@@ -53,7 +53,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
 
   return (
     <Link to={`/apartment/${apartment.id}`}>
-      <Card className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:transform hover:-translate-y-2 border-2 hover:border-indigo-200 animate-fade-in">
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:transform hover:-translate-y-2 border-2 hover:border-amber-200 animate-fade-in">
         <div className="relative aspect-[4/3] overflow-hidden group">
           <img
             src={getImageUrl(apartment.image)}
@@ -79,7 +79,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
               </Badge>
             )}
             {verifiedLandlord && (
-              <Badge className="bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center gap-1 shadow-lg backdrop-blur-sm">
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 flex items-center gap-1 shadow-lg backdrop-blur-sm">
                 <ShieldCheck className="h-3 w-3" />
                 Verified Landlord
               </Badge>
@@ -89,25 +89,25 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
             )}
           </div>
         </div>
-        <CardContent className="p-4 bg-gradient-to-br from-white to-indigo-50/30">
+        <CardContent className="p-4 bg-gradient-to-br from-white to-amber-50/30">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-1 text-slate-900 group-hover:text-indigo-600 transition-colors">{apartment.title}</h3>
+              <h3 className="font-semibold text-lg mb-1 text-slate-900 group-hover:text-amber-600 transition-colors">{apartment.title}</h3>
               <div className="flex items-center text-slate-600 text-sm mb-3">
-                <MapPin className="h-4 w-4 mr-1 text-indigo-500" />
+                <MapPin className="h-4 w-4 mr-1 text-amber-500" />
                 <span>
                   {apartment.city}, {apartment.state}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">${apartment.price}</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">${apartment.price}</p>
               <p className="text-sm text-slate-600">/month</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-slate-600 border-t border-indigo-100 pt-3 mt-3">
+          <div className="flex items-center gap-4 text-sm text-slate-600 border-t border-amber-100 pt-3 mt-3">
             <div className="flex items-center gap-1">
-              <Bed className="h-4 w-4 text-indigo-500" />
+              <Bed className="h-4 w-4 text-amber-500" />
               <span>{apartment.bedrooms} bed</span>
             </div>
             <div className="flex items-center gap-1">

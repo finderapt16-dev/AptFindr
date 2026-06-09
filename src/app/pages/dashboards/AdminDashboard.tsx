@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type ReactElement } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth, type User } from "@/app/contexts/AuthContext";
 import { apartments as defaultApartments, type ListingRecord } from "@/app/data/apartments";
 import { Card, CardContent } from "@/app/components/ui/card";
@@ -20,10 +20,22 @@ import {
   updateUserProfile,
   deleteViolation as deleteViolationRecord,
   getDashboardSummary,
+  fetchPendingAppeals,
+  updateAppealStatus,
+  notifyReportResolved,
+  notifyReportDismissed,
+  fetchReportWithDetails,
+  fetchUserById,
+  fetchLandlordWithDetails,
+  notifyLandlordVerification,
+  notifyLandlordViolation,
+  notifyLandlordNotice,
   type DashboardUserRow,
   type DashboardReportRow,
   type DashboardViolationRow,
   type DashboardNotificationRow,
+  type DashboardAppealRow,
+  type DashboardLandlordDetailsRow,
 } from "@/app/services/dashboardSupabaseService";
 import {
   CheckCircle2, XCircle, Shield, Users, Phone, FileText,
@@ -51,9 +63,7 @@ const NAV_MAIN = [
   { icon: Users,           label: "Landlords",      section: "landlords" },
   { icon: Building2,       label: "Apartments",     section: "apartments" },
   { icon: Flag,            label: "Reports",        section: "reports" },
-];
-const NAV_MANAGE = [
-  { icon: Search, label: "Browse All", href: "/browse", isLink: true },
+  { icon: AlertTriangle,   label: "Appeals",        section: "appeals" },
 ];
 const NAV_ACCOUNT = [
   { icon: Shield, label: "Settings", section: "admininfo" },
@@ -153,9 +163,23 @@ export function AdminDashboard() {
   // reports
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
   const [selectedReport, setSelectedReport] = useState<DashboardReportRow | null>(null);
+  const [selectedReportDetails, setSelectedReportDetails] = useState<{
+    report: DashboardReportRow | null;
+    reporter: DashboardUserRow | null;
+    apartment: any | null;
+    landlord: DashboardUserRow | null;
+  } | null>(null);
+  const [dismissReportModal, setDismissReportModal] = useState<{ reportId: string; reason: string } | null>(null);
+  const [viewingUserProfile, setViewingUserProfile] = useState<DashboardUserRow | null>(null);
 
   // violations / notices  { landlordId, type, category, message, issuedAt, apartmentTitle }
   const [violations, setViolations] = useState<DashboardViolationRow[]>([]);
+
+  // appeals
+  const [appeals, setAppeals] = useState<DashboardAppealRow[]>([]);
+  const [selectedAppeal, setSelectedAppeal] = useState<DashboardAppealRow | null>(null);
+  const [appealResponse, setAppealResponse] = useState("");
+  const [appealStatus, setAppealStatus] = useState<"under_review" | "approved" | "rejected">("under_review");
 
   // violation modal
   const [violationModal, setViolationModal] = useState<{
@@ -201,6 +225,7 @@ export function AdminDashboard() {
 
   // landlord details modal
   const [selectedLandlord, setSelectedLandlord] = useState<DashboardUserRow | null>(null);
+  const [selectedLandlordDetails, setSelectedLandlordDetails] = useState<DashboardLandlordDetailsRow | null>(null);
 
   const [allApartments, setAllApartments] = useState<ListingRecord[]>(
     defaultApartments as ListingRecord[],
@@ -366,6 +391,9 @@ export function AdminDashboard() {
         setAllApartments(items as unknown as ListingRecord[]),
       );
     }
+    if (activeSection === "appeals") {
+      void fetchPendingAppeals().then(setAppeals);
+    }
   }, [activeSection]);
 
   useEffect(() => {
@@ -385,6 +413,24 @@ export function AdminDashboard() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  // Fetch full report details when a report is selected
+  useEffect(() => {
+    if (selectedReport?.id) {
+      void fetchReportWithDetails(selectedReport.id).then(setSelectedReportDetails);
+    } else {
+      setSelectedReportDetails(null);
+    }
+  }, [selectedReport?.id]);
+
+  // Fetch full landlord details when a landlord is selected
+  useEffect(() => {
+    if (selectedLandlord?.id) {
+      void fetchLandlordWithDetails(selectedLandlord.id).then(setSelectedLandlordDetails);
+    } else {
+      setSelectedLandlordDetails(null);
+    }
+  }, [selectedLandlord?.id]);
+
   const loadLandlords = async () => {
     const users = await fetchUsers();
     setLandlords(users.filter((x) => x.role === "landlord"));
@@ -400,7 +446,13 @@ export function AdminDashboard() {
     const action = verifyAction.verify
       ? verifyLandlord(verifyAction.landlordId)
       : updateUser(verifyAction.landlordId, { isVerified: false, status: "pending" });
-    void action.then(() => {
+    void action.then(async () => {
+      // Send notification to landlord
+      await notifyLandlordVerification(
+        verifyAction.landlordId,
+        verifyAction.verify,
+        user?.id,
+      );
       void loadLandlords();
       toast.success(verifyAction.verify ? "Landlord verified" : "Verification revoked");
       setVerifyAction(null);
@@ -408,21 +460,44 @@ export function AdminDashboard() {
   };
 
   const resolveReport = (id: string) => {
-    void updateReportStatus(id, "resolved").then((updated) => {
+    void updateReportStatus(id, "resolved").then(async (updated) => {
       if (updated) {
         setReports((p) => p.map((r) => (r.id === id ? updated : r)));
+        
+        // Send notifications to landlord and reporter
+        if (selectedReportDetails?.report?.id && selectedReportDetails?.landlord?.id && selectedReportDetails?.reporter?.id) {
+          await notifyReportResolved(
+            selectedReportDetails.report.id,
+            selectedReportDetails.landlord.id,
+            selectedReportDetails.reporter.id,
+            selectedReportDetails.report.apartment_title || selectedReportDetails.report.apartment || "Reported Apartment",
+          );
+        }
+        
         setSelectedReport(null);
-        toast.success("Report marked as resolved");
+        toast.success("Report marked as resolved and notifications sent");
       }
     });
   };
 
-  const dismissReport = (id: string) => {
-    void updateReportStatus(id, "dismissed").then((updated) => {
+  const dismissReport = (id: string, reason?: string) => {
+    void updateReportStatus(id, "dismissed").then(async (updated) => {
       if (updated) {
         setReports((p) => p.map((r) => (r.id === id ? updated : r)));
+        
+        // Send notification to reporter
+        if (selectedReportDetails?.report?.id && selectedReportDetails?.reporter?.id) {
+          await notifyReportDismissed(
+            selectedReportDetails.report.id,
+            selectedReportDetails.reporter.id,
+            selectedReportDetails.report.apartment_title || selectedReportDetails.report.apartment || "Reported Apartment",
+            reason,
+          );
+        }
+        
         setSelectedReport(null);
-        toast.success("Report dismissed");
+        setDismissReportModal(null);
+        toast.success("Report dismissed and notification sent to reporter");
       }
     });
   };
@@ -444,8 +519,20 @@ export function AdminDashboard() {
       active: true,
     };
 
-    void createViolation(payload).then((created) => {
+    void createViolation(payload).then(async (created) => {
       if (created) {
+        // Send notification to landlord
+        if (violationModal.mode === "violation") {
+          await notifyLandlordViolation(
+            violationModal.landlordId,
+            vType,
+            vMessage,
+            violationModal.apartmentTitle !== "General" ? violationModal.apartmentTitle : undefined,
+          );
+        } else {
+          await notifyLandlordNotice(violationModal.landlordId, nType, nMessage);
+        }
+
         void fetchViolations().then(setViolations);
         toast.success(violationModal.mode === "violation" ? "Violation issued to landlord" : "Notice sent to landlord");
         setViolationModal(null);
@@ -622,19 +709,6 @@ export function AdminDashboard() {
                 <span className="ml-auto h-5 px-1.5 bg-indigo-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">{unreadNotifsCount}</span>
               )}
             </button>
-          ))}
-        </div>
-      </nav>
-      <nav className="px-3 pt-3 pb-2 border-t border-white/10 mt-2">
-        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest px-3 mb-2">Browse</p>
-        <div className="space-y-0.5">
-          {NAV_MANAGE.map(({ icon: Icon, label, href }) => (
-            <Link key={href} to={href}
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/10 transition-all">
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
-            </Link>
           ))}
         </div>
       </nav>
@@ -1291,7 +1365,11 @@ export function AdminDashboard() {
               </div>
               {/* Footer actions */}
               {landlord && (
-                <div className="px-6 py-4 border-t border-amber-50 flex gap-3 shrink-0">
+                <div className="px-6 py-4 border-t border-amber-50 flex gap-3 shrink-0 flex-wrap">
+                  <Button onClick={() => navigate(`/admin/apartment/${selectedApt.id}`)}
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-xl shadow-md">
+                    <Eye className="h-4 w-4 mr-2" />Full Inspection
+                  </Button>
                   <Button onClick={() => { setSelectedApt(null); openViolationModal("violation", text(landlord.id), text(landlord.name, "Landlord"), selectedApt.title); }}
                     className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold rounded-xl shadow-md">
                     <AlertOctagon className="h-4 w-4 mr-2" />Issue Violation
@@ -1411,9 +1489,10 @@ export function AdminDashboard() {
         {selectedReport && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setSelectedReport(null)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden"
+            <div className="relative z-10 w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden max-h-[90vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-50">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-50 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center shadow">
                     <Flag className="h-5 w-5 text-white" />
@@ -1421,7 +1500,7 @@ export function AdminDashboard() {
                   <div>
                     <p className="font-black text-slate-900">Report Detail</p>
                     <p className="text-slate-400 text-xs font-medium">
-                      {formatOptionalDate(selectedReport.submittedAt ?? selectedReport.submitted_at)}
+                      ID: {selectedReport.id?.slice(0, 8) || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -1429,109 +1508,576 @@ export function AdminDashboard() {
                   <X className="h-4 w-4 text-slate-500" />
                 </button>
               </div>
-              <div className="px-6 py-5 space-y-4 max-h-[55vh] overflow-y-auto">
-                <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-2xl border border-amber-100">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shadow shrink-0 ${
-                    selectedReport.role === "student" ? "bg-gradient-to-br from-blue-100 to-sky-200 text-blue-700" : "bg-gradient-to-br from-purple-100 to-violet-200 text-purple-700"
+
+              {/* Body - Scrollable */}
+              <div className="px-6 py-5 space-y-4 overflow-y-auto">
+                {/* Status Badge */}
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-xs font-bold ${
+                    selectedReport.status === "pending" ? "bg-amber-100 text-amber-800 border border-amber-300" :
+                    selectedReport.status === "resolved" ? "bg-green-100 text-green-800 border border-green-300" :
+                    "bg-slate-100 text-slate-800 border border-slate-300"
                   }`}>
-                    {text(selectedReport.reporter).split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-black text-slate-900 text-sm">{selectedReport.reporter}</p>
-                    <p className="text-xs text-slate-400 font-medium capitalize">{selectedReport.role}{selectedReport.contact && ` · ${selectedReport.contact}`}</p>
-                  </div>
+                    {selectedReport.status?.toUpperCase()}
+                  </Badge>
+                  <span className="text-xs font-medium text-slate-400">
+                    {formatOptionalDate(selectedReport.submittedAt ?? selectedReport.submitted_at, {
+                      month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit"
+                    })}
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Apartment</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedReport.apartment}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Issue Type</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedReport.issueType}</p>
-                  </div>
-                </div>
+
+                {/* Reporting Tenant Section */}
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Severity & Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedReport.severity && (
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full border-2 ${SEVERITY_LABEL[selectedReport.severity]?.class}`}>
-                        {SEVERITY_LABEL[selectedReport.severity]?.label}
-                      </span>
-                    )}
-                    {selectedReport.tags?.map((tag: string) => (
-                      <span key={tag} className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800">{tag}</span>
-                    ))}
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reporting Tenant</p>
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shadow shrink-0 ${
+                        selectedReport.role === "student" ? "bg-gradient-to-br from-blue-100 to-sky-200 text-blue-700" : "bg-gradient-to-br from-purple-100 to-violet-200 text-purple-700"
+                      }`}>
+                        {text(selectedReport.reporter).split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-slate-900 text-sm">{selectedReport.reporter}</p>
+                        <p className="text-xs text-slate-500 font-medium capitalize">{selectedReport.role}</p>
+                        {selectedReport.contact && <p className="text-xs text-slate-500 font-medium">{selectedReport.contact}</p>}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (selectedReportDetails?.reporter) {
+                            setViewingUserProfile(selectedReportDetails.reporter);
+                          }
+                        }}
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold rounded-lg shrink-0"
+                      >
+                        <UserIcon className="h-3.5 w-3.5 mr-1" />View
+                      </Button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Reported Apartment Section */}
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Description</p>
-                  <p className="text-sm text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    {selectedReport.details || "No description provided."}
-                  </p>
-                </div>
-                {/* Find matching apartment */}
-                {(() => {
-                  const match = allApartments.find((a) =>
-                    text(selectedReport.apartment).toLowerCase().includes(a.title?.toLowerCase()) ||
-                    a.title?.toLowerCase().includes(text(selectedReport.apartment).toLowerCase())
-                  );
-                  if (!match) return null;
-                  const ll = getLandlordForApt(match);
-                  return (
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Linked Apartment</p>
-                      <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors"
-                        onClick={() => { setSelectedReport(null); setSelectedApt(match); setActiveSection("apartments"); }}>
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 overflow-hidden shrink-0">
-                          {match.images?.[0]
-                            ? <img src={match.images[0]} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center"><Building2 className="h-5 w-5 text-amber-400" /></div>}
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reported Apartment</p>
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="space-y-2">
+                      <p className="font-bold text-slate-900">{selectedReport.apartment || "Unknown Apartment"}</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-slate-400 font-medium">Issue Type</p>
+                          <p className="font-bold text-slate-800">{selectedReport.issueType}</p>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-slate-900 text-sm truncate">{match.title}</p>
-                          <p className="text-xs text-slate-400 font-medium flex items-center gap-1"><MapPin className="h-3 w-3" />{match.location}</p>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-bold text-amber-600">
-                          <Eye className="h-3.5 w-3.5" />View
+                        <div>
+                          <p className="text-slate-400 font-medium">Severity</p>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${SEVERITY_LABEL[selectedReport.severity]?.class}`}>
+                            {SEVERITY_LABEL[selectedReport.severity]?.label}
+                          </span>
                         </div>
                       </div>
-                      {ll && (
-                        <div className="mt-2 flex gap-2">
-                          <Button size="sm" variant="outline"
-                            onClick={() => { setSelectedReport(null); openViolationModal("violation", text(ll.id), text(ll.name, "Landlord"), match.title, text(selectedReport.id)); }}
-                            className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs">
-                            <AlertOctagon className="h-3.5 w-3.5 mr-1.5" />Issue Violation
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            onClick={() => { setSelectedReport(null); openViolationModal("notice", text(ll.id), text(ll.name, "Landlord"), match.title, text(selectedReport.id)); }}
-                            className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-50 font-bold rounded-xl text-xs">
-                            <BellRing className="h-3.5 w-3.5 mr-1.5" />Send Notice
-                          </Button>
-                        </div>
-                      )}
+                      <div className="pt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (selectedReportDetails?.apartment?.id) {
+                              setSelectedReport(null);
+                              navigate(`/admin/apartment/${selectedReportDetails.apartment.id}`);
+                            }
+                          }}
+                          className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-bold rounded-lg"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />View Apartment
+                        </Button>
+                      </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                </div>
+
+                {/* Landlord Information Section */}
+                {selectedReportDetails?.landlord && (
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Landlord (Property Owner)</p>
+                    <div className="p-3 bg-orange-50 rounded-xl border border-orange-200">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-100 to-amber-200 flex items-center justify-center font-black text-sm shadow text-orange-700 shrink-0">
+                          {selectedReportDetails.landlord.name?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-slate-900 text-sm">{selectedReportDetails.landlord.name}</p>
+                          <p className="text-xs text-slate-500 font-medium truncate">{selectedReportDetails.landlord.email}</p>
+                          {selectedReportDetails.landlord.mobile && <p className="text-xs text-slate-500 font-medium">{selectedReportDetails.landlord.mobile}</p>}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setViewingUserProfile(selectedReportDetails.landlord)}
+                          className="border-orange-200 text-orange-600 hover:bg-orange-100 text-xs font-bold rounded-lg shrink-0"
+                        >
+                          <UserIcon className="h-3.5 w-3.5 mr-1" />View
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Report Tags */}
+                {selectedReport.tags && selectedReport.tags.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedReport.tags.map((tag: string) => (
+                        <Badge key={tag} className="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Report Description */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Details</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                      {selectedReport.details || "No description provided."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                {selectedReport.contact && (
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reporter Contact</p>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <p className="text-sm font-medium text-slate-800">{selectedReport.contact}</p>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Footer Actions */}
               {selectedReport.status === "pending" && (
-                <div className="px-6 py-4 border-t border-amber-50 flex gap-3">
-                  <Button onClick={() => resolveReport(text(selectedReport.id))}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-md">
-                    <CheckCheck className="h-4 w-4 mr-2" />Mark Resolved
+                <div className="px-6 py-4 border-t border-amber-50 flex gap-2 shrink-0 flex-wrap">
+                  <Button
+                    onClick={() => resolveReport(text(selectedReport.id))}
+                    className="flex-1 min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-md text-sm"
+                  >
+                    <CheckCheck className="h-4 w-4 mr-2" />Resolve
                   </Button>
-                  <Button variant="outline" onClick={() => dismissReport(text(selectedReport.id))}
-                    className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDismissReportModal({ reportId: text(selectedReport.id), reason: "" })}
+                    className="flex-1 min-w-[120px] border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl text-sm"
+                  >
                     <XCircle className="h-4 w-4 mr-2" />Dismiss
                   </Button>
                 </div>
               )}
               {selectedReport.status !== "pending" && (
-                <div className="px-6 py-4 border-t border-amber-50 text-center">
-                  <p className="text-sm text-slate-400 font-medium capitalize">This report has been <strong>{selectedReport.status}</strong>.</p>
+                <div className="px-6 py-4 border-t border-amber-50 text-center shrink-0">
+                  <p className="text-sm text-slate-500 font-medium">
+                    This report has been <span className="font-black capitalize">{selectedReport.status}</span> on {formatOptionalDate(selectedReport.resolved_at, { month: "short", day: "numeric" })}.
+                  </p>
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Dismiss Report Modal with Reason */}
+        {dismissReportModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setDismissReportModal(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-amber-100 p-6"
+              onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-black text-slate-900 mb-2">Dismiss Report</h3>
+              <p className="text-sm text-slate-500 font-medium mb-4">
+                Why are you dismissing this report? (Optional)
+              </p>
+              <textarea
+                value={dismissReportModal.reason}
+                onChange={(e) => setDismissReportModal({ ...dismissReportModal, reason: e.target.value })}
+                placeholder="e.g., Investigation inconclusive, False complaint, Already resolved by landlord..."
+                className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 bg-white/80 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                rows={4}
+              />
+              <div className="flex gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setDismissReportModal(null)}
+                  className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (dismissReportModal.reportId) {
+                      dismissReport(dismissReportModal.reportId, dismissReportModal.reason || undefined);
+                    }
+                  }}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl"
+                >
+                  Confirm Dismissal
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Profile Modal */}
+        {viewingUserProfile && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setViewingUserProfile(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-amber-100 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-black text-white">User Profile</h3>
+                <button onClick={() => setViewingUserProfile(null)} className="h-8 w-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+              <div className="px-6 py-6 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center font-black text-2xl text-orange-700 shadow shrink-0">
+                    {viewingUserProfile.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-900">{viewingUserProfile.name}</p>
+                    <p className="text-xs text-slate-500 font-medium capitalize">{viewingUserProfile.role}</p>
+                  </div>
+                </div>
+                <div className="space-y-3 pt-2 border-t border-amber-50">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                    <p className="text-sm font-medium text-slate-800">{viewingUserProfile.email}</p>
+                  </div>
+                  {viewingUserProfile.mobile && (
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
+                      <p className="text-sm font-medium text-slate-800">{viewingUserProfile.mobile}</p>
+                    </div>
+                  )}
+                  {viewingUserProfile.address && (
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p>
+                      <p className="text-sm font-medium text-slate-800">{viewingUserProfile.address}</p>
+                    </div>
+                  )}
+                  {viewingUserProfile.is_verified !== undefined && (
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verification</p>
+                      <Badge className={`text-xs font-bold ${
+                        viewingUserProfile.is_verified ? "bg-green-100 text-green-800 border border-green-300" : "bg-amber-100 text-amber-800 border border-amber-300"
+                      }`}>
+                        {viewingUserProfile.is_verified ? "Verified" : "Pending"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Section: Appeals Management ─────────────────────────────────────────
+  const renderAppeals = () => {
+    const landlordMap = new Map<string, DashboardUserRow>();
+    landlords.forEach((l) => {
+      if (l.id) landlordMap.set(l.id, l);
+    });
+
+    const handleUpdateAppealStatus = async () => {
+      if (!selectedAppeal?.id || !user?.id) {
+        toast.error("Cannot update appeal - missing information");
+        return;
+      }
+
+      try {
+        const updated = await updateAppealStatus(
+          selectedAppeal.id,
+          appealStatus,
+          user.id,
+          appealResponse
+        );
+
+        if (updated) {
+          toast.success(`Appeal marked as ${appealStatus}`);
+          setAppeals((prev) => prev.map((a) => (a.id === selectedAppeal.id ? updated : a)));
+          setSelectedAppeal(null);
+          setAppealResponse("");
+          setAppealStatus("under_review");
+        } else {
+          toast.error("Failed to update appeal");
+        }
+      } catch (error) {
+        console.error("Error updating appeal:", error);
+        toast.error("Error updating appeal");
+      }
+    };
+
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest">
+              Appeal Management ({appeals.length})
+            </h2>
+          </div>
+        </div>
+
+        {selectedAppeal ? (
+          // Detail view
+          <div className="space-y-4">
+            <Button
+              onClick={() => {
+                setSelectedAppeal(null);
+                setAppealResponse("");
+                setAppealStatus("under_review");
+              }}
+              variant="outline"
+              className="border-amber-200 text-amber-600 hover:bg-amber-50 font-bold text-xs"
+            >
+              ← Back to List
+            </Button>
+
+            <Card className="border-2 border-amber-100 bg-white/90">
+              <CardContent className="pt-6 space-y-4">
+                {/* Landlord Info */}
+                {selectedAppeal.landlord_id && (
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                    <h3 className="font-bold text-sm text-slate-900 mb-2">Landlord Information</h3>
+                    {(() => {
+                      const landlord = landlordMap.get(selectedAppeal.landlord_id);
+                      return landlord ? (
+                        <div className="space-y-1 text-xs">
+                          <p><strong>Name:</strong> {landlord.name || "—"}</p>
+                          <p><strong>Email:</strong> {landlord.email || "—"}</p>
+                          <p><strong>Phone:</strong> {landlord.mobile || "—"}</p>
+                        </div>
+                      ) : (
+                        <p className="text-slate-500 text-xs">Loading landlord info...</p>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Appeal Details */}
+                <div className="space-y-3">
+                  <h3 className="font-bold text-sm text-slate-900">Appeal Details</h3>
+
+                  {selectedAppeal.report_id && (
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <Badge className="bg-blue-600 mb-2">Report Appeal</Badge>
+                      <p className="text-xs text-slate-600"><strong>Report ID:</strong> {selectedAppeal.report_id}</p>
+                    </div>
+                  )}
+
+                  {selectedAppeal.violation_id && (
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                      <Badge className="bg-red-600 mb-2">Violation Appeal</Badge>
+                      <p className="text-xs text-slate-600"><strong>Violation ID:</strong> {selectedAppeal.violation_id}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-1">Reason for Appeal</label>
+                    <div className="p-3 rounded-lg bg-slate-100 text-slate-700 text-xs border border-slate-200">
+                      {selectedAppeal.reason || "—"}
+                    </div>
+                  </div>
+
+                  {selectedAppeal.description && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-900 mb-1">Description</label>
+                      <div className="p-3 rounded-lg bg-slate-100 text-slate-700 text-xs border border-slate-200">
+                        {selectedAppeal.description}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppeal.supporting_docs && selectedAppeal.supporting_docs.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-900 mb-1">Supporting Documents</label>
+                      <div className="space-y-1">
+                        {selectedAppeal.supporting_docs.map((doc, i) => (
+                          <div key={i} className="text-xs text-blue-600 hover:underline cursor-pointer">
+                            • Document {i + 1}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-slate-500 font-medium">Submitted</p>
+                      <p className="text-slate-900 font-bold">
+                        {selectedAppeal.submitted_at
+                          ? new Date(selectedAppeal.submitted_at).toLocaleDateString("en-PH")
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">Status</p>
+                      <Badge
+                        className={`inline-block font-bold text-[10px] ${
+                          selectedAppeal.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : selectedAppeal.status === "under_review"
+                              ? "bg-blue-100 text-blue-800"
+                              : selectedAppeal.status === "approved"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {selectedAppeal.status?.toUpperCase() || "PENDING"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Action Section */}
+                <div className="border-t border-slate-200 pt-4 space-y-3">
+                  <h3 className="font-bold text-sm text-slate-900">Admin Response</h3>
+
+                  {selectedAppeal.admin_response && (
+                    <div className="p-3 rounded-lg bg-slate-100 border border-slate-200">
+                      <p className="text-xs text-slate-500 font-medium mb-1">Previous Response</p>
+                      <p className="text-xs text-slate-700">{selectedAppeal.admin_response}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-2">Update Status</label>
+                    <div className="flex gap-2">
+                      {(["under_review", "approved", "rejected"] as const).map((status) => (
+                        <Button
+                          key={status}
+                          onClick={() => setAppealStatus(status)}
+                          className={`flex-1 text-xs font-bold py-2 ${
+                            appealStatus === status
+                              ? status === "under_review"
+                                ? "bg-blue-600 text-white"
+                                : status === "approved"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-red-600 text-white"
+                              : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                          }`}
+                        >
+                          {status === "under_review" ? "Under Review" : status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-1">Admin Response Message</label>
+                    <textarea
+                      value={appealResponse}
+                      onChange={(e) => setAppealResponse(e.target.value)}
+                      placeholder="Enter your decision and explanation..."
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-400 focus:border-transparent text-xs font-medium text-slate-900 placeholder-slate-400 resize-vertical min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleUpdateAppealStatus}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-xs hover:shadow-lg"
+                    >
+                      Save Appeal Decision
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedAppeal(null);
+                        setAppealResponse("");
+                        setAppealStatus("under_review");
+                      }}
+                      variant="outline"
+                      className="border-amber-300 text-amber-600 hover:bg-amber-50 font-bold text-xs"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // List view
+          <div className="space-y-3">
+            {appeals.length > 0 ? (
+              appeals.map((appeal) => {
+                const landlord = landlordMap.get(appeal.landlord_id ?? "");
+                return (
+                  <Card
+                    key={appeal.id}
+                    onClick={() => setSelectedAppeal(appeal)}
+                    className="border-2 border-amber-100 hover:border-amber-300 bg-white/90 cursor-pointer transition-all shadow-md hover:shadow-lg"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-sm text-slate-900">
+                            {landlord?.name || "Unknown Landlord"}
+                          </h3>
+                          <p className="text-xs text-slate-500 font-medium">{landlord?.email || "—"}</p>
+                        </div>
+                        <Badge
+                          className={`shrink-0 font-bold text-[10px] ${
+                            appeal.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : appeal.status === "under_review"
+                                ? "bg-blue-100 text-blue-800"
+                                : appeal.status === "approved"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {appeal.status?.toUpperCase() || "PENDING"}
+                        </Badge>
+                      </div>
+
+                      <div className="mb-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                        <p className="text-xs text-slate-600 font-medium line-clamp-2">
+                          {appeal.reason || "No reason provided"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex gap-2 items-center">
+                          {appeal.report_id && (
+                            <Badge className="bg-blue-100 text-blue-700 text-[10px]">Report</Badge>
+                          )}
+                          {appeal.violation_id && (
+                            <Badge className="bg-red-100 text-red-700 text-[10px]">Violation</Badge>
+                          )}
+                        </div>
+                        <span className="text-slate-400 font-medium">
+                          {appeal.submitted_at
+                            ? new Date(appeal.submitted_at).toLocaleDateString("en-PH")
+                            : "—"}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card className="border-2 border-amber-100 bg-white/90">
+                <CardContent className="pt-6 text-center py-10">
+                  <AlertTriangle className="h-8 w-8 text-amber-200 mx-auto mb-3" />
+                  <p className="text-slate-500 font-medium text-sm">No pending appeals</p>
+                  <p className="text-slate-400 text-xs font-medium mt-1">All appeals have been reviewed!</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
@@ -1741,6 +2287,7 @@ export function AdminDashboard() {
     landlords:     renderLandlords,
     apartments:    renderApartments,
     reports:       renderReports,
+    appeals:       renderAppeals,
     admininfo:     renderAdminInfo,
   };
 
@@ -1898,11 +2445,11 @@ export function AdminDashboard() {
         </div>
       )}
 
-      {/* Landlord Details Modal */}
-      {selectedLandlord && (
+      {/* Landlord Details Modal - Enhanced */}
+      {selectedLandlord && selectedLandlordDetails && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setSelectedLandlord(null)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-3xl max-h-[90vh] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden flex flex-col"
+          <div className="relative z-10 w-full max-w-4xl max-h-[90vh] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0">
@@ -1913,7 +2460,7 @@ export function AdminDashboard() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-black text-slate-900">{selectedLandlord.name}</h2>
-                    {selectedLandlord.isVerified
+                    {selectedLandlordDetails.profile?.is_verified || selectedLandlord.isVerified || selectedLandlord.is_verified
                       ? <Badge className="bg-green-100 text-green-800 border border-green-200 font-bold text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Verified</Badge>
                       : <Badge className="bg-orange-100 text-orange-700 border border-orange-200 font-bold text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>}
                   </div>
@@ -1927,54 +2474,110 @@ export function AdminDashboard() {
 
             {/* Body - scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-              {/* Contact Information */}
+              {/* Account Information */}
               <div>
                 <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                   <UserIcon className="h-4 w-4" />
-                  Contact Information
+                  Account Information
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mobile Number</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                    <p className="text-sm font-bold text-slate-900">{selectedLandlord.email}</p>
+                  </div>
+                  <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
                     <p className="text-sm font-bold text-slate-900 flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5 text-amber-600" />
-                      {selectedLandlord.mobileNumber || "Not provided"}
+                      {selectedLandlord.mobile || "Not provided"}
                     </p>
                   </div>
                   <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Permit Number</p>
-                    <p className="text-sm font-bold text-slate-900 flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5 text-amber-600" />
-                      {selectedLandlord.permitNumber || "Not provided"}
-                    </p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Account Status</p>
+                    <Badge className="inline-block bg-green-100 text-green-800 font-bold text-xs">Active</Badge>
+                  </div>
+                  <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verification</p>
+                    <Badge className={`inline-block font-bold text-xs ${
+                      selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : "bg-amber-100 text-amber-800 border border-amber-200"
+                    }`}>
+                      {selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified ? "Verified" : "Pending"}
+                    </Badge>
                   </div>
                 </div>
               </div>
 
-              {/* Properties */}
+              {/* Verification Documents */}
+              {selectedLandlordDetails.profile && (
+                <div>
+                  <h3 className="text-xs font-black text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Verification Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedLandlordDetails.profile.business_permit_number && (
+                      <div className="p-3 bg-green-50/30 border border-green-100 rounded-xl">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Business Permit</p>
+                        <p className="text-sm font-bold text-slate-900">{selectedLandlordDetails.profile.business_permit_number}</p>
+                        {selectedLandlordDetails.profile.permit_expiry && (
+                          <p className="text-xs text-slate-500 mt-1">Expires: {new Date(selectedLandlordDetails.profile.permit_expiry).toLocaleDateString()}</p>
+                        )}
+                      </div>
+                    )}
+                    {selectedLandlordDetails.profile.tin_number && (
+                      <div className="p-3 bg-green-50/30 border border-green-100 rounded-xl">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">TIN Number</p>
+                        <p className="text-sm font-bold text-slate-900">{selectedLandlordDetails.profile.tin_number}</p>
+                      </div>
+                    )}
+                    {selectedLandlordDetails.profile.id_type && (
+                      <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valid ID Type</p>
+                        <p className="text-sm font-bold text-slate-900">{selectedLandlordDetails.profile.id_type}</p>
+                      </div>
+                    )}
+                    {selectedLandlordDetails.profile.id_number && (
+                      <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Number</p>
+                        <p className="text-sm font-bold text-slate-900">{selectedLandlordDetails.profile.id_number}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Property Information */}
               <div>
                 <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Properties ({allApartments.filter((a: any) => a.landlordId === selectedLandlord.id).length})
+                  Properties ({selectedLandlordDetails.properties.length})
                 </h3>
-                {allApartments.filter((a: any) => a.landlordId === selectedLandlord.id).length > 0 ? (
+                {selectedLandlordDetails.properties.length > 0 ? (
                   <div className="space-y-2">
-                    {allApartments.filter((a: any) => a.landlordId === selectedLandlord.id).map((apt: any) => (
-                      <div key={apt.id} className="p-3 bg-white border border-amber-100 rounded-xl hover:shadow-md transition-shadow flex items-center gap-3">
-                        {apt.images?.[0] ? (
-                          <img src={apt.images[0]} alt={apt.title} className="h-14 w-14 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center shrink-0">
+                    {selectedLandlordDetails.properties.map((apt) => (
+                      <div
+                        key={apt.id}
+                        onClick={() => {
+                          navigate(`/admin/apartment/${apt.id}`);
+                          setSelectedLandlord(null);
+                        }}
+                        className="p-3 bg-white border border-amber-100 rounded-xl hover:shadow-md transition-all cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center shrink-0">
                             <Building2 className="h-6 w-6 text-amber-400" />
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900 text-sm truncate">{apt.title}</p>
-                          <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-amber-500" />{apt.location}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900 text-sm truncate">{apt.title || "—"}</p>
+                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                              <Badge variant="outline" className="text-[9px] font-bold">
+                                {(apt.is_published ?? apt.isPublished) ? "Published" : "Draft"}
+                              </Badge>
+                            </p>
+                          </div>
+                          <span className="text-sm font-black text-amber-700 shrink-0">₱{(apt.price || 0)?.toLocaleString()}</span>
                         </div>
-                        <span className="text-sm font-black text-amber-700 shrink-0">₱{apt.price?.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -1986,15 +2589,79 @@ export function AdminDashboard() {
                 )}
               </div>
 
-              {/* Violations & Notices */}
+              {/* Property Statistics */}
               <div>
-                <h3 className="text-xs font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <AlertOctagon className="h-4 w-4" />
-                  Violations &amp; Notices ({violations.filter((v) => v.landlordId === selectedLandlord.id).length})
+                <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Statistics
                 </h3>
-                {violations.filter((v) => v.landlordId === selectedLandlord.id).length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Views</p>
+                    <p className="text-lg font-black text-blue-700">{selectedLandlordDetails.propertyStats.totalViews}</p>
+                  </div>
+                  <div className="p-3 bg-pink-50/30 border border-pink-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Favorites</p>
+                    <p className="text-lg font-black text-pink-700">{selectedLandlordDetails.propertyStats.totalFavorites}</p>
+                  </div>
+                  <div className="p-3 bg-purple-50/30 border border-purple-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Price</p>
+                    <p className="text-lg font-black text-purple-700">₱{selectedLandlordDetails.propertyStats.averagePrice?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div className="p-3 bg-emerald-50/30 border border-emerald-100 rounded-xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Published</p>
+                    <p className="text-lg font-black text-emerald-700">{selectedLandlordDetails.propertyStats.publishedProperties}/{selectedLandlordDetails.propertyStats.totalProperties}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reports */}
+              {selectedLandlordDetails.reports.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Flag className="h-4 w-4" />
+                    Reports ({selectedLandlordDetails.reports.length})
+                  </h3>
                   <div className="space-y-2">
-                    {violations.filter((v) => v.landlordId === selectedLandlord.id).map((v) => (
+                    {selectedLandlordDetails.reports.map((report) => (
+                      <div
+                        key={report.id}
+                        onClick={() => {
+                          setSelectedReport(report);
+                          setSelectedLandlord(null);
+                        }}
+                        className="p-3 bg-red-50/30 border border-red-200 rounded-xl hover:shadow-md transition-all cursor-pointer">
+                        <div className="flex items-start gap-2 justify-between">
+                          <div className="flex-1">
+                            <Badge className={`text-xs font-bold mb-1 ${
+                              report.severity === "high" ? "bg-red-600 text-white" : report.severity === "med" ? "bg-amber-600 text-white" : "bg-green-600 text-white"
+                            }`}>
+                              {report.severity?.toUpperCase() || "MEDIUM"}
+                            </Badge>
+                            <p className="text-xs font-bold text-slate-900">{report.issue_type || "Reported Issue"}</p>
+                            <p className="text-[10px] text-slate-500 mt-1">Status: {report.status || "pending"}</p>
+                          </div>
+                          <Badge className={`text-[10px] font-bold shrink-0 ${
+                            report.status === "resolved" ? "bg-green-100 text-green-800" : report.status === "dismissed" ? "bg-gray-100 text-gray-800" : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                            {report.status === "resolved" ? "Resolved" : report.status === "dismissed" ? "Dismissed" : "Pending"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Violations & Notices */}
+              {selectedLandlordDetails.violations.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <AlertOctagon className="h-4 w-4" />
+                    Violations & Notices ({selectedLandlordDetails.violations.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedLandlordDetails.violations.map((v) => (
                       <div key={v.id} className={`p-3 border rounded-xl ${
                         v.mode === "violation" ? "bg-red-50/50 border-red-200" : "bg-amber-50/50 border-amber-200"
                       }`}>
@@ -2007,29 +2674,21 @@ export function AdminDashboard() {
                           <Badge variant="outline" className="text-[10px] font-bold border-slate-300 text-slate-700">
                             {v.type}
                           </Badge>
-                          {v.apartmentTitle && v.apartmentTitle !== "General" && (
-                            <span className="text-[10px] text-slate-500 font-medium">• {v.apartmentTitle}</span>
-                          )}
                         </div>
                         {v.message && <p className="text-xs font-medium text-slate-700 mb-1">{v.message}</p>}
                         <p className="text-[10px] text-slate-400 font-medium">
-                          Issued on {formatOptionalDate(v.issuedAt ?? v.issued_at, { month: "short", day: "numeric", year: "numeric" })}
+                          Issued on {new Date(v.issuedAt ?? v.issued_at ?? "").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="py-8 text-center bg-green-50/30 border border-green-100 rounded-xl">
-                    <CheckCheck className="h-8 w-8 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-slate-500">No violations or notices on record</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Footer - actions */}
             <div className="px-6 py-4 border-t border-amber-100 bg-amber-50/30 shrink-0 flex gap-2">
-              {selectedLandlord.isVerified ? (
+              {selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified ? (
                 <Button variant="outline" size="sm"
                   onClick={(e) => { e.stopPropagation(); setVerifyAction({ landlordId: text(selectedLandlord.id), verify: false }); setSelectedLandlord(null); }}
                   className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl">

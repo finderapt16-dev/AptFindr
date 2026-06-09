@@ -9,8 +9,22 @@ import { Button } from "@/app/components/ui/button";
 import { LayoutGrid, Map, Sparkles, ArrowLeft } from "lucide-react";
 import { rankApartments } from "@/app/utils/rankingEngine";
 import { useFavorites } from "@/app/hooks/useFavorites";
+import { LandlordBrowse } from "./LandlordBrowse";
 
-export function Home() {
+// Wrapper component to handle role-based routing to prevent hooks issues
+function BrowseContent() {
+  const { user } = useAuth();
+
+  // Show Landlord Browse page for landlords
+  if (user?.role === "landlord") {
+    return <LandlordBrowse />;
+  }
+
+  // Show tenant browse for students, employees, and others
+  return <TenantBrowse />;
+}
+
+function TenantBrowse() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -63,8 +77,9 @@ export function Home() {
 
   const filteredApartments = useMemo(() => {
     const filtered = allApartments.filter((apt) => {
-      // Only show published apartments to students/employees (except landlords viewing their own)
-      if (apt.isPublished === false && apt.landlordId !== user?.id) {
+      // Only show published apartments to everyone (Browse All shows public listings only)
+      // Landlords can view all public properties here, but manage their own in the dashboard
+      if (apt.isPublished === false) {
         return false;
       }
 
@@ -357,4 +372,8 @@ export function Home() {
       </div>
     </div>
   );
+}
+
+export function Home() {
+  return <BrowseContent />;
 }

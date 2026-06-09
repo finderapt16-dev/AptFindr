@@ -95,6 +95,14 @@ export interface DashboardFavoriteRow extends DashboardRow {
   role?: string | null;
 }
 
+export interface DashboardApartmentViewRow extends DashboardRow {
+  apartment_id?: string | null;
+  viewer_id?: string | null;
+  viewed_at?: string | null;
+  apartmentId?: string | null;
+  viewerId?: string | null;
+}
+
 export interface DashboardUserRow extends DashboardRow {
   id?: string;
   email?: string | null;
@@ -156,7 +164,7 @@ export interface DashboardProfilePayload {
   listing_visibility?: string | null;
 }
 
-type TableName = "app_users" | "apartments" | "favorites" | "reports" | "violations" | "notifications" | "audit_logs";
+type TableName = "app_users" | "apartments" | "apartment_views" | "favorites" | "reports" | "violations" | "notifications" | "audit_logs";
 
 const cacheKeyPrefix = "dashboard-supabase-cache";
 
@@ -380,6 +388,17 @@ function toFavoriteRow(row: DashboardRow): DashboardFavoriteRow {
   };
 }
 
+function toApartmentViewRow(row: DashboardRow): DashboardApartmentViewRow {
+  return {
+    ...row,
+    apartment_id: getStringValue(row.apartment_id),
+    viewer_id: getStringValue(row.viewer_id),
+    viewed_at: getStringValue(row.viewed_at),
+    apartmentId: getStringValue(row.apartmentId),
+    viewerId: getStringValue(row.viewerId),
+  };
+}
+
 function toUserRow(row: DashboardRow): DashboardUserRow {
   return {
     ...row,
@@ -515,54 +534,116 @@ export async function deleteViolation(violationId: string): Promise<boolean> {
 }
 
 export async function fetchNotifications(userId?: string): Promise<DashboardNotificationRow[]> {
-  if (userId) {
-    const rows = await fetchRowsByColumn<DashboardNotificationRow>("notifications", "user_id", userId);
-    const normalized = rows.map((row) => toNotificationRow(row));
-    if (normalized.length > 0) {
-      writeCachedValue(`notifications:${userId}`, JSON.stringify(normalized));
+  try {
+    if (userId) {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching notifications:", error);
+        return safeJsonParse<DashboardNotificationRow[]>(readCachedValue(`notifications:${userId}`), []);
+      }
+
+      const normalized = (data || []).map((row: DashboardRow) => toNotificationRow(row));
+      if (normalized.length > 0) {
+        writeCachedValue(`notifications:${userId}`, JSON.stringify(normalized));
+      }
       return normalized;
     }
 
-    return safeJsonParse<DashboardNotificationRow[]>(readCachedValue(`notifications:${userId}`), []);
-  }
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-  const notifications = await fetchRows<DashboardNotificationRow>("notifications");
-  const normalized = notifications.map((row) => toNotificationRow(row));
-  if (normalized.length > 0) {
-    writeCachedValue("notifications", JSON.stringify(normalized));
+    if (error) {
+      console.error("Error fetching all notifications:", error);
+      return safeJsonParse<DashboardNotificationRow[]>(readCachedValue("notifications"), []);
+    }
+
+    const normalized = (data || []).map((row: DashboardRow) => toNotificationRow(row));
+    if (normalized.length > 0) {
+      writeCachedValue("notifications", JSON.stringify(normalized));
+    }
     return normalized;
+  } catch (error) {
+    console.error("Unexpected error in fetchNotifications:", error);
+    return [];
   }
-
-  return safeJsonParse<DashboardNotificationRow[]>(readCachedValue("notifications"), []);
 }
 
-export async function markNotificationRead(notificationId: string): Promise<DashboardNotificationRow | null> {
-  const { data, error } = await supabase
-    .from("notifications")
-    .update({ read: true })
-    .eq("id", notificationId)
-    .select("*")
-    .single();
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact" })
+      .eq("user_id", userId)
+      .eq("read", false);
 
-  if (error || !data) {
+    if (error) {
+      console.error("Error getting unread count:", error);
+      return 0;
+    }
+
+    return data?.length ?? 0;
+  } catch (error) {
+    console.error("Unexpected error in getUnreadNotificationCount:", error);
+    return 0;
+  }
+}
+
+export async function markNotificationRead(notificationId: string, userId?: string): Promise<DashboardNotificationRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq("id", notificationId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("Error marking notification as read:", error);
+      return null;
+    }
+
+    // Invalidate cache
+    if (userId) {
+      writeCachedValue(`notifications:${userId}`, "");
+    }
+
+    return toNotificationRow(data as DashboardRow);
+  } catch (error) {
+    console.error("Unexpected error in markNotificationRead:", error);
     return null;
   }
-
-  return toNotificationRow(data as DashboardRow);
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("notifications")
-    .update({ read: true })
-    .eq("user_id", userId)
-    .select("id");
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("read", false)
+      .select("id");
 
-  if (error || !Array.isArray(data)) {
+    if (error || !Array.isArray(data)) {
+      console.error("Error marking all notifications as read:", error);
+      return 0;
+    }
+
+    // Invalidate cache
+    writeCachedValue(`notifications:${userId}`, "");
+
+    return data.length;
+  } catch (error) {
+    console.error("Unexpected error in markAllNotificationsRead:", error);
     return 0;
   }
-
-  return data.length;
 }
 
 export async function createNotification(notification: {
@@ -590,6 +671,149 @@ export async function createNotification(notification: {
   }
 
   return toNotificationRow(data as DashboardRow);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// APPEALS MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface DashboardAppealRow extends DashboardRow {
+  id?: string;
+  landlord_id?: string;
+  report_id?: string | null;
+  violation_id?: string | null;
+  reason?: string;
+  description?: string;
+  supporting_docs?: any[];
+  status?: string;
+  admin_response?: string | null;
+  admin_id?: string | null;
+  submitted_at?: string;
+  reviewed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function createAppeal(appeal: {
+  landlord_id: string;
+  report_id?: string | null;
+  violation_id?: string | null;
+  reason: string;
+  description?: string;
+  supporting_docs?: any[];
+}): Promise<DashboardAppealRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("appeals")
+      .insert({
+        landlord_id: appeal.landlord_id,
+        report_id: appeal.report_id ?? null,
+        violation_id: appeal.violation_id ?? null,
+        reason: appeal.reason,
+        description: appeal.description ?? null,
+        supporting_docs: appeal.supporting_docs ?? [],
+        status: "pending",
+      })
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("Error creating appeal:", error);
+      return null;
+    }
+
+    return data as DashboardAppealRow;
+  } catch (error) {
+    console.error("Unexpected error in createAppeal:", error);
+    return null;
+  }
+}
+
+export async function fetchAppealsByLandlord(landlordId: string): Promise<DashboardAppealRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("appeals")
+      .select("*")
+      .eq("landlord_id", landlordId)
+      .order("submitted_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching appeals:", error);
+      return [];
+    }
+
+    return (data ?? []) as DashboardAppealRow[];
+  } catch (error) {
+    console.error("Unexpected error in fetchAppealsByLandlord:", error);
+    return [];
+  }
+}
+
+export async function fetchPendingAppeals(): Promise<DashboardAppealRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("appeals")
+      .select("*")
+      .eq("status", "pending")
+      .order("submitted_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching pending appeals:", error);
+      return [];
+    }
+
+    return (data ?? []) as DashboardAppealRow[];
+  } catch (error) {
+    console.error("Unexpected error in fetchPendingAppeals:", error);
+    return [];
+  }
+}
+
+export async function updateAppealStatus(
+  appealId: string,
+  status: "pending" | "under_review" | "approved" | "rejected",
+  adminId?: string,
+  adminResponse?: string
+): Promise<DashboardAppealRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("appeals")
+      .update({
+        status,
+        admin_id: adminId ?? null,
+        admin_response: adminResponse ?? null,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", appealId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("Error updating appeal status:", error);
+      return null;
+    }
+
+    return data as DashboardAppealRow;
+  } catch (error) {
+    console.error("Unexpected error in updateAppealStatus:", error);
+    return null;
+  }
+}
+
+export async function deleteAppeal(appealId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("appeals").delete().eq("id", appealId);
+
+    if (error) {
+      console.error("Error deleting appeal:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error in deleteAppeal:", error);
+    return false;
+  }
 }
 
 export async function createAuditLog(auditLog: {
@@ -746,6 +970,17 @@ export async function fetchApartmentFavorites(apartmentId: string): Promise<Dash
   return data.map((row) => toFavoriteRow(row as DashboardRow));
 }
 
+export async function fetchApartmentViews(): Promise<DashboardApartmentViewRow[]> {
+  const views = await fetchRows<DashboardApartmentViewRow>("apartment_views");
+  const normalized = views.map((row) => toApartmentViewRow(row));
+  if (normalized.length > 0) {
+    writeCachedValue("apartment_views", JSON.stringify(normalized));
+    return normalized;
+  }
+
+  return safeJsonParse<DashboardApartmentViewRow[]>(readCachedValue("apartment_views"), []);
+}
+
 export async function getLandlordPropertyStats(landlordId: string): Promise<DashboardPropertyStats> {
   const apartments = await fetchRowsByColumn<DashboardApartmentRow>("apartments", "landlord_id", landlordId);
   const normalizedApartments = apartments.map((row) => toApartmentRow(row));
@@ -841,6 +1076,157 @@ export async function updateReportStatus(
   return normalized;
 }
 
+/**
+ * Notify landlord and reporter when a report is resolved
+ * Creates notifications for both the landlord (apartment owner) and the reporting tenant
+ */
+export async function notifyReportResolved(
+  reportId: string,
+  landlordId: string,
+  reporterId: string,
+  apartmentTitle: string,
+): Promise<void> {
+  try {
+    // Notify landlord
+    await createNotification({
+      user_id: landlordId,
+      type: "report_resolved",
+      title: "Report Resolved",
+      message: `A report for "${apartmentTitle}" has been reviewed and resolved by admin.`,
+      payload: {
+        report_id: reportId,
+        apartment_title: apartmentTitle,
+        action_type: "resolved",
+        resolved_at: new Date().toISOString(),
+      },
+    });
+
+    // Notify reporting tenant
+    await createNotification({
+      user_id: reporterId,
+      type: "report_status_updated",
+      title: "Your Report Has Been Resolved",
+      message: `Your report for "${apartmentTitle}" has been resolved and closed.`,
+      payload: {
+        report_id: reportId,
+        apartment_title: apartmentTitle,
+        status: "resolved",
+        resolved_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("Error notifying report resolution:", err);
+  }
+}
+
+/**
+ * Notify reporter when a report is dismissed
+ * Creates notification for the reporting tenant with dismissal details
+ */
+export async function notifyReportDismissed(
+  reportId: string,
+  reporterId: string,
+  apartmentTitle: string,
+  dismissalReason?: string,
+): Promise<void> {
+  try {
+    // Notify reporting tenant
+    await createNotification({
+      user_id: reporterId,
+      type: "report_dismissed",
+      title: "Your Report Was Dismissed",
+      message: dismissalReason
+        ? `Your report for "${apartmentTitle}" was dismissed. Reason: ${dismissalReason}`
+        : `Your report for "${apartmentTitle}" was dismissed after admin review.`,
+      payload: {
+        report_id: reportId,
+        apartment_title: apartmentTitle,
+        status: "dismissed",
+        reason: dismissalReason || null,
+        dismissed_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("Error notifying report dismissal:", err);
+  }
+}
+
+/**
+ * Fetch complete report details with all relationships
+ * Returns report data along with reporter info, apartment info, and landlord info
+ */
+export async function fetchReportDetails(
+  reportId: string,
+): Promise<DashboardReportRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("reports")
+      .select("*")
+      .eq("id", reportId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return toReportRow(data as DashboardRow);
+  } catch (err) {
+    console.error("Error fetching report details:", err);
+    return null;
+  }
+}
+
+/**
+ * Fetch all necessary information for a report detail view
+ * Includes reporter info, apartment details, and landlord info
+ */
+export async function fetchReportWithDetails(
+  reportId: string,
+): Promise<{
+  report: DashboardReportRow | null;
+  reporter: DashboardUserRow | null;
+  apartment: any | null;
+  landlord: DashboardUserRow | null;
+} | null> {
+  try {
+    const report = await fetchReportDetails(reportId);
+    if (!report) return null;
+
+    const reporter = report.reporter_id
+      ? await fetchUserById(report.reporter_id)
+      : null;
+
+    // Try to fetch apartment details
+    const apartmentId = report.apartment_id || report.apartmentId;
+    let apartment = null;
+    if (apartmentId) {
+      try {
+        const { data: aptData } = await supabase
+          .from("apartments")
+          .select("*")
+          .eq("id", apartmentId)
+          .single();
+        apartment = aptData;
+      } catch {
+        // Apartment might not exist
+      }
+    }
+
+    // Get landlord if apartment exists
+    let landlord = null;
+    if (apartment?.user_id || apartment?.landlord_id) {
+      landlord = await fetchUserById(
+        apartment.user_id || apartment.landlord_id,
+      );
+    }
+
+    return { report, reporter, apartment, landlord };
+  } catch (err) {
+    console.error("Error fetching report with details:", err);
+    return null;
+  }
+}
+
 export async function createReport(report: {
   reporter_id?: string | null;
   reporter_role?: string | null;
@@ -889,4 +1275,237 @@ export async function syncDashboardCache(): Promise<void> {
     fetchApartments(),
     fetchFavorites(),
   ]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// LANDLORD DETAILS & MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface DashboardLandlordProfileRow extends DashboardRow {
+  user_id?: string;
+  permit_number?: string | null;
+  business_permit_number?: string | null;
+  verified_at?: string | null;
+  verification_document_url?: string | null;
+  is_verified?: boolean | null;
+  organization?: string | null;
+  business_name?: string | null;
+  tin_number?: string | null;
+  id_type?: string | null;
+  id_number?: string | null;
+  id_document_url?: string | null;
+  permit_expiry?: string | null;
+  business_type?: string | null;
+  years_active?: number | null;
+  total_units?: number | null;
+  service_areas?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface DashboardLandlordDetailsRow extends DashboardRow {
+  user: DashboardUserRow | null;
+  profile: DashboardLandlordProfileRow | null;
+  properties: DashboardApartmentRow[];
+  violations: DashboardViolationRow[];
+  reports: DashboardReportRow[];
+  propertyStats: {
+    totalProperties: number;
+    publishedProperties: number;
+    totalViews: number;
+    totalFavorites: number;
+    averagePrice: number;
+  };
+}
+
+/**
+ * Fetch landlord profile information from landlord_profiles table
+ */
+export async function fetchLandlordProfile(
+  landlordId: string,
+): Promise<DashboardLandlordProfileRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("landlord_profiles")
+      .select("*")
+      .eq("user_id", landlordId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data as DashboardLandlordProfileRow;
+  } catch (err) {
+    console.error("Error fetching landlord profile:", err);
+    return null;
+  }
+}
+
+/**
+ * Fetch complete landlord details with all relationships
+ * Returns landlord info, profile, properties, violations, reports, and statistics
+ */
+export async function fetchLandlordWithDetails(
+  landlordId: string,
+): Promise<DashboardLandlordDetailsRow | null> {
+  try {
+    // Fetch user info
+    const user = await fetchUserById(landlordId);
+    if (!user) return null;
+
+    // Fetch landlord profile
+    const profile = await fetchLandlordProfile(landlordId);
+
+    // Fetch properties
+    const properties = await fetchRowsByColumn<DashboardApartmentRow>(
+      "apartments",
+      "landlord_id",
+      landlordId,
+    );
+    const normalizedProperties = properties.map((row) => toApartmentRow(row));
+
+    // Fetch violations for this landlord
+    const allViolations = await fetchViolations();
+    const violations = allViolations.filter(
+      (v) => (v.landlord_id ?? v.landlordId) === landlordId,
+    );
+
+    // Fetch reports related to this landlord's apartments
+    const allReports = await fetchAdminReports();
+    const reports = allReports.filter((r) =>
+      normalizedProperties.some((p) => p.id === (r.apartment_id ?? r.apartmentId)),
+    );
+
+    // Calculate property statistics
+    const views = await fetchApartmentViews();
+    const favorites = await fetchApartmentFavorites("");
+    const totalViews = views.filter((v) =>
+      normalizedProperties.some((p) => p.id === (v.apartment_id ?? v.apartmentId)),
+    ).length;
+    const totalFavorites = favorites.filter((f) =>
+      normalizedProperties.some((p) => p.id === (f.apartment_id ?? f.apartmentId)),
+    ).length;
+
+    const averagePrice =
+      normalizedProperties.length > 0
+        ? normalizedProperties.reduce(
+            (sum, p) => sum + getNumberValue(p.price),
+            0,
+          ) / normalizedProperties.length
+        : 0;
+
+    return {
+      user,
+      profile,
+      properties: normalizedProperties,
+      violations,
+      reports,
+      propertyStats: {
+        totalProperties: normalizedProperties.length,
+        publishedProperties: normalizedProperties.filter(
+          (p) => (p.is_published ?? p.isPublished) === true,
+        ).length,
+        totalViews,
+        totalFavorites,
+        averagePrice: Number.isFinite(averagePrice) ? averagePrice : 0,
+      },
+    };
+  } catch (err) {
+    console.error("Error fetching landlord with details:", err);
+    return null;
+  }
+}
+
+/**
+ * Notify landlord when verification status changes
+ */
+export async function notifyLandlordVerification(
+  landlordId: string,
+  verified: boolean,
+  adminId?: string,
+): Promise<void> {
+  try {
+    if (verified) {
+      await createNotification({
+        user_id: landlordId,
+        type: "verification_approved",
+        title: "✅ Account Verified",
+        message:
+          "Congratulations! Your landlord account has been verified by our admin team. You can now list properties with the verified badge.",
+        payload: {
+          action: "verification_approved",
+          verified_at: new Date().toISOString(),
+          admin_id: adminId || null,
+        },
+      });
+    } else {
+      await createNotification({
+        user_id: landlordId,
+        type: "verification_rejected",
+        title: "⚠️ Verification Rejected",
+        message:
+          "Your verification has been rejected. Please review your documents and resubmit for verification.",
+        payload: {
+          action: "verification_rejected",
+          rejected_at: new Date().toISOString(),
+          admin_id: adminId || null,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("Error notifying landlord verification:", err);
+  }
+}
+
+/**
+ * Notify landlord when a violation is issued
+ */
+export async function notifyLandlordViolation(
+  landlordId: string,
+  violationType: string,
+  violationMessage: string,
+  apartmentTitle?: string,
+): Promise<void> {
+  try {
+    await createNotification({
+      user_id: landlordId,
+      type: "violation_issued",
+      title: "⚠️ Violation Issued",
+      message: `A ${violationType} has been issued${apartmentTitle ? ` for "${apartmentTitle}"` : ""}. ${violationMessage}`,
+      payload: {
+        violation_type: violationType,
+        apartment_title: apartmentTitle || null,
+        message: violationMessage,
+        issued_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("Error notifying landlord violation:", err);
+  }
+}
+
+/**
+ * Notify landlord when a notice is sent
+ */
+export async function notifyLandlordNotice(
+  landlordId: string,
+  noticeType: string,
+  noticeMessage: string,
+): Promise<void> {
+  try {
+    await createNotification({
+      user_id: landlordId,
+      type: "notice_issued",
+      title: "📋 Official Notice",
+      message: `${noticeType}: ${noticeMessage}`,
+      payload: {
+        notice_type: noticeType,
+        message: noticeMessage,
+        issued_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("Error notifying landlord notice:", err);
+  }
 }

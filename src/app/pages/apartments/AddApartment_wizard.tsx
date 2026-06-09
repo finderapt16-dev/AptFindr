@@ -691,7 +691,7 @@ export function AddApartment() {
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold">Map Location</Label>
                     <p className="text-xs text-slate-500">Drag the marker to set location</p>
-                    <div className="rounded-2xl border-2 border-amber-200 overflow-hidden bg-white shadow-sm" style={{ height: "500px" }}>
+                    <div className="rounded-2xl border border-amber-100 h-80">
                       <LocationPicker
                         lat={formData.lat ?? 0}
                         lng={formData.lng ?? 0}
@@ -1099,7 +1099,7 @@ export function AddApartment() {
                     Next <ArrowRight className="h-5 w-5" />
                   </Button>
                 ) : (
-                  <Button type="submit" className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl h-12 font-bold">
+                  <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl h-12 font-bold">
                     <Check className="h-5 w-5" /> List Property
                   </Button>
                 )}

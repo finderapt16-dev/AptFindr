@@ -1,9 +1,12 @@
+export type ApartmentStatus = 'available' | 'occupied' | 'reserved' | 'maintenance';
+
 export interface ApartmentRoom {
   id?: string;
   name?: string;
   price?: number;
   sqft?: number;
   maxOccupants?: number;
+  status?: ApartmentStatus;
   isOccupied?: boolean;
   hasPrivateBath?: boolean;
   bathroomType?: string;
@@ -36,6 +39,7 @@ export interface Apartment {
   lng: number;
   landlordId?: string;
   isPublished?: boolean;
+  status?: ApartmentStatus;
   rooms?: ApartmentRoom[];
   location?: string;
   wifi?: boolean;
@@ -75,6 +79,8 @@ export interface ApartmentFormValues {
   lng: string;
   isPublished: boolean;
   landlordId: string;
+  status: ApartmentStatus;
+  rooms?: ApartmentRoom[];
 }
 
 export interface ApartmentImageRow {
@@ -94,6 +100,7 @@ export interface ApartmentRoomRow {
   shared_bath_location?: string | null;
   has_ac?: boolean | null;
   is_occupied?: boolean | null;
+  status?: string | null;
 }
 
 export interface ApartmentRow {
@@ -118,6 +125,7 @@ export interface ApartmentRow {
   lng: number | string | null;
   landlord_id: string | null;
   is_published: boolean | null;
+  status?: string | null;
   features?: Record<string, unknown> | null;
   created_at?: string | null;
   apartment_images?: ApartmentImageRow[] | null;
@@ -144,6 +152,7 @@ export interface ApartmentInsertRow {
   lng: number;
   landlord_id?: string;
   is_published: boolean;
+  status: ApartmentStatus;
   features: Record<string, unknown>;
 }
 
@@ -170,6 +179,7 @@ const EMPTY_FORM_VALUES: ApartmentFormValues = {
   lng: '',
   isPublished: true,
   landlordId: '',
+  status: 'available',
 };
 
 export const apartments: Apartment[] = [];
@@ -199,6 +209,13 @@ const toString = (value: string | null | undefined, fallback = ''): string => {
   }
 
   return fallback;
+};
+
+const toApartmentStatus = (value: string | null | undefined): ApartmentStatus => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return normalized === 'occupied' || normalized === 'reserved' || normalized === 'maintenance'
+    ? normalized
+    : 'available';
 };
 
 export const parseStringList = (value: string[] | string | null | undefined): string[] => {
@@ -277,13 +294,15 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     lng: toNumber(row.lng),
     landlordId: row.landlord_id ?? undefined,
     isPublished: row.is_published ?? undefined,
+    status: toApartmentStatus(row.status),
     rooms: row.apartment_rooms?.map((room) => ({
       id: room.id ?? undefined,
       name: toString(room.room_type),
       price: toNumber(room.rent),
       sqft: toNumber(room.sqft),
       maxOccupants: toNumber(room.max_occupants, 1),
-      isOccupied: toBoolean(room.is_occupied),
+      status: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')),
+      isOccupied: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')) === 'occupied',
       hasPrivateBath: toBoolean(room.has_private_bath),
       bathroomType: toString(room.bathroom_type),
       sharedBathLocation: toString(room.shared_bath_location),
@@ -321,6 +340,8 @@ export const apartmentFormValuesFromApartment = (apartment: Apartment | null | u
     lng: String(apartment.lng),
     isPublished: apartment.isPublished ?? true,
     landlordId: apartment.landlordId ?? '',
+    status: apartment.status ?? 'available',
+    rooms: apartment.rooms ?? [],
   };
 };
 
@@ -365,6 +386,7 @@ export const apartmentFormValuesToInsertRow = (
     lng: toNumber(values.lng),
     landlord_id: resolvedLandlordId,
     is_published: values.isPublished,
+    status: values.status ?? 'available',
     features: {
       availableDate: values.availableDate,
       customFeatures,
@@ -388,13 +410,18 @@ export {
   createApartment,
   updateApartment,
   deleteApartment,
+  updateApartmentPublication,
+  updateApartmentStatus,
   toggleFavorite,
   reportApartment,
+  recordApartmentView,
   resolveAppUserId,
   getLandlordVerification,
   listFavoriteApartments,
   fetchApartmentWithImages,
   insertApartmentImages,
+  replaceApartmentImages,
+  uploadApartmentImage,
   insertApartmentRooms,
   fetchApartmentsForLandlord,
 } from '../services/apartmentsService';

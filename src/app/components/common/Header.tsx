@@ -32,7 +32,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-indigo-100 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-amber-100 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center space-x-2 group">
@@ -44,8 +44,8 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-6">
             <Link
               to="/browse"
-              className={`transition-all duration-300 hover:text-indigo-600 font-medium ${
-                isActive("/browse") ? "text-indigo-600" : "text-slate-600"
+              className={`transition-all duration-300 hover:text-amber-600 font-medium ${
+                isActive("/browse") ? "text-amber-600" : "text-slate-600"
               }`}
             >
               Browse

@@ -29,5 +29,7 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
     lng: String(apartment.lng),
     isPublished: apartment.isPublished ?? true,
     landlordId: apartment.landlordId ?? '',
+    status: apartment.status ?? 'available',
+    rooms: apartment.rooms ?? [],
   };
 }

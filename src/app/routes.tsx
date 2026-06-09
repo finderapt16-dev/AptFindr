@@ -15,6 +15,7 @@ import { Signup } from "./pages/auth/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
 import { NotFound } from "./pages/public/NotFound";
+import { AdminApartmentDetail } from "./pages/admin/AdminApartmentDetail";
 
 export const router = createBrowserRouter([
   // Standalone pages — no Root wrapper (no app Header / Chatbot)
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Landing /> },
       { path: "browse", element: <Home /> },
       { path: "apartment/:id", element: <ApartmentDetail /> },
+      { path: "admin/apartment/:id", element: <ProtectedRoute allowedRoles={["admin"]}><AdminApartmentDetail /></ProtectedRoute> },
       { path: "add-apartment", element: <ProtectedRoute allowedRoles={["landlord"]}><AddApartment /></ProtectedRoute> },
       { path: "favorites", element: <ProtectedRoute><Favorites /></ProtectedRoute> },
       { path: "settings", element: <ProtectedRoute><Settings /></ProtectedRoute> },

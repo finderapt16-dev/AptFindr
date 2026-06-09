@@ -13,7 +13,7 @@ import {
 
 const CURRENT_USER_KEY = 'apartment_finder_current_user';
 const APARTMENT_SELECT =
-  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied)';
+  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status)';
 
 export interface SessionUser {
   id: string;
@@ -381,10 +381,30 @@ export const updateApartment = async (
   const resolvedLandlordId = await resolveAppUserId(landlord);
   const payload: ApartmentInsertRow = apartmentFormValuesToInsertRow(apartment, resolvedLandlordId);
 
-  const { data, error } = await supabase.from('apartments').update(payload).eq('id', id).select('*').single();
+  const { error } = await supabase.from('apartments').update(payload).eq('id', id);
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to update apartment.'));
+  }
+
+  const { error: roomDeleteError } = await supabase.from('apartment_rooms').delete().eq('apartment_id', id);
+
+  if (roomDeleteError) {
+    throw new Error(unwrapErrorMessage(roomDeleteError, 'Unable to update apartment rooms.'));
+  }
+
+  if (apartment.rooms && apartment.rooms.length > 0) {
+    await insertApartmentRooms(id, apartment.rooms);
+  }
+
+  const { data, error: reloadError } = await supabase
+    .from('apartments')
+    .select(APARTMENT_SELECT)
+    .eq('id', id)
+    .single();
+
+  if (reloadError) {
+    throw new Error(unwrapErrorMessage(reloadError, 'Unable to reload updated apartment.'));
   }
 
   return apartmentRowToApartment(data as ApartmentRow);
@@ -395,6 +415,25 @@ export const deleteApartment = async (id: string): Promise<void> => {
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to delete apartment.'));
+  }
+};
+
+export const updateApartmentPublication = async (id: string, isPublished: boolean): Promise<void> => {
+  const { error } = await supabase.from('apartments').update({ is_published: isPublished }).eq('id', id);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to update listing visibility.'));
+  }
+};
+
+export const updateApartmentStatus = async (
+  id: string,
+  status: Apartment['status'] = 'available',
+): Promise<void> => {
+  const { error } = await supabase.from('apartments').update({ status }).eq('id', id);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to update apartment status.'));
   }
 };
 
@@ -581,7 +620,8 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
       bathroom_type: room.hasPrivateBath ? room.bathroomType?.trim() || null : null,
       shared_bath_location: room.hasPrivateBath ? null : room.sharedBathLocation?.trim() || null,
       has_ac: room.hasAC === true,
-      is_occupied: room.isOccupied === true,
+      status: room.status ?? (room.isOccupied ? 'occupied' : 'available'),
+      is_occupied: (room.status ?? (room.isOccupied ? 'occupied' : 'available')) === 'occupied',
     }));
 
   if (payload.length === 0) {
@@ -592,6 +632,56 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to save apartment rooms.'));
+  }
+};
+
+export const uploadApartmentImage = async (
+  apartmentId: string,
+  file: File | Blob,
+  fileName = 'apartment-image.jpg',
+): Promise<string> => {
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const path = `${apartmentId}/${safeName}`;
+
+  const { error } = await supabase.storage
+    .from('apartment-images')
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'image/jpeg',
+    });
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to upload apartment image.'));
+  }
+
+  const { data } = supabase.storage.from('apartment-images').getPublicUrl(path);
+  return data.publicUrl;
+};
+
+export const replaceApartmentImages = async (apartmentId: string, images: string[]): Promise<void> => {
+  const { error } = await supabase.from('apartment_images').delete().eq('apartment_id', apartmentId);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to update apartment images.'));
+  }
+
+  await insertApartmentImages(apartmentId, images);
+};
+
+export const recordApartmentView = async (
+  apartmentId: string,
+  viewer: SessionUser,
+): Promise<void> => {
+  const viewerId = await resolveAppUserId(viewer);
+  const { error } = await supabase.from('apartment_views').insert({
+    apartment_id: apartmentId,
+    viewer_id: viewerId,
+  });
+
+  if (error && error.code !== '42P01') {
+    throw new Error(unwrapErrorMessage(error, 'Unable to record apartment view.'));
   }
 };
 

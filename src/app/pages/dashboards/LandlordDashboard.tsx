@@ -1,8 +1,26 @@
 import { useState, useEffect, type ReactElement } from "react";
-import { fetchApartmentsForLandlord } from "@/app/data/apartments";
+import {
+  deleteApartment as deleteApartmentInDb,
+  fetchApartmentsForLandlord,
+  updateApartmentPublication,
+  updateApartmentStatus,
+  type ApartmentStatus,
+} from "@/app/data/apartments";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { updateUserProfile } from "@/app/services/dashboardSupabaseService";
+import {
+  fetchApartmentViews,
+  fetchFavorites,
+  fetchUsers,
+  updateUserProfile,
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  type DashboardApartmentViewRow,
+  type DashboardFavoriteRow,
+  type DashboardUserRow,
+  type DashboardNotificationRow,
+} from "@/app/services/dashboardSupabaseService";
 import { ApartmentCard } from "@/app/components/common/ApartmentCard";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -14,15 +32,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { toast } from "sonner";
-import {
-  deleteApartment,
-  unpublishApartment,
-  publishApartment,
-  getApartmentViews,
-  getFavoritesForApartment,
-  getViewCountForApartment,
-  getFavoriteCountForApartment,
-} from "@/app/utils/landlordUtils";
 import {
   Building2,
   Eye,
@@ -79,6 +88,16 @@ const NAV_ACCOUNT = [
   { icon: HelpCircle, label: "Help",     section: "help",     isLink: false },
 ];
 
+const STATUS_OPTIONS: { value: ApartmentStatus; label: string; className: string }[] = [
+  { value: "available", label: "Available", className: "bg-green-100 text-green-700 border-green-200" },
+  { value: "occupied", label: "Occupied", className: "bg-red-100 text-red-700 border-red-200" },
+  { value: "reserved", label: "Reserved", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  { value: "maintenance", label: "Under Maintenance", className: "bg-slate-100 text-slate-600 border-slate-200" },
+];
+
+const getStatusOption = (status?: string) =>
+  STATUS_OPTIONS.find((option) => option.value === status) ?? STATUS_OPTIONS[0];
+
 // ── Realistic placeholder names ──────────────────────────────────────────────
 const VIEWER_NAMES = [
   "Maria Santos",   "Juan dela Cruz",   "Ana Reyes",      "Carlo Mendoza",
@@ -109,16 +128,6 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-}
-
-function getViewers(aptId: string, count: number) {
-  const viewers = getApartmentViews(aptId).map((v) => `${v.viewerName} (${v.viewerRole})`);
-  return viewers.slice(0, Math.min(count, viewers.length));
-}
-
-function getFavoriters(aptId: string, count: number) {
-  const favorites = getFavoritesForApartment(aptId);
-  return favorites.map((f) => `${f.name} (${f.role})`).slice(0, Math.min(count, count));
 }
 
 // ── Modal component ──────────────────────────────────────────────────────────
@@ -296,6 +305,12 @@ export function LandlordDashboard() {
     message: "",
     contact: user?.email || "",
   });
+  const [propertyFilter, setPropertyFilter] = useState<"all" | ApartmentStatus>("all");
+  const [favoriteRows, setFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
+  const [viewRows, setViewRows] = useState<DashboardApartmentViewRow[]>([]);
+  const [favoriteUsers, setFavoriteUsers] = useState<DashboardUserRow[]>([]);
+  const [notifications, setNotifications] = useState<DashboardNotificationRow[]>([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const violations: any[] = JSON.parse(localStorage.getItem("adminViolations") || "[]");
   const myViolationsCount = violations.filter((v) => v.landlordId === user?.id).length;
@@ -308,10 +323,26 @@ export function LandlordDashboard() {
   }>({ open: false, type: "views", names: [], aptTitle: "" });
 
   const openViewers = (aptId: string, aptTitle: string, count: number) => {
-    setModal({ open: true, type: "views", names: getViewers(aptId, count), aptTitle });
+    const names = viewRows
+      .filter((view) => (view.apartment_id ?? view.apartmentId) === aptId)
+      .map((view) => {
+        const viewer = favoriteUsers.find((entry) => entry.id === (view.viewer_id ?? view.viewerId));
+        return viewer?.name
+          ? `${viewer.name} (${viewer.role ?? "viewer"})`
+          : view.viewer_id ?? view.viewerId ?? "Viewer";
+      });
+    setModal({ open: true, type: "views", names: names.slice(0, count || names.length), aptTitle });
   };
   const openFavoriters = (aptId: string, aptTitle: string, count: number) => {
-    setModal({ open: true, type: "favorites", names: getFavoriters(aptId, count), aptTitle });
+    const names = favoriteRows
+      .filter((favorite) => (favorite.apartment_id ?? favorite.apartmentId) === aptId)
+      .map((favorite) => {
+        const favoriteUser = favoriteUsers.find((entry) => entry.id === (favorite.user_id ?? favorite.userId));
+        return favoriteUser?.name
+          ? `${favoriteUser.name} (${favoriteUser.role ?? "renter"})`
+          : favorite.user_id ?? favorite.userId ?? "Saved renter";
+      });
+    setModal({ open: true, type: "favorites", names: names.slice(0, count || names.length), aptTitle });
   };
   const closeModal = () => setModal((m) => ({ ...m, open: false }));
 
@@ -371,29 +402,164 @@ export function LandlordDashboard() {
     };
   }, [user?.id, apartmentsRefresh]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadActivityData = async () => {
+      try {
+        const [favorites, views, users] = await Promise.all([fetchFavorites(), fetchApartmentViews(), fetchUsers()]);
+        if (active) {
+          setFavoriteRows(favorites);
+          setViewRows(views);
+          setFavoriteUsers(users);
+        }
+      } catch (error) {
+        console.error("Failed to load landlord activity data:", error);
+        if (active) {
+          setFavoriteRows([]);
+          setViewRows([]);
+          setFavoriteUsers([]);
+        }
+      }
+    };
+
+    void loadActivityData();
+
+    return () => {
+      active = false;
+    };
+  }, [apartmentsRefresh]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadNotifications = async () => {
+      if (!user?.id) {
+        setNotifications([]);
+        setUnreadNotificationCount(0);
+        return;
+      }
+
+      try {
+        const notifs = await fetchNotifications(user.id);
+        if (active) {
+          setNotifications(notifs);
+          const unreadCount = notifs.filter((n) => !n.read).length;
+          setUnreadNotificationCount(unreadCount);
+        }
+      } catch (error) {
+        console.error("Failed to load notifications:", error);
+        if (active) {
+          setNotifications([]);
+          setUnreadNotificationCount(0);
+        }
+      }
+    };
+
+    void loadNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
+  const handleNotificationClick = async (notification: DashboardNotificationRow) => {
+    // Mark as read
+    if (!notification.read && notification.id) {
+      await markNotificationRead(notification.id, user?.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+      );
+      setUnreadNotificationCount((prev) => Math.max(0, prev - 1));
+    }
+
+    // Handle navigation based on notification type
+    const payload = notification.payload as Record<string, any>;
+    switch (notification.type) {
+      case "property_reported":
+        navigate(`/dashboard?section=notifications&report=${payload?.report_id || ""}`);
+        break;
+      case "violation_issued":
+        navigate(`/dashboard?section=notifications&violation=${payload?.violation_id || ""}`);
+        break;
+      case "appeal_status_updated":
+        navigate(`/dashboard?section=notifications&appeal=${payload?.appeal_id || ""}`);
+        break;
+      default:
+        // Generic notification, just show in notifications tab
+        setActiveSection("notifications");
+    }
+  };
+
   const refreshApartments = () => {
     setApartmentsRefresh((prev) => prev + 1);
   };
 
+  const getApartmentStatus = (apartment: any): ApartmentStatus => apartment.status ?? "available";
   const allRooms = myApartments.flatMap((apt: any) => apt.rooms ?? []);
-  const occupiedCount  = allRooms.length > 0
-    ? allRooms.filter((r: any) => r.isOccupied).length
-    : myApartments.filter((apt: any) => new Date(apt.availableDate) > new Date()).length;
-  const availableCount = allRooms.length > 0
-    ? allRooms.filter((r: any) => !r.isOccupied).length
-    : myApartments.length - occupiedCount;
-
-  const totalViews     = myApartments.length * 145;
-  const totalInquiries = myApartments.length * 12;
+  const unitStatuses: ApartmentStatus[] = allRooms.length > 0
+    ? allRooms.map((room: any) => room.status ?? (room.isOccupied ? "occupied" : "available"))
+    : myApartments.map(getApartmentStatus);
+  const availableCount = unitStatuses.filter((status) => status === "available").length;
+  const occupiedCount  = unitStatuses.filter((status) => status === "occupied").length;
+  const reservedCount  = unitStatuses.filter((status) => status === "reserved").length;
+  const totalUnits = unitStatuses.length;
+  const propertyIds = new Set(myApartments.map((apartment) => apartment.id));
+  const landlordFavoriteRows = favoriteRows.filter((favorite) => propertyIds.has(favorite.apartment_id ?? favorite.apartmentId ?? ""));
+  const landlordViewRows = viewRows.filter((view) => propertyIds.has(view.apartment_id ?? view.apartmentId ?? ""));
+  const totalViews     = landlordViewRows.length;
+  const totalInquiries = landlordFavoriteRows.length;
   const occupancyRate  = myApartments.length > 0
-    ? Math.round((occupiedCount / (allRooms.length || myApartments.length)) * 100)
+    ? Math.round((occupiedCount / (totalUnits || myApartments.length)) * 100)
     : 0;
 
   const aptViews = (aptId: string) => {
-    return getViewCountForApartment(aptId);
+    return viewRows.filter((view) => (view.apartment_id ?? view.apartmentId) === aptId).length;
   };
   const aptFavs = (aptId: string) => {
-    return getFavoriteCountForApartment(aptId);
+    return favoriteRows.filter((favorite) => (favorite.apartment_id ?? favorite.apartmentId) === aptId).length;
+  };
+  const filteredApartments = propertyFilter === "all"
+    ? myApartments
+    : myApartments.filter((apartment) => getApartmentStatus(apartment) === propertyFilter);
+
+  const handleTogglePublication = async (apartmentId: string, nextValue: boolean) => {
+    try {
+      await updateApartmentPublication(apartmentId, nextValue);
+      refreshApartments();
+      toast.success(nextValue ? "Listing published" : "Listing unpublished");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update listing.";
+      toast.error(message);
+    }
+  };
+
+  const handleDeleteApartment = async (apartmentId: string) => {
+    if (!window.confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await deleteApartmentInDb(apartmentId);
+      refreshApartments();
+      toast.success("Listing deleted");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete listing.";
+      toast.error(message);
+    }
+  };
+
+  const handleStatusChange = async (apartmentId: string, status: ApartmentStatus) => {
+    try {
+      await updateApartmentStatus(apartmentId, status);
+      setMyApartments((previous) =>
+        previous.map((apartment) => apartment.id === apartmentId ? { ...apartment, status } : apartment),
+      );
+      toast.success("Occupancy status updated");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update occupancy status.";
+      toast.error(message);
+    }
   };
 
   // ── Settings state ───────────────────────────────────────────────────────
@@ -1086,6 +1252,16 @@ export function LandlordDashboard() {
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-xl">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200 shrink-0">
+              <Building2 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-4xl font-black text-slate-900 leading-none">{totalUnits}</p>
+              <p className="text-amber-700 font-black text-xs uppercase tracking-widest mt-0.5">Total Units</p>
+              <p className="text-slate-400 text-xs font-medium">Apartments or rooms</p>
+            </div>
+          </div>
           <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-md shadow-green-200 shrink-0">
               <Home className="h-6 w-6 text-white" />
@@ -1094,16 +1270,6 @@ export function LandlordDashboard() {
               <p className="text-4xl font-black text-slate-900 leading-none">{availableCount}</p>
               <p className="text-green-700 font-black text-xs uppercase tracking-widest mt-0.5">Available</p>
               <p className="text-slate-400 text-xs font-medium">Ready for tenants</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-400 to-sky-500 flex items-center justify-center shadow-md shadow-blue-200 shrink-0">
-              <Calendar className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <p className="text-4xl font-black text-slate-900 leading-none">{occupiedCount}</p>
-              <p className="text-blue-700 font-black text-xs uppercase tracking-widest mt-0.5">Occupied</p>
-              <p className="text-slate-400 text-xs font-medium">Currently rented</p>
             </div>
           </div>
         </div>
@@ -1125,7 +1291,7 @@ export function LandlordDashboard() {
   // ── Section: Properties ──────────────────────────────────────────────────
   const renderProperties = () => (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Building2 className="h-4 w-4 text-amber-600" />
@@ -1133,15 +1299,38 @@ export function LandlordDashboard() {
           </div>
           <h2 className="text-2xl font-black text-slate-900">Your Listings</h2>
         </div>
-        <Link to="/browse">
-          <Button variant="outline" className="rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold gap-1 text-sm">
-            Browse All <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPropertyFilter("all")}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all ${
+              propertyFilter === "all"
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-slate-600 border-amber-100 hover:bg-amber-50"
+            }`}
+          >
+            All Units
+          </button>
+          {STATUS_OPTIONS.slice(0, 1).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setPropertyFilter(option.value)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all ${
+                propertyFilter === option.value
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "bg-white text-slate-600 border-amber-100 hover:bg-amber-50"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
       {myApartments.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {myApartments.map((apartment) => (
+        filteredApartments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filteredApartments.map((apartment) => (
             <div key={apartment.id} className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-amber-400/20 to-orange-400/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               {!apartment.isPublished && (
@@ -1154,20 +1343,34 @@ export function LandlordDashboard() {
               </Badge>
               <ApartmentCard apartment={apartment} />
               <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className={`${getStatusOption(apartment.status).className} border font-black`}>
+                    {getStatusOption(apartment.status).label}
+                  </Badge>
+                  <select
+                    value={apartment.status ?? "available"}
+                    onChange={(e) => void handleStatusChange(apartment.id, e.target.value as ApartmentStatus)}
+                    className="flex-1 h-9 rounded-xl border border-amber-100 bg-white px-3 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => openViewers(apartment.id, apartment.title, getViewCountForApartment(apartment.id))}
+                    onClick={() => openViewers(apartment.id, apartment.title, aptViews(apartment.id))}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-xs transition-all"
                   >
                     <Eye className="h-3.5 w-3.5" />
-                    {getViewCountForApartment(apartment.id)} views
+                    {aptViews(apartment.id)} views
                   </button>
                   <button
-                    onClick={() => openFavoriters(apartment.id, apartment.title, getFavoriteCountForApartment(apartment.id))}
+                    onClick={() => openFavoriters(apartment.id, apartment.title, aptFavs(apartment.id))}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-xs transition-all"
                   >
                     <Heart className="h-3.5 w-3.5" />
-                    {getFavoriteCountForApartment(apartment.id)} saved
+                    {aptFavs(apartment.id)} saved
                   </button>
                   <Link to={`/apartment/${apartment.id}`} className="flex-1">
                     <Button variant="outline" className="w-full rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-sm">
@@ -1178,11 +1381,7 @@ export function LandlordDashboard() {
                 <div className="flex gap-2">
                   {apartment.isPublished ? (
                     <Button
-                      onClick={() => {
-                        unpublishApartment(apartment.id);
-                        refreshApartments();
-                        toast.success("Listing unpublished");
-                      }}
+                      onClick={() => void handleTogglePublication(apartment.id, false)}
                       variant="outline"
                       className="flex-1 rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50 font-bold text-xs"
                     >
@@ -1190,11 +1389,7 @@ export function LandlordDashboard() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => {
-                        publishApartment(apartment.id);
-                        refreshApartments();
-                        toast.success("Listing published");
-                      }}
+                      onClick={() => void handleTogglePublication(apartment.id, true)}
                       variant="outline"
                       className="flex-1 rounded-xl border-green-200 text-green-700 hover:bg-green-50 font-bold text-xs"
                     >
@@ -1202,13 +1397,7 @@ export function LandlordDashboard() {
                     </Button>
                   )}
                   <Button
-                    onClick={() => {
-                      if (window.confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
-                        deleteApartment(apartment.id);
-                        refreshApartments();
-                        toast.success("Listing deleted");
-                      }
-                    }}
+                    onClick={() => void handleDeleteApartment(apartment.id)}
                     variant="outline"
                     className="flex-1 rounded-xl border-red-200 text-red-700 hover:bg-red-50 font-bold text-xs"
                   >
@@ -1217,8 +1406,14 @@ export function LandlordDashboard() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl p-10 shadow-lg text-center">
+            <h3 className="text-xl font-black text-slate-900 mb-1">No Matching Units</h3>
+            <p className="text-slate-500 font-medium text-sm">Try another occupancy filter.</p>
+          </div>
+        )
       ) : (
         <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl p-10 shadow-lg text-center">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mx-auto mb-4">
@@ -1300,10 +1495,26 @@ export function LandlordDashboard() {
             <Bell className="h-4 w-4 text-amber-600" />
             <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest">Notifications</h2>
           </div>
-          {myViolations.length > 0 && (
-            <Badge className="bg-red-500 text-white font-bold">{myViolations.length}</Badge>
+          {unreadNotificationCount > 0 && (
+            <Badge className="bg-red-500 text-white font-bold">{unreadNotificationCount}</Badge>
           )}
         </div>
+
+        {unreadNotificationCount > 0 && (
+          <Button
+            onClick={async () => {
+              if (user?.id) {
+                await markAllNotificationsRead(user.id);
+                setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                setUnreadNotificationCount(0);
+              }
+            }}
+            variant="outline"
+            className="w-full border-amber-200 text-amber-600 hover:bg-amber-50 font-bold text-xs"
+          >
+            Mark All as Read
+          </Button>
+        )}
 
         {myViolations.length > 0 && (
           <div className="bg-white/90 backdrop-blur-xl border-2 border-red-200 rounded-2xl shadow-lg overflow-hidden">
@@ -1315,7 +1526,7 @@ export function LandlordDashboard() {
             </div>
             <div className="divide-y divide-red-50">
               {myViolations.map((violation, i) => (
-                <div key={i} className="flex items-start gap-4 px-5 py-4 bg-red-50/60 hover:bg-red-100/60 transition-colors">
+                <div key={i} className="flex items-start gap-4 px-5 py-4 bg-red-50/60 hover:bg-red-100/60 transition-colors cursor-pointer">
                   <div className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 bg-red-500" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -1337,22 +1548,50 @@ export function LandlordDashboard() {
           </div>
         )}
 
-        <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden divide-y divide-amber-50">
-          {[
-            { title: "New inquiry on your listing", desc: "Someone asked about Modern Loft in La Paz", time: "2 mins ago", unread: true },
-            { title: "Listing approved",            desc: "Your property has been published successfully", time: "1 hour ago", unread: true },
-            { title: "Verification update",         desc: "Your permit is currently under admin review",  time: "Yesterday", unread: true },
-          ].map((notif, i) => (
-            <div key={i} className={`flex items-start gap-4 px-5 py-4 ${notif.unread ? "bg-amber-50/60" : ""}`}>
-              <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${notif.unread ? "bg-orange-500" : "bg-slate-200"}`} />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 text-sm">{notif.title}</p>
-                <p className="text-slate-500 text-xs font-medium mt-0.5">{notif.desc}</p>
+        {notifications.length > 0 ? (
+          <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden divide-y divide-amber-50">
+            {notifications.map((notif, i) => (
+              <div
+                key={notif.id || i}
+                onClick={() => handleNotificationClick(notif)}
+                className={`flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors ${
+                  notif.read ? "" : "bg-amber-50/60 hover:bg-amber-100/60"
+                } hover:bg-amber-50`}
+              >
+                <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? "bg-slate-200" : "bg-orange-500"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-slate-900 text-sm">{notif.title || notif.type}</p>
+                    {!notif.read && <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />}
+                  </div>
+                  <p className="text-slate-600 text-xs font-medium">{notif.message}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-slate-400 text-[10px] font-medium">
+                      {notif.created_at
+                        ? new Date(notif.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
+                    </span>
+                    {!notif.read && (
+                      <Badge className="bg-amber-100 text-amber-700 text-[10px] font-black">Unread</Badge>
+                    )}
+                  </div>
+                </div>
               </div>
-              <span className="text-slate-400 text-xs font-medium shrink-0">{notif.time}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden p-8 text-center">
+            <Bell className="h-8 w-8 text-amber-200 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium text-sm">No notifications yet</p>
+            <p className="text-slate-400 text-xs font-medium mt-1">You're all caught up!</p>
+          </div>
+        )}
       </div>
     );
   };

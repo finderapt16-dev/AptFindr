@@ -4,6 +4,7 @@ import type { Apartment } from "@/app/data/apartments";
 import {
   fetchApartmentWithImages,
   getLandlordVerification,
+  recordApartmentView,
   updateApartment,
 } from "@/app/data/apartments";
 import { createReport } from "@/app/services/dashboardSupabaseService";
@@ -88,6 +89,25 @@ const getRecordNumber = (value: unknown, keys: string[], fallback = 0): number =
   return fallback;
 };
 
+const STATUS_BADGE: Record<string, string> = {
+  available: "bg-green-600 text-white",
+  occupied: "bg-red-600 text-white",
+  reserved: "bg-yellow-500 text-white",
+  maintenance: "bg-slate-500 text-white",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  available: "Available",
+  occupied: "Occupied",
+  reserved: "Reserved",
+  maintenance: "Under Maintenance",
+};
+
+const getRoomStatus = (room: Record<string, unknown>): string => {
+  const raw = typeof room.status === "string" ? room.status : room.isOccupied ? "occupied" : "available";
+  return raw === "occupied" || raw === "reserved" || raw === "maintenance" ? raw : "available";
+};
+
 export function ApartmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -134,6 +154,24 @@ export function ApartmentDetail() {
             setVerifiedLandlord(null);
           }
         }
+
+        if (
+          loaded &&
+          (user?.role === "student" || user?.role === "employee") &&
+          loaded.landlordId !== user.id
+        ) {
+          const viewKey = `apartment-viewed:${loaded.id}:${user.id}`;
+          if (!sessionStorage.getItem(viewKey)) {
+            sessionStorage.setItem(viewKey, "true");
+            void recordApartmentView(loaded.id, {
+              id: user.id,
+              authId: user.authId,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+            });
+          }
+        }
       } catch (error) {
         console.error('Failed to load apartment:', error);
         if (active) {
@@ -151,7 +189,7 @@ export function ApartmentDetail() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, user?.authId, user?.email, user?.id, user?.name, user?.role]);
 
   const hasAccess = (() => {
     if (!apartment) return false;
@@ -340,6 +378,9 @@ export function ApartmentDetail() {
                 {apartment.petFriendly && <Badge variant="secondary">Pet Friendly</Badge>}
                 {apartment.parking && <Badge variant="secondary">Parking</Badge>}
                 {apartment.furnished && <Badge variant="secondary">Furnished</Badge>}
+                <Badge className={STATUS_BADGE[apartment.status ?? "available"]}>
+                  {STATUS_LABEL[apartment.status ?? "available"]}
+                </Badge>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -381,6 +422,15 @@ export function ApartmentDetail() {
                           day: "numeric",
                         })}
                       </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <Home className="h-5 w-5 text-slate-600" />
+                    <div>
+                      <p className="text-sm text-slate-600">Status</p>
+                      <p className="text-lg font-semibold">{STATUS_LABEL[apartment.status ?? "available"]}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -491,11 +541,9 @@ export function ApartmentDetail() {
                                 <h3 className="text-lg font-black text-slate-900">
                                   {getRecordText(room, ["name", "type", "room_type"], "Room")} #{index + 1}
                                 </h3>
-                                {room.isOccupied ? (
-                                  <Badge className="bg-slate-600 text-white">Occupied</Badge>
-                                ) : (
-                                  <Badge className="bg-green-600 text-white">Available</Badge>
-                                )}
+                                <Badge className={STATUS_BADGE[getRoomStatus(room)]}>
+                                  {STATUS_LABEL[getRoomStatus(room)]}
+                                </Badge>
                               </div>
                               <p className="text-2xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mt-1">
                                 PHP {getRecordNumber(room, ["price", "rent"]).toLocaleString("en-US")}/month
