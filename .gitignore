@@ -9,6 +9,9 @@ dist
 build
 .next
 out
+build_output.txt
+*.out.log
+*.err.log
 
 # Development
 .vscode
