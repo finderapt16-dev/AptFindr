@@ -6,6 +6,7 @@ import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
 import { useFavorites } from "@/app/hooks/useFavorites";
 import { createReport, updateUserProfile } from "@/app/services/dashboardSupabaseService";
 import { ApartmentCard } from "@/app/components/common/ApartmentCard";
+import { getStudentRecommendations, getEmployeeRecommendations, getRecommendationExplanation } from "@/app/utils/rankingEngine";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -107,16 +108,33 @@ export function StudentEmployeeDashboard() {
     return allApartments.filter((apt) => apt.isPublished !== false);
   }, [allApartments]);
 
-  const suggestedApartments = publishedApartments
-    .filter((apt) => apt.petFriendly || apt.parking)
-    .sort((a, b) => a.price - b.price)
-    .slice(0, 6);
+  // Personalized recommendations based on user role
+  const suggestedApartments = useMemo(() => {
+    if (user?.role === "student") {
+      return getStudentRecommendations(publishedApartments).slice(0, 6);
+    } else if (user?.role === "employee") {
+      return getEmployeeRecommendations(publishedApartments).slice(0, 6);
+    }
+    return publishedApartments.slice(0, 6);
+  }, [publishedApartments, user?.role]);
 
-  const popularApartments = publishedApartments.filter((apt) => apt.furnished).slice(0, 6);
+  // Popular apartments (most viewed, most favorited, highest engagement)
+  const popularApartments = useMemo(() => {
+    return [...publishedApartments]
+      .sort((a, b) => {
+        const aScore = (a.furnished ? 10 : 0) + (a.parking ? 5 : 0) + (a.wifi ? 3 : 0);
+        const bScore = (b.furnished ? 10 : 0) + (b.parking ? 5 : 0) + (b.wifi ? 3 : 0);
+        return bScore - aScore;
+      })
+      .slice(0, 6);
+  }, [publishedApartments]);
 
-  const recentApartments = publishedApartments
-    .sort((a, b) => new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime())
-    .slice(0, 6);
+  // Recent apartments sorted by availability date
+  const recentApartments = useMemo(() => {
+    return [...publishedApartments]
+      .sort((a, b) => new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime())
+      .slice(0, 6);
+  }, [publishedApartments]);
 
   const favoriteApartments = publishedApartments.filter((apt) => favoriteIds.includes(apt.id));
 

@@ -323,18 +323,43 @@ export function LandlordDashboard() {
   const [notifSearch, setNotifSearch] = useState("");
   const [notifFilter, setNotifFilter] = useState<"all" | "read" | "unread">("all");
 
+  // Loading states for action prevention
+  const [deletingNotifId, setDeletingNotifId] = useState<string | null>(null);
+  const [isDeletingAllNotifs, setIsDeletingAllNotifs] = useState(false);
+  const [deletingApartmentId, setDeletingApartmentId] = useState<string | null>(null);
+  const [updatingApartmentStatusId, setUpdatingApartmentStatusId] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
   const deleteNotif = (notificationId: string) => {
+    if (deletingNotifId === notificationId) {
+      toast.error("Deletion in progress...");
+      return;
+    }
+    setDeletingNotifId(notificationId);
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
     if (user?.id) {
-      void deleteNotification(notificationId, user.id);
+      void deleteNotification(notificationId, user.id).finally(() => {
+        setDeletingNotifId(null);
+      });
+    } else {
+      setDeletingNotifId(null);
     }
   };
 
   const deleteAllNotifs = () => {
+    if (isDeletingAllNotifs) {
+      toast.error("Deletion in progress...");
+      return;
+    }
     if (window.confirm("Are you sure you want to delete all notifications?")) {
+      setIsDeletingAllNotifs(true);
       setNotifications([]);
       if (user?.id) {
-        void deleteAllNotifications(user.id);
+        void deleteAllNotifications(user.id).finally(() => {
+          setIsDeletingAllNotifs(false);
+        });
+      } else {
+        setIsDeletingAllNotifs(false);
       }
     }
   };
@@ -620,10 +645,15 @@ export function LandlordDashboard() {
   };
 
   const handleDeleteApartment = async (apartmentId: string) => {
+    if (deletingApartmentId === apartmentId) {
+      toast.error("Deletion in progress...");
+      return;
+    }
     if (!window.confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
       return;
     }
 
+    setDeletingApartmentId(apartmentId);
     try {
       await deleteApartmentInDb(apartmentId);
       refreshApartments();
@@ -631,10 +661,17 @@ export function LandlordDashboard() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete listing.";
       toast.error(message);
+    } finally {
+      setDeletingApartmentId(null);
     }
   };
 
   const handleStatusChange = async (apartmentId: string, status: ApartmentStatus) => {
+    if (updatingApartmentStatusId === apartmentId) {
+      toast.error("Update in progress...");
+      return;
+    }
+    setUpdatingApartmentStatusId(apartmentId);
     try {
       await updateApartmentStatus(apartmentId, status);
       setMyApartments((previous) =>
@@ -644,6 +681,8 @@ export function LandlordDashboard() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update occupancy status.";
       toast.error(message);
+    } finally {
+      setUpdatingApartmentStatusId(null);
     }
   };
 
@@ -874,6 +913,12 @@ export function LandlordDashboard() {
   };
 
   const handleUpdateProfile = async () => {
+    // Prevent duplicate submissions
+    if (isUpdatingProfile) {
+      toast.error("Please wait for your update to complete...");
+      return;
+    }
+    
     // Validation
     if (!profile.firstName.trim()) {
       toast.error("First name is required");
@@ -904,6 +949,7 @@ export function LandlordDashboard() {
       return;
     }
 
+    setIsUpdatingProfile(true);
     if (user) {
       try {
         const updatedUser = {
@@ -947,6 +993,8 @@ export function LandlordDashboard() {
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to save profile information.";
         toast.error(message);
+      } finally {
+        setIsUpdatingProfile(false);
       }
     }
   };

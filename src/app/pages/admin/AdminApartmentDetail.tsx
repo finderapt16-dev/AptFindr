@@ -1,15 +1,21 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import type { Apartment } from "@/app/data/apartments";
+import type { ReactNode } from "react";
+import type { Apartment, ApartmentRoom } from "@/app/data/apartments";
 import {
-  fetchApartmentWithImages,
   getLandlordVerification,
 } from "@/app/data/apartments";
 import {
+  fetchApartmentInspectionDetails,
+  type ApartmentInspectionDetails,
+} from "@/app/services/apartmentsService";
+import {
   fetchAdminReports,
+  fetchLandlordProfile,
   fetchUserById,
   updateReportStatus,
   createViolation,
+  type DashboardLandlordProfileRow,
   type DashboardReportRow,
   type DashboardUserRow,
 } from "@/app/services/dashboardSupabaseService";
@@ -46,6 +52,10 @@ import {
   Trash2,
   MessageSquare,
   ClipboardList,
+  Image as ImageIcon,
+  FileSearch,
+  Building2,
+  ExternalLink,
 } from "lucide-react";
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
@@ -106,13 +116,63 @@ const getRoomStatus = (room: Record<string, unknown>): string => {
   return raw === "occupied" || raw === "reserved" || raw === "maintenance" ? raw : "available";
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const getText = (record: Record<string, unknown> | null | undefined, keys: string[], fallback = "—"): string => {
+  if (!record) return fallback;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+  }
+  return fallback;
+};
+
+const getStringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const scrollToSection = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <p className="text-xs text-slate-500 font-semibold mb-1">{label}</p>
+      <div className="text-sm font-bold text-slate-900 break-words">{value || "—"}</div>
+    </div>
+  );
+}
+
+function ImageTile({ src, label }: { src: string; label?: string }) {
+  return (
+    <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
+      <div className="aspect-video bg-slate-100">
+        <img src={getImageUrl(src)} alt={label || "Apartment image"} className="h-full w-full object-cover" />
+      </div>
+      {label && <p className="px-3 py-2 text-xs font-bold text-slate-600">{label}</p>}
+    </div>
+  );
+}
+
 export function AdminApartmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [apartment, setApartment] = useState<Apartment | null>(null);
+  const [inspectionDetails, setInspectionDetails] = useState<ApartmentInspectionDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [landlord, setLandlord] = useState<DashboardUserRow | null>(null);
+  const [landlordProfile, setLandlordProfile] = useState<DashboardLandlordProfileRow | null>(null);
   const [verifiedLandlord, setVerifiedLandlord] = useState<{ name?: string } | null>(null);
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -134,8 +194,10 @@ export function AdminApartmentDetail() {
       setIsLoading(true);
 
       try {
-        const loaded = await fetchApartmentWithImages(id);
+        const details = await fetchApartmentInspectionDetails(id);
         if (!active) return;
+        const loaded = details?.apartment ?? null;
+        setInspectionDetails(details);
         setApartment(loaded);
 
         if (loaded?.landlordId) {
@@ -147,6 +209,11 @@ export function AdminApartmentDetail() {
           const isVerified = await getLandlordVerification(loaded.landlordId);
           if (active && isVerified) {
             setVerifiedLandlord({ name: "Verified Landlord" });
+          }
+
+          const profile = await fetchLandlordProfile(loaded.landlordId);
+          if (active) {
+            setLandlordProfile(profile);
           }
         }
 
@@ -194,6 +261,43 @@ export function AdminApartmentDetail() {
     } catch (error) {
       console.error("Error resolving report:", error);
       toast.error("Error resolving report");
+    }
+  };
+
+  const handleRefreshData = async () => {
+    if (!id) return;
+    
+    try {
+      setIsLoading(true);
+      const details = await fetchApartmentInspectionDetails(id);
+      if (details?.apartment) {
+        setInspectionDetails(details);
+        setApartment(details.apartment);
+        
+        if (details.apartment?.landlordId) {
+          const landlordData = await fetchUserById(details.apartment.landlordId);
+          if (landlordData) setLandlord(landlordData);
+          
+          const isVerified = await getLandlordVerification(details.apartment.landlordId);
+          if (isVerified) setVerifiedLandlord({ name: "Verified Landlord" });
+          
+          const profile = await fetchLandlordProfile(details.apartment.landlordId);
+          if (profile) setLandlordProfile(profile);
+        }
+        
+        const allReports = await fetchAdminReports();
+        if (allReports) {
+          const apartmentReports = allReports.filter((r) => r.apartment_id === id || r.apartmentId === id);
+          setReports(apartmentReports);
+        }
+        
+        toast.success("Data refreshed successfully");
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -257,7 +361,39 @@ export function AdminApartmentDetail() {
     );
   }
 
-  const images = [apartment.image, ...apartment.images].filter(Boolean);
+  const rawApartment = inspectionDetails?.rawApartment ?? null;
+  const rawFeatures = isRecord(rawApartment?.features) ? rawApartment.features : {};
+  const imageRows = inspectionDetails?.images ?? [];
+  const roomRows = inspectionDetails?.rooms ?? [];
+  const images = Array.from(
+    new Set(
+      [
+        ...imageRows
+          .slice()
+          .sort((left: Record<string, unknown>, right: Record<string, unknown>) => {
+            const leftPrimary = left.is_primary === true ? 1 : 0;
+            const rightPrimary = right.is_primary === true ? 1 : 0;
+            if (leftPrimary !== rightPrimary) return rightPrimary - leftPrimary;
+            return getRecordNumber(left, ["sort_order"]) - getRecordNumber(right, ["sort_order"]);
+          })
+          .map((image: Record<string, unknown>) => getText(image, ["url"], "")),
+        apartment.image,
+        ...apartment.images,
+      ].filter(Boolean),
+    ),
+  );
+  const coverImage = images[0] || apartment.image;
+  const roomsForDisplay = roomRows.length > 0 ? roomRows : (apartment.rooms ?? []).map((room: ApartmentRoom) => room as Record<string, unknown>);
+  const availableRoomCount = roomsForDisplay.filter((room: Record<string, unknown>) => getRoomStatus(room) === "available").length;
+  const customFeatures = getStringList(rawFeatures.customFeatures ?? apartment.features);
+  const verificationData = isRecord(rawFeatures.verification) ? rawFeatures.verification : {};
+  const propertyType = getText(rawFeatures, ["propertyType", "property_type", "type"], apartment.propertyType || "—");
+  const barangay = getText(rawFeatures, ["barangay", "district", "area"], "—");
+  const datePosted = getText(rawApartment, ["created_at", "createdAt"], apartment.createdAt || apartment.availableDate);
+  const documentLinks = [
+    { label: "Verification Document", url: landlordProfile?.verification_document_url },
+    { label: "ID Document", url: landlordProfile?.id_document_url },
+  ].filter((item): item is { label: string; url: string } => typeof item.url === "string" && item.url.trim().length > 0);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -268,11 +404,26 @@ export function AdminApartmentDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Admin
           </Button>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-purple-600">Admin View</Badge>
-            <Badge className={STATUS_BADGE[apartment.status ?? "available"]}>
-              {STATUS_LABEL[apartment.status ?? "available"]}
-            </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleRefreshData}
+              disabled={isLoading}
+              variant="outline"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              {isLoading ? (
+                <span className="animate-spin">⟳</span>
+              ) : (
+                <span>↻</span>
+              )}
+              {isLoading ? "Syncing..." : "Refresh"}
+            </Button>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-purple-600">Admin View</Badge>
+              <Badge className={STATUS_BADGE[apartment.status ?? "available"]}>
+                {STATUS_LABEL[apartment.status ?? "available"]}
+              </Badge>
+            </div>
           </div>
         </div>
 
@@ -280,13 +431,17 @@ export function AdminApartmentDetail() {
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
             {/* Image Gallery */}
-            <Card className="border-2 border-slate-200">
+            <Card id="admin-images" className="border-2 border-slate-200 scroll-mt-6">
               <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl">
                 <img
-                  src={getImageUrl(images[currentImageIndex])}
+                  src={getImageUrl(images[currentImageIndex] || coverImage)}
                   alt={apartment.title}
                   className="h-full w-full object-cover"
                 />
+                <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                  <Badge className="bg-black/70 text-white">Main Cover Photo</Badge>
+                  <Badge className="bg-black/70 text-white">{images.length} uploaded image(s)</Badge>
+                </div>
               </div>
               <CardContent className="pt-4">
                 {images.length > 1 && (
@@ -308,6 +463,27 @@ export function AdminApartmentDetail() {
                     ))}
                   </div>
                 )}
+                {imageRows.length > 0 && (
+                  <div className="mt-4">
+                    <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-amber-600" />
+                      All Property Images
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {imageRows.map((image: Record<string, unknown>, index: number) => {
+                        const url = getText(image, ["url"], "");
+                        if (!url) return null;
+                        return (
+                          <ImageTile
+                            key={`${url}-${index}`}
+                            src={url}
+                            label={`${image.is_primary ? "Cover Photo" : "Additional Image"}${getText(image, ["caption"], "") ? ` - ${getText(image, ["caption"], "")}` : ""}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -318,6 +494,18 @@ export function AdminApartmentDetail() {
                 <div className="flex items-center text-slate-600 mb-4">
                   <MapPin className="h-5 w-5 mr-2" />
                   <span>{apartment.address}, {apartment.city}, {apartment.state} {apartment.zip}</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                  <DetailRow label="Property Name" value={apartment.title} />
+                  <DetailRow label="Property Type" value={propertyType} />
+                  <DetailRow label="Property Description" value={apartment.description} />
+                  <DetailRow label="Complete Address" value={`${apartment.address}, ${apartment.city}, ${apartment.state} ${apartment.zip}`} />
+                  <DetailRow label="Monthly Rent" value={`₱${apartment.price.toLocaleString()}`} />
+                  <DetailRow label="Available Rooms" value={availableRoomCount} />
+                  <DetailRow label="Total Rooms" value={roomsForDisplay.length || apartment.bedrooms} />
+                  <DetailRow label="Property Status" value={STATUS_LABEL[apartment.status ?? "available"]} />
+                  <DetailRow label="Date Posted" value={datePosted ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"} />
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -390,11 +578,35 @@ export function AdminApartmentDetail() {
                   </CardContent>
                 </Card>
               )}
+              {(customFeatures.length > 0 || Object.keys(verificationData).length > 0) && (
+                <Card className="border-2 border-slate-200">
+                  <CardContent className="pt-6">
+                    <h2 className="text-lg font-bold text-slate-900 mb-3">Property Features</h2>
+                    {customFeatures.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {customFeatures.map((feature, index) => (
+                          <Badge key={`${feature}-${index}`} variant="outline">
+                            {feature}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {Object.keys(verificationData).length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <DetailRow label="Submitted Property Name" value={getText(verificationData, ["propertyName"])} />
+                        <DetailRow label="Submitted Property Address" value={getText(verificationData, ["propertyAddress"])} />
+                        <DetailRow label="Submitted Business Permit" value={getText(verificationData, ["businessPermit"])} />
+                        <DetailRow label="Submitted TIN" value={getText(verificationData, ["tinNumber"])} />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Room Details */}
-            {apartment.rooms && apartment.rooms.length > 0 && (
-              <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50">
+            {roomsForDisplay.length > 0 && (
+              <Card id="admin-rooms" className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50 scroll-mt-6">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
@@ -402,16 +614,16 @@ export function AdminApartmentDetail() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Room Details</h2>
-                      <p className="text-sm text-slate-600 font-medium">{apartment.rooms.length} rooms available</p>
+                      <p className="text-sm text-slate-600 font-medium">{roomsForDisplay.length} submitted room(s)</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    {apartment.rooms.map((room: any, index: number) => (
+                    {roomsForDisplay.map((room: Record<string, unknown>, index: number) => (
                       <div
-                        key={room.id || index}
+                        key={getText(room, ["id"], `room-${index}`)}
                         className={`p-5 rounded-2xl border-2 ${
-                          room.isOccupied
+                          getRoomStatus(room) === "occupied"
                             ? "bg-slate-100 border-slate-300"
                             : "bg-white border-blue-200 shadow-sm"
                         }`}
@@ -419,8 +631,11 @@ export function AdminApartmentDetail() {
                         <div className="flex items-start justify-between mb-4">
                           <div>
                             <h3 className="text-lg font-bold text-slate-900">
-                              {getRecordText(room, ["name", "type", "room_type"], "Room")} #{index + 1}
+                              {getText(room, ["room_name", "name"], `Room ${index + 1}`)}
                             </h3>
+                            <p className="text-xs font-semibold text-slate-500 mt-1">
+                              {getText(room, ["room_type", "type"], "Room type not specified")}
+                            </p>
                             <p className="text-xl font-bold text-amber-600 mt-1">
                               ₱{getRecordNumber(room, ["price", "rent"]).toLocaleString()}/month
                             </p>
@@ -441,13 +656,31 @@ export function AdminApartmentDetail() {
                           </div>
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <p className="text-xs text-slate-500 font-semibold mb-1">Bathroom</p>
-                            <p className="text-sm font-bold text-slate-900">{room.hasPrivateBath ? "Private" : "Shared"}</p>
+                            <p className="text-sm font-bold text-slate-900">
+                              {room.has_private_bath === true || room.hasPrivateBath === true
+                                ? `Private${getText(room, ["bathroom_type"], "") ? ` - ${getText(room, ["bathroom_type"], "")}` : ""}`
+                                : `Shared${getText(room, ["shared_bath_location"], "") ? ` - ${getText(room, ["shared_bath_location"], "")}` : ""}`}
+                            </p>
                           </div>
                           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <p className="text-xs text-slate-500 font-semibold mb-1">AC</p>
-                            <p className="text-sm font-bold text-slate-900">{room.hasAC ? "Yes" : "No"}</p>
+                            <p className="text-sm font-bold text-slate-900">{room.has_ac === true || room.hasAC === true ? "Yes" : "No"}</p>
                           </div>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                          <DetailRow label="Room Availability Status" value={STATUS_LABEL[getRoomStatus(room)]} />
+                          <DetailRow label="Room Description" value={getText(room, ["description", "room_description"], "No room description submitted")} />
+                        </div>
+                        {getStringList(room.images ?? room.image_url ?? room.imageUrl).length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm font-bold text-slate-900 mb-2">Room Images</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {getStringList(room.images ?? room.image_url ?? room.imageUrl).map((src, imageIndex) => (
+                                <ImageTile key={`${src}-${imageIndex}`} src={src} label={`${getText(room, ["room_name", "name"], `Room ${index + 1}`)} image ${imageIndex + 1}`} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -455,11 +688,23 @@ export function AdminApartmentDetail() {
               </Card>
             )}
 
-            {/* Location Map */}
+            {/* Location Details */}
             <Card className="border-2 border-slate-200">
               <CardContent className="pt-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Location</h2>
-                <div className="h-[400px] w-full rounded-lg overflow-hidden">
+                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-amber-600" />
+                  Location Details
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                  <DetailRow label="Complete Address" value={`${apartment.address}, ${apartment.city}, ${apartment.state} ${apartment.zip}`} />
+                  <DetailRow label="Barangay / District" value={barangay} />
+                  <DetailRow label="City" value={apartment.city || "—"} />
+                  <DetailRow label="ZIP Code" value={apartment.zip || "—"} />
+                  <DetailRow label="Latitude" value={apartment.lat ? apartment.lat.toFixed(6) : "—"} />
+                  <DetailRow label="Longitude" value={apartment.lng ? apartment.lng.toFixed(6) : "—"} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-3">Map Location</h3>
+                <div className="h-[400px] w-full rounded-lg overflow-hidden border border-slate-200">
                   <MapView
                     lat={apartment.lat}
                     lng={apartment.lng}
@@ -469,6 +714,53 @@ export function AdminApartmentDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Verification Documents */}
+            {documentLinks.length > 0 && (
+              <Card id="admin-verification" className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-slate-50 scroll-mt-6">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                      <FileSearch className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Verification Documents</h2>
+                      <p className="text-sm text-slate-600 font-medium">Landlord's verification & identity documents</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {documentLinks.map((doc, index) => (
+                      <div key={index} className="p-4 bg-white rounded-lg border border-green-200 hover:border-green-400 transition-all">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="font-bold text-slate-900">{doc.label}</h3>
+                          <ExternalLink className="h-4 w-4 text-green-600" />
+                        </div>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block"
+                        >
+                          <img
+                            src={getImageUrl(doc.url)}
+                            alt={doc.label}
+                            className="w-full h-48 object-cover rounded-lg border border-slate-200 hover:opacity-90 transition-opacity cursor-pointer"
+                          />
+                        </a>
+                        <Button
+                          onClick={() => window.open(doc.url, '_blank')}
+                          className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          View Full Document
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Reports Section */}
             {reports.length > 0 && (
@@ -499,7 +791,7 @@ export function AdminApartmentDetail() {
                           <div className="flex-1">
                             <h3 className="font-bold text-slate-900">{report.issue_type || "Report"}</h3>
                             <p className="text-sm text-slate-600 mt-1 line-clamp-2">{getRecordText(report, ["details", "reason"], "—")}</p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 flex-wrap">
                               <span>{report.reporter_name || "Unknown"}</span>
                               <span>•</span>
                               <span>
@@ -507,6 +799,14 @@ export function AdminApartmentDetail() {
                                   ? new Date(report.submitted_at).toLocaleDateString("en-PH")
                                   : "—"}
                               </span>
+                              {report.severity && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-semibold">
+                                    {report.severity === "high" ? "🔴" : report.severity === "med" ? "🟡" : "🟢"} {report.severity.toUpperCase()}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                           <Badge
@@ -533,9 +833,12 @@ export function AdminApartmentDetail() {
           <div className="lg:col-span-1 space-y-6">
             {/* Landlord Info */}
             {landlord && (
-              <Card className="border-2 border-slate-200 sticky top-20">
+              <Card className="border-2 border-slate-200">
                 <CardContent className="pt-6">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4">Landlord Information</h2>
+                  <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-amber-600" />
+                    Landlord Information
+                  </h2>
 
                   <div className="space-y-3">
                     <div>
@@ -578,13 +881,71 @@ export function AdminApartmentDetail() {
                       </div>
                     )}
 
-                    <Button
-                      onClick={() => navigate(`/admin/landlords/${landlord.id}`)}
-                      className="w-full mt-3 bg-slate-600 hover:bg-slate-700 text-white"
-                    >
-                      <UserCheck className="h-4 w-4 mr-2" />
-                      View Profile
-                    </Button>
+                    {landlordProfile && (
+                      <>
+                        {landlordProfile.business_permit_number && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">Business Permit</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.business_permit_number}</p>
+                          </div>
+                        )}
+
+                        {landlordProfile.tin_number && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">TIN Number</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.tin_number}</p>
+                          </div>
+                        )}
+
+                        {landlordProfile.business_name && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">Business Name</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.business_name}</p>
+                          </div>
+                        )}
+
+                        {landlordProfile.id_number && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">ID Number</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.id_number}</p>
+                          </div>
+                        )}
+
+                        {landlordProfile.years_active && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">Years Active</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.years_active} year(s)</p>
+                          </div>
+                        )}
+
+                        {landlordProfile.total_units && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-semibold mb-1">Total Units</p>
+                            <p className="font-bold text-slate-900">{landlordProfile.total_units}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => navigate(`/admin/landlords/${landlord.id}`)}
+                        className="flex-1 bg-slate-600 hover:bg-slate-700 text-white text-xs"
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        View Profile
+                      </Button>
+                      {documentLinks.length > 0 && (
+                        <Button
+                          onClick={() => scrollToSection('admin-verification')}
+                          variant="outline"
+                          className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 text-xs"
+                        >
+                          <FileSearch className="h-4 w-4 mr-1" />
+                          Documents
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -598,7 +959,7 @@ export function AdminApartmentDetail() {
                 <div className="space-y-3">
                   <Button
                     onClick={() => navigate(`/admin/apartments/${apartment.id}/edit`)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start text-xs"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Listing Details
@@ -606,62 +967,64 @@ export function AdminApartmentDetail() {
 
                   {selectedReport && (
                     <>
-                      <Button
-                        onClick={() => setModerationMode(moderationMode === "view" ? "takeAction" : "view")}
-                        className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start"
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-2" />
-                        {moderationMode === "view" ? "Take Action" : "Cancel"}
-                      </Button>
+                      <div className="border-t border-amber-300 pt-3">
+                        <Button
+                          onClick={() => setModerationMode(moderationMode === "view" ? "takeAction" : "view")}
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start text-xs"
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          {moderationMode === "view" ? "Take Action" : "Cancel"}
+                        </Button>
 
-                      {moderationMode === "takeAction" && (
-                        <>
-                          <Button
-                            onClick={() => handleResolveReport(selectedReport.id)}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white justify-start"
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Resolve Report
-                          </Button>
-
-                          <div className="border-t border-amber-300 pt-3">
-                            <p className="text-xs font-bold text-slate-900 mb-2">Issue Violation</p>
-                            <select
-                              value={violationType}
-                              onChange={(e) => setViolationType(e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2"
-                            >
-                              <option>Misleading information</option>
-                              <option>Policy violation</option>
-                              <option>Fraudulent listing</option>
-                              <option>Safety concern</option>
-                              <option>Permit non-compliance</option>
-                            </select>
-
-                            <textarea
-                              value={violationMessage}
-                              onChange={(e) => setViolationMessage(e.target.value)}
-                              placeholder="Enter violation details..."
-                              rows={4}
-                              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2 resize-none"
-                            />
-
+                        {moderationMode === "takeAction" && (
+                          <>
                             <Button
-                              onClick={handleCreateViolation}
-                              className="w-full bg-red-600 hover:bg-red-700 text-white justify-start"
+                              onClick={() => handleResolveReport(selectedReport.id)}
+                              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white justify-start text-xs"
                             >
-                              <Lock className="h-4 w-4 mr-2" />
-                              Issue Violation
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Resolve Report
                             </Button>
-                          </div>
-                        </>
-                      )}
+
+                            <div className="border-t border-amber-300 pt-3 mt-3">
+                              <p className="text-xs font-bold text-slate-900 mb-2">Issue Violation</p>
+                              <select
+                                value={violationType}
+                                onChange={(e) => setViolationType(e.target.value)}
+                                className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2"
+                              >
+                                <option>Misleading information</option>
+                                <option>Policy violation</option>
+                                <option>Fraudulent listing</option>
+                                <option>Safety concern</option>
+                                <option>Permit non-compliance</option>
+                              </select>
+
+                              <textarea
+                                value={violationMessage}
+                                onChange={(e) => setViolationMessage(e.target.value)}
+                                placeholder="Enter violation details..."
+                                rows={4}
+                                className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2 resize-none"
+                              />
+
+                              <Button
+                                onClick={handleCreateViolation}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white justify-start text-xs"
+                              >
+                                <Lock className="h-4 w-4 mr-2" />
+                                Issue Violation
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </>
                   )}
 
                   <Button
                     variant="outline"
-                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start"
+                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Send Message to Landlord
@@ -669,11 +1032,27 @@ export function AdminApartmentDetail() {
 
                   <Button
                     variant="outline"
-                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start"
+                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
                   >
                     <ClipboardList className="h-4 w-4 mr-2" />
                     View Change Log
                   </Button>
+
+                  {reports.length > 0 && (
+                    <div className="border-t border-amber-300 pt-3">
+                      <p className="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <Flag className="h-4 w-4 text-red-600" />
+                        Reports: {reports.length}
+                      </p>
+                      {!selectedReport ? (
+                        <p className="text-xs text-slate-600">Click a report in the section below to inspect and take action</p>
+                      ) : (
+                        <p className="text-xs text-amber-700 bg-amber-100 p-2 rounded border border-amber-200">
+                          Report selected. Use buttons above to take action or resolve.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -722,7 +1101,7 @@ export function AdminApartmentDetail() {
           <Card className="mt-6 border-2 border-red-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Report Details</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Report Investigation Details</h2>
                 <Button variant="ghost" onClick={() => setSelectedReport(null)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -784,19 +1163,38 @@ export function AdminApartmentDetail() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Report Details</h3>
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Report Details & Inspection</h3>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 mb-4">
                     <p className="text-sm text-slate-700 leading-relaxed">
                       {getRecordText(selectedReport, ["details", "reason"], "No details provided")}
                     </p>
                   </div>
 
                   {selectedReport.contact && (
-                    <div className="mt-3">
+                    <div className="mb-4">
                       <p className="text-xs text-slate-500 font-semibold mb-1">Reporter Contact</p>
                       <p className="font-bold text-slate-900">{selectedReport.contact}</p>
                     </div>
                   )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        if (id) navigate(`/admin/apartments/${id}`);
+                      }}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Building2 className="h-4 w-4 mr-2" />
+                      View Reported Apartment
+                    </Button>
+                    <Button
+                      onClick={() => navigate(`/admin/landlords/${apartment?.landlordId}`)}
+                      className="flex-1 bg-slate-600 hover:bg-slate-700 text-white"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      View Landlord
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

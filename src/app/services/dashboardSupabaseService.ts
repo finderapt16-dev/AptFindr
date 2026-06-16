@@ -540,6 +540,7 @@ export async function fetchNotifications(userId?: string): Promise<DashboardNoti
         .from("notifications")
         .select("*")
         .eq("user_id", userId)
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -557,6 +558,7 @@ export async function fetchNotifications(userId?: string): Promise<DashboardNoti
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("is_deleted", false)
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -582,7 +584,8 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
       .from("notifications")
       .select("id", { count: "exact" })
       .eq("user_id", userId)
-      .eq("read", false);
+      .eq("read", false)
+      .eq("is_deleted", false);
 
     if (error) {
       console.error("Error getting unread count:", error);
@@ -602,6 +605,7 @@ export async function markNotificationRead(notificationId: string, userId?: stri
       .from("notifications")
       .update({ read: true, read_at: new Date().toISOString() })
       .eq("id", notificationId)
+      .eq("is_deleted", false)
       .select("*")
       .single();
 
@@ -610,10 +614,11 @@ export async function markNotificationRead(notificationId: string, userId?: stri
       return null;
     }
 
-    // Invalidate cache
+    // Invalidate all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
     }
+    writeCachedValue("notifications", "");
 
     return toNotificationRow(data as DashboardRow);
   } catch (error) {
@@ -629,6 +634,7 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
       .update({ read: true, read_at: new Date().toISOString() })
       .eq("user_id", userId)
       .eq("read", false)
+      .eq("is_deleted", false)
       .select("id");
 
     if (error || !Array.isArray(data)) {
@@ -636,8 +642,9 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
       return 0;
     }
 
-    // Invalidate cache
+    // Invalidate all notification caches for this user
     writeCachedValue(`notifications:${userId}`, "");
+    writeCachedValue("notifications", "");
 
     return data.length;
   } catch (error) {
@@ -652,6 +659,7 @@ export async function markNotificationUnread(notificationId: string, userId?: st
       .from("notifications")
       .update({ read: false })
       .eq("id", notificationId)
+      .eq("is_deleted", false)
       .select("*")
       .single();
 
@@ -660,9 +668,11 @@ export async function markNotificationUnread(notificationId: string, userId?: st
       return null;
     }
 
+    // Invalidate all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
     }
+    writeCachedValue("notifications", "");
 
     return toNotificationRow(data as DashboardRow);
   } catch (error) {
@@ -675,7 +685,10 @@ export async function deleteNotification(notificationId: string, userId?: string
   try {
     const { error } = await supabase
       .from("notifications")
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString()
+      })
       .eq("id", notificationId);
 
     if (error) {
@@ -683,9 +696,11 @@ export async function deleteNotification(notificationId: string, userId?: string
       return false;
     }
 
+    // Clear all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
     }
+    writeCachedValue("notifications", "");
 
     return true;
   } catch (error) {
@@ -698,8 +713,12 @@ export async function deleteAllNotifications(userId: string): Promise<number> {
   try {
     const { data, error } = await supabase
       .from("notifications")
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString()
+      })
       .eq("user_id", userId)
+      .eq("is_deleted", false)
       .select("id");
 
     if (error || !Array.isArray(data)) {
@@ -707,7 +726,9 @@ export async function deleteAllNotifications(userId: string): Promise<number> {
       return 0;
     }
 
+    // Clear all notification caches
     writeCachedValue(`notifications:${userId}`, "");
+    writeCachedValue("notifications", "");
 
     return data.length;
   } catch (error) {

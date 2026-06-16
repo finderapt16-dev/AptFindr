@@ -1,17 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useInView, AnimatePresence } from "motion/react";
 import { Button } from "@/app/components/ui/button";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import {
   Search,
   Heart,
-  Map,
-  Home,
+  MapPin,
   CheckCircle2,
   Menu,
   Sparkles,
-  Zap,
   UserCheck,
   Building2,
   GraduationCap,
@@ -19,11 +17,33 @@ import {
   UserCog,
   ShieldCheck,
   Flag,
-  Smartphone,
+  Zap,
   Database,
+  Smartphone,
   ClipboardCheck,
   BarChart3,
   Bot,
+  Map,
+  ChevronDown,
+  Star,
+  ArrowRight,
+  BedDouble,
+  DollarSign,
+  CalendarCheck,
+  Users,
+  Phone,
+  Mail,
+  ExternalLink,
+  TrendingUp,
+  BadgeCheck,
+  MessageSquare,
+  FileCheck,
+  Eye,
+  Filter,
+  SlidersHorizontal,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Sheet,
@@ -36,100 +56,182 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { LandingListingsSection } from "@/app/components/landing/LandingApartmentPreview";
 import { AppLogo } from "@/app/components/common/AppLogo";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0 },
-};
+/* ─── Animation helpers ──────────────────────────────────── */
+const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0 } };
+const fadeIn = { hidden: { opacity: 0 }, show: { opacity: 1 } };
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 
-const stagger = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.1,
-    },
+function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.15 });
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: 0, y: 32 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ─── Hero images ───────────────────────────────────────── */
+const heroImages = [
+  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600",
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600",
+];
+
+/* ─── Barangay data ─────────────────────────────────────── */
+const barangays = [
+  { name: "Divinagracia", count: "12+ units", emoji: "🏘️" },
+  { name: "Benedicto", count: "8+ units", emoji: "🏢" },
+  { name: "Sto. Rosario", count: "15+ units", emoji: "🏠" },
+  { name: "Rizal", count: "10+ units", emoji: "🏗️" },
+  { name: "Baldoza", count: "6+ units", emoji: "🏡" },
+  { name: "Pale Benedicto", count: "9+ units", emoji: "🏬" },
+];
+
+/* ─── Categories ────────────────────────────────────────── */
+const categories = [
+  { icon: Building2, label: "Apartments", color: "from-amber-400 to-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+  { icon: GraduationCap, label: "Student Housing", color: "from-rose-400 to-rose-600", bg: "bg-rose-50", border: "border-rose-200" },
+  { icon: Users, label: "Family Units", color: "from-pink-400 to-pink-600", bg: "bg-pink-50", border: "border-pink-200" },
+  { icon: Briefcase, label: "Professional Housing", color: "from-orange-400 to-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+  { icon: BedDouble, label: "Furnished Units", color: "from-amber-500 to-rose-500", bg: "bg-amber-50", border: "border-amber-200" },
+];
+
+/* ─── Community users ───────────────────────────────────── */
+const communityCards = [
+  {
+    role: "Student",
+    icon: GraduationCap,
+    name: "College student near CPU",
+    quote: "Found a verified, affordable boarding house within walking distance from my university without having to do multiple walk-ins.",
+    color: "border-amber-200",
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-700",
   },
-};
+  {
+    role: "Working Professional",
+    icon: Briefcase,
+    name: "Office worker in La Paz",
+    quote: "I needed something close to work with a verified permit. The map view made it easy to compare apartments near my office.",
+    color: "border-orange-200",
+    iconBg: "bg-orange-100",
+    iconColor: "text-orange-700",
+  },
+  {
+    role: "Family",
+    icon: Users,
+    name: "Young family relocating",
+    quote: "The ranking feature helped us filter by number of rooms and budget. We found a safe, family-friendly unit faster than expected.",
+    color: "border-rose-200",
+    iconBg: "bg-rose-100",
+    iconColor: "text-rose-700",
+  },
+];
 
 export function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [landingSearch, setLandingSearch] = useState("");
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [budget, setBudget] = useState("");
+  const [roomType, setRoomType] = useState("");
+  const [rooms, setRooms] = useState("");
+  const [availability, setAvailability] = useState("");
+  const [scrolled, setScrolled] = useState(false);
 
-  const dashboardPath =
-    user?.role === "admin" ? "/admin" : user?.role === "landlord" ? "/dashboard" : "/dashboard";
+  useEffect(() => {
+    const timer = setInterval(() => setHeroIndex((i) => (i + 1) % heroImages.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const dashboardPath = user?.role === "admin" ? "/admin" : "/dashboard";
 
   const handleProtectedAction = (e: React.MouseEvent, path: string) => {
-    if (!user) {
-      e.preventDefault();
-      navigate("/login");
-    }
+    if (!user) { e.preventDefault(); navigate("/login"); }
   };
 
   const handleLandingSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    const query = landingSearch.trim();
-    navigate(query ? `/browse?search=${encodeURIComponent(query)}` : "/browse");
+    if (!user) { navigate("/login"); return; }
+    const params = new URLSearchParams();
+    if (landingSearch.trim()) params.set("search", landingSearch.trim());
+    if (budget) params.set("budget", budget);
+    if (roomType) params.set("type", roomType);
+    if (rooms) params.set("rooms", rooms);
+    if (availability) params.set("availability", availability);
+    navigate(params.toString() ? `/browse?${params}` : "/browse");
   };
 
+  const activeFiltersCount = [budget, roomType, rooms, availability].filter(Boolean).length;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
-      {/* ─── Header ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-amber-100/50 shadow-sm">
-        <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-white">
+
+      {/* ─── Sticky Header ──────────────────────────────────── */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-white/95 backdrop-blur-xl shadow-md border-b border-amber-100" : "bg-transparent"
+        }`}
+      >
+        <div className="container mx-auto px-4 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <AppLogo className="h-11 w-11 rounded-xl transition-all group-hover:scale-105" iconClassName="h-6 w-6" />
+            <Link to="/" className="flex items-center space-x-2.5 group">
+              <AppLogo className="h-10 w-10 rounded-xl transition-all group-hover:scale-105" iconClassName="h-5 w-5" />
               <div>
-                <span className="text-xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <span className={`text-xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent`}>
                   AptFindr
                 </span>
-                <p className="text-xs text-amber-600/60 font-medium">La Paz, Iloilo City PWA</p>
+                <p className="text-[10px] text-amber-600/60 font-semibold -mt-0.5 leading-none">La Paz, Iloilo City</p>
               </div>
             </Link>
 
-            <nav className="hidden md:flex items-center space-x-1">
-              <Link
-                to="/browse"
-                onClick={(e) => handleProtectedAction(e, "/browse")}
-                className="px-4 py-2 text-slate-700 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50/50 font-medium"
-              >
-                Browse
-              </Link>
-              <Link
-                to="/favorites"
-                onClick={(e) => handleProtectedAction(e, "/favorites")}
-                className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50/50 font-medium"
-              >
-                <Heart className="h-4 w-4" />
-                <span>Favorites</span>
-              </Link>
-              <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-amber-200">
+            <nav className="hidden md:flex items-center gap-1">
+              {[
+                { to: "/browse", label: "Browse", protected: true },
+                { to: "/favorites", label: "Favorites", protected: true, icon: <Heart className="h-3.5 w-3.5" /> },
+              ].map(({ to, label, protected: isProtected, icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-colors rounded-lg ${
+                    scrolled ? "text-slate-700 hover:text-amber-600 hover:bg-amber-50" : "text-white/90 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {icon}{label}
+                </Link>
+              ))}
+              <div className="flex items-center gap-2 ml-3 pl-3 border-l border-current/20">
                 {!user ? (
                   <>
                     <Link to="/login">
-                      <Button
-                        variant="ghost"
-                        className="text-slate-700 hover:text-amber-600 hover:bg-amber-50/50 font-medium"
-                      >
+                      <Button variant="ghost" size="sm" className={`font-semibold ${scrolled ? "text-slate-700 hover:text-amber-600" : "text-white hover:bg-white/10"}`}>
                         Login
                       </Button>
                     </Link>
                     <Link to="/signup">
-                      <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg hover:shadow-orange-300/50 transition-all font-semibold rounded-lg">
+                      <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg font-semibold rounded-lg px-5">
                         Sign Up
                       </Button>
                     </Link>
                   </>
                 ) : (
                   <Link to={dashboardPath}>
-                    <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg hover:shadow-orange-300/50 transition-all font-semibold rounded-lg">
-                      Go to Dashboard
+                    <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg font-semibold rounded-lg px-5">
+                      Dashboard
                     </Button>
                   </Link>
                 )}
@@ -137,44 +239,23 @@ export function Landing() {
             </nav>
 
             <Sheet>
-              <SheetTrigger className="md:hidden inline-flex items-center justify-center rounded-lg hover:bg-amber-50 h-9 w-9">
-                <Menu className="h-6 w-6 text-amber-600" />
+              <SheetTrigger className="md:hidden inline-flex items-center justify-center rounded-lg h-9 w-9 hover:bg-white/10">
+                <Menu className={`h-5 w-5 ${scrolled ? "text-slate-700" : "text-white"}`} />
               </SheetTrigger>
               <SheetContent className="bg-white border-amber-100">
                 <SheetTitle className="text-amber-900">Menu</SheetTitle>
-                <SheetDescription className="text-amber-700/60">
-                  AptFindr PWA for La Paz, Iloilo City
-                </SheetDescription>
-                <nav className="flex flex-col space-y-4 mt-8">
-                  <Link
-                    to="/browse"
-                    onClick={(e) => handleProtectedAction(e, "/browse")}
-                    className="text-lg text-slate-700 px-3 py-2 rounded-lg hover:bg-amber-50 font-medium"
-                  >
-                   Browse Apartments
-                  </Link>
-                  <Link
-                    to="/favorites"
-                    onClick={(e) => handleProtectedAction(e, "/favorites")}
-                    className="flex items-center gap-2 text-lg text-slate-700 px-3 py-2 rounded-lg hover:bg-amber-50 font-medium"
-                  >
-                    <Heart className="h-5 w-5" />
-                    Favorites
-                  </Link>
-                  {!user ? (
-                    <>
-                      <Link to="/login" className="text-lg text-slate-700 px-3 py-2 rounded-lg hover:bg-amber-50 font-medium">
-                        Login
-                      </Link>
-                      <Link to="/signup" className="text-lg text-slate-700 px-3 py-2 rounded-lg hover:bg-amber-50 font-medium">
-                        Sign Up
-                      </Link>
-                    </>
-                  ) : (
-                    <Link to={dashboardPath} className="text-lg text-slate-700 px-3 py-2 rounded-lg hover:bg-amber-50 font-medium">
-                      Dashboard
+                <SheetDescription className="text-amber-700/60">AptFindr — La Paz, Iloilo City</SheetDescription>
+                <nav className="flex flex-col gap-2 mt-8">
+                  {[
+                    { to: "/browse", label: "Browse Apartments", protected: true },
+                    { to: "/favorites", label: "Favorites", protected: true },
+                    ...(!user ? [{ to: "/login", label: "Login", protected: false }, { to: "/signup", label: "Sign Up", protected: false }] : [{ to: dashboardPath, label: "Dashboard", protected: false }]),
+                  ].map(({ to, label, protected: isProtected }) => (
+                    <Link key={to} to={to} onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                      className="px-4 py-3 text-slate-700 hover:text-amber-700 hover:bg-amber-50 rounded-xl font-semibold transition-colors">
+                      {label}
                     </Link>
-                  )}
+                  ))}
                 </nav>
               </SheetContent>
             </Sheet>
@@ -183,555 +264,527 @@ export function Landing() {
       </header>
 
       {/* ─── Hero ────────────────────────────────────────────── */}
-      <section className="relative min-h-[720px] flex items-center justify-center overflow-hidden pt-12">
+      <section className="relative min-h-[100svh] flex items-center overflow-hidden">
+        {/* Background carousel */}
         <div className="absolute inset-0 z-0">
-          <motion.div
-            className="absolute inset-0"
-            animate={{ scale: [1, 1.045, 1], x: [0, -10, 0], y: [0, 8, 0] }}
-            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ImageWithFallback
-              src="https://images.unsplash.com/photo-1559329146-807aff9ff1fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhcGFydG1lbnQlMjBidWlsZGluZyUyMGV4dGVyaW9yfGVufDF8fHx8MTc3MjE4MTg5Nnww&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="Apartment building in La Paz area"
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
-          <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-amber-100/40 to-orange-100/40" />
-          <motion.div
-            className="absolute top-20 right-0 w-96 h-96 bg-orange-300/20 rounded-full blur-3xl"
-            animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.08, 1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-0 left-0 w-96 h-96 bg-amber-300/20 rounded-full blur-3xl"
-            animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.06, 1] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          />
+          <AnimatePresence mode="sync">
+            <motion.div
+              key={heroIndex}
+              className="absolute inset-0"
+              initial={{ opacity: 0, scale: 1.04 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+            >
+              <ImageWithFallback
+                src={heroImages[heroIndex]}
+                alt="Apartment in La Paz"
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
+          </AnimatePresence>
+          {/* Multi-layer overlay for readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-slate-900/80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-900/30 via-transparent to-transparent" />
         </div>
 
-        <motion.div
-          className="relative z-10 container mx-auto px-4 text-center"
-          initial="hidden"
-          animate="show"
-          variants={stagger}
-        >
-          <motion.div variants={fadeUp} className="inline-block mb-6 px-6 py-3 bg-white/70 backdrop-blur-md border border-amber-200/50 rounded-full shadow-sm">
-            <span className="text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
-              <motion.span
-                animate={{ rotate: [0, 12, -8, 0], scale: [1, 1.12, 1] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                className="inline-flex"
-              >
-                <Sparkles className="h-4 w-4 text-amber-500" />
+        {/* Carousel controls */}
+        <button onClick={() => setHeroIndex((i) => (i - 1 + heroImages.length) % heroImages.length)}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-white/10 backdrop-blur hover:bg-white/20 flex items-center justify-center transition-colors">
+          <ChevronLeft className="h-5 w-5 text-white" />
+        </button>
+        <button onClick={() => setHeroIndex((i) => (i + 1) % heroImages.length)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-white/10 backdrop-blur hover:bg-white/20 flex items-center justify-center transition-colors">
+          <ChevronRight className="h-5 w-5 text-white" />
+        </button>
+
+        {/* Carousel dots */}
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          {heroImages.map((_, i) => (
+            <button key={i} onClick={() => setHeroIndex(i)}
+              className={`h-1.5 rounded-full transition-all ${i === heroIndex ? "w-8 bg-amber-400" : "w-2 bg-white/40"}`} />
+          ))}
+        </div>
+
+        {/* Hero content */}
+        <div className="relative z-10 container mx-auto px-4 lg:px-8 pt-20 pb-28">
+          <motion.div className="max-w-4xl mx-auto text-center" initial="hidden" animate="show" variants={stagger}>
+
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-amber-500/20 backdrop-blur-md border border-amber-400/30 rounded-full">
+              <motion.span animate={{ rotate: [0, 15, -10, 0] }} transition={{ duration: 2.5, repeat: Infinity }}>
+                <MapPin className="h-4 w-4 text-amber-400" />
               </motion.span>
-               Progressive Web Application
-            </span>
-          </motion.div>
+              <span className="text-sm font-bold text-amber-200">La Paz, Iloilo City · Verified Listings</span>
+            </motion.div>
 
-          <motion.h1 variants={fadeUp} className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight text-slate-900">
-            <span className="block">AptFindr for</span>
-            <motion.span
-              className="block bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 bg-clip-text text-transparent"
-              style={{ backgroundSize: "220% 220%" }}
-              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            >
-              La Paz, Iloilo City
-            </motion.span>
-          </motion.h1>
-
-          <motion.p variants={fadeUp} className="text-lg md:text-xl mb-8 text-slate-700 max-w-3xl mx-auto leading-relaxed font-medium">
-            A verified apartment listing and smart analytics platform for <strong>students</strong>,{" "}
-            <strong>employees</strong>, landlords, and administrators in La Paz. It centralizes rental information,
-            supports permit review, ranks apartments by user preferences, maps nearby units, and presents demand
-            insights for safer housing decisions.
-          </motion.p>
-
-          <motion.form
-            variants={fadeUp}
-            onSubmit={handleLandingSearch}
-            className="flex items-center justify-center mb-8"
-            animate={{
-              filter: [
-                "drop-shadow(0 8px 18px rgba(245, 158, 11, 0.16))",
-                "drop-shadow(0 14px 28px rgba(245, 158, 11, 0.28))",
-                "drop-shadow(0 8px 18px rgba(245, 158, 11, 0.16))",
-              ],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white/85 backdrop-blur-md border-2 border-amber-200 rounded-2xl px-4 py-4 shadow-lg w-full max-w-2xl">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-amber-500" />
-                <input
-                  value={landingSearch}
-                  onChange={(e) => setLandingSearch(e.target.value)}
-                  placeholder="Search by area, address, or apartment name"
-                  className="w-full h-12 rounded-xl border-2 border-amber-100 bg-white pl-12 pr-4 text-slate-800 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+            <motion.h1 variants={fadeUp} className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 leading-[1.05] tracking-tight text-white">
+              Find Your{" "}
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">Perfect Home</span>
+                <motion.div
+                  className="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-orange-400 rounded-full"
+                  initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.7 }}
                 />
-              </div>
-              <Button
-                type="submit"
-                className="h-12 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold px-6 shrink-0"
-              >
-                Search Listings
-              </Button>
-            </div>
-          </motion.form>
+              </span>
+              <br />in La Paz
+            </motion.h1>
 
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link to="/signup">
-              <Button
-                size="lg"
-                className="text-lg px-8 py-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-xl rounded-xl font-bold flex items-center gap-2"
-              >
-                <UserCheck className="h-5 w-5" />
-                Create Account
-              </Button>
-            </Link>
-            <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-6 border-2 border-amber-300 text-amber-800 bg-white hover:bg-amber-50 rounded-xl font-bold flex items-center gap-2"
-              >
-                <Building2 className="h-5 w-5" />
-                Browse Listings
-              </Button>
-            </Link>
+            <motion.p variants={fadeUp} className="text-lg md:text-xl text-white/75 mb-10 max-w-2xl mx-auto leading-relaxed">
+              Browse verified apartment listings, compare locations on a live map, and find your ideal rental — all in one platform.
+            </motion.p>
+
+            {/* ── Search panel ── */}
+            <motion.div variants={fadeUp} className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden max-w-3xl mx-auto">
+              <form onSubmit={handleLandingSearch}>
+                {/* Main search bar */}
+                <div className="flex items-center gap-3 p-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-amber-500" />
+                    <input
+                      value={landingSearch}
+                      onChange={(e) => setLandingSearch(e.target.value)}
+                      placeholder="Search by area, address, or apartment name..."
+                      className="w-full h-13 rounded-xl bg-amber-50/60 border border-amber-100 pl-12 pr-4 py-3.5 text-slate-800 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-base"
+                    />
+                  </div>
+                  <button type="button" onClick={() => setShowFilters(!showFilters)}
+                    className={`relative flex items-center gap-2 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-all ${
+                      showFilters || activeFiltersCount > 0
+                        ? "bg-amber-100 border-amber-300 text-amber-800"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:border-amber-300"
+                    }`}>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                        {activeFiltersCount}
+                      </span>
+                    )}
+                  </button>
+                  <Button type="submit"
+                    className="px-6 py-3.5 h-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold text-base shadow-lg whitespace-nowrap">
+                    Search
+                  </Button>
+                </div>
+
+                {/* Quick filters panel */}
+                <AnimatePresence>
+                  {showFilters && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-3 pb-3 border-t border-slate-100 pt-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                            <DollarSign className="inline h-3 w-3 mr-1" />Budget
+                          </label>
+                          <select value={budget} onChange={(e) => setBudget(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="">Any budget</option>
+                            <option value="0-3000">Under ₱3,000</option>
+                            <option value="3000-5000">₱3,000–5,000</option>
+                            <option value="5000-8000">₱5,000–8,000</option>
+                            <option value="8000+">₱8,000+</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                            <Building2 className="inline h-3 w-3 mr-1" />Type
+                          </label>
+                          <select value={roomType} onChange={(e) => setRoomType(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="">All types</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="studio">Studio</option>
+                            <option value="family">Family Unit</option>
+                            <option value="furnished">Furnished Unit</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                            <BedDouble className="inline h-3 w-3 mr-1" />Rooms
+                          </label>
+                          <select value={rooms} onChange={(e) => setRooms(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="">Any</option>
+                            <option value="1">1 Room</option>
+                            <option value="2">2 Rooms</option>
+                            <option value="3">3 Rooms</option>
+                            <option value="4+">4+ Rooms</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                            <CalendarCheck className="inline h-3 w-3 mr-1" />Available
+                          </label>
+                          <select value={availability} onChange={(e) => setAvailability(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="">Any time</option>
+                            <option value="now">Available now</option>
+                            <option value="soon">Available soon</option>
+                          </select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </form>
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-3 mt-6 text-sm text-white/70">
+              <span className="font-semibold text-white/50">Popular:</span>
+              {["Divinagracia", "Sto. Rosario", "Near CPU", "Near schools"].map((s) => (
+                <button key={s} type="button"
+                  onClick={() => { setLandingSearch(s); }}
+                  className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full border border-white/20 transition-colors font-medium">
+                  {s}
+                </button>
+              ))}
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* ─── Platform highlights (no fake stats) ─────────────── */}
-      <section className="bg-white/90 backdrop-blur border-y border-amber-100 py-10 shadow-sm">
-        <div className="container mx-auto px-4">
-          <p className="text-center text-slate-500 font-medium text-sm mb-6 uppercase tracking-wide">
-            What this system provides
-          </p>
+      {/* ─── Stats bar ───────────────────────────────────────── */}
+      <section className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 py-6 shadow-lg">
+        <div className="container mx-auto px-4 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              {
-                icon: ClipboardCheck,
-                label: "Permit review",
-                detail: "Admin-verified badges",
-                color: "text-amber-600",
-              },
-              {
-                icon: Map,
-                label: "GIS map",
-                detail: "Locations in La Paz",
-                color: "text-orange-600",
-              },
-              {
-                icon: Search,
-                label: "Weighted ranking",
-                detail: "Preference-based matches",
-                color: "text-rose-600",
-              },
-              {
-                icon: BarChart3,
-                label: "Smart analytics",
-                detail: "Demand and trends",
-                color: "text-amber-500",
-              },
-            ].map(({ icon: Icon, label, detail, color }, index) => (
-              <motion.div
-                key={label}
-                className="flex flex-col items-center gap-1 text-center px-2"
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.4 }}
-                transition={{ duration: 0.45, delay: index * 0.06 }}
-                whileHover={{ y: -4 }}
-              >
-                <Icon className={`h-7 w-7 ${color} mb-1`} />
-                <span className="font-black text-slate-900 text-sm md:text-base">{label}</span>
-                <span className="text-slate-500 text-xs md:text-sm">{detail}</span>
-              </motion.div>
+              { label: "Available Apartments", value: "50+", icon: Building2 },
+              { label: "Available Rooms", value: "120+", icon: BedDouble },
+              { label: "Verified Landlords", value: "30+", icon: BadgeCheck },
+              { label: "Active Listings", value: "80+", icon: TrendingUp },
+            ].map(({ label, value, icon: Icon }, i) => (
+              <AnimatedSection key={label} delay={i * 0.06}>
+                <div className="flex items-center gap-3 text-white">
+                  <div className="flex-shrink-0 h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black leading-none">{value}</div>
+                    <div className="text-xs text-white/80 font-medium mt-0.5">{label}</div>
+                  </div>
+                </div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Who it's for ────────────────────────────────────── */}
-      <section className="py-20 relative">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-black mb-3 text-slate-900">Who Uses the Platform</h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Built around the users identified in the thesis scope
-            </p>
-          </div>
+      {/* ─── Categories ──────────────────────────────────────── */}
+      <section className="py-20 bg-gradient-to-b from-white to-amber-50/40">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Browse by Type</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">Apartment Categories</h2>
+            <p className="text-slate-500 max-w-lg mx-auto">Find the right type of rental that fits your lifestyle and needs</p>
+          </AnimatedSection>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
+            {categories.map(({ icon: Icon, label, color, bg, border }, i) => (
+              <AnimatedSection key={label} delay={i * 0.07}>
+                <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+                  <motion.div
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className={`${bg} ${border} border-2 rounded-2xl p-5 text-center cursor-pointer transition-shadow hover:shadow-lg group`}
+                  >
+                    <div className={`inline-flex h-14 w-14 rounded-2xl bg-gradient-to-br ${color} items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform`}>
+                      <Icon className="h-7 w-7 text-white" />
+                    </div>
+                    <p className="font-bold text-slate-800 text-sm leading-tight">{label}</p>
+                  </motion.div>
+                </Link>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Featured Listings (preserved component) ─────────── */}
+      <div className="bg-white">
+        <div className="container mx-auto px-4 lg:px-8 pt-4 pb-2">
+          <AnimatedSection className="text-center mb-2">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Live from the platform</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">Featured Listings</h2>
+            <p className="text-slate-500 max-w-lg mx-auto">Recently posted, verified apartments in La Paz</p>
+          </AnimatedSection>
+        </div>
+        <LandingListingsSection onBrowseClick={(e) => handleProtectedAction(e, "/browse")} />
+      </div>
+
+      {/* ─── Browse by Location ───────────────────────────────── */}
+      <section className="py-20 bg-gradient-to-b from-amber-50/40 to-white">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Explore the area</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">Browse by Location</h2>
+            <p className="text-slate-500 max-w-lg mx-auto">Apartments across barangays within La Paz, Iloilo City</p>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            {barangays.map(({ name, count, emoji }, i) => (
+              <AnimatedSection key={name} delay={i * 0.07}>
+                <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+                  <motion.div
+                    whileHover={{ y: -5 }}
+                    className="bg-white border-2 border-amber-100 hover:border-amber-300 rounded-2xl p-5 flex items-center gap-4 cursor-pointer shadow-sm hover:shadow-md transition-all group"
+                  >
+                    <span className="text-3xl">{emoji}</span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 group-hover:text-amber-700 transition-colors text-sm leading-snug">{name}</p>
+                      <p className="text-xs text-amber-600 font-semibold mt-0.5">{count}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-amber-400 ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </motion.div>
+                </Link>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Who It's For ────────────────────────────────────── */}
+      <section className="py-20 bg-slate-900">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-amber-400 font-bold text-sm uppercase tracking-widest mb-2">Built for everyone</p>
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-3">Who Uses AptFindr</h2>
+            <p className="text-slate-400 max-w-xl mx-auto">Designed around the distinct needs of renters, landlords, and administrators</p>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
             {[
-              {
-                icon: GraduationCap,
-                role: "Students",
-                desc: "Find accessible apartments near schools, compare prices and amenities, view locations, and use recommendations to reduce manual walk-ins.",
-                card: "border-amber-200/60",
-                iconWrap: "bg-amber-100",
-                iconColor: "text-amber-700",
-              },
-              {
-                icon: Briefcase,
-                role: "Employees",
-                desc: "Search for rentals that fit budget, commute, and preferred location while checking verified information before visiting a unit.",
-                card: "border-orange-200/60",
-                iconWrap: "bg-orange-100",
-                iconColor: "text-orange-700",
-              },
-              {
-                icon: Building2,
-                role: "Landlords",
-                desc: "Submit permit information for review, publish legitimate listings, manage rental details, and reach tenants through a centralized platform.",
-                card: "border-rose-200/60",
-                iconWrap: "bg-rose-100",
-                iconColor: "text-rose-700",
-              },
-              {
-                icon: UserCog,
-                role: "Administrators",
-                desc: "Review permits, mark verified listings, monitor apartments without business permits, handle reports, and oversee platform data.",
-                card: "border-pink-200/60",
-                iconWrap: "bg-pink-100",
-                iconColor: "text-pink-700",
-              },
-            ].map(({ icon: Icon, role, desc, card, iconWrap, iconColor }, index) => (
-              <motion.div
-                key={role}
-                className={`bg-white/80 backdrop-blur border-2 ${card} rounded-2xl p-6 shadow-md`}
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-              >
+              { icon: GraduationCap, role: "Students", desc: "Find affordable, accessible housing near schools with verified information — no more random walk-ins.", gradient: "from-amber-500 to-amber-600" },
+              { icon: Briefcase, role: "Employees", desc: "Search within budget and commute range. Check verified details before scheduling a visit.", gradient: "from-orange-500 to-orange-600" },
+              { icon: Building2, role: "Landlords", desc: "Submit permits for review, get verified, and reach tenants through a centralized listing platform.", gradient: "from-rose-500 to-rose-600" },
+              { icon: UserCog, role: "Administrators", desc: "Review permits, manage verified listings, monitor compliance, and oversee platform activity.", gradient: "from-pink-500 to-pink-600" },
+            ].map(({ icon: Icon, role, desc, gradient }, i) => (
+              <AnimatedSection key={role} delay={i * 0.08}>
                 <motion.div
-                  className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${iconWrap} mb-4`}
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: index * 0.18 }}
+                  whileHover={{ y: -8 }}
+                  className="bg-slate-800 border border-slate-700 rounded-2xl p-6 h-full"
                 >
-                  <Icon className={`h-6 w-6 ${iconColor}`} />
+                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} mb-4 shadow-lg`}>
+                    <Icon className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-black text-white mb-2">{role}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
                 </motion.div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">{role}</h3>
-                <p className="text-slate-600 leading-relaxed">{desc}</p>
-              </motion.div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Why Choose Us ───────────────────────────────────── */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Platform advantages</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">Why Choose Our Platform</h2>
+            <p className="text-slate-500 max-w-xl mx-auto">Features designed for safer, more informed rental decisions</p>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
+            {[
+              { icon: BadgeCheck, title: "Verified Landlords", desc: "Landlords are reviewed and approved before listings go live. Look for the verified badge.", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+              { icon: ShieldCheck, title: "Permit-Checked Listings", desc: "Listings with valid business permits are marked and monitored by platform administrators.", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+              { icon: Flag, title: "Community Reporting", desc: "Users can report suspicious or inaccurate listings. Admins review and act on reports promptly.", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100" },
+              { icon: Map, title: "GIS Map View", desc: "See all apartments on a live map. Compare locations and find what's closest to your destination.", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+              { icon: Bot, title: "AI Assistance", desc: "A built-in assistant helps you navigate the platform and understand rental options quickly.", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+              { icon: BarChart3, title: "Smart Analytics", desc: "Track demand trends, pricing insights, and availability data to make better rental decisions.", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100" },
+            ].map(({ icon: Icon, title, desc, color, bg, border }, i) => (
+              <AnimatedSection key={title} delay={i * 0.07}>
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className={`${bg} ${border} border-2 rounded-2xl p-6 h-full`}
+                >
+                  <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white border ${border} mb-4 shadow-sm`}>
+                    <Icon className={`h-5 w-5 ${color}`} />
+                  </div>
+                  <h3 className="font-black text-slate-900 mb-2">{title}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{desc}</p>
+                </motion.div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
 
       {/* ─── How It Works ────────────────────────────────────── */}
-      <section className="py-20 bg-gradient-to-b from-white/50 to-amber-50/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-black mb-3 text-slate-900">How the System Works</h2>
-            <p className="text-lg text-slate-600 max-w-xl mx-auto">
-              From verified listing data to informed rental decisions
-            </p>
-          </div>
+      <section className="py-20 bg-gradient-to-b from-amber-50/60 to-white">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-14">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Simple process</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">How AptFindr Works</h2>
+            <p className="text-slate-500 max-w-xl mx-auto">From account creation to informed rental decision in three steps</p>
+          </AnimatedSection>
 
-          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <motion.div
-              className="hidden md:block absolute top-14 left-1/4 right-1/4 h-0.5 origin-left bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300"
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 1 }}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
+            {/* connector line */}
+            <div className="hidden md:block absolute top-[52px] left-1/4 right-1/4 h-px bg-gradient-to-r from-amber-300 to-orange-300" />
 
             {[
-              {
-                step: "01",
-                icon: UserCheck,
-                title: "Collect and verify",
-                desc: "Landlords submit apartment details and permits. Administrators review documents, approve legitimate accounts, and monitor unverified rentals.",
-              },
-              {
-                step: "02",
-                icon: Search,
-                title: "Match and visualize",
-                desc: "Tenants filter listings, receive ranked apartment suggestions, and use the GIS map to compare locations within La Paz.",
-              },
-              {
-                step: "03",
-                icon: BarChart3,
-                title: "Analyze and decide",
-                desc: "The platform presents availability, pricing, rental demand, and assistance tools to support safer and more informed choices.",
-              },
-            ].map(({ step, icon: Icon, title, desc }, index) => (
-              <motion.div
-                key={step}
-                className="relative bg-white/80 backdrop-blur border-2 border-amber-200/60 rounded-3xl p-8 text-center shadow-lg"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -8 }}
-              >
-                <div className="text-5xl font-black text-amber-400/40 mb-3">{step}</div>
-                <motion.div
-                  className="inline-flex items-center justify-center w-14 h-14 bg-amber-100 rounded-2xl mb-5 mx-auto"
-                  animate={{ y: [0, -5, 0], rotate: [0, 1.5, 0] }}
-                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: index * 0.2 }}
-                >
-                  <Icon className="h-7 w-7 text-amber-700" />
+              { icon: UserCheck, title: "Create your account", desc: "Sign up as a renter or landlord. Landlords submit permit details for admin review before their listings go live." },
+              { icon: Search, title: "Browse & compare", desc: "Filter listings by budget, type, and location. Use the GIS map to compare apartments and view them side by side." },
+              { icon: CheckCircle2, title: "Decide with confidence", desc: "Use verified listings, ranked suggestions, and demand analytics to make informed housing decisions." },
+            ].map(({ icon: Icon, title, desc }, i) => (
+              <AnimatedSection key={title} delay={i * 0.12}>
+                <motion.div whileHover={{ y: -6 }} className="relative bg-white border-2 border-amber-100 rounded-3xl p-8 text-center shadow-sm">
+                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg mb-5 mx-auto">
+                    <Icon className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 bg-white border-2 border-amber-200 rounded-full flex items-center justify-center text-xs font-black text-amber-600 shadow-sm">
+                    {i + 1}
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 mb-2">{title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
                 </motion.div>
-                <h3 className="text-xl font-black mb-2 text-slate-900">{title}</h3>
-                <p className="text-slate-600 leading-relaxed">{desc}</p>
-              </motion.div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Core features ───────────────────────────────────── */}
-      <section className="py-20 relative">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-black mb-3 text-slate-900">Main Features</h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Based on Chapters 1-3: verified listings, GIS, ranking, analytics, and Agile development
-            </p>
-          </div>
+      {/* ─── Community Section ───────────────────────────────── */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4 lg:px-8">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-amber-600 font-bold text-sm uppercase tracking-widest mb-2">Our community</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3">Built for La Paz Renters</h2>
+            <p className="text-slate-500 max-w-lg mx-auto">AptFindr supports the needs of students, families, and working professionals across La Paz</p>
+          </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                icon: Search,
-                title: "Centralized listings",
-                desc: "Apartment details are organized in one platform for renters in La Paz, reducing reliance on walk-ins, word-of-mouth, and scattered social media posts.",
-              },
-              {
-                icon: Map,
-                title: "GIS map browsing",
-                desc: "Leaflet-based mapping helps users view apartment locations, compare nearby options, and understand proximity before visiting.",
-              },
-              {
-                icon: Search,
-                title: "Weighted ranking",
-                desc: "Listings can be ranked based on user preferences such as price, location, amenities, availability, and other rental criteria.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Permit verification",
-                desc: "Landlords submit business permit details for admin review so approved apartments can display verified badges.",
-              },
-              {
-                icon: Flag,
-                title: "Compliance monitoring",
-                desc: "Administrators can track reports and apartments without business permits based on available system records and user inputs.",
-              },
-              {
-                icon: Bot,
-                title: "AI assistance",
-                desc: "A built-in assistance feature helps users navigate the platform and understand apartment-related information more efficiently.",
-              },
-            ].map(({ icon: Icon, title, desc }, index) => (
-              <motion.div
-                key={title}
-                className="bg-white/80 backdrop-blur border-2 border-amber-100 rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow"
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.5, delay: index * 0.06 }}
-                whileHover={{ y: -8, scale: 1.015 }}
-              >
-                <motion.div
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 mb-5"
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{ duration: 3.1, repeat: Infinity, ease: "easeInOut", delay: index * 0.12 }}
-                >
-                  <Icon className="h-6 w-6 text-amber-700" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {communityCards.map(({ role, icon: Icon, name, quote, color, iconBg, iconColor }, i) => (
+              <AnimatedSection key={role} delay={i * 0.09}>
+                <motion.div whileHover={{ y: -6 }} className={`bg-white border-2 ${color} rounded-2xl p-6 shadow-sm h-full flex flex-col`}>
+                  <div className={`inline-flex h-10 w-10 ${iconBg} rounded-xl items-center justify-center mb-4`}>
+                    <Icon className={`h-5 w-5 ${iconColor}`} />
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{role}</p>
+                  <p className="font-bold text-slate-800 text-sm mb-3">{name}</p>
+                  <p className="text-slate-500 text-sm leading-relaxed flex-1 italic">"{quote}"</p>
+                  <div className="flex gap-0.5 mt-4">
+                    {[...Array(5)].map((_, j) => <Star key={j} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />)}
+                  </div>
                 </motion.div>
-                <h3 className="text-xl font-black mb-3 text-slate-900">{title}</h3>
-                <p className="text-slate-600 leading-relaxed">{desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Live listings preview (or placeholder when empty) ─ */}
-      <LandingListingsSection onBrowseClick={(e) => handleProtectedAction(e, "/browse")} />
-      {/* ─── Trust & accuracy ────────────────────────────────── */}
-      <section className="py-20 relative">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-black mb-3 text-slate-900">Focused Study Scope</h2>
-            <p className="text-lg text-slate-600">Aligned with the thesis limitations and methodology</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Manual permit validation",
-                desc: "Verification depends on documents submitted by landlords and review by administrators, matching the study's defined process.",
-              },
-              {
-                icon: Database,
-                title: "Data-driven insights",
-                desc: "Analytics and forecasting are limited to data collected within the system, such as listings, views, preferences, and availability.",
-              },
-              {
-                icon: Smartphone,
-                title: "Progressive Web App",
-                desc: "The system is accessible through desktop and mobile browsers and supports an app-like experience without requiring installation.",
-              },
-              {
-                icon: CheckCircle2,
-                title: "Focused on La Paz",
-                desc: "The study covers apartment rentals in La Paz, Iloilo City only and does not represent a nationwide rental marketplace.",
-              },
-            ].map(({ icon: Icon, title, desc }, index) => (
-              <motion.div
-                key={title}
-                className="flex gap-5 p-6 bg-white/80 backdrop-blur border-2 border-amber-100 rounded-2xl shadow-md"
-                initial={{ opacity: 0, x: index % 2 === 0 ? -24 : 24 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-                whileHover={{ y: -5 }}
-              >
-                <motion.div
-                  className="flex-shrink-0 h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center"
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut", delay: index * 0.16 }}
-                >
-                  <Icon className="h-6 w-6 text-amber-700" />
-                </motion.div>
-                <div>
-                  <h3 className="font-black text-lg text-slate-900 mb-1">{title}</h3>
-                  <p className="text-slate-600">{desc}</p>
-                </div>
-              </motion.div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
 
       {/* ─── CTA ─────────────────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-100/50 via-orange-100/50 to-rose-100/50" />
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <motion.div
-            className="max-w-3xl mx-auto"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.35 }}
-            variants={stagger}
-          >
-            <motion.div variants={fadeUp} className="inline-block mb-6 px-5 py-2 bg-white/70 backdrop-blur border border-amber-200 rounded-full">
-              <span className="text-sm font-bold text-amber-700 flex items-center justify-center gap-2">
-                <Zap className="h-4 w-4" />
-                Ready to use the thesis prototype?
-              </span>
-            </motion.div>
-
-            <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-black mb-6 text-slate-900 leading-tight">
-              Search safer, verified apartment options
-            </motion.h2>
-
-            <motion.p variants={fadeUp} className="text-lg text-slate-700 mb-10 leading-relaxed font-medium">
-              Create an account to browse verified listings, compare mapped locations, receive ranked suggestions, and
-              view housing insights. Landlords can register to submit permits and publish apartments after review.
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
+      <section className="py-20 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl" />
+        </div>
+        <div className="relative z-10 container mx-auto px-4 lg:px-8 text-center">
+          <AnimatedSection>
+            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-white/20 backdrop-blur rounded-full border border-white/30">
+              <Zap className="h-4 w-4 text-white" />
+              <span className="text-sm font-bold text-white">Ready to find your next home?</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-5 leading-tight">
+              Start browsing verified<br />apartments today
+            </h2>
+            <p className="text-white/85 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+              Create a free account to access all listings, view the GIS map, get personalized recommendations, and connect with verified landlords in La Paz.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
-                <Button
-                  size="lg"
-                  className="text-lg px-10 py-7 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-xl rounded-2xl font-black inline-flex items-center gap-2"
-                >
+                <Button size="lg" className="bg-white text-amber-700 hover:bg-amber-50 shadow-xl font-black text-base px-8 py-4 h-auto rounded-xl inline-flex items-center gap-2">
                   <UserCheck className="h-5 w-5" />
-                  Sign Up
+                  Create Free Account
                 </Button>
               </Link>
-              <Link to="/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-10 py-7 border-2 border-amber-300 text-amber-800 bg-white hover:bg-amber-50 rounded-2xl font-black"
-                >
-                  Log In
+              <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+                <Button size="lg" variant="outline" className="border-2 border-white/50 text-white hover:bg-white/10 backdrop-blur font-bold text-base px-8 py-4 h-auto rounded-xl inline-flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Browse Listings
                 </Button>
               </Link>
-            </motion.div>
-          </motion.div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* ─── Footer ──────────────────────────────────────────── */}
-      <footer className="bg-gradient-to-b from-slate-900 to-slate-950 text-slate-300 py-14 border-t border-amber-200/10">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-            <div>
+      <footer className="bg-slate-950 text-slate-400 pt-16 pb-8">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            {/* Brand */}
+            <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <AppLogo className="h-10 w-10 rounded-xl" />
-                <span className="font-black text-white text-lg">AptFindr PWA</span>
+                <AppLogo className="h-10 w-10 rounded-xl" iconClassName="h-5 w-5" />
+                <span className="font-black text-white text-xl">AptFindr</span>
               </div>
-              <p className="text-slate-400">
-                Progressive Web Application for verified apartment listings and smart apartment analytics in La Paz,
-                Iloilo City.
+              <p className="text-slate-400 leading-relaxed max-w-xs text-sm">
+                A Progressive Web Application for verified apartment listings and smart rental analytics in La Paz, Iloilo City. Academic thesis project.
               </p>
+              <div className="flex gap-3 mt-5">
+                <a href="mailto:aptfindr@example.com" className="flex items-center gap-2 text-xs text-slate-500 hover:text-amber-400 transition-colors">
+                  <Mail className="h-3.5 w-3.5" />aptfindr@example.com
+                </a>
+              </div>
             </div>
 
+            {/* Quick links */}
             <div>
-              <h4 className="font-black text-white mb-4">App</h4>
+              <h4 className="font-black text-white text-sm uppercase tracking-widest mb-4">Quick Links</h4>
               <ul className="space-y-2">
-                <li>
-                  <Link
-                    to="/browse"
-                    onClick={(e) => handleProtectedAction(e, "/browse")}
-                    className="hover:text-amber-400 transition-colors"
-                  >
-                    Browse
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/favorites"
-                    onClick={(e) => handleProtectedAction(e, "/favorites")}
-                    className="hover:text-amber-400 transition-colors"
-                  >
-                    Favorites
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/signup" className="hover:text-amber-400 transition-colors">
-                    Sign Up
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/login" className="hover:text-amber-400 transition-colors">
-                    Log In
-                  </Link>
-                </li>
+                {[
+                  { to: "/browse", label: "Browse Listings", protected: true },
+                  { to: "/favorites", label: "Favorites", protected: true },
+                  { to: "/signup", label: "Create Account", protected: false },
+                  { to: "/login", label: "Log In", protected: false },
+                  { to: "/flowchart", label: "Platform Flowchart", protected: false },
+                  { to: "/design-guide", label: "Design Guide", protected: false },
+                ].map(({ to, label, protected: isProtected }) => (
+                  <li key={to}>
+                    <Link to={to} onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                      className="text-sm hover:text-amber-400 transition-colors flex items-center gap-1.5 group">
+                      <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
+            {/* About / Legal */}
             <div>
-              <h4 className="font-black text-white mb-4">Documentation</h4>
-              <ul className="space-y-2">
-                <li>
-                  <Link to="/flowchart" className="hover:text-amber-400 transition-colors">
-                    Platform flowchart
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/design-guide" className="hover:text-amber-400 transition-colors">
-                    Design guide
-                  </Link>
-                </li>
+              <h4 className="font-black text-white text-sm uppercase tracking-widest mb-4">About</h4>
+              <ul className="space-y-2 text-sm">
+                <li><span className="text-slate-500">About Us</span></li>
+                <li><span className="text-slate-500">Privacy Policy</span></li>
+                <li><span className="text-slate-500">Terms & Conditions</span></li>
+                <li><span className="text-slate-500">Contact Us</span></li>
               </ul>
+              <div className="mt-6 pt-5 border-t border-slate-800">
+                <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide mb-2">Coverage Area</p>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-xs text-slate-400">La Paz, Iloilo City, Philippines</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-800 pt-6 text-center text-slate-500 text-sm">
-            <p>2026 AptFindr PWA - La Paz, Iloilo City - Academic thesis project</p>
+          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-slate-600">© 2026 AptFindr PWA — La Paz, Iloilo City. Academic thesis project.</p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-800 px-3 py-1.5 rounded-full">
+                <Smartphone className="h-3 w-3" /> Progressive Web App
+              </span>
+            </div>
           </div>
         </div>
       </footer>

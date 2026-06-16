@@ -3,6 +3,7 @@ export type ApartmentStatus = 'available' | 'occupied' | 'reserved' | 'maintenan
 export interface ApartmentRoom {
   id?: string;
   name?: string;
+  type?: string;
   price?: number;
   sqft?: number;
   maxOccupants?: number;
@@ -12,6 +13,8 @@ export interface ApartmentRoom {
   bathroomType?: string;
   sharedBathLocation?: string;
   hasAC?: boolean;
+  description?: string;
+  images?: string[];
 }
 
 export interface Apartment {
@@ -86,14 +89,23 @@ export interface ApartmentFormValues {
 }
 
 export interface ApartmentImageRow {
+  id?: string | null;
   url: string | null;
+  caption?: string | null;
   is_primary: boolean | null;
   sort_order: number | null;
+  created_at?: string | null;
 }
 
 export interface ApartmentRoomRow {
   id?: string | null;
   room_type?: string | null;
+  room_name?: string | null;
+  name?: string | null;
+  type?: string | null;
+  description?: string | null;
+  images?: string[] | string | null;
+  image_url?: string | null;
   sqft?: number | string | null;
   max_occupants?: number | string | null;
   rent?: number | string | null;
@@ -297,9 +309,13 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     landlordId: row.landlord_id ?? undefined,
     isPublished: row.is_published ?? undefined,
     status: toApartmentStatus(row.status),
+    createdAt: row.created_at ?? undefined,
+    propertyType: row.features && typeof row.features.propertyType === 'string' ? row.features.propertyType : undefined,
+    features: row.features ?? undefined,
     rooms: row.apartment_rooms?.map((room) => ({
       id: room.id ?? undefined,
-      name: toString(room.room_type),
+      name: toString(room.room_name ?? room.name ?? room.room_type),
+      type: toString(room.type ?? room.room_type),
       price: toNumber(room.rent),
       sqft: toNumber(room.sqft),
       maxOccupants: toNumber(room.max_occupants, 1),
@@ -309,6 +325,8 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
       bathroomType: toString(room.bathroom_type),
       sharedBathLocation: toString(room.shared_bath_location),
       hasAC: toBoolean(room.has_ac),
+      description: toString(room.description),
+      images: parseStringList(room.images ?? room.image_url),
     })),
   };
 };
@@ -421,6 +439,7 @@ export {
   getLandlordVerification,
   listFavoriteApartments,
   fetchApartmentWithImages,
+  fetchApartmentInspectionDetails,
   insertApartmentImages,
   replaceApartmentImages,
   uploadApartmentImage,

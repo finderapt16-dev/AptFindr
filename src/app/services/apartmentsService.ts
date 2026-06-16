@@ -14,6 +14,14 @@ import {
 const CURRENT_USER_KEY = 'apartment_finder_current_user';
 const APARTMENT_SELECT =
   '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status)';
+const APARTMENT_INSPECTION_SELECT = '*, apartment_images(*), apartment_rooms(*)';
+
+export interface ApartmentInspectionDetails {
+  apartment: Apartment;
+  rawApartment: ApartmentRow & Record<string, unknown>;
+  images: Array<Record<string, unknown>>;
+  rooms: Array<Record<string, unknown>>;
+}
 
 export interface SessionUser {
   id: string;
@@ -701,4 +709,35 @@ export const fetchApartmentWithImages = async (id: string): Promise<Apartment | 
   }
 
   return apartmentRowToApartment(data as ApartmentRow);
+};
+
+export const fetchApartmentInspectionDetails = async (id: string): Promise<ApartmentInspectionDetails | null> => {
+  const { data, error } = await supabase
+    .from('apartments')
+    .select(APARTMENT_INSPECTION_SELECT)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to load apartment inspection details.'));
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const rawApartment = data as ApartmentRow & Record<string, unknown>;
+  const images = Array.isArray(rawApartment.apartment_images)
+    ? (rawApartment.apartment_images.filter(isRecord) as Record<string, unknown>[])
+    : [];
+  const rooms = Array.isArray(rawApartment.apartment_rooms)
+    ? (rawApartment.apartment_rooms.filter(isRecord) as Record<string, unknown>[])
+    : [];
+
+  return {
+    apartment: apartmentRowToApartment(rawApartment),
+    rawApartment,
+    images,
+    rooms,
+  };
 };

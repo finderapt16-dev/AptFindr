@@ -117,6 +117,7 @@ export function AddApartment() {
 
   // ── Wizard State ───────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const totalSteps = 5;
 
   const stepConfig = [
@@ -248,6 +249,13 @@ export function AddApartment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent duplicate submissions while async operation is in flight
+    if (isSubmitting) {
+      toast.error("Please wait for your submission to complete...");
+      return;
+    }
+    
     if (!user || user.role !== "landlord") {
       toast.error("Only landlords can add apartments");
       return;
@@ -295,6 +303,7 @@ export function AddApartment() {
       status: formData.status ?? "available",
     };
 
+    setIsSubmitting(true);
     try {
       const formValues = {
         ...apartmentFormValuesFromApartment(draftApartment),
@@ -405,6 +414,8 @@ export function AddApartment() {
       console.error("Failed to submit apartment:", error);
       const message = error instanceof Error ? error.message : "Unable to save apartment.";
       toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1037,8 +1048,8 @@ export function AddApartment() {
                     Next <ArrowRight className="h-5 w-5" />
                   </Button>
                 ) : (
-                  <Button type="submit" className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl h-12 font-bold">
-                    <Check className="h-5 w-5" /> List Property
+                  <Button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl h-12 font-bold disabled:opacity-60 disabled:cursor-not-allowed">
+                    <Check className="h-5 w-5" /> {isSubmitting ? "Submitting..." : "List Property"}
                   </Button>
                 )}
               </div>

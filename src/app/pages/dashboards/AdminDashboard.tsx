@@ -46,7 +46,7 @@ import {
   ChevronRight, Clock, Flag, CheckCheck, Building2, Eye,
   MapPin, Wifi, Car, PawPrint, Sofa, Search, AlertOctagon,
   Bell, BellRing, ShieldAlert, User as UserIcon, Edit2, Trash2, Lock, Calendar,
-  Mail, MailOpen,
+  Mail, MailOpen, BarChart3,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -164,6 +164,13 @@ export function AdminDashboard() {
   const [landlords, setLandlords] = useState<DashboardUserRow[]>([]);
   const [verifyAction, setVerifyAction] = useState<{ landlordId: string; verify: boolean } | null>(null);
 
+  // Loading states for action prevention
+  const [deletingNotifId, setDeletingNotifId] = useState<string | null>(null);
+  const [isDeletingAllNotifs, setIsDeletingAllNotifs] = useState(false);
+  const [isResolvingReportId, setIsResolvingReportId] = useState<string | null>(null);
+  const [isDismissingReportId, setIsDismissingReportId] = useState<string | null>(null);
+  const [isDeletingViolationId, setIsDeletingViolationId] = useState<string | null>(null);
+
   // reports
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
   const [selectedReport, setSelectedReport] = useState<DashboardReportRow | null>(null);
@@ -225,17 +232,35 @@ export function AdminDashboard() {
   };
 
   const deleteNotif = (notificationId: string) => {
+    if (deletingNotifId === notificationId) {
+      toast.error("Deletion in progress...");
+      return;
+    }
+    setDeletingNotifId(notificationId);
     setAdminNotifs((prev) => prev.filter((n) => n.id !== notificationId));
     if (user?.id) {
-      void deleteNotification(notificationId, user.id);
+      void deleteNotification(notificationId, user.id).finally(() => {
+        setDeletingNotifId(null);
+      });
+    } else {
+      setDeletingNotifId(null);
     }
   };
 
   const deleteAllNotifs = () => {
+    if (isDeletingAllNotifs) {
+      toast.error("Deletion in progress...");
+      return;
+    }
     if (window.confirm("Are you sure you want to delete all notifications? This cannot be undone.")) {
+      setIsDeletingAllNotifs(true);
       setAdminNotifs([]);
       if (user?.id) {
-        void deleteAllNotifications(user.id);
+        void deleteAllNotifications(user.id).finally(() => {
+          setIsDeletingAllNotifs(false);
+        });
+      } else {
+        setIsDeletingAllNotifs(false);
       }
     }
   };
@@ -507,6 +532,11 @@ export function AdminDashboard() {
   };
 
   const resolveReport = (id: string) => {
+    if (isResolvingReportId === id) {
+      toast.error("Operation in progress...");
+      return;
+    }
+    setIsResolvingReportId(id);
     void updateReportStatus(id, "resolved").then(async (updated) => {
       if (updated) {
         setReports((p) => p.map((r) => (r.id === id ? updated : r)));
@@ -524,10 +554,17 @@ export function AdminDashboard() {
         setSelectedReport(null);
         toast.success("Report marked as resolved and notifications sent");
       }
+    }).finally(() => {
+      setIsResolvingReportId(null);
     });
   };
 
   const dismissReport = (id: string, reason?: string) => {
+    if (isDismissingReportId === id) {
+      toast.error("Operation in progress...");
+      return;
+    }
+    setIsDismissingReportId(id);
     void updateReportStatus(id, "dismissed").then(async (updated) => {
       if (updated) {
         setReports((p) => p.map((r) => (r.id === id ? updated : r)));
@@ -546,6 +583,8 @@ export function AdminDashboard() {
         setDismissReportModal(null);
         toast.success("Report dismissed and notification sent to reporter");
       }
+    }).finally(() => {
+      setIsDismissingReportId(null);
     });
   };
 
@@ -672,11 +711,18 @@ export function AdminDashboard() {
   };
 
   const handleDeleteViolation = (violationId: string) => {
+    if (isDeletingViolationId === violationId) {
+      toast.error("Deletion in progress...");
+      return;
+    }
+    setIsDeletingViolationId(violationId);
     void deleteViolationRecord(violationId).then((removed) => {
       if (removed) {
         setViolations((p) => p.filter((v) => v.id !== violationId));
         toast.success("Violation deleted");
       }
+    }).finally(() => {
+      setIsDeletingViolationId(null);
     });
   };
 

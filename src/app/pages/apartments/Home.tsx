@@ -7,7 +7,7 @@ import { FilterBar } from "@/app/components/common/FilterBar";
 import { MapView } from "@/app/components/features/map/MapView";
 import { Button } from "@/app/components/ui/button";
 import { LayoutGrid, Map, Sparkles, ArrowLeft } from "lucide-react";
-import { rankApartments } from "@/app/utils/rankingEngine";
+import { rankApartments, getRecommendationExplanation, type TenantPreferences } from "@/app/utils/rankingEngine";
 import { useFavorites } from "@/app/hooks/useFavorites";
 import { LandlordBrowse } from "./LandlordBrowse";
 
@@ -121,16 +121,19 @@ function TenantBrowse() {
       const isTenant = user?.role === "student" || user?.role === "employee";
 
       if (isTenant) {
-        // Use weighted ranking algorithm only for tenant browsing
+        // Use weighted ranking algorithm for tenant browsing
+        const preferences: TenantPreferences = {
+          maxBudget: priceRange[1],
+          preferredArea: searchQuery || undefined,
+          petFriendly,
+          parking,
+          furnished,
+          tenantType: user?.role === "student" ? "student" : "employee",
+        };
+
         const rankedApartments = rankApartments(
           filtered,
-          {
-            maxBudget: priceRange[1],
-            preferredArea: searchQuery,
-            petFriendly,
-            parking,
-            furnished,
-          },
+          preferences,
           userFavorites
         );
 

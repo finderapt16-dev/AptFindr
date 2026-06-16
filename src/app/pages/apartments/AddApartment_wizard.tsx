@@ -173,6 +173,7 @@ export function AddApartment() {
 
   const [features, setFeatures] = useState<string[]>([]);
   const [featureInput, setFeatureInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addFeature = (value: string) => {
     const trimmed = value.trim();
@@ -302,9 +303,17 @@ export function AddApartment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent duplicate submissions while async operation is in flight
+    if (isSubmitting) {
+      toast.error("Please wait for your submission to complete...");
+      return;
+    }
+    
     if (!user || user.role !== "landlord") { toast.error("Only landlords can add apartments"); return; }
     if (!user.id) { toast.error("User ID is missing. Please log in again."); return; }
 
+    setIsSubmitting(true);
     const primaryImage = uploadedImage || formData.image || "modern-loft-apartment";
     const imageList = uploadedImage
       ? [uploadedImage, ...(formData.images?.filter((img) => img !== "modern-loft-apartment") || [])]
@@ -413,6 +422,8 @@ export function AddApartment() {
       console.error("Failed to submit apartment:", error);
       const message = error instanceof Error ? error.message : "Unable to save apartment.";
       toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
