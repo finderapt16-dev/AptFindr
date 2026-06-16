@@ -1342,11 +1342,10 @@ export function LandlordDashboard() {
         >
           <div className="absolute -top-5 -right-5 w-24 h-24 bg-amber-50 rounded-full" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center mb-3">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
                 <Eye className="h-5 w-5 text-amber-600" />
               </div>
-              <span className="text-xs font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+12%</span>
             </div>
             <p className="text-5xl font-black text-slate-900 leading-none mb-1">{totalViews.toLocaleString()}</p>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Total Views</p>
@@ -1362,11 +1361,10 @@ export function LandlordDashboard() {
         >
           <div className="absolute -top-5 -right-5 w-24 h-24 bg-orange-50 rounded-full" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center mb-3">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
                 <Heart className="h-5 w-5 text-amber-600" />
               </div>
-              <span className="text-xs font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+8%</span>
             </div>
             <p className="text-5xl font-black text-slate-900 leading-none mb-1">{totalInquiries}</p>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Favorites</p>
@@ -1582,12 +1580,7 @@ export function LandlordDashboard() {
                 key={apartment.id}
                 className={`px-5 py-4 ${index < Math.min(myApartments.length, 5) - 1 ? "border-b border-amber-50" : ""}`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-black text-slate-900 text-sm">{apartment.title}</p>
-                  <span className="text-lg font-black text-amber-600 flex items-center gap-1">
-                    +{Math.floor(Math.random() * 30 + 5)}% <ArrowUpRight className="h-4 w-4 text-amber-400" />
-                  </span>
-                </div>
+                <p className="font-black text-slate-900 text-sm mb-3">{apartment.title}</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => openViewers(apartment.id, apartment.title, views)}

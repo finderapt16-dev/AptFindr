@@ -14,6 +14,7 @@
 --   - Complete database schema for all features
 --   - User roles and profile tables
 --   - Apartment listings with images and rooms
+--   - Storage bucket for apartment images
 --   - Reporting system with evidence tracking
 --   - Violations and appeals management
 --   - Notifications system with soft delete
@@ -106,6 +107,7 @@ create unique index if not exists app_users_legacy_id_key on public.app_users (l
 create index if not exists idx_app_users_role on public.app_users (role);
 create index if not exists idx_app_users_email on public.app_users (email);
 create index if not exists idx_app_users_status on public.app_users (status);
+create index if not exists idx_app_users_legacy on public.app_users (legacy_id);
 
 -- Auth audit tables
 create table if not exists public.signups (
@@ -227,17 +229,23 @@ create table if not exists public.apartments (
   amenities text[] default array[]::text[],
   features jsonb not null default '{}'::jsonb,
   is_published boolean not null default true,
-  status text default 'available',
+  status text not null default 'available',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-alter table public.apartments add column if not exists status text default 'available';
+alter table public.apartments add column if not exists legacy_id text;
+alter table public.apartments add column if not exists status text not null default 'available';
+alter table public.apartments alter column features set default '{}'::jsonb;
+alter table public.apartments drop constraint if exists apartments_status_check;
+alter table public.apartments add constraint apartments_status_check check (status in ('available', 'occupied', 'reserved', 'maintenance'));
 
 create unique index if not exists apartments_legacy_id_key on public.apartments (legacy_id) where legacy_id is not null;
 create index if not exists idx_apartments_landlord on public.apartments (landlord_id);
 create index if not exists idx_apartments_city on public.apartments (city);
 create index if not exists idx_apartments_published on public.apartments (is_published);
+create index if not exists idx_apartments_status on public.apartments (status);
+create index if not exists idx_apartments_legacy on public.apartments (legacy_id);
 
 create table if not exists public.apartment_images (
   id uuid primary key default gen_random_uuid(),
@@ -264,19 +272,22 @@ create table if not exists public.apartment_rooms (
   shared_bath_location text,
   has_ac boolean not null default false,
   is_occupied boolean not null default false,
-  status text default 'available',
+  status text not null default 'available',
   description text,
   created_at timestamptz not null default now()
 );
 
+alter table public.apartment_rooms add column if not exists name text;
 alter table public.apartment_rooms add column if not exists bathroom_type text;
 alter table public.apartment_rooms add column if not exists shared_bath_location text;
 alter table public.apartment_rooms add column if not exists has_ac boolean not null default false;
-alter table public.apartment_rooms add column if not exists name text;
-alter table public.apartment_rooms add column if not exists status text default 'available';
+alter table public.apartment_rooms add column if not exists status text not null default 'available';
 alter table public.apartment_rooms add column if not exists description text;
+alter table public.apartment_rooms drop constraint if exists apartment_rooms_status_check;
+alter table public.apartment_rooms add constraint apartment_rooms_status_check check (status in ('available', 'occupied', 'reserved', 'maintenance'));
 
 create index if not exists idx_apartment_rooms_apartment on public.apartment_rooms (apartment_id);
+create index if not exists idx_apartment_rooms_status on public.apartment_rooms (status);
 
 -- Apartment views (tracking)
 create table if not exists public.apartment_views (
@@ -292,6 +303,10 @@ create table if not exists public.apartment_views (
 create index if not exists idx_apartment_views_apartment on public.apartment_views (apartment_id);
 create index if not exists idx_apartment_views_viewer on public.apartment_views (viewer_id);
 create index if not exists idx_apartment_views_viewed_at on public.apartment_views (viewed_at);
+
+insert into storage.buckets (id, name, public)
+values ('apartment-images', 'apartment-images', true)
+on conflict (id) do update set public = true;
 
 -- Favorites
 create table if not exists public.favorites (
@@ -317,8 +332,10 @@ begin
     alter table public.favorites drop constraint if exists favorites_pkey;
     alter table public.favorites add primary key (id);
     begin
-      alter table public.favorites add constraint favorites_user_apartment_unique unique (user_id, apartment_id);
-    exception when duplicate_object then null;
+      alter table public.favorites
+        add constraint favorites_user_apartment_unique unique (user_id, apartment_id);
+    exception
+      when duplicate_object then null;
     end;
   end if;
 end $$;
@@ -869,7 +886,7 @@ $$;
 
 -- Reports with evidence view
 drop view if exists public.reports_with_evidence cascade;
-create view public.reports_with_evidence as
+create view public.reports_with_evidence with (security_invoker = true) as
 select
   r.id, r.reporter_id, r.apartment_id, r.landlord_id, r.category, r.issue_type,
   r.details, r.severity, r.status, r.submitted_at, r.last_action_at,
@@ -951,6 +968,13 @@ select pg_temp.ensure_public_fk('violations', 'related_report_id', 'violations_r
 select pg_temp.ensure_public_fk('notifications', 'user_id', 'notifications_user_id_app_users_fkey', 'app_users', 'id', 'cascade', 'c');
 select pg_temp.ensure_public_fk('audit_logs', 'admin_id', 'audit_logs_admin_id_app_users_fkey', 'app_users', 'id', 'set null', 'n');
 
+-- Orphaned FK integrity checks (informational — returns rows if data is inconsistent)
+select 'apartments missing app_users landlord' as check_name, a.id, a.landlord_id
+from public.apartments a left join public.app_users u on u.id = a.landlord_id where u.id is null;
+
+select 'favorites missing app_users user' as check_name, f.id, f.user_id
+from public.favorites f left join public.app_users u on u.id = f.user_id where u.id is null;
+
 -- SECTION 7: ROW LEVEL SECURITY
 -- =============================================================================
 
@@ -998,6 +1022,9 @@ create policy "dev_apartment_rooms_all" on public.apartment_rooms for all to ano
 drop policy if exists "dev_apartment_views_all" on public.apartment_views;
 create policy "dev_apartment_views_all" on public.apartment_views for all to anon, authenticated using (true) with check (true);
 
+drop policy if exists "dev_apartment_storage_all" on storage.objects;
+create policy "dev_apartment_storage_all" on storage.objects for all to anon, authenticated using (bucket_id = 'apartment-images') with check (bucket_id = 'apartment-images');
+
 drop policy if exists "dev_favorites_all" on public.favorites;
 create policy "dev_favorites_all" on public.favorites for all to anon, authenticated using (true) with check (true);
 
@@ -1035,12 +1062,7 @@ drop policy if exists "dev_appeals_all" on public.appeals;
 create policy "dev_appeals_all" on public.appeals for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "report_evidence_reporter_view" on public.report_evidence;
-create policy "report_evidence_reporter_view" on public.report_evidence for select
-  using (auth.uid()::uuid = uploaded_by or (select role from public.app_users where id = auth.uid()::uuid limit 1) = 'admin' or (select landlord_id from public.reports where id = report_id) = auth.uid()::uuid);
-
 drop policy if exists "report_evidence_reporter_insert" on public.report_evidence;
-create policy "report_evidence_reporter_insert" on public.report_evidence for insert with check (auth.uid()::uuid = uploaded_by);
-
 drop policy if exists "dev_report_evidence_all" on public.report_evidence;
 create policy "dev_report_evidence_all" on public.report_evidence for all to anon, authenticated using (true) with check (true);
 
@@ -1069,6 +1091,18 @@ grant execute on function public.fn_mark_notification_read(uuid) to anon, authen
 grant execute on function public.fn_mark_all_notifications_read(uuid) to anon, authenticated, service_role;
 grant execute on function public.fn_get_unread_notification_count(uuid) to anon, authenticated, service_role;
 
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rls_auto_enable'
+      and pg_get_function_identity_arguments(p.oid) = ''
+  ) then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+    grant execute on function public.rls_auto_enable() to service_role;
+  end if;
+end $$;
+
 -- SECTION 9: SEED DATA (OPTIONAL)
 -- =============================================================================
 
@@ -1083,6 +1117,11 @@ on conflict (email) do update set
   status = excluded.status,
   is_verified = excluded.is_verified,
   permit_number = excluded.permit_number;
+
+update public.app_users set
+  signup_source = coalesce(nullif(signup_source, ''), 'web'),
+  verification_status = coalesce(nullif(verification_status, ''), case when is_verified then 'verified' else 'pending' end),
+  landlord_status = case when role = 'landlord' then coalesce(nullif(landlord_status, ''), status) else landlord_status end;
 
 -- =============================================================================
 -- MIGRATION COMPLETE ✓

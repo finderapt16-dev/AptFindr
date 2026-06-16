@@ -220,7 +220,7 @@ export function Flowchart() {
               <text x="1005" y="820" className="text-white" style={{ fontSize: '12px' }}>Edit Own Apartments</text>
 
               <rect x="900" y="850" width="210" height="40" rx="8" className="box-feature" strokeWidth="2" />
-              <text x="1005" y="875" className="text-white" style={{ fontSize: '12px' }}>View Analytics</text>
+              <text x="1005" y="875" className="text-white" style={{ fontSize: '12px' }}>Listing Activity</text>
 
               <rect x="900" y="905" width="210" height="40" rx="8" className="box-feature" strokeWidth="2" />
               <text x="1005" y="930" className="text-white" style={{ fontSize: '12px' }}>Track Performance</text>
@@ -340,7 +340,7 @@ export function Flowchart() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-3 h-3 mt-0.5 rounded-full bg-purple-500 flex-shrink-0" />
-                    <span><strong>Landlord (Verified):</strong> Can add new apartments with verified badge, edit own properties, view analytics, and browse like students</span>
+                    <span><strong>Landlord (Verified):</strong> Can add new apartments with verified badge, edit own properties, track listing activity, and browse like students</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-3 h-3 mt-0.5 rounded-full bg-orange-500 flex-shrink-0" />

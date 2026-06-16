@@ -728,10 +728,10 @@ export const fetchApartmentInspectionDetails = async (id: string): Promise<Apart
 
   const rawApartment = data as ApartmentRow & Record<string, unknown>;
   const images = Array.isArray(rawApartment.apartment_images)
-    ? (rawApartment.apartment_images.filter(isRecord) as Record<string, unknown>[])
+    ? (rawApartment.apartment_images as unknown[]).filter(isRecord)
     : [];
   const rooms = Array.isArray(rawApartment.apartment_rooms)
-    ? (rawApartment.apartment_rooms.filter(isRecord) as Record<string, unknown>[])
+    ? (rawApartment.apartment_rooms as unknown[]).filter(isRecord)
     : [];
 
   return {

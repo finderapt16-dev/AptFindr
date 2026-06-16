@@ -21,7 +21,6 @@ import {
   Database,
   Smartphone,
   ClipboardCheck,
-  BarChart3,
   Bot,
   Map,
   ChevronDown,
@@ -597,7 +596,7 @@ export function Landing() {
               { icon: Flag, title: "Community Reporting", desc: "Users can report suspicious or inaccurate listings. Admins review and act on reports promptly.", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100" },
               { icon: Map, title: "GIS Map View", desc: "See all apartments on a live map. Compare locations and find what's closest to your destination.", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
               { icon: Bot, title: "AI Assistance", desc: "A built-in assistant helps you navigate the platform and understand rental options quickly.", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
-              { icon: BarChart3, title: "Smart Analytics", desc: "Track demand trends, pricing insights, and availability data to make better rental decisions.", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100" },
+              { icon: TrendingUp, title: "Listing Activity", desc: "Landlords see views and saves on their listings. Renters get ranked suggestions based on verified availability.", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-100" },
             ].map(({ icon: Icon, title, desc, color, bg, border }, i) => (
               <AnimatedSection key={title} delay={i * 0.07}>
                 <motion.div
@@ -632,7 +631,7 @@ export function Landing() {
             {[
               { icon: UserCheck, title: "Create your account", desc: "Sign up as a renter or landlord. Landlords submit permit details for admin review before their listings go live." },
               { icon: Search, title: "Browse & compare", desc: "Filter listings by budget, type, and location. Use the GIS map to compare apartments and view them side by side." },
-              { icon: CheckCircle2, title: "Decide with confidence", desc: "Use verified listings, ranked suggestions, and demand analytics to make informed housing decisions." },
+              { icon: CheckCircle2, title: "Decide with confidence", desc: "Use verified listings, ranked suggestions, and map-based comparisons to make informed housing decisions." },
             ].map(({ icon: Icon, title, desc }, i) => (
               <AnimatedSection key={title} delay={i * 0.12}>
                 <motion.div whileHover={{ y: -6 }} className="relative bg-white border-2 border-amber-100 rounded-3xl p-8 text-center shadow-sm">
@@ -727,7 +726,7 @@ export function Landing() {
                 <span className="font-black text-white text-xl">AptFindr</span>
               </div>
               <p className="text-slate-400 leading-relaxed max-w-xs text-sm">
-                A Progressive Web Application for verified apartment listings and smart rental analytics in La Paz, Iloilo City. Academic thesis project.
+                A Progressive Web Application for verified apartment listings and smart rental search in La Paz, Iloilo City. Academic thesis project.
               </p>
               <div className="flex gap-3 mt-5">
                 <a href="mailto:aptfindr@example.com" className="flex items-center gap-2 text-xs text-slate-500 hover:text-amber-400 transition-colors">

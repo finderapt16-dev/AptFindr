@@ -1,4 +1,4 @@
-// ── Real Analytics Tracking ──────────────────────────────────────────────────
+// ── View & Favorite Tracking ─────────────────────────────────────────────────
 export interface ApartmentViewTracker {
   apartmentId: string;
   viewerId: string;

@@ -91,7 +91,7 @@ export function DesignGuide() {
       path: "/dashboard",
       description: "Management dashboard for landlords",
       icon: LayoutDashboard,
-      features: ["Property Overview", "Add Apartment CTA", "Listing Management", "Analytics", "Verification Status"],
+      features: ["Property Overview", "Add Apartment CTA", "Listing Management", "Listing Activity", "Verification Status"],
       userTypes: ["Landlord"],
       color: "bg-amber-500"
     },

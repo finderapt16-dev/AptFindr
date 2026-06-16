@@ -46,7 +46,7 @@ import {
   ChevronRight, Clock, Flag, CheckCheck, Building2, Eye,
   MapPin, Wifi, Car, PawPrint, Sofa, Search, AlertOctagon,
   Bell, BellRing, ShieldAlert, User as UserIcon, Edit2, Trash2, Lock, Calendar,
-  Mail, MailOpen, BarChart3,
+  Mail, MailOpen,
 } from "lucide-react";
 import {
   AlertDialog,
