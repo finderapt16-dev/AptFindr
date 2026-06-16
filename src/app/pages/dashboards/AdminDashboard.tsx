@@ -14,6 +14,9 @@ import {
   fetchFavorites,
   markNotificationRead,
   markAllNotificationsRead,
+  markNotificationUnread,
+  deleteNotification,
+  deleteAllNotifications,
   createViolation,
   updateViolationStatus,
   updateReportStatus,
@@ -43,6 +46,7 @@ import {
   ChevronRight, Clock, Flag, CheckCheck, Building2, Eye,
   MapPin, Wifi, Car, PawPrint, Sofa, Search, AlertOctagon,
   Bell, BellRing, ShieldAlert, User as UserIcon, Edit2, Trash2, Lock, Calendar,
+  Mail, MailOpen,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -209,6 +213,8 @@ export function AdminDashboard() {
 
   // admin notifications (new property submissions)
   const [adminNotifs, setAdminNotifs] = useState<DashboardNotificationRow[]>([]);
+  const [notifSearch, setNotifSearch] = useState("");
+  const [notifFilter, setNotifFilter] = useState<"all" | "read" | "unread">("all");
 
   const markNotifsRead = () => {
     const updated = adminNotifs.map((n) => ({ ...n, read: true, is_read: true }));
@@ -217,6 +223,47 @@ export function AdminDashboard() {
       void markAllNotificationsRead(user.id);
     }
   };
+
+  const deleteNotif = (notificationId: string) => {
+    setAdminNotifs((prev) => prev.filter((n) => n.id !== notificationId));
+    if (user?.id) {
+      void deleteNotification(notificationId, user.id);
+    }
+  };
+
+  const deleteAllNotifs = () => {
+    if (window.confirm("Are you sure you want to delete all notifications? This cannot be undone.")) {
+      setAdminNotifs([]);
+      if (user?.id) {
+        void deleteAllNotifications(user.id);
+      }
+    }
+  };
+
+  const toggleNotifReadStatus = (notificationId: string, isCurrentlyRead: boolean) => {
+    const updated = adminNotifs.map((n) =>
+      n.id === notificationId ? { ...n, read: !isCurrentlyRead, is_read: !isCurrentlyRead } : n
+    );
+    setAdminNotifs(updated);
+    if (user?.id) {
+      if (isCurrentlyRead) {
+        void markNotificationUnread(notificationId, user.id);
+      } else {
+        void markNotificationRead(notificationId, user.id);
+      }
+    }
+  };
+
+  const filteredNotifs = useMemo(() => {
+    return adminNotifs.filter((n) => {
+      const matchesSearch = !notifSearch || 
+        n.title?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+        n.message?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+        n.type?.toLowerCase().includes(notifSearch.toLowerCase());
+      const matchesFilter = notifFilter === "all" || (notifFilter === "read" ? n.read : !n.read);
+      return matchesSearch && matchesFilter;
+    });
+  }, [adminNotifs, notifSearch, notifFilter]);
 
   // apartments
   const [aptSearch, setAptSearch]   = useState("");
@@ -527,7 +574,6 @@ export function AdminDashboard() {
             violationModal.landlordId,
             vType,
             vMessage,
-            violationModal.apartmentTitle !== "General" ? violationModal.apartmentTitle : undefined,
           );
         } else {
           await notifyLandlordNotice(violationModal.landlordId, nType, nMessage);
@@ -836,16 +882,49 @@ export function AdminDashboard() {
           </div>
           <div>
             <h2 className="text-3xl font-black text-slate-900">Notifications</h2>
-            <p className="text-slate-500 text-sm font-medium">New property submissions from landlords</p>
+            <p className="text-slate-500 text-sm font-medium">{adminNotifs.length} total</p>
           </div>
         </div>
-        {adminNotifs.some((n) => !n.read) && (
-          <Button variant="outline" size="sm" onClick={markNotifsRead}
-            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl text-xs">
-            <CheckCheck className="h-3.5 w-3.5 mr-1.5" />Mark all as read
-          </Button>
+        {adminNotifs.length > 0 && (
+          <div className="flex items-center gap-2">
+            {adminNotifs.some((n) => !n.read) && (
+              <Button variant="outline" size="sm" onClick={markNotifsRead}
+                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl text-xs">
+                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />Mark all as read
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={deleteAllNotifs}
+              className="border-red-200 text-red-700 hover:bg-red-50 font-bold rounded-xl text-xs">
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete all
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* Search and Filter */}
+      {adminNotifs.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <input
+              type="text"
+              placeholder="Search notifications..."
+              value={notifSearch}
+              onChange={(e) => setNotifSearch(e.target.value)}
+              className="w-full rounded-xl border-2 border-indigo-100 bg-indigo-50/30 px-3 py-2 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <select
+            value={notifFilter}
+            onChange={(e) => setNotifFilter(e.target.value as any)}
+            className="rounded-xl border-2 border-indigo-100 bg-indigo-50/30 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            <option value="all">All</option>
+            <option value="unread">Unread</option>
+            <option value="read">Read</option>
+          </select>
+          <span className="text-xs text-slate-400 font-medium">{filteredNotifs.length} results</span>
+        </div>
+      )}
 
       {adminNotifs.length === 0 ? (
         <div className="py-16 text-center">
@@ -855,9 +934,14 @@ export function AdminDashboard() {
           <p className="text-slate-400 font-medium">No notifications yet</p>
           <p className="text-slate-400 text-sm mt-1">New property submissions will appear here</p>
         </div>
+      ) : filteredNotifs.length === 0 ? (
+        <div className="py-12 text-center">
+          <Bell className="h-8 w-8 text-slate-200 mx-auto mb-3" />
+          <p className="text-slate-400 font-medium">No matching notifications</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {adminNotifs.map((notif) => (
+          {filteredNotifs.map((notif) => (
             <div key={notif.id}
               className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all ${
                 notif.read
@@ -870,8 +954,11 @@ export function AdminDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-black text-slate-900 text-sm">{notif.title}</p>
-                    <p className="text-sm text-slate-600 font-medium mt-0.5 leading-relaxed">{notif.message}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-black text-slate-900 text-sm">{notif.title}</p>
+                      {notif.type && <Badge variant="secondary" className="text-[10px] font-bold">{notif.type}</Badge>}
+                    </div>
+                    <p className="text-sm text-slate-600 font-medium leading-relaxed">{notif.message}</p>
                   </div>
                   {!notif.read && (
                     <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
@@ -893,6 +980,24 @@ export function AdminDashboard() {
                     }}
                     className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl text-xs">
                     <Eye className="h-3.5 w-3.5 mr-1.5" />Inspect Property
+                  </Button>
+                  <Button size="sm" variant="ghost"
+                    onClick={() => toggleNotifReadStatus(notif.id || "", notif.read || false)}
+                    className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs">
+                    {notif.read ? (
+                      <>
+                        <Mail className="h-3.5 w-3.5 mr-1.5" />Mark unread
+                      </>
+                    ) : (
+                      <>
+                        <MailOpen className="h-3.5 w-3.5 mr-1.5" />Mark read
+                      </>
+                    )}
+                  </Button>
+                  <Button size="sm" variant="ghost"
+                    onClick={() => deleteNotif(notif.id || "")}
+                    className="text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs">
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete
                   </Button>
                 </div>
               </div>
@@ -1571,8 +1676,8 @@ export function AdminDashboard() {
                         </div>
                         <div>
                           <p className="text-slate-400 font-medium">Severity</p>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${SEVERITY_LABEL[selectedReport.severity]?.class}`}>
-                            {SEVERITY_LABEL[selectedReport.severity]?.label}
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${(SEVERITY_LABEL[selectedReport.severity ?? "med"] ?? SEVERITY_LABEL.med).class}`}>
+                            {(SEVERITY_LABEL[selectedReport.severity ?? "med"] ?? SEVERITY_LABEL.med).label}
                           </span>
                         </div>
                       </div>
@@ -1759,7 +1864,7 @@ export function AdminDashboard() {
                       <p className="text-sm font-medium text-slate-800">{viewingUserProfile.mobile}</p>
                     </div>
                   )}
-                  {viewingUserProfile.address && (
+                  {typeof viewingUserProfile.address === "string" && viewingUserProfile.address.length > 0 && (
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p>
                       <p className="text-sm font-medium text-slate-800">{viewingUserProfile.address}</p>
@@ -2340,9 +2445,9 @@ export function AdminDashboard() {
 
       {/* Violation / Notice modal */}
       {violationModal?.open && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setViolationModal(null)}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto" onClick={() => setViolationModal(null)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden"
+          <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden my-8"
             onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b ${
@@ -2356,7 +2461,7 @@ export function AdminDashboard() {
                 </div>
                 <div>
                   <p className="font-black text-slate-900">{violationModal.mode === "violation" ? "Issue Violation" : "Send Notice"}</p>
-                  <p className="text-xs text-slate-400 font-medium">{violationModal.landlordName} · {violationModal.apartmentTitle}</p>
+                  <p className="text-xs text-slate-400 font-medium">{violationModal.landlordName}</p>
                 </div>
               </div>
               <button onClick={() => setViolationModal(null)} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
@@ -2364,7 +2469,8 @@ export function AdminDashboard() {
               </button>
             </div>
             {/* Body */}
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Type Selection */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   {violationModal.mode === "violation" ? "Violation Type" : "Notice Type"}
@@ -2379,15 +2485,19 @@ export function AdminDashboard() {
                   ))}
                 </select>
               </div>
+
+              {/* Message */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Message (optional)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {violationModal.mode === "violation" ? "Violation Description" : "Message"} (optional)
+                  </label>
                   <span className="text-[10px] text-slate-400">
-                    {(violationModal.mode === "violation" ? vMessage : nMessage).length}/300
+                    {(violationModal.mode === "violation" ? vMessage : nMessage).length}/500
                   </span>
                 </div>
                 <textarea
-                  rows={4} maxLength={300}
+                  rows={4} maxLength={500}
                   value={violationModal.mode === "violation" ? vMessage : nMessage}
                   onChange={(e) => violationModal.mode === "violation" ? setVMessage(e.target.value) : setNMessage(e.target.value)}
                   placeholder={violationModal.mode === "violation"
@@ -2396,10 +2506,12 @@ export function AdminDashboard() {
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
                 />
               </div>
+
+              {/* Expiration (violations only) */}
               {violationModal.mode === "violation" && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Calendar className="h-3.5 w-3.5 inline mr-1" />
                     Expiration Days
                   </label>
                   <input
@@ -2411,11 +2523,10 @@ export function AdminDashboard() {
                     placeholder="Days"
                     className="w-full rounded-xl border-2 border-red-100 bg-red-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
-                  <p className="text-[10px] text-slate-500">
-                    Expires on {new Date(Date.now() + vExpirationDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                  </p>
                 </div>
               )}
+
+              {/* Info Alert */}
               <div className={`flex gap-3 p-3 rounded-xl border ${
                 violationModal.mode === "violation" ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"
               }`}>
@@ -2569,7 +2680,7 @@ export function AdminDashboard() {
                             <Building2 className="h-6 w-6 text-amber-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-900 text-sm truncate">{apt.title || "—"}</p>
+                            <p className="font-bold text-slate-900 text-sm truncate">{String(apt.title || "—")}</p>
                             <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
                               <Badge variant="outline" className="text-[9px] font-bold">
                                 {(apt.is_published ?? apt.isPublished) ? "Published" : "Draft"}

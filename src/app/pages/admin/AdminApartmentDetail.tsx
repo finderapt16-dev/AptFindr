@@ -498,7 +498,7 @@ export function AdminApartmentDetail() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h3 className="font-bold text-slate-900">{report.issue_type || "Report"}</h3>
-                            <p className="text-sm text-slate-600 mt-1 line-clamp-2">{report.details || report.reason || "—"}</p>
+                            <p className="text-sm text-slate-600 mt-1 line-clamp-2">{getRecordText(report, ["details", "reason"], "—")}</p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
                               <span>{report.reporter_name || "Unknown"}</span>
                               <span>•</span>
@@ -787,7 +787,7 @@ export function AdminApartmentDetail() {
                   <h3 className="text-lg font-bold text-slate-900 mb-4">Report Details</h3>
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <p className="text-sm text-slate-700 leading-relaxed">
-                      {selectedReport.details || selectedReport.reason || "No details provided"}
+                      {getRecordText(selectedReport, ["details", "reason"], "No details provided")}
                     </p>
                   </div>
 

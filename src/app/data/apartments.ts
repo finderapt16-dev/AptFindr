@@ -42,6 +42,8 @@ export interface Apartment {
   status?: ApartmentStatus;
   rooms?: ApartmentRoom[];
   location?: string;
+  createdAt?: string;
+  propertyType?: string;
   wifi?: boolean;
   features?: Record<string, unknown> | string[];
 }

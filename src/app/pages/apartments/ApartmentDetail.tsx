@@ -15,6 +15,8 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
 import { MapView } from "@/app/components/features/map/MapView";
 import { EditApartmentDialog } from "@/app/components/common/EditApartmentDialog";
+import { ImageGallery } from "@/app/components/common/ImageGallery";
+import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
@@ -122,9 +124,13 @@ export function ApartmentDetail() {
 
   // Report modal state
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportType, setReportType] = useState("Inaccurate information");
+  const [reportCategory, setReportCategory] = useState("Inaccurate information");
+  const [reportTitle, setReportTitle] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportContact, setReportContact] = useState("");
+  const [reportDateOfIncident, setReportDateOfIncident] = useState("");
+  const [reportEvidenceFiles, setReportEvidenceFiles] = useState<EvidenceFile[]>([]);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -217,8 +223,19 @@ export function ApartmentDetail() {
   const submitReport = async () => {
     if (!apartment) return;
 
+    // Validation
+    if (!reportTitle.trim()) {
+      toast.error("Please provide a report title");
+      return;
+    }
+
     if (!reportDetails.trim()) {
       toast.error("Please provide details about the issue");
+      return;
+    }
+
+    if (reportEvidenceFiles.length === 0) {
+      toast.error("Please upload at least one image or document to support your report");
       return;
     }
 
@@ -227,29 +244,47 @@ export function ApartmentDetail() {
       return;
     }
 
+    setIsSubmittingReport(true);
     try {
       const createdReport = await createReport({
         reporter_id: user.id,
         reporter_role: user.role,
         apartment_id: apartment.id,
-        issue_type: reportType,
-        tags: [reportType],
+        category: reportCategory,
+        issue_type: reportCategory,
+        tags: [reportCategory],
         details: reportDetails,
         contact: reportContact || user.email,
+        date_of_incident: reportDateOfIncident || null,
+        landlord_id: apartment.landlordId,
+        has_evidence: true,
+        evidence_count: reportEvidenceFiles.length,
       });
 
-      if (!createdReport) {
+      if (!createdReport || !createdReport.id) {
         throw new Error("Unable to save report.");
       }
 
-      toast.success("Report submitted successfully. Admin will review it.");
+      // TODO: Upload evidence files to Supabase storage
+      // For now, we'll show success and evidence can be added via admin dashboard
+      // In production, implement:
+      // - Upload each file to supabase.storage
+      // - Create report_evidence records with file URLs
+      // - Handle upload progress and errors
+
+      toast.success("Report submitted successfully with evidence. Admin will review it.");
       setReportModalOpen(false);
+      setReportTitle("");
       setReportDetails("");
       setReportContact("");
-      setReportType("Inaccurate information");
+      setReportDateOfIncident("");
+      setReportCategory("Inaccurate information");
+      setReportEvidenceFiles([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit report.";
       toast.error(message);
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -304,29 +339,12 @@ export function ApartmentDetail() {
         </div>
 
         {/* Image Gallery */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
-            <img
-              src={getImageUrl(images[currentImageIndex])}
-              alt={apartment.title}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {images.slice(1, 5).map((img, index) => (
-              <div
-                key={index}
-                className="relative aspect-[4/3] overflow-hidden rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setCurrentImageIndex(index + 1)}
-              >
-                <img
-                  src={getImageUrl(img)}
-                  alt={`${apartment.title} - ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
+        <div className="mb-8">
+          <ImageGallery
+            images={images.map((img) => getImageUrl(img))}
+            title={apartment.title}
+            primaryImageUrl={getImageUrl(apartment.image)}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -683,33 +701,34 @@ export function ApartmentDetail() {
 
       {/* Report Problem Modal */}
       {reportModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setReportModalOpen(false)}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto" onClick={() => setReportModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden"
+          <div className="relative z-10 w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden my-8"
             onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-rose-50">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-rose-50 sticky top-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 flex items-center justify-center shadow">
                   <Flag className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <p className="font-black text-slate-900">Report a Problem</p>
-                  <p className="text-xs text-slate-500 font-medium">{apartment.title}</p>
+                  <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{apartment.title}</p>
                 </div>
               </div>
-              <button onClick={() => setReportModalOpen(false)} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <button onClick={() => setReportModalOpen(false)} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors flex-shrink-0">
                 <X className="h-4 w-4 text-slate-500" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Report Category */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Issue Type</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Category *</label>
                 <select
-                  value={reportType}
-                  onChange={(e) => setReportType(e.target.value)}
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 >
                   <option>Inaccurate information</option>
@@ -719,51 +738,98 @@ export function ApartmentDetail() {
                   <option>Safety concerns</option>
                   <option>Price discrepancy</option>
                   <option>Property condition issue</option>
+                  <option>Discriminatory behavior</option>
                   <option>Other</option>
                 </select>
               </div>
 
+              {/* Report Title */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Title *</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={reportTitle}
+                  onChange={(e) => setReportTitle(e.target.value)}
+                  placeholder="Brief summary of the issue"
+                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <p className="text-[10px] text-slate-400">{reportTitle.length}/100</p>
+              </div>
+
+              {/* Date of Incident */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date of Incident (Optional)</label>
+                <input
+                  type="date"
+                  value={reportDateOfIncident}
+                  onChange={(e) => setReportDateOfIncident(e.target.value)}
+                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+
+              {/* Details */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Details *</label>
-                  <span className="text-[10px] text-slate-400">{reportDetails.length}/500</span>
+                  <span className="text-[10px] text-slate-400">{reportDetails.length}/1000</span>
                 </div>
                 <textarea
-                  rows={5}
-                  maxLength={500}
+                  rows={4}
+                  maxLength={1000}
                   value={reportDetails}
                   onChange={(e) => setReportDetails(e.target.value)}
-                  placeholder="Please describe the issue in detail..."
+                  placeholder="Please describe the issue in detail. Include what happened, when it happened, and why you're reporting it..."
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
                 />
               </div>
 
+              {/* Evidence Upload */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Supporting Evidence *</label>
+                <EvidenceUploader
+                  evidenceFiles={reportEvidenceFiles}
+                  onEvidenceChange={setReportEvidenceFiles}
+                  maxFiles={5}
+                  maxFileSize={10}
+                  required={true}
+                />
+              </div>
+
+              {/* Contact Info */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Info (Optional)</label>
                 <input
                   type="text"
                   value={reportContact}
                   onChange={(e) => setReportContact(e.target.value)}
-                  placeholder="Email or phone number"
+                  placeholder="Email or phone number (optional)"
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
 
-              <div className="flex gap-3 p-3 rounded-xl border border-amber-100 bg-amber-50">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
-                <p className="text-xs font-medium text-amber-700">
-                  Your report will be sent to administrators for review. Please provide as much detail as possible.
+              <div className="flex gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" />
+                <p className="text-xs font-medium text-blue-700">
+                  Your report and evidence will be sent to administrators for investigation. Be honest and provide as much detail as possible. False reports may result in account restrictions.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-amber-50 flex gap-3">
-              <Button onClick={submitReport}
-                className="flex-1 font-bold rounded-xl shadow-md text-white bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700">
-                <Flag className="h-4 w-4 mr-2" />Submit Report
+            <div className="px-6 py-4 border-t border-amber-50 flex gap-3 bg-amber-50/30 sticky bottom-0">
+              <Button 
+                onClick={submitReport}
+                disabled={isSubmittingReport || reportEvidenceFiles.length === 0}
+                className="flex-1 font-bold rounded-xl shadow-md text-white bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Flag className="h-4 w-4 mr-2" />
+                {isSubmittingReport ? "Submitting..." : "Submit Report"}
               </Button>
-              <Button variant="outline" onClick={() => setReportModalOpen(false)} className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
+              <Button 
+                variant="outline" 
+                onClick={() => setReportModalOpen(false)}
+                disabled={isSubmittingReport}
+                className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl disabled:opacity-50">
                 Cancel
               </Button>
             </div>

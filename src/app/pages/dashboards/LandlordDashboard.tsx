@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from "react";
+import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   deleteApartment as deleteApartmentInDb,
   fetchApartmentsForLandlord,
@@ -16,10 +16,16 @@ import {
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  markNotificationUnread,
+  deleteNotification,
+  deleteAllNotifications,
+  fetchViolations,
+  createAppeal,
   type DashboardApartmentViewRow,
   type DashboardFavoriteRow,
   type DashboardUserRow,
   type DashboardNotificationRow,
+  type DashboardViolationRow,
 } from "@/app/services/dashboardSupabaseService";
 import { ApartmentCard } from "@/app/components/common/ApartmentCard";
 import { Button } from "@/app/components/ui/button";
@@ -68,6 +74,8 @@ import {
   EyeOff,
   CheckCircle2,
   MessageSquare,
+  Mail,
+  MailOpen,
 } from "lucide-react";
 
 // ── Nav groups ───────────────────────────────────────────────────────────────
@@ -310,10 +318,61 @@ export function LandlordDashboard() {
   const [viewRows, setViewRows] = useState<DashboardApartmentViewRow[]>([]);
   const [favoriteUsers, setFavoriteUsers] = useState<DashboardUserRow[]>([]);
   const [notifications, setNotifications] = useState<DashboardNotificationRow[]>([]);
+  const [violations, setViolations] = useState<DashboardViolationRow[]>([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [notifSearch, setNotifSearch] = useState("");
+  const [notifFilter, setNotifFilter] = useState<"all" | "read" | "unread">("all");
 
-  const violations: any[] = JSON.parse(localStorage.getItem("adminViolations") || "[]");
-  const myViolationsCount = violations.filter((v) => v.landlordId === user?.id).length;
+  const deleteNotif = (notificationId: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    if (user?.id) {
+      void deleteNotification(notificationId, user.id);
+    }
+  };
+
+  const deleteAllNotifs = () => {
+    if (window.confirm("Are you sure you want to delete all notifications?")) {
+      setNotifications([]);
+      if (user?.id) {
+        void deleteAllNotifications(user.id);
+      }
+    }
+  };
+
+  const toggleNotifReadStatus = (notificationId: string, isCurrentlyRead: boolean) => {
+    const updated = notifications.map((n) =>
+      n.id === notificationId ? { ...n, read: !isCurrentlyRead, is_read: !isCurrentlyRead } : n
+    );
+    setNotifications(updated);
+    if (user?.id) {
+      if (isCurrentlyRead) {
+        void markNotificationUnread(notificationId, user.id);
+      } else {
+        void markNotificationRead(notificationId, user.id);
+      }
+    }
+  };
+
+  const filteredNotifs = useMemo(() => {
+    return notifications.filter((n) => {
+      const matchesSearch = !notifSearch ||
+        n.title?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+        n.message?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+        n.type?.toLowerCase().includes(notifSearch.toLowerCase());
+      const matchesFilter = notifFilter === "all" || (notifFilter === "read" ? n.read : !n.read);
+      return matchesSearch && matchesFilter;
+    });
+  }, [notifications, notifSearch, notifFilter]);
+
+  const myViolationsCount = violations.filter((v) => v.landlord_id === user?.id || v.landlordId === user?.id).length;
+
+  const [appealModal, setAppealModal] = useState<{
+    open: boolean;
+    violationId: string | null;
+    violationType: string;
+  }>({ open: false, violationId: null, violationType: "" });
+  const [appealMessage, setAppealMessage] = useState("");
+  const [appealStatus, setAppealStatus] = useState<"under_review" | "approved" | "rejected">("under_review");
 
   const [modal, setModal] = useState<{
     open: boolean;
@@ -457,6 +516,32 @@ export function LandlordDashboard() {
     };
 
     void loadNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadViolations = async () => {
+      try {
+        const allViolations = await fetchViolations();
+        if (active) {
+          // Filter violations for current landlord
+          const myViolations = allViolations.filter((v) => v.landlord_id === user?.id || v.landlordId === user?.id);
+          setViolations(myViolations);
+        }
+      } catch (error) {
+        console.error("Failed to load violations:", error);
+        if (active) {
+          setViolations([]);
+        }
+      }
+    };
+
+    void loadViolations();
 
     return () => {
       active = false;
@@ -1485,8 +1570,7 @@ export function LandlordDashboard() {
 
   // ── Section: Notifications ───────────────────────────────────────────────
   const renderNotifications = () => {
-    const violations: any[] = JSON.parse(localStorage.getItem("adminViolations") || "[]");
-    const myViolations = violations.filter((v) => v.landlordId === user?.id);
+    const myViolations = violations.filter((v) => v.landlord_id === user?.id || v.landlordId === user?.id);
 
     return (
       <div className="space-y-5">
@@ -1525,47 +1609,132 @@ export function LandlordDashboard() {
               </h3>
             </div>
             <div className="divide-y divide-red-50">
-              {myViolations.map((violation, i) => (
-                <div key={i} className="flex items-start gap-4 px-5 py-4 bg-red-50/60 hover:bg-red-100/60 transition-colors cursor-pointer">
-                  <div className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 bg-red-500" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5">
-                        {violation.type}
-                      </Badge>
-                      {violation.apartmentTitle && (
-                        <span className="text-slate-600 text-xs font-medium">• {violation.apartmentTitle}</span>
+              {myViolations.map((violation) => {
+                const issueDate = new Date(violation.issued_at || violation.issuedAt || new Date());
+                const isViolation = violation.mode === "violation";
+                return (
+                  <div key={violation.id} className="flex items-start gap-4 px-5 py-4 bg-red-50/60 hover:bg-red-100/60 transition-colors">
+                    <div className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 bg-red-500" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5">
+                          {violation.type || "Violation"}
+                        </Badge>
+                      </div>
+                      <p className="font-bold text-slate-900 text-sm">{violation.message || "No message provided"}</p>
+                      <p className="text-slate-500 text-xs font-medium mt-1">
+                        Issued on {issueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                      {isViolation && violation.expires_at && (
+                        <p className="text-slate-500 text-xs font-medium">
+                          Expires: {new Date(violation.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                      )}
+                      {isViolation && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAppealModal({ open: true, violationId: violation.id || "", violationType: violation.type || "" })}
+                          className="mt-2 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+                        >
+                          Submit Appeal
+                        </Button>
                       )}
                     </div>
-                    <p className="font-bold text-slate-900 text-sm">{violation.message}</p>
-                    <p className="text-slate-500 text-xs font-medium mt-1">
-                      Issued by Admin on {new Date(violation.issuedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {notifications.length > 0 ? (
+        {notifications.length > 0 && (
+          <div className="mb-4 flex flex-col sm:flex-row gap-2">
+            {unreadNotificationCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const unreadNotifs = notifications.filter((n) => !n.read);
+                  unreadNotifs.forEach((notif) => {
+                    if (user?.id && notif.id) {
+                      void markNotificationRead(notif.id, user.id);
+                    }
+                  });
+                  setNotifications(
+                    notifications.map((n) => ({ ...n, read: true, is_read: true }))
+                  );
+                }}
+                className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+              >
+                Mark all as read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={deleteAllNotifs}
+                className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+              >
+                Delete all
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search notifications..."
+              value={notifSearch}
+              onChange={(e) => setNotifSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <select
+            value={notifFilter}
+            onChange={(e) => setNotifFilter(e.target.value as "all" | "read" | "unread")}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Notifications</option>
+            <option value="read">Read</option>
+            <option value="unread">Unread</option>
+          </select>
+        </div>
+
+        {filteredNotifs.length > 0 && (
+          <p className="text-xs text-slate-500 mb-3">
+            Showing {filteredNotifs.length} of {notifications.length} notifications
+          </p>
+        )}
+
+        {filteredNotifs.length > 0 ? (
           <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden divide-y divide-amber-50">
-            {notifications.map((notif, i) => (
+            {filteredNotifs.map((notif, i) => (
               <div
                 key={notif.id || i}
-                onClick={() => handleNotificationClick(notif)}
-                className={`flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors ${
+                className={`flex items-start gap-3 px-5 py-4 transition-colors ${
                   notif.read ? "" : "bg-amber-50/60 hover:bg-amber-100/60"
                 } hover:bg-amber-50`}
               >
                 <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? "bg-slate-200" : "bg-orange-500"}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <p className="font-bold text-slate-900 text-sm">{notif.title || notif.type}</p>
-                    {!notif.read && <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />}
+                    {notif.type && (
+                      <Badge className="bg-blue-100 text-blue-700 text-[10px] font-black">
+                        {notif.type}
+                      </Badge>
+                    )}
+                    {!notif.read && (
+                      <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
+                    )}
                   </div>
                   <p className="text-slate-600 text-xs font-medium">{notif.message}</p>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-amber-100">
                     <span className="text-slate-400 text-[10px] font-medium">
                       {notif.created_at
                         ? new Date(notif.created_at).toLocaleDateString("en-US", {
@@ -1577,19 +1746,59 @@ export function LandlordDashboard() {
                           })
                         : ""}
                     </span>
-                    {!notif.read && (
-                      <Badge className="bg-amber-100 text-amber-700 text-[10px] font-black">Unread</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (notif.id) {
+                            toggleNotifReadStatus(notif.id, Boolean(notif.read || notif.is_read));
+                          }
+                        }}
+                        className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 hover:bg-amber-100"
+                      >
+                        {notif.read || notif.is_read ? (
+                          <>
+                            <MailOpen className="h-3.5 w-3.5 mr-1" />
+                            Mark unread
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-3.5 w-3.5 mr-1" />
+                            Mark read
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (notif.id) {
+                            deleteNotif(notif.id);
+                          }
+                        }}
+                        className="h-7 px-2 text-xs text-red-600 hover:text-red-900 hover:bg-red-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
+        ) : notifications.length === 0 ? (
           <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden p-8 text-center">
             <Bell className="h-8 w-8 text-amber-200 mx-auto mb-3" />
             <p className="text-slate-500 font-medium text-sm">No notifications yet</p>
             <p className="text-slate-400 text-xs font-medium mt-1">You're all caught up!</p>
+          </div>
+        ) : (
+          <div className="bg-white/90 backdrop-blur-xl border border-amber-100 rounded-2xl shadow-lg overflow-hidden p-8 text-center">
+            <Search className="h-8 w-8 text-amber-200 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium text-sm">No matching notifications</p>
+            <p className="text-slate-400 text-xs font-medium mt-1">Try adjusting your search or filter</p>
           </div>
         )}
       </div>
@@ -2518,6 +2727,105 @@ export function LandlordDashboard() {
         iconColor={modal.type === "views" ? "bg-gradient-to-br from-amber-500 to-orange-500" : "bg-gradient-to-br from-rose-400 to-pink-500"}
         names={modal.names}
       />
+
+      {/* Appeal modal */}
+      {appealModal.open && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto" onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden my-8"
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-amber-100 bg-amber-50/40">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow bg-gradient-to-br from-amber-500 to-orange-600">
+                  <MessageSquare className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-black text-slate-900">Submit Appeal</p>
+                  <p className="text-xs text-slate-400 font-medium">{appealModal.violationType}</p>
+                </div>
+              </div>
+              <button onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Appeal Message (required)</label>
+                  <span className="text-[10px] text-slate-400">{appealMessage.length}/500</span>
+                </div>
+                <textarea
+                  rows={4} maxLength={500}
+                  value={appealMessage}
+                  onChange={(e) => setAppealMessage(e.target.value)}
+                  placeholder="Explain your appeal and provide any supporting information…"
+                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Appeal Status</label>
+                <select
+                  value={appealStatus}
+                  onChange={(e) => setAppealStatus(e.target.value as any)}
+                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div className={`flex gap-3 p-3 rounded-xl border bg-amber-50 border-amber-100`}>
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                <p className="text-xs font-medium text-amber-700">
+                  Your appeal will be reviewed by an administrator. Please provide clear and detailed information.
+                </p>
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-amber-50 flex gap-3">
+              <Button onClick={async () => {
+                if (!appealMessage.trim()) {
+                  toast.error("Please enter an appeal message");
+                  return;
+                }
+                if (!user?.id || !appealModal.violationId) {
+                  toast.error("Missing required information");
+                  return;
+                }
+
+                try {
+                  await createAppeal({
+                    violation_id: appealModal.violationId,
+                    landlord_id: user.id,
+                    reason: appealModal.violationType || "Violation Appeal",
+                    description: appealMessage,
+                  });
+                  toast.success("Appeal submitted successfully");
+                  setAppealModal({ open: false, violationId: null, violationType: "" });
+                  setAppealMessage("");
+                  setAppealStatus("under_review");
+                  // Refresh violations to show updated status
+                  const allViolations = await fetchViolations();
+                  setViolations(allViolations.filter((v) => v.landlord_id === user.id || v.landlordId === user.id));
+                } catch (err) {
+                  toast.error("Failed to submit appeal");
+                }
+              }}
+                className="flex-1 font-bold rounded-xl shadow-md text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                <MessageSquare className="h-4 w-4 mr-2 inline" />
+                Submit Appeal
+              </Button>
+              <Button variant="outline" onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })} className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

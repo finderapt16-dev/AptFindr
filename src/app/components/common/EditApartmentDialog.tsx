@@ -7,8 +7,9 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Switch } from "../ui/switch";
+import { MultiImageUploader, type UploadedImage } from "./MultiImageUploader";
 import { toast } from "sonner";
-import { Home, Plus, Trash2 } from "lucide-react";
+import { Home, Plus, Trash2, Images, Star, X } from "lucide-react";
 
 interface EditApartmentDialogProps {
   apartment: Apartment;
@@ -19,6 +20,31 @@ interface EditApartmentDialogProps {
 
 export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: EditApartmentDialogProps) {
   const [formData, setFormData] = useState<Apartment>(apartment);
+
+  // ── Image Management State ─────────────────────────────────────────────
+  const [existingImages, setExistingImages] = useState<UploadedImage[]>(
+    (apartment.images || []).map((url, idx) => ({
+      id: `existing-${idx}`,
+      url,
+      isPrimary: idx === 0 || url === apartment.image,
+      sortOrder: idx,
+    }))
+  );
+  const [newImages, setNewImages] = useState<UploadedImage[]>([]);
+  // ───────────────────────────────────────────────────────────────────────
+
+  const handleExistingImageDelete = (id: string) => {
+    setExistingImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const handleExistingImageSetPrimary = (id: string) => {
+    setExistingImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        isPrimary: img.id === id,
+      }))
+    );
+  };
 
   const createRoom = (): NonNullable<Apartment["rooms"]>[number] => ({
     id: Date.now().toString() + Math.random(),
@@ -76,9 +102,24 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
       hasAC: room.hasAC === true,
       isOccupied: room.isOccupied === true,
     }));
+
+    // Combine all images (existing + new)
+    const allImages = [
+      ...existingImages.map((img) => img.url),
+      ...newImages.map((img) => img.url),
+    ];
+
+    // Find primary image
+    const primaryImage =
+      existingImages.find((img) => img.isPrimary)?.url ||
+      newImages.find((img) => img.isPrimary)?.url ||
+      allImages[0];
+
     onSave({
       ...formData,
       rooms: normalizedRooms,
+      images: allImages,
+      image: primaryImage,
       bedrooms: normalizedRooms.length || formData.bedrooms,
       bathrooms: normalizedRooms.filter((room) => room.hasPrivateBath).length || formData.bathrooms,
       price: normalizedRooms.length > 0
@@ -100,6 +141,79 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Images Section */}
+          <div className="space-y-3 border-b pb-4">
+            <div className="flex items-center gap-2">
+              <Images className="h-5 w-5 text-amber-600" />
+              <Label className="text-amber-700 font-bold">Property Images</Label>
+            </div>
+
+            {/* Existing Images */}
+            {existingImages.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-700 mb-2">Current Images</h4>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {existingImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className={`relative group rounded-lg overflow-hidden border-2 aspect-square ${
+                        img.isPrimary
+                          ? "border-yellow-400 ring-2 ring-yellow-300"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <img
+                        src={img.url}
+                        alt="Apartment"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          title="Set as primary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleExistingImageSetPrimary(img.id);
+                          }}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white p-1.5 rounded"
+                        >
+                          <Star className="h-3 w-3 fill-current" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleExistingImageDelete(img.id);
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {img.isPrimary && (
+                        <div className="absolute top-1 right-1 bg-yellow-400 rounded-full p-0.5">
+                          <Star className="h-3 w-3 text-yellow-900 fill-current" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Images Upload */}
+            <div>
+              <h4 className="text-xs font-semibold text-slate-700 mb-2">Add More Images</h4>
+              <MultiImageUploader
+                images={newImages}
+                onImagesChange={setNewImages}
+                maxImages={10 - existingImages.length}
+                maxFileSize={5}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input

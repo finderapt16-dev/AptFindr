@@ -1,10 +1,9 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import {
   apartmentFormValuesFromApartment,
   createApartment,
-  insertApartmentImages,
   insertApartmentRooms,
   resolveAppUserId,
   uploadApartmentImage,
@@ -21,9 +20,10 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Switch } from "@/app/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { LocationPicker } from "@/app/components/common/LocationPicker";
+import { MultiImageUploader, type UploadedImage } from "@/app/components/common/MultiImageUploader";
 import {
   ArrowLeft, AlertCircle, Sparkles, Building2, MapPin, ListChecks,
-  ArrowRight, ShieldCheck, FileText, Camera, Upload, X, Plus,
+  ArrowRight, ShieldCheck, FileText, Upload, X, Plus,
   Home, Trash2, Check,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
@@ -114,17 +114,13 @@ export function AddApartment() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshApartments } = useApartmentsContext();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // ── Wizard State ───────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
 
   const stepConfig = [
-    { number: 1, title: "Property Information", description: "Photo, title, and basic details" },
+    { number: 1, title: "Property Information", description: "Photos, title, and basic details" },
     { number: 2, title: "Location", description: "Address and map location" },
     { number: 3, title: "Rooms", description: "Room details and amenities" },
     { number: 4, title: "Amenities & Features", description: "Utilities and additional features" },
@@ -164,10 +160,10 @@ export function AddApartment() {
     setRooms((prev) => prev.filter((r) => r.id !== id));
   // ─────────────────────────────────────────────────────────────────────
 
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [uploadedImageFile, setUploadedImageFile] = useState<File | Blob | null>(null);
-  const [uploadedImageName, setUploadedImageName] = useState("apartment-image.jpg");
-  const [isCameraActive, setIsCameraActive] = useState(false);
+  // ── Multiple Images State ──────────────────────────────────────────────
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  // ─────────────────────────────────────────────────────────────────────
+
   const [amenitiesInput, setAmenitiesInput] = useState("");
   const [utilitiesInput, setUtilitiesInput] = useState("");
 
@@ -208,15 +204,21 @@ export function AddApartment() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(formData.title && formData.price && formData.sqft && formData.description);
+        return !!(
+          formData.title &&
+          formData.price &&
+          formData.sqft &&
+          formData.description &&
+          uploadedImages.length > 0
+        );
       case 2:
         return !!(formData.address);
       case 3:
         return rooms.length > 0 && rooms.every((r) => r.roomName && r.sqft > 0 && r.rent >= 0);
       case 4:
-        return true; // Optional fields
+        return true;
       case 5:
-        return true; // Optional fields for now
+        return true;
       default:
         return false;
     }
@@ -229,7 +231,11 @@ export function AddApartment() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } else {
-      toast.error("Please fill in all required fields for this step");
+      if (currentStep === 1 && uploadedImages.length === 0) {
+        toast.error("Please upload at least one property image");
+      } else {
+        toast.error("Please fill in all required fields for this step");
+      }
     }
   };
 
@@ -239,79 +245,28 @@ export function AddApartment() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  // ─────────────────────────────────────────────────────────────────────
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image size must be less than 5MB"); return; }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setUploadedImage(event.target?.result as string);
-      setUploadedImageFile(file);
-      setUploadedImageName(file.name);
-      toast.success("Image uploaded successfully!");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      if (videoRef.current) { videoRef.current.srcObject = stream; setIsCameraActive(true); }
-    } catch {
-      toast.error("Unable to access camera. Please check permissions.");
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (ctx) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        ctx.drawImage(videoRef.current, 0, 0);
-        canvasRef.current.toBlob((blob) => {
-          if (blob) {
-            setUploadedImageFile(blob);
-            setUploadedImageName(`camera-${Date.now()}.jpg`);
-          }
-        }, "image/jpeg");
-        setUploadedImage(canvasRef.current.toDataURL("image/jpeg"));
-        stopCamera();
-        toast.success("Photo captured successfully!");
-      }
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-      setIsCameraActive(false);
-    }
-  };
-
-  const clearImage = () => {
-    setUploadedImage(null);
-    setUploadedImageFile(null);
-    setUploadedImageName("apartment-image.jpg");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (cameraInputRef.current) cameraInputRef.current.value = "";
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || user.role !== "landlord") { toast.error("Only landlords can add apartments"); return; }
-    if (!user.id) { toast.error("User ID is missing. Please log in again."); return; }
+    if (!user || user.role !== "landlord") {
+      toast.error("Only landlords can add apartments");
+      return;
+    }
+    if (!user.id) {
+      toast.error("User ID is missing. Please log in again.");
+      return;
+    }
 
-    const primaryImage = uploadedImage || formData.image || "modern-loft-apartment";
-    const imageList = uploadedImage
-      ? [uploadedImage, ...(formData.images?.filter((img) => img !== "modern-loft-apartment") || [])]
-      : formData.images || [];
+    if (uploadedImages.length === 0) {
+      toast.error("Please upload at least one property image");
+      return;
+    }
 
     const featureLower = features.map((f) => f.toLowerCase());
     const utilityItems = utilitiesInput.split(",").map((u) => u.trim()).filter(Boolean);
+
+    // Get primary image or use first image
+    const primaryImageUrl = uploadedImages.find((img) => img.isPrimary)?.url || uploadedImages[0].url;
 
     const draftApartment: Apartment = {
       id: "",
@@ -324,8 +279,8 @@ export function AddApartment() {
       city: formData.city || "La Paz",
       state: formData.state || "Iloilo City",
       zip: formData.zip || "5000",
-      image: primaryImage,
-      images: imageList,
+      image: primaryImageUrl,
+      images: uploadedImages.map((img) => img.url),
       description: formData.description || "",
       amenities: amenitiesInput.split(",").map((a) => a.trim()).filter(Boolean),
       availableDate: formData.availableDate || new Date().toISOString().split("T")[0],
@@ -367,12 +322,49 @@ export function AddApartment() {
         resolvedLandlordId,
       );
 
-      const storedImages = uploadedImageFile
-        ? [await uploadApartmentImage(created.id, uploadedImageFile, uploadedImageName)]
-        : imageList;
+      // Upload all images and collect their URLs
+      const uploadedImageUrls: string[] = [];
+      for (let i = 0; i < uploadedImages.length; i++) {
+        const img = uploadedImages[i];
+        if (img.file) {
+          const url = await uploadApartmentImage(created.id, img.file, `apartment-image-${i}.jpg`);
+          uploadedImageUrls.push(url);
+        } else {
+          // If it's a data URL (from camera), convert and upload
+          if (img.url.startsWith("data:")) {
+            // Extract base64 data from data URL
+            const base64 = img.url.split(",")[1];
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let j = 0; j < binaryString.length; j++) {
+              bytes[j] = binaryString.charCodeAt(j);
+            }
+            const blob = new Blob([bytes], { type: "image/jpeg" });
+            const url = await uploadApartmentImage(created.id, blob, `apartment-image-${i}.jpg`);
+            uploadedImageUrls.push(url);
+          }
+        }
+      }
 
-      if (storedImages.length > 0) {
-        await insertApartmentImages(created.id, storedImages);
+      if (uploadedImageUrls.length > 0) {
+        // Insert with primary flag
+        const imagesToInsert = uploadedImageUrls.map((url, idx) => {
+          const originalImg = uploadedImages[idx];
+          return {
+            url,
+            is_primary: originalImg.isPrimary || idx === 0,
+            sort_order: idx,
+          };
+        });
+        // Insert directly into database with proper structure
+        const { supabase } = await import("@/lib/supabaseclient");
+        const insertPayload = imagesToInsert.map((img) => ({
+          apartment_id: created.id,
+          url: img.url,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+        }));
+        await supabase.from("apartment_images").insert(insertPayload);
       }
 
       await insertApartmentRooms(
@@ -520,68 +512,16 @@ export function AddApartment() {
                 <>
                   <div className="space-y-6">
                     <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
-                      <Camera className="h-5 w-5 text-amber-600" />
-                      <h3 className="text-sm font-bold text-amber-600 uppercase">Property Photo</h3>
+                      <Upload className="h-5 w-5 text-amber-600" />
+                      <h3 className="text-sm font-bold text-amber-600 uppercase">Property Photos</h3>
                     </div>
 
-                    {uploadedImage && (
-                      <div className="relative rounded-2xl border-2 border-amber-200">
-                        <img src={uploadedImage} alt="Apartment" className="w-full h-64 object-cover rounded-2xl" />
-                        <button
-                          type="button"
-                          onClick={clearImage}
-                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-
-                    {!uploadedImage && (
-                      <div className="space-y-4">
-                        {!isCameraActive && (
-                          <button
-                            type="button"
-                            onClick={startCamera}
-                            className="w-full flex items-center justify-center gap-3 p-4 border-2 border-dashed border-amber-300 rounded-2xl hover:bg-amber-50 bg-white"
-                          >
-                            <Camera className="h-6 w-6 text-amber-600" />
-                            <div className="text-left">
-                              <p className="font-bold">Take a Photo</p>
-                              <p className="text-sm text-slate-600">Use device camera</p>
-                            </div>
-                          </button>
-                        )}
-
-                        {isCameraActive && (
-                          <div className="space-y-4">
-                            <video ref={videoRef} autoPlay playsInline className="w-full rounded-2xl border-2 border-amber-200" />
-                            <div className="flex gap-3">
-                              <Button type="button" onClick={capturePhoto} className="flex-1 bg-green-500">
-                                <Camera className="h-4 w-4 mr-2" /> Capture
-                              </Button>
-                              <Button type="button" onClick={stopCamera} variant="outline" className="flex-1">
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full flex items-center justify-center gap-3 p-4 border-2 border-dashed border-amber-300 rounded-2xl hover:bg-amber-50 bg-white"
-                        >
-                          <Upload className="h-6 w-6 text-amber-600" />
-                          <div className="text-left">
-                            <p className="font-bold">Upload Photo</p>
-                            <p className="text-sm text-slate-600">Browse from device</p>
-                          </div>
-                        </button>
-
-                        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                      </div>
-                    )}
+                    <MultiImageUploader
+                      images={uploadedImages}
+                      onImagesChange={setUploadedImages}
+                      maxImages={10}
+                      maxFileSize={5}
+                    />
                   </div>
 
                   <div className="space-y-6">
@@ -1070,8 +1010,6 @@ export function AddApartment() {
                   </div>
                 </div>
               )}
-
-              <canvas ref={canvasRef} className="hidden" />
 
               <div className="flex gap-4 pt-10 border-t border-amber-100">
                 {currentStep > 1 ? (

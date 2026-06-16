@@ -78,7 +78,7 @@ export function LandlordBrowse() {
     // Recently added (last 7 days)
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentlyAddedCount = publishedApartments.filter(
-      (apt) => new Date(apt.createdAt) > sevenDaysAgo
+      (apt) => new Date(apt.createdAt ?? apt.availableDate) > sevenDaysAgo
     ).length;
 
     const uniqueCities = new Set(publishedApartments.map((apt) => apt.city)).size;
@@ -143,7 +143,11 @@ export function LandlordBrowse() {
       };
       sorted.sort((a, b) => getFavCount(b.id) - getFavCount(a.id));
     } else if (sortBy === "newest") {
-      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      sorted.sort(
+        (a, b) =>
+          new Date(b.createdAt ?? b.availableDate).getTime() -
+          new Date(a.createdAt ?? a.availableDate).getTime()
+      );
     } else if (sortBy === "price_low") {
       sorted.sort((a, b) => a.price - b.price);
     } else if (sortBy === "price_high") {
@@ -438,7 +442,7 @@ export function LandlordBrowse() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredApartments.length > 0 ? (
               filteredApartments.map((apartment) => {
-                const landlord = getLandlordInfo(apartment.landlordId);
+                const landlord = apartment.landlordId ? getLandlordInfo(apartment.landlordId) : null;
                 const viewCount = getViewCount(apartment.id);
                 const favCount = getFavCount(apartment.id);
 
@@ -589,7 +593,7 @@ export function LandlordBrowse() {
               <tbody>
                 {filteredApartments.length > 0 ? (
                   filteredApartments.map((apartment) => {
-                    const landlord = getLandlordInfo(apartment.landlordId);
+                    const landlord = apartment.landlordId ? getLandlordInfo(apartment.landlordId) : null;
                     const viewCount = getViewCount(apartment.id);
                     const favCount = getFavCount(apartment.id);
 

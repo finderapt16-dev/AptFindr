@@ -646,6 +646,76 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
   }
 }
 
+export async function markNotificationUnread(notificationId: string, userId?: string): Promise<DashboardNotificationRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ read: false })
+      .eq("id", notificationId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      console.error("Error marking notification as unread:", error);
+      return null;
+    }
+
+    if (userId) {
+      writeCachedValue(`notifications:${userId}`, "");
+    }
+
+    return toNotificationRow(data as DashboardRow);
+  } catch (error) {
+    console.error("Unexpected error in markNotificationUnread:", error);
+    return null;
+  }
+}
+
+export async function deleteNotification(notificationId: string, userId?: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId);
+
+    if (error) {
+      console.error("Error deleting notification:", error);
+      return false;
+    }
+
+    if (userId) {
+      writeCachedValue(`notifications:${userId}`, "");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error in deleteNotification:", error);
+    return false;
+  }
+}
+
+export async function deleteAllNotifications(userId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId)
+      .select("id");
+
+    if (error || !Array.isArray(data)) {
+      console.error("Error deleting all notifications:", error);
+      return 0;
+    }
+
+    writeCachedValue(`notifications:${userId}`, "");
+
+    return data.length;
+  } catch (error) {
+    console.error("Unexpected error in deleteAllNotifications:", error);
+    return 0;
+  }
+}
+
 export async function createNotification(notification: {
   user_id: string;
   type?: string;
@@ -1232,12 +1302,18 @@ export async function createReport(report: {
   reporter_role?: string | null;
   apartment_id?: string | null;
   issue_type?: string | null;
+  category?: string | null;
   tags?: string[] | null;
   details?: string | null;
   contact?: string | null;
+  date_of_incident?: string | null;
+  landlord_id?: string | null;
+  has_evidence?: boolean | null;
+  evidence_count?: number | null;
   severity?: string | null;
 }): Promise<DashboardReportRow | null> {
   const reporterId = report.reporter_id ? await resolveAppUserId(report.reporter_id) : null;
+  const landlordId = report.landlord_id ? await resolveAppUserId(report.landlord_id) : null;
 
   const { data, error } = await supabase
     .from("reports")
@@ -1246,11 +1322,17 @@ export async function createReport(report: {
       reporter_role: report.reporter_role ?? null,
       apartment_id: report.apartment_id ?? null,
       issue_type: report.issue_type ?? null,
+      category: report.category ?? null,
       tags: report.tags ?? [],
       details: report.details ?? null,
       contact: report.contact ?? null,
+      date_of_incident: report.date_of_incident ?? null,
+      landlord_id: landlordId,
+      has_evidence: report.has_evidence ?? false,
+      evidence_count: report.evidence_count ?? 0,
       severity: report.severity ?? "med",
       status: "pending",
+      last_action_at: new Date().toISOString(),
     })
     .select("*")
     .single();
