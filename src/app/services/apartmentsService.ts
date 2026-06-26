@@ -13,7 +13,7 @@ import {
 
 const CURRENT_USER_KEY = 'apartment_finder_current_user';
 const APARTMENT_SELECT =
-  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status)';
+  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description)';
 const APARTMENT_INSPECTION_SELECT = '*, apartment_images(*), apartment_rooms(*)';
 
 export interface ApartmentInspectionDetails {
@@ -499,6 +499,20 @@ export const toggleFavorite = async (apartmentId: string, userId?: string): Prom
     return false;
   }
 
+  const { data: apartmentRow, error: apartmentError } = await supabase
+    .from('apartments')
+    .select('landlord_id')
+    .eq('id', apartmentId)
+    .maybeSingle();
+
+  if (apartmentError) {
+    throw new Error(unwrapErrorMessage(apartmentError, 'Unable to verify listing ownership.'));
+  }
+
+  if (isRecord(apartmentRow) && apartmentRow.landlord_id === resolvedUserId) {
+    throw new Error('You cannot favorite your own listing.');
+  }
+
   const { error: insertError } = await supabase.from('favorites').insert({
     user_id: resolvedUserId,
     apartment_id: apartmentId,
@@ -620,7 +634,8 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
     .filter((room) => room && typeof room === 'object')
     .map((room) => ({
       apartment_id: apartmentId,
-      room_type: room.name?.trim() || 'Bedroom',
+      name: room.name?.trim() || room.type?.trim() || 'Room',
+      room_type: room.type?.trim() || 'Bedroom',
       sqft: Math.max(0, Number(room.sqft) || 0),
       max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
       rent: Math.max(0, Number(room.price) || 0),
@@ -630,6 +645,7 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
       has_ac: room.hasAC === true,
       status: room.status ?? (room.isOccupied ? 'occupied' : 'available'),
       is_occupied: (room.status ?? (room.isOccupied ? 'occupied' : 'available')) === 'occupied',
+      description: room.description?.trim() || null,
     }));
 
   if (payload.length === 0) {
@@ -641,6 +657,167 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to save apartment rooms.'));
   }
+};
+
+const apartmentRoomToPayload = (apartmentId: string, room: ApartmentRoom) => {
+  const status = room.status ?? (room.isOccupied ? 'occupied' : 'available');
+
+  return {
+    apartment_id: apartmentId,
+    name: room.name?.trim() || room.type?.trim() || 'Room',
+    room_type: room.type?.trim() || 'Bedroom',
+    sqft: Math.max(0, Number(room.sqft) || 0),
+    max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
+    rent: Math.max(0, Number(room.price) || 0),
+    has_private_bath: room.hasPrivateBath === true,
+    bathroom_type: room.hasPrivateBath ? room.bathroomType?.trim() || null : null,
+    shared_bath_location: room.hasPrivateBath ? null : room.sharedBathLocation?.trim() || null,
+    has_ac: room.hasAC === true,
+    status,
+    is_occupied: status === 'occupied',
+    description: room.description?.trim() || null,
+  };
+};
+
+const apartmentRoomRowToRoom = (row: Record<string, unknown>): ApartmentRoom => {
+  const statusValue = typeof row.status === 'string' ? row.status : row.is_occupied ? 'occupied' : 'available';
+  const status = statusValue === 'occupied' || statusValue === 'reserved' || statusValue === 'maintenance'
+    ? statusValue
+    : 'available';
+
+  return {
+    id: typeof row.id === 'string' ? row.id : undefined,
+    name: typeof row.name === 'string' && row.name.trim().length > 0
+      ? row.name
+      : typeof row.room_type === 'string'
+        ? row.room_type
+        : 'Room',
+    type: typeof row.room_type === 'string' ? row.room_type : 'Bedroom',
+    price: Number(row.rent) || 0,
+    sqft: Number(row.sqft) || 0,
+    maxOccupants: Number(row.max_occupants) || 1,
+    hasPrivateBath: row.has_private_bath === true,
+    bathroomType: typeof row.bathroom_type === 'string' ? row.bathroom_type : '',
+    sharedBathLocation: typeof row.shared_bath_location === 'string' ? row.shared_bath_location : '',
+    hasAC: row.has_ac === true,
+    status,
+    isOccupied: status === 'occupied',
+    description: typeof row.description === 'string' ? row.description : '',
+    images: [],
+  };
+};
+
+const syncApartmentRoomSummary = async (apartmentId: string): Promise<void> => {
+  const { data, error } = await supabase
+    .from('apartment_rooms')
+    .select('rent, has_private_bath, status, is_occupied')
+    .eq('apartment_id', apartmentId);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to refresh room summary.'));
+  }
+
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const rents = rows
+    .map((row) => Number(row.rent))
+    .filter((rent) => Number.isFinite(rent) && rent > 0);
+
+  const updatePayload: Record<string, unknown> = {
+    bedrooms: rows.length,
+    bathrooms: rows.filter((row) => row.has_private_bath === true).length,
+  };
+
+  if (rents.length > 0) {
+    updatePayload.price = Math.min(...rents);
+  }
+
+  const { error: updateError } = await supabase
+    .from('apartments')
+    .update(updatePayload)
+    .eq('id', apartmentId);
+
+  if (updateError) {
+    throw new Error(unwrapErrorMessage(updateError, 'Unable to update property room summary.'));
+  }
+};
+
+export const fetchApartmentRooms = async (apartmentId: string): Promise<ApartmentRoom[]> => {
+  const { data, error } = await supabase
+    .from('apartment_rooms')
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .eq('apartment_id', apartmentId);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to load rooms.'));
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map(apartmentRoomRowToRoom);
+};
+
+export const createApartmentRoom = async (apartmentId: string, room: ApartmentRoom): Promise<ApartmentRoom> => {
+  const { data, error } = await supabase
+    .from('apartment_rooms')
+    .insert(apartmentRoomToPayload(apartmentId, room))
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .single();
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to add room.'));
+  }
+
+  await syncApartmentRoomSummary(apartmentId);
+  return apartmentRoomRowToRoom(data as Record<string, unknown>);
+};
+
+export const updateApartmentRoom = async (
+  apartmentId: string,
+  roomId: string,
+  room: ApartmentRoom,
+): Promise<ApartmentRoom> => {
+  const { data, error } = await supabase
+    .from('apartment_rooms')
+    .update(apartmentRoomToPayload(apartmentId, room))
+    .eq('id', roomId)
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .single();
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to update room.'));
+  }
+
+  await syncApartmentRoomSummary(apartmentId);
+  return apartmentRoomRowToRoom(data as Record<string, unknown>);
+};
+
+export const updateApartmentRoomStatus = async (
+  apartmentId: string,
+  roomId: string,
+  status: ApartmentRoom['status'],
+): Promise<void> => {
+  const nextStatus = status ?? 'available';
+  const { error } = await supabase
+    .from('apartment_rooms')
+    .update({
+      status: nextStatus,
+      is_occupied: nextStatus === 'occupied',
+    })
+    .eq('id', roomId);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to update room status.'));
+  }
+
+  await syncApartmentRoomSummary(apartmentId);
+};
+
+export const deleteApartmentRoom = async (apartmentId: string, roomId: string): Promise<void> => {
+  const { error } = await supabase.from('apartment_rooms').delete().eq('id', roomId);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to delete room.'));
+  }
+
+  await syncApartmentRoomSummary(apartmentId);
 };
 
 export const uploadApartmentImage = async (

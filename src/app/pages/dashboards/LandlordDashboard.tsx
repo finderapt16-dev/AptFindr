@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo, type ReactElement } from "react";
 import {
   deleteApartment as deleteApartmentInDb,
   fetchApartmentsForLandlord,
+  updateApartment,
   updateApartmentPublication,
   updateApartmentStatus,
+  type Apartment,
   type ApartmentStatus,
 } from "@/app/data/apartments";
 import { Link, useNavigate } from "react-router-dom";
@@ -28,6 +30,7 @@ import {
   type DashboardViolationRow,
 } from "@/app/services/dashboardSupabaseService";
 import { ApartmentCard } from "@/app/components/common/ApartmentCard";
+import { EditApartmentDialog } from "@/app/components/common/EditApartmentDialog";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -38,6 +41,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { toast } from "sonner";
+import { apartmentToFormValues } from "@/app/utils/apartmentMappers";
 import {
   Building2,
   Eye,
@@ -328,6 +332,7 @@ export function LandlordDashboard() {
   const [isDeletingAllNotifs, setIsDeletingAllNotifs] = useState(false);
   const [deletingApartmentId, setDeletingApartmentId] = useState<string | null>(null);
   const [updatingApartmentStatusId, setUpdatingApartmentStatusId] = useState<string | null>(null);
+  const [editingApartment, setEditingApartment] = useState<Apartment | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const deleteNotif = (notificationId: string) => {
@@ -605,10 +610,26 @@ export function LandlordDashboard() {
     setApartmentsRefresh((prev) => prev + 1);
   };
 
-  const getApartmentStatus = (apartment: any): ApartmentStatus => apartment.status ?? "available";
+  const getRoomStatus = (room: any): ApartmentStatus => room.status ?? (room.isOccupied ? "occupied" : "available");
+  const getApartmentStatus = (apartment: any): ApartmentStatus => {
+    const rooms = apartment.rooms ?? [];
+    if (rooms.length === 0) {
+      return apartment.status ?? "available";
+    }
+    if (rooms.some((room: any) => getRoomStatus(room) === "available")) {
+      return "available";
+    }
+    if (rooms.every((room: any) => getRoomStatus(room) === "occupied")) {
+      return "occupied";
+    }
+    if (rooms.some((room: any) => getRoomStatus(room) === "maintenance")) {
+      return "maintenance";
+    }
+    return apartment.status ?? "available";
+  };
   const allRooms = myApartments.flatMap((apt: any) => apt.rooms ?? []);
   const unitStatuses: ApartmentStatus[] = allRooms.length > 0
-    ? allRooms.map((room: any) => room.status ?? (room.isOccupied ? "occupied" : "available"))
+    ? allRooms.map(getRoomStatus)
     : myApartments.map(getApartmentStatus);
   const availableCount = unitStatuses.filter((status) => status === "available").length;
   const occupiedCount  = unitStatuses.filter((status) => status === "occupied").length;
@@ -683,6 +704,32 @@ export function LandlordDashboard() {
       toast.error(message);
     } finally {
       setUpdatingApartmentStatusId(null);
+    }
+  };
+
+  const handleSaveEditedApartment = async (updatedApartment: Apartment) => {
+    if (!editingApartment) return;
+
+    try {
+      const saved = await updateApartment(
+        editingApartment.id,
+        apartmentToFormValues({
+          ...updatedApartment,
+          id: editingApartment.id,
+          landlordId: editingApartment.landlordId,
+        }),
+        user?.id,
+      );
+      setMyApartments((previous) =>
+        previous.map((apartment) => apartment.id === editingApartment.id ? saved : apartment),
+      );
+      refreshApartments();
+      setEditingApartment(null);
+      toast.success("Property updated successfully");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update property.";
+      toast.error(message);
+      throw error;
     }
   };
 
@@ -1475,18 +1522,24 @@ export function LandlordDashboard() {
               <ApartmentCard apartment={apartment} />
               <div className="mt-2 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Badge className={`${getStatusOption(apartment.status).className} border font-black`}>
-                    {getStatusOption(apartment.status).label}
+                  <Badge className={`${getStatusOption(getApartmentStatus(apartment)).className} border font-black`}>
+                    {getStatusOption(getApartmentStatus(apartment)).label}
                   </Badge>
-                  <select
-                    value={apartment.status ?? "available"}
-                    onChange={(e) => void handleStatusChange(apartment.id, e.target.value as ApartmentStatus)}
-                    className="flex-1 h-9 rounded-xl border border-amber-100 bg-white px-3 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
+                  <span className="flex-1 text-xs font-bold text-slate-500">
+                    {(apartment.rooms?.filter((room: any) => getRoomStatus(room) === "available").length ?? 0)} available / {(apartment.rooms?.length ?? 0)} total rooms
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Link to={`/apartment/${apartment.id}`} className="flex-1">
+                    <Button variant="outline" className="w-full rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-sm">
+                      View Property
+                    </Button>
+                  </Link>
+                  <Link to={`/landlord/properties/${apartment.id}/rooms`} className="flex-1">
+                    <Button className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-sm">
+                      Manage Rooms
+                    </Button>
+                  </Link>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -1503,11 +1556,14 @@ export function LandlordDashboard() {
                     <Heart className="h-3.5 w-3.5" />
                     {aptFavs(apartment.id)} saved
                   </button>
-                  <Link to={`/apartment/${apartment.id}`} className="flex-1">
-                    <Button variant="outline" className="w-full rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-sm">
-                      Edit
-                    </Button>
-                  </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingApartment(apartment as Apartment)}
+                    className="flex-1 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold text-sm"
+                  >
+                    Edit
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   {apartment.isPublished ? (
@@ -2768,6 +2824,19 @@ export function LandlordDashboard() {
         iconColor={modal.type === "views" ? "bg-gradient-to-br from-amber-500 to-orange-500" : "bg-gradient-to-br from-rose-400 to-pink-500"}
         names={modal.names}
       />
+
+      {editingApartment && (
+        <EditApartmentDialog
+          apartment={editingApartment}
+          open={Boolean(editingApartment)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingApartment(null);
+            }
+          }}
+          onSave={handleSaveEditedApartment}
+        />
+      )}
 
       {/* Appeal modal */}
       {appealModal.open && (

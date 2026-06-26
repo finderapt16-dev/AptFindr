@@ -274,6 +274,7 @@ create table if not exists public.apartment_rooms (
   is_occupied boolean not null default false,
   status text not null default 'available',
   description text,
+  images text[] not null default '{}',
   created_at timestamptz not null default now()
 );
 
@@ -283,6 +284,8 @@ alter table public.apartment_rooms add column if not exists shared_bath_location
 alter table public.apartment_rooms add column if not exists has_ac boolean not null default false;
 alter table public.apartment_rooms add column if not exists status text not null default 'available';
 alter table public.apartment_rooms add column if not exists description text;
+alter table public.apartment_rooms add column if not exists images text[] not null default '{}';
+alter table public.apartment_rooms add column if not exists created_at timestamptz not null default now();
 alter table public.apartment_rooms drop constraint if exists apartment_rooms_status_check;
 alter table public.apartment_rooms add constraint apartment_rooms_status_check check (status in ('available', 'occupied', 'reserved', 'maintenance'));
 

@@ -5,6 +5,7 @@ import { apartments as defaultApartments, type ListingRecord } from "@/app/data/
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
+import { EvidenceViewer, type EvidenceItem } from "@/app/components/common/EvidenceViewer";
 import {
   fetchAdminReports,
   fetchViolations,
@@ -40,6 +41,7 @@ import {
   type DashboardAppealRow,
   type DashboardLandlordDetailsRow,
 } from "@/app/services/dashboardSupabaseService";
+import { getReportEvidence } from "@/app/services/reportEvidenceService";
 import {
   CheckCircle2, XCircle, Shield, Users, Phone, FileText,
   LayoutDashboard, AlertTriangle, LogOut, Menu, X, Sparkles,
@@ -154,6 +156,25 @@ function text(value: string | null | undefined, fallback = ""): string {
   return value && value.length > 0 ? value : fallback;
 }
 
+function toEvidenceItem(row: any): EvidenceItem | null {
+  const fileUrl = text(row?.file_url);
+  if (!fileUrl) return null;
+
+  const fileType =
+    row?.file_type === "document" || row?.file_type === "screenshot" ? row.file_type : "image";
+
+  return {
+    id: text(row?.id, fileUrl),
+    fileName: text(row?.file_name, "Evidence file"),
+    fileUrl,
+    fileType,
+    mimeType: text(row?.mime_type, "image/jpeg"),
+    fileSize: typeof row?.file_size === "number" ? row.file_size : undefined,
+    uploadedBy: text(row?.uploaded_by),
+    uploadedAt: text(row?.uploaded_at),
+  };
+}
+
 export function AdminDashboard() {
   const { user, verifyLandlord, updateUser, logout } = useAuth();
   const navigate = useNavigate();
@@ -180,6 +201,7 @@ export function AdminDashboard() {
     apartment: any | null;
     landlord: DashboardUserRow | null;
   } | null>(null);
+  const [selectedReportEvidence, setSelectedReportEvidence] = useState<EvidenceItem[]>([]);
   const [dismissReportModal, setDismissReportModal] = useState<{ reportId: string; reason: string } | null>(null);
   const [viewingUserProfile, setViewingUserProfile] = useState<DashboardUserRow | null>(null);
 
@@ -487,11 +509,29 @@ export function AdminDashboard() {
 
   // Fetch full report details when a report is selected
   useEffect(() => {
+    let active = true;
+
     if (selectedReport?.id) {
-      void fetchReportWithDetails(selectedReport.id).then(setSelectedReportDetails);
+      void Promise.all([
+        fetchReportWithDetails(selectedReport.id),
+        getReportEvidence(selectedReport.id),
+      ]).then(([details, evidenceRows]) => {
+        if (!active) return;
+        setSelectedReportDetails(details);
+        setSelectedReportEvidence(
+          evidenceRows
+            .map(toEvidenceItem)
+            .filter((item): item is EvidenceItem => Boolean(item)),
+        );
+      });
     } else {
       setSelectedReportDetails(null);
+      setSelectedReportEvidence([]);
     }
+
+    return () => {
+      active = false;
+    };
   }, [selectedReport?.id]);
 
   // Fetch full landlord details when a landlord is selected
@@ -752,307 +792,630 @@ export function AdminDashboard() {
   const unreadNotifsCount  = adminNotifs.filter((n) => !n.read).length;
 
   const handleLogout = () => { logout?.(); navigate("/"); };
-
-  // ── Sidebar ───────────────────────────────────────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <div className="px-5 pt-6 pb-4 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shrink-0">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-black text-white text-lg tracking-tight">RentIloilo</span>
-        </div>
-        <p className="text-white/30 text-xs font-medium mt-1 ml-10">Admin Portal</p>
+    <div className="flex flex-col h-full overflow-y-auto bg-slate-950 border-r border-white/[0.06] shadow-2xl relative z-10 select-none">
+      {/* Cinematic Ambient Glow matching the Left Panel Login backdrop */}
+      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/75 to-slate-950/95" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/15 via-orange-600/5 to-transparent blur-sm" />
+        <div className="absolute inset-0 bg-radial-at-t from-transparent via-slate-950/40 to-slate-950/90" />
       </div>
-      <div className="px-4 py-4 border-b border-white/10">
-        <div className="flex items-center gap-3 bg-white/10 rounded-2xl px-3 py-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 font-black text-white text-sm shadow">
-            {user?.name?.[0]?.toUpperCase() ?? "A"}
+
+      {/* Brand Logo Section */}
+      <div className="px-6 pt-7 pb-5 relative z-10">
+        <div className="flex items-center gap-3.5 px-1">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 shadow-xl shadow-orange-500/10 flex items-center justify-center shrink-0 transform transition-transform duration-500 hover:scale-105 hover:rotate-3">
+            <Sparkles className="h-5 w-5 text-white filter drop-shadow-sm" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent tracking-tight">
+              RentIloilo
+            </span>
+            <span className="text-[9px] text-amber-400/60 font-black tracking-widest uppercase mt-0.5">
+              Admin Portal
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin User Profile Card */}
+      <div className="px-4 py-3 relative z-10">
+        <div className="flex items-center gap-3.5 bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent backdrop-blur-xl border border-white/[0.07] rounded-2xl px-3.5 py-3 shadow-lg shadow-black/20 hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-300 group">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 p-[1px] shadow-md shrink-0">
+            <div className="h-full w-full rounded-[11px] bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center font-black text-white text-sm shadow-inner transform group-hover:scale-105 transition-transform duration-300">
+              {user?.name?.[0]?.toUpperCase() ?? "A"}
+            </div>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-white font-bold text-sm truncate">{user?.name ?? "Admin"}</p>
-            <p className="text-white/40 text-xs truncate">{user?.email ?? ""}</p>
+            <p className="text-slate-200 font-extrabold text-sm truncate tracking-wide leading-snug group-hover:text-white transition-colors">
+              {user?.name ?? "Admin"}
+            </p>
+            <p className="text-white/40 text-xs truncate font-medium mt-0.5">
+              {user?.email ?? ""}
+            </p>
           </div>
-          <Shield className="h-4 w-4 text-amber-400 shrink-0" />
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] flex items-center justify-center shrink-0 group-hover:border-amber-500/30 group-hover:bg-amber-500/5 transition-all duration-300">
+            <Shield className="h-4 w-4 text-amber-400 filter drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+          </div>
         </div>
       </div>
-      <nav className="px-3 pt-4 pb-2">
-        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest px-3 mb-2">Main</p>
-        <div className="space-y-0.5">
+
+      {/* Main Navigation Segment */}
+      <nav className="px-3 pt-5 pb-3 space-y-1.5 relative z-10">
+        <p className="text-white/30 text-[10px] font-black uppercase tracking-widest px-4 mb-2">
+          Main
+        </p>
+        <div className="space-y-1">
           {NAV_MAIN.map(({ icon: Icon, label, section }) => (
-            <button key={section}
-              onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            <button
+              key={section}
+              onClick={() => {
+                setActiveSection(section);
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 relative group overflow-hidden ${
                 activeSection === section
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-900/30"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  ? "bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white shadow-xl shadow-orange-950/40 border-t border-white/[0.15]"
+                  : "text-slate-400 hover:text-white hover:bg-white/[0.04] hover:translate-x-0.5"
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              {activeSection === section && (
+                <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-white shadow-[0_0_8px_#fff]" />
+              )}
+              
+              <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                activeSection === section ? "text-white" : "text-slate-400 group-hover:text-amber-400"
+              }`} />
+              
+              <span className="flex-1 text-left">{label}</span>
+              
+              {/* Dynamic Notification Badges designed as Floating Pills */}
               {label === "Reports" && pendingReports > 0 && (
-                <span className="ml-auto h-5 px-1.5 bg-red-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">{pendingReports}</span>
+                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-red-400/20 shadow-md shadow-red-950/50 transform group-hover:scale-105 transition-transform">
+                  {pendingReports}
+                </span>
               )}
               {label === "Landlords" && pendingCount > 0 && (
-                <span className="ml-auto h-5 px-1.5 bg-orange-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">{pendingCount}</span>
+                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-amber-400/20 shadow-md shadow-orange-950/50 transform group-hover:scale-105 transition-transform">
+                  {pendingCount}
+                </span>
               )}
               {label === "Notifications" && unreadNotifsCount > 0 && (
-                <span className="ml-auto h-5 px-1.5 bg-indigo-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">{unreadNotifsCount}</span>
+                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-indigo-400/20 shadow-md shadow-indigo-950/50 transform group-hover:scale-105 transition-transform">
+                  {unreadNotifsCount}
+                </span>
               )}
             </button>
           ))}
         </div>
       </nav>
-      <nav className="px-3 pt-3 pb-2 border-t border-white/10 mt-2">
-        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest px-3 mb-2">Account</p>
-        <div className="space-y-0.5">
+
+      {/* Account Settings Segment */}
+      <nav className="px-3 pt-4 pb-3 border-t border-white/[0.06] mt-2 space-y-1.5 relative z-10">
+        <p className="text-white/30 text-[10px] font-black uppercase tracking-widest px-4 mb-2">
+          Account
+        </p>
+        <div className="space-y-1">
           {NAV_ACCOUNT.map(({ icon: Icon, label, section }) => (
-            <button key={section}
-              onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            <button
+              key={section}
+              onClick={() => {
+                setActiveSection(section);
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 relative group overflow-hidden ${
                 activeSection === section
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-900/30"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  ? "bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white shadow-xl shadow-orange-950/40 border-t border-white/[0.15]"
+                  : "text-slate-400 hover:text-white hover:bg-white/[0.04] hover:translate-x-0.5"
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              {activeSection === section && (
+                <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-white shadow-[0_0_8px_#fff]" />
+              )}
+              <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                activeSection === section ? "text-white" : "text-slate-400 group-hover:text-amber-400"
+              }`} />
+              <span className="flex-1 text-left">{label}</span>
             </button>
           ))}
         </div>
       </nav>
+
       <div className="flex-1" />
-      <div className="px-4 py-4 border-t border-white/10 mt-2">
-        <button onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
-          <LogOut className="h-4 w-4 shrink-0" />Log Out
+
+      {/* Danger Logout Action Button Container */}
+      <div className="px-4 py-4 border-t border-white/[0.06] mt-2 bg-gradient-to-t from-black/20 to-transparent relative z-10">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide text-rose-400 bg-rose-500/[0.03] border border-rose-500/10 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-600 hover:border-transparent hover:shadow-lg hover:shadow-red-950/40 transition-all duration-300 active:scale-[0.98] group"
+        >
+          <LogOut className="h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
+          <span>Log Out</span>
         </button>
       </div>
     </div>
   );
+// ── Section: Overview ─────────────────────────────────────────────────────
+  const renderOverview = () => {
+    // Dynamically calculate friendly status highlights for the context-driven header
+    const hasUrgentMatters = pendingReports > 0 || pendingCount > 0;
+    
+    // Get formatted current date string for a premium, localized feel
+    const formattedCurrentDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
 
-  // ── Section: Overview ─────────────────────────────────────────────────────
-  const renderOverview = () => (
-    <div className="space-y-6">
-      <div>
-        <div className="inline-block mb-3 px-4 py-1.5 bg-white/70 backdrop-blur-md border border-amber-200/50 rounded-full shadow-sm">
-          <span className="text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2 uppercase tracking-wider">
-            <Shield className="h-3.5 w-3.5 text-amber-500" /> Admin Dashboard
-          </span>
+    return (
+      <div className="space-y-8 max-w-[1400px] mx-auto p-4 md:p-6 text-slate-900 selection:bg-amber-100 selection:text-amber-900 relative">
+        
+        {/* ── CLIENT-REQUESTED BG ANIMATION (CLEAN & MINIMALIST) ── */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-[24px]">
+          <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-amber-500/[0.03] to-orange-500/[0.03] blur-[80px] animate-pulse [animation-duration:8s]" />
+          <div className="absolute bottom-[20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-orange-600/[0.02] to-transparent blur-[100px] animate-pulse [animation-duration:12s]" />
         </div>
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-2">
-          Welcome, <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{user?.name}</span>!
-        </h1>
-        <p className="text-slate-600 text-lg font-medium">Platform overview at a glance.</p>
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Landlords", value: landlords.length,   icon: Users,       grad: "from-amber-500 to-orange-600", section: "landlords" },
-          { label: "Verified",        value: verifiedCount,      icon: CheckCircle2,grad: "from-green-400 to-emerald-500",section: "landlords" },
-          { label: "Pending Verify",  value: pendingCount,       icon: Clock,       grad: "from-orange-400 to-amber-500", section: "landlords" },
-          { label: "Open Reports",    value: pendingReports,     icon: Flag,        grad: "from-red-400 to-rose-500",     section: "reports"   },
-        ].map(({ label, value, icon: Icon, grad, section }) => (
-          <button key={label} onClick={() => setActiveSection(section)}
-            className="bg-white/90 backdrop-blur-xl border-2 border-amber-100/50 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-left group">
-            <div className="flex items-center justify-between mb-2">
-              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center shadow`}>
-                <Icon className="h-5 w-5 text-white" />
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
-            </div>
-            <p className="text-3xl font-black text-slate-900">{value}</p>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-0.5">{label}</p>
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { section: "apartments", icon: Building2, title: "Browse Apartments", desc: `${allApartments.length} listings on the platform`, grad: "from-amber-500 to-orange-600", light: false },
-          { section: "reports",    icon: Flag,      title: "Review Reports",    desc: `${pendingReports} pending reports`,                grad: "", light: true },
-          { section: "landlords",  icon: ShieldAlert,title:"Issue Violations",  desc: "Send notices to landlords",                        grad: "", light: true },
-        ].map(({ section, icon: Icon, title, desc, grad, light }) => (
-          <button key={section} onClick={() => setActiveSection(section)}
-            className={`p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-left group ${
-              !light ? `bg-gradient-to-br ${grad} text-white` : "bg-white/90 backdrop-blur-xl border-2 border-amber-100"
-            }`}>
-            <Icon className={`h-8 w-8 mb-3 group-hover:scale-110 transition-transform ${light ? "text-amber-600" : ""}`} />
-            <h3 className={`text-lg font-black mb-1 ${light ? "text-slate-900" : ""}`}>{title}</h3>
-            <p className={`text-sm font-medium ${light ? "text-slate-500" : "text-amber-100"}`}>{desc}</p>
-            <div className={`mt-3 flex items-center gap-1 text-sm font-bold ${light ? "text-amber-600" : ""}`}>
-              Open <ChevronRight className="h-4 w-4" />
-            </div>
-          </button>
-        ))}
-      </div>
 
-      {/* Recent violations issued */}
-      {violations.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <AlertOctagon className="h-4 w-4 text-red-600" />
-            <h3 className="text-xs font-black text-red-600 uppercase tracking-widest">Recently Issued</h3>
+        <div className="relative z-10 space-y-8">
+          
+          {/* ── DASHBOARD HEADER (AIRBNB / NOTION INSPIRED HERO) ── */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 pb-6">
+            <div className="space-y-2.5 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-md">
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">
+                Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">{user?.name || "Admin"}</span>
+              </h1>
+              
+              <p className="text-slate-500 font-medium text-sm md:text-base leading-relaxed">
+                {hasUrgentMatters ? (
+                  <span>
+                    You currently have <strong className="text-slate-900 font-bold">{pendingCount} verification requests</strong> and <strong className="text-rose-600 font-bold">{pendingReports} community reports</strong> requiring immediate review.
+                  </span>
+                ) : (
+                  "The platform is performing stably. All verification queues and community reports are fully caught up."
+                )}
+              </p>
+            </div>
+            
+            <div className="shrink-0 flex items-center gap-2 bg-slate-50 border border-slate-200/60 px-4 py-2 rounded-xl self-start md:self-end">
+              <Clock className="h-4 w-4 text-slate-400" />
+              <span className="text-xs font-bold text-slate-600 tracking-tight">{formattedCurrentDate}</span>
+            </div>
           </div>
-          <div className="bg-white/90 backdrop-blur-xl border border-red-100 rounded-2xl overflow-hidden shadow">
-            {violations.slice(0, 3).map((v, i) => (
-              <div key={v.id} className={`flex items-center gap-4 px-5 py-3 ${i < 2 ? "border-b border-red-50" : ""}`}>
-                <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                  v.mode === "violation" ? "bg-red-100" : "bg-amber-100"
-                }`}>
-                  {v.mode === "violation"
-                    ? <AlertOctagon className="h-4 w-4 text-red-600" />
-                    : <Bell className="h-4 w-4 text-amber-600" />}
+
+          {/* ── HIGH PRIORITY COMMAND BAR: QUICK ACTIONS (STRIPE INSPIRED) ── */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span>Primary Operations</span>
+              <span className="h-px bg-slate-100 flex-1" />
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { 
+                  section: "reports", 
+                  icon: Flag, 
+                  title: "Review Reports", 
+                  desc: "Investigate tenant issues, flags, and complaints.", 
+                  badge: pendingReports > 0 ? `${pendingReports} Action Required` : "Clear", 
+                  badgeStyle: pendingReports > 0 ? "bg-rose-50 text-rose-700 border-rose-200/60" : "bg-slate-50 text-slate-500 border-slate-200",
+                  grad: "", 
+                  light: true,
+                  isHighPriority: pendingReports > 0
+                },
+                { 
+                  section: "landlords", 
+                  icon: ShieldAlert, 
+                  title: "Verify Landlords", 
+                  desc: "Audit onboarding credentials and unlock partner features.", 
+                  badge: pendingCount > 0 ? `${pendingCount} Awaiting Review` : "All Verified", 
+                  badgeStyle: pendingCount > 0 ? "bg-amber-50 text-amber-700 border-amber-200/60" : "bg-emerald-50 text-emerald-700 border-emerald-200",
+                  grad: "", 
+                  light: true,
+                  isHighPriority: !pendingReports && pendingCount > 0
+                },
+                { 
+                  section: "apartments", 
+                  icon: Building2, 
+                  title: "Manage Apartments", 
+                  desc: "Browse catalog listing indexes, metrics, and global states.", 
+                  badge: `${allApartments.length} Active`, 
+                  badgeStyle: "bg-slate-900 text-slate-100 border-transparent", 
+                  grad: "from-slate-900 to-slate-950", 
+                  light: false,
+                  isHighPriority: false
+                },
+              ].map(({ section, icon: Icon, title, desc, badge, badgeStyle, grad, light, isHighPriority }) => (
+                <button 
+                  key={section} 
+                  onClick={() => setActiveSection(section)}
+                  className={`w-full p-5 rounded-2xl text-left group relative transition-all duration-200 shadow-sm border ${
+                    !light 
+                      ? `bg-gradient-to-b ${grad} text-white border-slate-950 hover:shadow-md hover:-translate-y-0.5` 
+                      : isHighPriority
+                        ? "bg-white border-amber-500 ring-2 ring-amber-500/10 shadow-md hover:-translate-y-0.5"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
+                      light ? "bg-amber-50 text-amber-600 border border-amber-200/60" : "bg-white/10 text-amber-400"
+                    }`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeStyle}`}>
+                      {badge}
+                    </span>
+                  </div>
+
+                  <h3 className={`text-base font-bold tracking-tight mb-1 ${light ? "text-slate-900" : "text-white"}`}>
+                    {title}
+                  </h3>
+                  
+                  <p className={`text-xs font-medium leading-relaxed min-h-[32px] ${light ? "text-slate-500" : "text-slate-400"}`}>
+                    {desc}
+                  </p>
+                  
+                  <div className={`mt-3 pt-3 border-t flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider ${
+                    light ? "border-slate-100 text-amber-600 group-hover:text-amber-700" : "border-white/10 text-amber-400 group-hover:text-amber-300"
+                  }`}>
+                    <span>Launch Module</span> 
+                    <ChevronRight className="h-3 w-3 transform group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── PLATFORM METRICS AND CONTEXT STATISTICS ── */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span>Platform Health Metrics</span>
+              <span className="h-px bg-slate-100 flex-1" />
+            </h2>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Total Landlords", value: landlords.length,   icon: Users,       grad: "from-amber-500 to-amber-600", borderStyle: "border-slate-200", context: "Registered index", contextStyle: "text-slate-400", section: "landlords" },
+                { label: "Verified Partners",  value: verifiedCount,      icon: CheckCircle2,grad: "from-emerald-500 to-emerald-600", borderStyle: "border-slate-200", context: "Active accounts", contextStyle: "text-emerald-600 font-semibold", section: "landlords" },
+                { label: "Pending Verify", value: pendingCount,       icon: Clock,       grad: "from-orange-500 to-orange-600", borderStyle: pendingCount > 0 ? "border-orange-200 bg-orange-50/[0.15]" : "border-slate-200", context: pendingCount > 0 ? "Requires review" : "Queue empty", contextStyle: pendingCount > 0 ? "text-orange-600 font-bold" : "text-slate-400", section: "landlords" },
+                { label: "Open Reports",     value: pendingReports,     icon: Flag,        grad: "from-rose-500 to-rose-600",    borderStyle: pendingReports > 0 ? "border-rose-200 bg-rose-50/[0.15]" : "border-slate-200", context: pendingReports > 0 ? "Urgent intervention" : "All clean", contextStyle: pendingReports > 0 ? "text-rose-600 font-bold" : "text-slate-400", section: "reports"   },
+              ].map(({ label, value, icon: Icon, grad, borderStyle, context, contextStyle, section }) => (
+                <button 
+                  key={label} 
+                  onClick={() => setActiveSection(section)}
+                  className={`w-full bg-white border rounded-2xl p-5 shadow-sm text-left group transition-all duration-200 hover:border-slate-300 hover:shadow-md ${borderStyle}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-500 font-bold tracking-tight uppercase truncate mr-2">{label}</span>
+                    <div className={`h-7 w-7 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center text-white shrink-0 shadow-sm`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                      {value}
+                    </span>
+                  </div>
+
+                  <p className={`text-[11px] mt-2 block tracking-tight ${contextStyle}`}>
+                    {context}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── LINEAR-INSPIRED ACTIVITY & AUDIT FEED TIMELINE ── */}
+          {violations.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <AlertOctagon className="h-3.5 w-3.5 text-rose-500" />
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+                    System Audit Log & Notices
+                  </h3>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-900 truncate">{v.type}</p>
-                  <p className="text-xs text-slate-400 font-medium">{v.landlordName} · {v.apartmentTitle}</p>
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Feed
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                  {formatOptionalDate(v.issuedAt ?? v.issued_at, { month: "short", day: "numeric" })}
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="divide-y divide-slate-100">
+                  {violations.slice(0, 3).map((v) => (
+                    <div 
+                      key={v.id} 
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-slate-50/[0.6] transition-colors duration-150 group"
+                    >
+                      <div className="flex items-start gap-3.5 min-w-0">
+                        {/* Compact Context Icon Status Indicator */}
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm border mt-0.5 ${
+                          v.mode === "violation" 
+                            ? "bg-rose-50 border-rose-100 text-rose-600" 
+                            : "bg-amber-50 border-amber-100 text-amber-600"
+                        }`}>
+                          {v.mode === "violation" ? <AlertOctagon className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                        </div>
+                        
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-slate-900 truncate">
+                              {v.type}
+                            </span>
+                            <span className={`text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                              v.mode === "violation" 
+                                ? "bg-rose-50 text-rose-700 border-rose-100" 
+                                : "bg-amber-50 text-amber-700 border-amber-100"
+                            }`}>
+                              {v.mode === "violation" ? "Violation" : "Notice"}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 truncate">
+                            <span className="text-slate-700 font-semibold">{v.landlordName}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="truncate">{v.apartmentTitle}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-none border-slate-100">
+                        <span className="sm:hidden text-[10px] text-slate-400 font-bold uppercase tracking-wider">Timeline</span>
+                        <span className="text-xs font-semibold text-slate-400 tracking-tight">
+                          {formatOptionalDate(v.issuedAt ?? v.issued_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+ // ── Section: Notifications ────────────────────────────────────────────────
+  const renderNotifications = () => {
+    // Auxiliary states extracted safely from existing structures
+    const totalCount = adminNotifs.length;
+    const unreadCount = adminNotifs.filter((n) => !n.read).length;
+
+    // Strict System Operations Urgency Mapper (Visual styling mapping only)
+    const getSystemUrgency = (notif: any) => {
+      const typeStr = (notif.type || "").toLowerCase();
+      const titleStr = (notif.title || "").toLowerCase();
+      const msgStr = (notif.message || "").toLowerCase();
+
+      if (typeStr.includes("violation") || typeStr.includes("report") || msgStr.includes("violation") || titleStr.includes("urgent")) {
+        return {
+          border: "border-l-rose-500",
+          dot: "bg-rose-500",
+          bgUnread: "bg-rose-50/[0.12] hover:bg-rose-50/[0.18]",
+          badge: "bg-rose-50 text-rose-700 border-rose-200"
+        };
+      }
+      if (typeStr.includes("review") || typeStr.includes("pending") || titleStr.includes("submission") || typeStr.includes("submission")) {
+        return {
+          border: "border-l-amber-500",
+          dot: "bg-amber-500",
+          bgUnread: "bg-amber-50/[0.15] hover:bg-amber-50/[0.22]",
+          badge: "bg-amber-50 text-amber-700 border-amber-200"
+        };
+      }
+      if (typeStr.includes("update") || typeStr.includes("general")) {
+        return {
+          border: "border-l-indigo-500",
+          dot: "bg-indigo-500",
+          bgUnread: "bg-indigo-50/[0.12] hover:bg-indigo-50/[0.18]",
+          badge: "bg-indigo-50 text-indigo-700 border-indigo-200"
+        };
+      }
+      return {
+        border: "border-l-slate-400",
+        dot: "bg-slate-400",
+        bgUnread: "bg-slate-50 hover:bg-slate-100",
+        badge: "bg-slate-100 text-slate-700 border-slate-200"
+      };
+    };
+
+    return (
+      <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 text-slate-900">
+        
+        {/* ── HEADER CONTROL PANEL ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Notifications Center</h2>
+              {unreadCount > 0 ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
+                  {unreadCount} Actions Pending
                 </span>
-              </div>
-            ))}
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                  Up to date
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
+              <span>System Log Operations Panel</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-400 font-mono text-[11px]">{totalCount} total events synchronized</span>
+            </p>
           </div>
-        </div>
-      )}
-    </div>
-  );
 
-  // ── Section: Notifications ────────────────────────────────────────────────
-  const renderNotifications = () => (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Bell className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-slate-900">Notifications</h2>
-            <p className="text-slate-500 text-sm font-medium">{adminNotifs.length} total</p>
-          </div>
-        </div>
-        {adminNotifs.length > 0 && (
-          <div className="flex items-center gap-2">
-            {adminNotifs.some((n) => !n.read) && (
-              <Button variant="outline" size="sm" onClick={markNotifsRead}
-                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl text-xs">
-                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />Mark all as read
+          {/* Bulk Operations Toolbar */}
+          {totalCount > 0 && (
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {adminNotifs.some((n) => !n.read) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={markNotifsRead}
+                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-lg text-xs h-8 px-3 transition-colors shadow-2xs"
+                >
+                  <CheckCheck className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+                  Mark All Read
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={deleteAllNotifs}
+                className="bg-white border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200 font-bold rounded-lg text-xs h-8 px-3 transition-colors shadow-2xs"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Clear All Logs
               </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={deleteAllNotifs}
-              className="border-red-200 text-red-700 hover:bg-red-50 font-bold rounded-xl text-xs">
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete all
-            </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── FILTER & SEARCH UTILITY TOOLBAR ── */}
+        {totalCount > 0 && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row items-stretch md:items-center gap-3 shadow-2xs">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Filter logs by property reference, title key, or message content..."
+                value={notifSearch}
+                onChange={(e) => setNotifSearch(e.target.value)}
+                className="w-full h-9 rounded-lg border border-slate-200 bg-white pl-9 pr-4 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 transition-all"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden lg:block">View Status:</label>
+              <select
+                value={notifFilter}
+                onChange={(e) => setNotifFilter(e.target.value as any)}
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 focus:outline-none focus:border-amber-500 shadow-2xs cursor-pointer"
+              >
+                <option value="all">All Operational Logs</option>
+                <option value="unread">Unread Operations Only</option>
+                <option value="read">Archived / Read Logs</option>
+              </select>
+
+              <div className="bg-white border border-slate-200 rounded-lg h-9 px-3 flex items-center justify-center text-xs font-bold text-slate-500 font-mono shadow-2xs whitespace-nowrap">
+                {filteredNotifs.length} hit{filteredNotifs.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DENSE ACTIVITY WORKFLOW FEED ── */}
+        {totalCount === 0 ? (
+          <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 max-w-xl mx-auto p-4">
+            <Bell className="h-6 w-6 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">No notifications available</h3>
+            <p className="text-slate-400 text-xs mt-1">System is fully optimized and up to date.</p>
+          </div>
+        ) : filteredNotifs.length === 0 ? (
+          <div className="py-12 text-center bg-white border border-slate-200 rounded-xl max-w-xl mx-auto p-4">
+            <Search className="h-5 w-5 text-slate-300 mx-auto mb-2" />
+            <h4 className="text-xs font-bold text-slate-800">No logs match criteria</h4>
+            <p className="text-slate-400 text-xs mt-0.5">Refine your keyword filter or adjust the view selector.</p>
+          </div>
+        ) : (
+          <div className="border border-slate-200 bg-white rounded-xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
+            {filteredNotifs.map((notif) => {
+              const config = getSystemUrgency(notif);
+
+              return (
+                <div 
+                  key={notif.id}
+                  className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-3.5 border-l-[3px] transition-all duration-150 ${config.border} ${
+                    notif.read 
+                      ? "bg-white hover:bg-slate-50/70" 
+                      : `${config.bgUnread}`
+                  }`}
+                >
+                  {/* Event Meta Details Block */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {/* Read Status Absolute Dot Indicator */}
+                    <div className="pt-1.5 shrink-0">
+                      <span className={`h-2 w-2 rounded-full block ${notif.read ? "bg-transparent border border-slate-300" : `${config.dot}`}`} />
+                    </div>
+
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-[13px] tracking-tight text-slate-900 ${notif.read ? "font-medium text-slate-700" : "font-bold"}`}>
+                          {notif.title}
+                        </span>
+                        {notif.type && (
+                          <span className={`text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded border ${config.badge}`}>
+                            {notif.type}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                          {formatOptionalDate(notif.createdAt ?? notif.created_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 font-medium leading-normal line-clamp-2 md:line-clamp-1 max-w-4xl">
+                        {notif.message}
+                      </p>
+                      
+                      {/* Mobile Timestamp */}
+                      <div className="text-[10px] text-slate-400 font-mono sm:hidden pt-0.5">
+                        {formatOptionalDate(notif.createdAt ?? notif.created_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operational Controls Drawer Panel */}
+                  <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center bg-slate-50 md:bg-transparent p-1.5 md:p-0 rounded-lg border border-slate-100 md:border-transparent w-full md:w-auto justify-end">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        const updated = adminNotifs.map((n) => n.id === notif.id ? { ...n, read: true } : n);
+                        setAdminNotifs(updated);
+                        localStorage.setItem("adminNotifications", JSON.stringify(updated));
+                        setActiveSection("apartments");
+                        const allApts = [...defaultApartments, ...JSON.parse(localStorage.getItem("customApartments") || "[]")];
+                        const apt = allApts.find((a: any) => a.id === notif.apartmentId);
+                        if (apt) setSelectedApt(apt);
+                      }}
+                      className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-bold rounded-md text-xs h-7 px-2.5 shadow-2xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1.5 text-amber-500" />
+                      Inspect Property
+                    </Button>
+
+                    <button 
+                      onClick={() => toggleNotifReadStatus(notif.id || "", notif.read || false)}
+                      title={notif.read ? "Mark Unread" : "Mark Read"}
+                      className="h-7 w-7 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors shadow-2xs shrink-0"
+                    >
+                      {notif.read ? <Mail className="h-3 w-3" /> : <MailOpen className="h-3 w-3" />}
+                    </button>
+
+                    <button 
+                      onClick={() => deleteNotif(notif.id || "")}
+                      title="Delete Record"
+                      className="h-7 w-7 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors shadow-2xs shrink-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
-
-      {/* Search and Filter */}
-      {adminNotifs.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <input
-              type="text"
-              placeholder="Search notifications..."
-              value={notifSearch}
-              onChange={(e) => setNotifSearch(e.target.value)}
-              className="w-full rounded-xl border-2 border-indigo-100 bg-indigo-50/30 px-3 py-2 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-          <select
-            value={notifFilter}
-            onChange={(e) => setNotifFilter(e.target.value as any)}
-            className="rounded-xl border-2 border-indigo-100 bg-indigo-50/30 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            <option value="all">All</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-          </select>
-          <span className="text-xs text-slate-400 font-medium">{filteredNotifs.length} results</span>
-        </div>
-      )}
-
-      {adminNotifs.length === 0 ? (
-        <div className="py-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-            <Bell className="h-8 w-8 text-indigo-200" />
-          </div>
-          <p className="text-slate-400 font-medium">No notifications yet</p>
-          <p className="text-slate-400 text-sm mt-1">New property submissions will appear here</p>
-        </div>
-      ) : filteredNotifs.length === 0 ? (
-        <div className="py-12 text-center">
-          <Bell className="h-8 w-8 text-slate-200 mx-auto mb-3" />
-          <p className="text-slate-400 font-medium">No matching notifications</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredNotifs.map((notif) => (
-            <div key={notif.id}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all ${
-                notif.read
-                  ? "bg-white/60 border-slate-100"
-                  : "bg-white/95 border-indigo-100 shadow-lg shadow-indigo-50/60"
-              }`}>
-              <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0 shadow bg-gradient-to-br from-indigo-500 to-purple-600">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-black text-slate-900 text-sm">{notif.title}</p>
-                      {notif.type && <Badge variant="secondary" className="text-[10px] font-bold">{notif.type}</Badge>}
-                    </div>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed">{notif.message}</p>
-                  </div>
-                  {!notif.read && (
-                    <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
-                  <span className="text-xs text-slate-400 font-medium">
-                    {formatOptionalDate(notif.createdAt ?? notif.created_at)}
-                  </span>
-                  <Button size="sm" variant="outline"
-                    onClick={() => {
-                      const updated = adminNotifs.map((n) => n.id === notif.id ? { ...n, read: true } : n);
-                      setAdminNotifs(updated);
-                      localStorage.setItem("adminNotifications", JSON.stringify(updated));
-                      setActiveSection("apartments");
-                      const allApts = [...defaultApartments, ...JSON.parse(localStorage.getItem("customApartments") || "[]")];
-                      const apt = allApts.find((a: any) => a.id === notif.apartmentId);
-                      if (apt) setSelectedApt(apt);
-                    }}
-                    className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl text-xs">
-                    <Eye className="h-3.5 w-3.5 mr-1.5" />Inspect Property
-                  </Button>
-                  <Button size="sm" variant="ghost"
-                    onClick={() => toggleNotifReadStatus(notif.id || "", notif.read || false)}
-                    className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs">
-                    {notif.read ? (
-                      <>
-                        <Mail className="h-3.5 w-3.5 mr-1.5" />Mark unread
-                      </>
-                    ) : (
-                      <>
-                        <MailOpen className="h-3.5 w-3.5 mr-1.5" />Mark read
-                      </>
-                    )}
-                  </Button>
-                  <Button size="sm" variant="ghost"
-                    onClick={() => deleteNotif(notif.id || "")}
-                    className="text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs">
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   // ── Section: Landlords ────────────────────────────────────────────────────
   const renderLandlords = () => (
@@ -1717,14 +2080,16 @@ export function AdminDashboard() {
                       <p className="font-bold text-slate-900">{selectedReport.apartment || "Unknown Apartment"}</p>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <p className="text-slate-400 font-medium">Issue Type</p>
-                          <p className="font-bold text-slate-800">{selectedReport.issueType}</p>
+                          <p className="text-slate-400 font-medium">Date Submitted</p>
+                          <p className="font-bold text-slate-800">
+                            {formatOptionalDate(selectedReport.submittedAt ?? selectedReport.submitted_at, {
+                              month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit"
+                            })}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-slate-400 font-medium">Severity</p>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${(SEVERITY_LABEL[selectedReport.severity ?? "med"] ?? SEVERITY_LABEL.med).class}`}>
-                            {(SEVERITY_LABEL[selectedReport.severity ?? "med"] ?? SEVERITY_LABEL.med).label}
-                          </span>
+                          <p className="text-slate-400 font-medium">Report Status</p>
+                          <p className="font-bold text-slate-800 capitalize">{selectedReport.status || "pending"}</p>
                         </div>
                       </div>
                       <div className="pt-2 flex gap-2">
@@ -1739,7 +2104,7 @@ export function AdminDashboard() {
                           }}
                           className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-bold rounded-lg"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1" />View Apartment
+                          <Eye className="h-3.5 w-3.5 mr-1" />View Reported Apartment
                         </Button>
                       </div>
                     </div>
@@ -1773,23 +2138,9 @@ export function AdminDashboard() {
                   </div>
                 )}
 
-                {/* Report Tags */}
-                {selectedReport.tags && selectedReport.tags.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tags</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedReport.tags.map((tag: string) => (
-                        <Badge key={tag} className="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Report Description */}
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Details</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Problem Description</p>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <p className="text-sm text-slate-700 font-medium leading-relaxed">
                       {selectedReport.details || "No description provided."}
@@ -1797,15 +2148,22 @@ export function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Uploaded Evidence */}
+                <div>
+                  <EvidenceViewer
+                    evidence={selectedReportEvidence}
+                    title="Uploaded Evidence/Image"
+                    isAdmin
+                  />
+                </div>
+
                 {/* Contact Information */}
-                {selectedReport.contact && (
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reporter Contact</p>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <p className="text-sm font-medium text-slate-800">{selectedReport.contact}</p>
-                    </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contact Information</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-sm font-medium text-slate-800">{selectedReport.contact || "No contact information provided."}</p>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Footer Actions */}

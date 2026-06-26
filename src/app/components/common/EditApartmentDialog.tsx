@@ -8,18 +8,18 @@ import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Switch } from "../ui/switch";
 import { MultiImageUploader, type UploadedImage } from "./MultiImageUploader";
-import { toast } from "sonner";
 import { Home, Plus, Trash2, Images, Star, X } from "lucide-react";
 
 interface EditApartmentDialogProps {
   apartment: Apartment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (updatedApartment: Apartment) => void;
+  onSave: (updatedApartment: Apartment) => void | Promise<void>;
 }
 
 export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: EditApartmentDialogProps) {
   const [formData, setFormData] = useState<Apartment>(apartment);
+  const [isSaving, setIsSaving] = useState(false);
 
   // ── Image Management State ─────────────────────────────────────────────
   const [existingImages, setExistingImages] = useState<UploadedImage[]>(
@@ -87,8 +87,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
     const normalizedRooms = (formData.rooms ?? []).map((room, index) => ({
       ...room,
       id: room.id ?? `room-${Date.now()}-${index}`,
@@ -115,19 +117,23 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
       newImages.find((img) => img.isPrimary)?.url ||
       allImages[0];
 
-    onSave({
-      ...formData,
-      rooms: normalizedRooms,
-      images: allImages,
-      image: primaryImage,
-      bedrooms: normalizedRooms.length || formData.bedrooms,
-      bathrooms: normalizedRooms.filter((room) => room.hasPrivateBath).length || formData.bathrooms,
-      price: normalizedRooms.length > 0
-        ? Math.min(...normalizedRooms.map((room) => room.price).filter((price) => price > 0)) || formData.price
-        : formData.price,
-    });
-    toast.success("Apartment updated successfully!");
-    onOpenChange(false);
+    setIsSaving(true);
+    try {
+      await onSave({
+        ...formData,
+        rooms: normalizedRooms,
+        images: allImages,
+        image: primaryImage,
+        bedrooms: normalizedRooms.length || formData.bedrooms,
+        bathrooms: normalizedRooms.filter((room) => room.hasPrivateBath).length || formData.bathrooms,
+        price: normalizedRooms.length > 0
+          ? Math.min(...normalizedRooms.map((room) => room.price).filter((price) => price > 0)) || formData.price
+          : formData.price,
+      });
+      onOpenChange(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -543,14 +549,15 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-

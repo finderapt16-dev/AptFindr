@@ -30,6 +30,8 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
   const favorite = isFavorite(apartment.id);
+  const isOwnListing = user?.role === "landlord" && apartment.landlordId === user.id;
+  const showFavoriteButton = user?.role !== "admin" && !isOwnListing;
 
   // Check if landlord is verified
   const getLandlordVerification = () => {
@@ -77,16 +79,19 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`absolute right-2 top-2 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 ${
-              favorite ? "text-pink-500" : ""
-            }`}
-            onClick={handleFavoriteClick}
-          >
-            <Heart className={`h-5 w-5 ${favorite ? "animate-pulse" : ""}`} fill={favorite ? "currentColor" : "none"} />
-          </Button>
+          {showFavoriteButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`absolute right-2 top-2 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 ${
+                favorite ? "text-pink-500" : ""
+              }`}
+              onClick={handleFavoriteClick}
+              aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart className={`h-5 w-5 ${favorite ? "animate-pulse" : ""}`} fill={favorite ? "currentColor" : "none"} />
+            </Button>
+          )}
           <div className="absolute left-2 top-2 flex flex-col gap-2 animate-slide-in-left">
             {reportCount > 0 && (
               <Badge className="bg-gradient-to-r from-red-500 to-rose-600 flex items-center gap-1 shadow-lg backdrop-blur-sm text-white font-bold">

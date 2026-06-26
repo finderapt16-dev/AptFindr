@@ -8,6 +8,7 @@ import {
   updateApartment,
 } from "@/app/data/apartments";
 import { createReport } from "@/app/services/dashboardSupabaseService";
+import { uploadReportEvidence } from "@/app/services/reportEvidenceService";
 import { apartmentToFormValues } from "@/app/utils/apartmentMappers";
 import { getImageUrl } from "@/app/utils/images";
 import { useFavorites } from "@/app/hooks/useFavorites";
@@ -41,7 +42,6 @@ import {
   DoorOpen,
   CheckCircle2,
   XCircle,
-  Flag,
   X,
   AlertTriangle,
 } from "lucide-react";
@@ -124,11 +124,8 @@ export function ApartmentDetail() {
 
   // Report modal state
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportCategory, setReportCategory] = useState("Inaccurate information");
-  const [reportTitle, setReportTitle] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportContact, setReportContact] = useState("");
-  const [reportDateOfIncident, setReportDateOfIncident] = useState("");
   const [reportEvidenceFiles, setReportEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
@@ -223,14 +220,8 @@ export function ApartmentDetail() {
   const submitReport = async () => {
     if (!apartment) return;
 
-    // Validation
-    if (!reportTitle.trim()) {
-      toast.error("Please provide a report title");
-      return;
-    }
-
     if (!reportDetails.trim()) {
-      toast.error("Please provide details about the issue");
+      toast.error("Please describe the problem");
       return;
     }
 
@@ -250,12 +241,12 @@ export function ApartmentDetail() {
         reporter_id: user.id,
         reporter_role: user.role,
         apartment_id: apartment.id,
-        category: reportCategory,
-        issue_type: reportCategory,
-        tags: [reportCategory],
+        category: "Apartment problem",
+        issue_type: "Tenant-submitted problem",
+        tags: [],
         details: reportDetails,
         contact: reportContact || user.email,
-        date_of_incident: reportDateOfIncident || null,
+        date_of_incident: null,
         landlord_id: apartment.landlordId,
         has_evidence: true,
         evidence_count: reportEvidenceFiles.length,
@@ -265,20 +256,28 @@ export function ApartmentDetail() {
         throw new Error("Unable to save report.");
       }
 
-      // TODO: Upload evidence files to Supabase storage
-      // For now, we'll show success and evidence can be added via admin dashboard
-      // In production, implement:
-      // - Upload each file to supabase.storage
-      // - Create report_evidence records with file URLs
-      // - Handle upload progress and errors
+      const reportId = createdReport.id;
+      const uploadResults = await Promise.all(
+        reportEvidenceFiles.map((evidence) =>
+          uploadReportEvidence({
+            reportId,
+            file: evidence.file,
+            fileName: evidence.fileName,
+            fileType: evidence.fileType,
+            mimeType: evidence.mimeType,
+            uploadedBy: user.id,
+          }),
+        ),
+      );
+
+      if (uploadResults.some((result) => !result)) {
+        throw new Error("Report saved, but one or more evidence files could not be uploaded. Please contact support.");
+      }
 
       toast.success("Report submitted successfully with evidence. Admin will review it.");
       setReportModalOpen(false);
-      setReportTitle("");
       setReportDetails("");
       setReportContact("");
-      setReportDateOfIncident("");
-      setReportCategory("Inaccurate information");
       setReportEvidenceFiles([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit report.";
@@ -307,6 +306,8 @@ export function ApartmentDetail() {
 
   const canEdit = canEditApartment(apartment.id, apartment.landlordId);
   const favorite = isFavorite(apartment.id);
+  const isOwnListing = user?.role === "landlord" && apartment.landlordId === user.id;
+  const showFavoriteButton = user?.role !== "admin" && !isOwnListing;
   const images = [apartment.image, ...apartment.images].filter(Boolean);
 
   const handleSaveApartment = async (updatedApartment: Apartment) => {
@@ -363,27 +364,19 @@ export function ApartmentDetail() {
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => void toggleFavorite(apartment.id)}
-                    className={favorite ? "text-red-500" : ""}
-                  >
-                    <Heart className="h-5 w-5" fill={favorite ? "currentColor" : "none"} />
-                  </Button>
-                  {(user?.role === "student" || user?.role === "employee") && (
+                {showFavoriteButton && (
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setReportModalOpen(true)}
-                      className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                      title="Report a problem"
+                      onClick={() => void toggleFavorite(apartment.id)}
+                      className={favorite ? "text-red-500" : ""}
+                      aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
                     >
-                      <Flag className="h-5 w-5" />
+                      <Heart className="h-5 w-5" fill={favorite ? "currentColor" : "none"} />
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2 mb-6">
@@ -513,21 +506,21 @@ export function ApartmentDetail() {
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-black text-green-600">
-                        {apartment.rooms.filter((r: any) => !r.isOccupied).length}
+                        {apartment.rooms.filter((r: any) => getRoomStatus(r) === "available").length}
                       </p>
                       <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Available</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-black text-blue-600">
-                        {apartment.rooms.filter((r: any) => r.isOccupied).length}
+                        {apartment.rooms.filter((r: any) => getRoomStatus(r) === "occupied").length}
                       </p>
                       <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Occupied</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-black text-purple-600">
-                        {apartment.rooms.filter((r: any) => r.hasPrivateBath).length}
+                        {apartment.rooms.filter((r: any) => getRoomStatus(r) === "maintenance").length}
                       </p>
-                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">With Bath</p>
+                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Maintenance</p>
                     </div>
                   </div>
 
@@ -683,6 +676,18 @@ export function ApartmentDetail() {
                     </span>
                   </p>
                 </div>
+
+                {(user?.role === "student" || user?.role === "employee") && (
+                  <div className="mt-6 pt-6 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => setReportModalOpen(true)}
+                      className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+                    >
+                      Report Apartment
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -709,7 +714,7 @@ export function ApartmentDetail() {
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-rose-50 sticky top-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 flex items-center justify-center shadow">
-                  <Flag className="h-5 w-5 text-white" />
+                  <AlertTriangle className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <p className="font-black text-slate-900">Report a Problem</p>
@@ -723,55 +728,21 @@ export function ApartmentDetail() {
 
             {/* Body */}
             <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {/* Report Category */}
+              {/* Apartment Being Reported */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Category *</label>
-                <select
-                  value={reportCategory}
-                  onChange={(e) => setReportCategory(e.target.value)}
-                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option>Inaccurate information</option>
-                  <option>Scam / fraudulent listing</option>
-                  <option>Photos don't match</option>
-                  <option>Unresponsive landlord</option>
-                  <option>Safety concerns</option>
-                  <option>Price discrepancy</option>
-                  <option>Property condition issue</option>
-                  <option>Discriminatory behavior</option>
-                  <option>Other</option>
-                </select>
-              </div>
-
-              {/* Report Title */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Title *</label>
-                <input
-                  type="text"
-                  maxLength={100}
-                  value={reportTitle}
-                  onChange={(e) => setReportTitle(e.target.value)}
-                  placeholder="Brief summary of the issue"
-                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-                <p className="text-[10px] text-slate-400">{reportTitle.length}/100</p>
-              </div>
-
-              {/* Date of Incident */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date of Incident (Optional)</label>
-                <input
-                  type="date"
-                  value={reportDateOfIncident}
-                  onChange={(e) => setReportDateOfIncident(e.target.value)}
-                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apartment Being Reported</label>
+                <div className="rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-3">
+                  <p className="text-sm font-black text-slate-900">{apartment.title}</p>
+                  <p className="text-xs font-medium text-slate-500 mt-1">
+                    {apartment.address}, {apartment.city}, {apartment.state} {apartment.zip}
+                  </p>
+                </div>
               </div>
 
               {/* Details */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Details *</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Describe the Problem *</label>
                   <span className="text-[10px] text-slate-400">{reportDetails.length}/1000</span>
                 </div>
                 <textarea
@@ -779,14 +750,14 @@ export function ApartmentDetail() {
                   maxLength={1000}
                   value={reportDetails}
                   onChange={(e) => setReportDetails(e.target.value)}
-                  placeholder="Please describe the issue in detail. Include what happened, when it happened, and why you're reporting it..."
+                  placeholder="Tell us what happened. Include the issue, relevant details, and why this apartment should be reviewed."
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
                 />
               </div>
 
               {/* Evidence Upload */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Supporting Evidence *</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Upload Image/Evidence *</label>
                 <EvidenceUploader
                   evidenceFiles={reportEvidenceFiles}
                   onEvidenceChange={setReportEvidenceFiles}
@@ -798,12 +769,12 @@ export function ApartmentDetail() {
 
               {/* Contact Info */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Info (Optional)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Information</label>
                 <input
                   type="text"
                   value={reportContact}
                   onChange={(e) => setReportContact(e.target.value)}
-                  placeholder="Email or phone number (optional)"
+                  placeholder={user?.email || "Email or phone number"}
                   className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
@@ -822,7 +793,6 @@ export function ApartmentDetail() {
                 onClick={submitReport}
                 disabled={isSubmittingReport || reportEvidenceFiles.length === 0}
                 className="flex-1 font-bold rounded-xl shadow-md text-white bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <Flag className="h-4 w-4 mr-2" />
                 {isSubmittingReport ? "Submitting..." : "Submit Report"}
               </Button>
               <Button 

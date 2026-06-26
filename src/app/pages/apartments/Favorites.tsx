@@ -27,7 +27,12 @@ export function Favorites() {
       try {
         const apartments = await listFavoriteApartments(user.id);
         if (active) {
-          setFavoriteApartments(apartments.filter((apt) => apt.isPublished !== false));
+          setFavoriteApartments(
+            apartments.filter((apt) => (
+              apt.isPublished !== false &&
+              !(user.role === "landlord" && apt.landlordId === user.id)
+            )),
+          );
         }
       } catch (error) {
         console.error("Failed to load favorite apartments:", error);
@@ -47,9 +52,9 @@ export function Favorites() {
     return () => {
       active = false;
     };
-  }, [user?.id, refreshFavorites]);
+  }, [user?.id, user?.role, refreshFavorites]);
 
-  if (user?.role === "landlord" || user?.role === "admin") {
+  if (user?.role === "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -5,7 +5,9 @@ import { Settings as AccountSettings } from "@/app/pages/settings/Settings";
 import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
 import { useFavorites } from "@/app/hooks/useFavorites";
 import { createReport, updateUserProfile } from "@/app/services/dashboardSupabaseService";
+import { uploadReportEvidence } from "@/app/services/reportEvidenceService";
 import { ApartmentCard } from "@/app/components/common/ApartmentCard";
+import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
 import { getStudentRecommendations, getEmployeeRecommendations, getRecommendationExplanation } from "@/app/utils/rankingEngine";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
@@ -73,12 +75,10 @@ export function StudentEmployeeDashboard() {
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [reportForm, setReportForm] = useState({
     apartment: "",
-    issueType: "",
-    severity: "",
-    tags: [] as string[],
     details: "",
     contact: "",
   });
+  const [reportEvidenceFiles, setReportEvidenceFiles] = useState<EvidenceFile[]>([]);
 
   // ── Help & support state ────────────────────────────────────────────────
   const [supportSubmitted, setSupportSubmitted] = useState(false);
@@ -140,17 +140,19 @@ export function StudentEmployeeDashboard() {
 
   const handleLogout = () => { logout?.(); navigate("/"); };
 
-  const toggleReportTag = (tag: string) =>
-    setReportForm((f) => ({
-      ...f,
-      tags: f.tags.includes(tag) ? f.tags.filter((t) => t !== tag) : [...f.tags, tag],
-    }));
-
   const handleReportSubmit = async () => {
-    if (!reportForm.apartment || !reportForm.issueType) return;
+    if (!reportForm.apartment) {
+      toast.error("Please select the apartment you want to report.");
+      return;
+    }
 
     if (!reportForm.details.trim()) {
       toast.error("Please describe the problem before submitting.");
+      return;
+    }
+
+    if (reportEvidenceFiles.length === 0) {
+      toast.error("Please upload at least one image or document as evidence.");
       return;
     }
 
@@ -166,15 +168,37 @@ export function StudentEmployeeDashboard() {
         reporter_id: user.id,
         reporter_role: user.role === "student" || user.role === "employee" ? user.role : "student",
         apartment_id: reportForm.apartment,
-        issue_type: reportForm.issueType,
-        severity: reportForm.severity || "med",
-        tags: reportForm.tags,
+        category: "Apartment problem",
+        issue_type: "Tenant-submitted problem",
+        severity: "med",
+        tags: [],
         details: reportForm.details.trim(),
         contact: reportForm.contact.trim() || user.email,
+        landlord_id: apartment?.landlordId,
+        has_evidence: true,
+        evidence_count: reportEvidenceFiles.length,
       });
 
-      if (!createdReport) {
+      if (!createdReport?.id) {
         throw new Error("Unable to save report.");
+      }
+
+      const reportId = createdReport.id;
+      const uploadResults = await Promise.all(
+        reportEvidenceFiles.map((evidence) =>
+          uploadReportEvidence({
+            reportId,
+            file: evidence.file,
+            fileName: evidence.fileName,
+            fileType: evidence.fileType,
+            mimeType: evidence.mimeType,
+            uploadedBy: user.id,
+          }),
+        ),
+      );
+
+      if (uploadResults.some((result) => !result)) {
+        throw new Error("Report saved, but one or more evidence files could not be uploaded. Please contact support.");
       }
 
       const existingReports = JSON.parse(localStorage.getItem("apartmentReports") || "[]");
@@ -199,7 +223,8 @@ export function StudentEmployeeDashboard() {
 
   const resetReport = () => {
     setReportSubmitted(false);
-    setReportForm({ apartment: "", issueType: "", severity: "", tags: [], details: "", contact: "" });
+    setReportForm({ apartment: "", details: "", contact: "" });
+    setReportEvidenceFiles([]);
   };
 
   const handleSupportSubmit = () => {
@@ -428,7 +453,7 @@ export function StudentEmployeeDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:transform hover:-translate-y-1">
           <CardContent className="p-6 bg-gradient-to-br from-white to-pink-50/30">
             <div className="flex items-center justify-between">
@@ -454,20 +479,6 @@ export function StudentEmployeeDashboard() {
               </div>
               <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg">
                 <Clock className="h-7 w-7 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:transform hover:-translate-y-1">
-          <CardContent className="p-6 bg-gradient-to-br from-white to-amber-50/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1 font-semibold">In La Paz Area</p>
-                <p className="text-4xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{allApartments.length}</p>
-              </div>
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-                <MapPin className="h-7 w-7 text-white" />
               </div>
             </div>
           </CardContent>
@@ -652,13 +663,6 @@ export function StudentEmployeeDashboard() {
   );
 
   // ── Section: Report ──────────────────────────────────────────────────────
-  const TAG_OPTIONS = ["Wrong price", "Misleading photos", "Wrong address", "Already taken", "Fake listing", "No contact"];
-  const SEVERITY_OPTIONS = [
-    { key: "low",  label: "Low",          style: "bg-green-100 border-green-400 text-green-800" },
-    { key: "med",  label: "Medium",       style: "bg-amber-100 border-amber-400 text-amber-800" },
-    { key: "high", label: "High – urgent",style: "bg-red-100 border-red-400 text-red-800" },
-  ];
-
   const renderReport = () => (
     <div className="space-y-5 max-w-2xl">
       <div className="flex items-center gap-3 mb-2">
@@ -691,78 +695,25 @@ export function StudentEmployeeDashboard() {
         <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
           <CardContent className="pt-6 space-y-5">
 
-            {/* Apartment + Issue Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Apartment *</label>
-                <select
-                  value={reportForm.apartment}
-                  onChange={(e) => setReportForm((f) => ({ ...f, apartment: e.target.value }))}
-                  className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option value="">Select an apartment...</option>
-                  {allApartments.map((apt) => (
-                    <option key={apt.id} value={apt.id}>{apt.title}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Issue Type *</label>
-                <select
-                  value={reportForm.issueType}
-                  onChange={(e) => setReportForm((f) => ({ ...f, issueType: e.target.value }))}
-                  className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option value="">Select a category...</option>
-                  {["Inaccurate information","Photos don't match","Unavailable / already rented","Scam / fraudulent listing","Unresponsive landlord","Safety concern","Other"].map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Severity */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Severity</label>
-              <div className="flex gap-2 flex-wrap">
-                {SEVERITY_OPTIONS.map(({ key, label, style }) => (
-                  <button
-                    key={key}
-                    onClick={() => setReportForm((f) => ({ ...f, severity: f.severity === key ? "" : key }))}
-                    className={`px-4 py-2 rounded-full border-2 text-sm font-bold transition-all ${
-                      reportForm.severity === key ? style : "border-amber-100 bg-white text-slate-500 hover:border-amber-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
+            {/* Apartment */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Select Apartment *</label>
+              <select
+                value={reportForm.apartment}
+                onChange={(e) => setReportForm((f) => ({ ...f, apartment: e.target.value }))}
+                className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="">Select an apartment...</option>
+                {allApartments.map((apt) => (
+                  <option key={apt.id} value={apt.id}>{apt.title}</option>
                 ))}
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">What happened? (optional tags)</label>
-              <div className="flex gap-2 flex-wrap">
-                {TAG_OPTIONS.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => toggleReportTag(tag)}
-                    className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all ${
-                      reportForm.tags.includes(tag)
-                        ? "bg-amber-100 border-amber-400 text-amber-800"
-                        : "border-amber-100 bg-white text-slate-500 hover:border-amber-300"
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+              </select>
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Describe the Problem</label>
+                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Describe the Problem *</label>
                 <span className="text-xs text-slate-400 font-medium">{reportForm.details.length}/500</span>
               </div>
               <textarea
@@ -775,14 +726,26 @@ export function StudentEmployeeDashboard() {
               />
             </div>
 
+            {/* Evidence */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">Upload Image/Evidence *</label>
+              <EvidenceUploader
+                evidenceFiles={reportEvidenceFiles}
+                onEvidenceChange={setReportEvidenceFiles}
+                maxFiles={5}
+                maxFileSize={10}
+                required
+              />
+            </div>
+
             {/* Contact */}
             <div className="space-y-1.5">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Your Contact (Optional)</label>
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Contact Information</label>
               <input
                 type="text"
                 value={reportForm.contact}
                 onChange={(e) => setReportForm((f) => ({ ...f, contact: e.target.value }))}
-                placeholder="Email or phone number"
+                placeholder={user?.email || "Email or phone number"}
                 className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -791,7 +754,7 @@ export function StudentEmployeeDashboard() {
             <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleReportSubmit}
-                disabled={!reportForm.apartment || !reportForm.issueType}
+                disabled={!reportForm.apartment || reportEvidenceFiles.length === 0}
                 className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 font-bold rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit Report

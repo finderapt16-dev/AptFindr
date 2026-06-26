@@ -118,12 +118,13 @@ export function AddApartment() {
   // ── Wizard State ───────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const totalSteps = 5;
 
   const stepConfig = [
     { number: 1, title: "Property Information", description: "Photos, title, and basic details" },
     { number: 2, title: "Location", description: "Address and map location" },
-    { number: 3, title: "Rooms", description: "Room details and amenities" },
+    { number: 3, title: "Rooms", description: "Room details and availability" },
     { number: 4, title: "Amenities & Features", description: "Utilities and additional features" },
     { number: 5, title: "Verification", description: "Business permit and ID information" },
   ];
@@ -201,25 +202,73 @@ export function AddApartment() {
     idNumber: "",
   });
 
+  const fieldClass = (field: string) =>
+    validationErrors[field] ? "rounded-xl border-red-300 focus-visible:ring-red-400" : "rounded-xl border-amber-100";
+
+  const FieldError = ({ field }: { field: string }) =>
+    validationErrors[field] ? <p className="text-xs font-bold text-red-600">{validationErrors[field]}</p> : null;
+
+  const validateAllFields = (): { isValid: boolean; errors: Record<string, string>; firstStep: number } => {
+    const errors: Record<string, string> = {};
+
+    if (!String(formData.title ?? "").trim()) errors.title = "Property title is required.";
+    if (!Number(formData.price)) errors.price = "Monthly rent is required.";
+    if (!Number(formData.sqft)) errors.sqft = "Total property area is required.";
+    if (!String(formData.description ?? "").trim()) errors.description = "Property description is required.";
+    if (uploadedImages.length === 0) errors.images = "Upload at least one property image.";
+
+    if (!String(formData.address ?? "").trim()) errors.address = "Complete address is required.";
+    if (!Number.isFinite(Number(formData.lat)) || !Number.isFinite(Number(formData.lng))) {
+      errors.mapLocation = "Map location is required.";
+    }
+
+    if (rooms.length === 0) {
+      errors.rooms = "Add at least one room.";
+    }
+    rooms.forEach((room, index) => {
+      const prefix = `rooms.${index}`;
+      if (!room.roomName.trim()) errors[`${prefix}.roomName`] = "Room number/name is required.";
+      if (!Number(room.rent) || Number(room.rent) <= 0) errors[`${prefix}.rent`] = "Room rent is required.";
+      if (!Number(room.maxOccupants) || Number(room.maxOccupants) <= 0) errors[`${prefix}.maxOccupants`] = "Room capacity is required.";
+      if (!room.status) errors[`${prefix}.status`] = "Room status is required.";
+    });
+
+    if (!String(verificationData.propertyName).trim()) errors.verificationPropertyName = "Property name is required for verification.";
+    if (!String(verificationData.propertyAddress).trim()) errors.verificationPropertyAddress = "Property address is required for verification.";
+    if (!String(verificationData.businessPermit).trim()) errors.businessPermit = "Business permit number is required.";
+    if (!String(verificationData.tinNumber).trim()) errors.tinNumber = "TIN number is required.";
+    if (!String(verificationData.idType).trim()) errors.idType = "Valid ID type is required.";
+    if (!String(verificationData.idNumber).trim()) errors.idNumber = "ID number is required.";
+
+    const firstStep = errors.title || errors.price || errors.sqft || errors.description || errors.images
+      ? 1
+      : errors.address || errors.mapLocation
+        ? 2
+        : Object.keys(errors).some((key) => key.startsWith("rooms"))
+          ? 3
+          : errors.verificationPropertyName || errors.verificationPropertyAddress || errors.businessPermit || errors.tinNumber || errors.idType || errors.idNumber
+            ? 5
+            : currentStep;
+
+    return { isValid: Object.keys(errors).length === 0, errors, firstStep };
+  };
+
   // ── Step validation ────────────────────────────────────────────────────
   const validateStep = (step: number): boolean => {
+    const { errors } = validateAllFields();
+    setValidationErrors(errors);
+
     switch (step) {
       case 1:
-        return !!(
-          formData.title &&
-          formData.price &&
-          formData.sqft &&
-          formData.description &&
-          uploadedImages.length > 0
-        );
+        return !errors.title && !errors.price && !errors.sqft && !errors.description && !errors.images;
       case 2:
-        return !!(formData.address);
+        return !errors.address && !errors.mapLocation;
       case 3:
-        return rooms.length > 0 && rooms.every((r) => r.roomName && r.sqft > 0 && r.rent >= 0);
+        return !Object.keys(errors).some((key) => key.startsWith("rooms"));
       case 4:
         return true;
       case 5:
-        return true;
+        return !errors.verificationPropertyName && !errors.verificationPropertyAddress && !errors.businessPermit && !errors.tinNumber && !errors.idType && !errors.idNumber;
       default:
         return false;
     }
@@ -267,6 +316,15 @@ export function AddApartment() {
 
     if (uploadedImages.length === 0) {
       toast.error("Please upload at least one property image");
+      return;
+    }
+
+    const validation = validateAllFields();
+    setValidationErrors(validation.errors);
+    if (!validation.isValid) {
+      setCurrentStep(validation.firstStep);
+      toast.error("Please complete all required fields before submitting.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -381,6 +439,7 @@ export function AddApartment() {
         rooms.map((room) => ({
           id: room.id,
           name: room.roomName || room.type,
+          type: room.type,
           sqft: room.sqft,
           maxOccupants: room.maxOccupants,
           price: room.rent,
@@ -388,9 +447,10 @@ export function AddApartment() {
           bathroomType: room.bathroomType,
           sharedBathLocation: room.sharedBathLocation,
           hasAC: room.hasAC,
-          isOccupied: room.isOccupied,
+          isOccupied: room.status === "occupied",
           status: room.status,
           description: room.description,
+          images: room.images,
         })),
       );
 
@@ -529,10 +589,18 @@ export function AddApartment() {
 
                     <MultiImageUploader
                       images={uploadedImages}
-                      onImagesChange={setUploadedImages}
+                      onImagesChange={(images) => {
+                        setUploadedImages(images);
+                        setValidationErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.images;
+                          return next;
+                        });
+                      }}
                       maxImages={10}
                       maxFileSize={5}
                     />
+                    <FieldError field="images" />
                   </div>
 
                   <div className="space-y-6">
@@ -548,11 +616,12 @@ export function AddApartment() {
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         placeholder="e.g., Modern Loft"
                         required
-                        className="rounded-xl border-amber-100"
+                        className={fieldClass("title")}
                       />
+                      <FieldError field="title" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-3">
                         <Label className="text-slate-700 font-bold">Monthly Rent (₱) *</Label>
                         <Input
@@ -560,18 +629,20 @@ export function AddApartment() {
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                           required
-                          className="rounded-xl border-amber-100"
+                          className={fieldClass("price")}
                         />
+                        <FieldError field="price" />
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-slate-700 font-bold">Total Area (sqft) *</Label>
+                        <Label className="text-slate-700 font-bold">Total Property Area (sqft) *</Label>
                         <Input
                           type="number"
                           value={formData.sqft}
                           onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
                           required
-                          className="rounded-xl border-amber-100"
+                          className={fieldClass("sqft")}
                         />
+                        <FieldError field="sqft" />
                       </div>
                     </div>
 
@@ -583,23 +654,9 @@ export function AddApartment() {
                         rows={4}
                         required
                         placeholder="Describe your property..."
-                        className="rounded-xl border-amber-100 resize-none"
+                        className={`${fieldClass("description")} resize-none`}
                       />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">Occupancy Status</Label>
-                      <select
-                        value={formData.status ?? "available"}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value as ApartmentStatus })}
-                        className="w-full h-11 rounded-xl border border-amber-100 bg-white px-3 text-sm"
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <FieldError field="description" />
                     </div>
                   </div>
                 </>
@@ -620,8 +677,9 @@ export function AddApartment() {
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="House number, street, subdivision"
                       required
-                      className="rounded-xl border-amber-100"
+                      className={fieldClass("address")}
                     />
+                    <FieldError field="address" />
                   </div>
 
                   <div className="grid grid-cols-3 gap-6">
@@ -649,6 +707,7 @@ export function AddApartment() {
                         onLocationChange={(lat, lng) => setFormData({ ...formData, lat, lng })}
                       />
                     </div>
+                    <FieldError field="mapLocation" />
                   </div>
                 </div>
               )}
@@ -686,8 +745,9 @@ export function AddApartment() {
                             onChange={(e) => updateRoom(room.id, { roomName: e.target.value })}
                             placeholder="e.g., Room 101"
                             required
-                            className="rounded-xl border-amber-100"
+                            className={fieldClass(`rooms.${index}.roomName`)}
                           />
+                          <FieldError field={`rooms.${index}.roomName`} />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs uppercase font-bold">Room Type</Label>
@@ -722,8 +782,9 @@ export function AddApartment() {
                             min={1}
                             value={room.maxOccupants}
                             onChange={(e) => updateRoom(room.id, { maxOccupants: Number(e.target.value) })}
-                            className="rounded-xl border-amber-100"
+                            className={fieldClass(`rooms.${index}.maxOccupants`)}
                           />
+                          <FieldError field={`rooms.${index}.maxOccupants`} />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs uppercase font-bold">Monthly Rent (₱)</Label>
@@ -732,8 +793,9 @@ export function AddApartment() {
                             min={0}
                             value={room.rent}
                             onChange={(e) => updateRoom(room.id, { rent: Number(e.target.value) })}
-                            className="rounded-xl border-amber-100"
+                            className={fieldClass(`rooms.${index}.rent`)}
                           />
+                          <FieldError field={`rooms.${index}.rent`} />
                         </div>
                       </div>
 
@@ -791,7 +853,9 @@ export function AddApartment() {
                               isOccupied: e.target.value === "maintenance" ? false : room.isOccupied,
                             })
                           }
-                          className="w-full h-10 rounded-xl border border-amber-100 bg-white px-3 text-sm"
+                          className={`w-full h-10 rounded-xl border bg-white px-3 text-sm ${
+                            validationErrors[`rooms.${index}.status`] ? "border-red-300 focus:ring-red-400" : "border-amber-100"
+                          }`}
                         >
                           {STATUS_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -799,6 +863,7 @@ export function AddApartment() {
                             </option>
                           ))}
                         </select>
+                        <FieldError field={`rooms.${index}.status`} />
                       </div>
 
                       <div className="space-y-2">
@@ -843,7 +908,7 @@ export function AddApartment() {
                 </div>
               )}
 
-              {/* ──────── STEP 4: Amenities & Features ──────── */}
+              {/* ──────── STEP 3: Amenities & Features ──────── */}
               {currentStep === 4 && (
                 <>
                   <div className="space-y-6">
@@ -936,7 +1001,7 @@ export function AddApartment() {
                 </>
               )}
 
-              {/* ──────── STEP 5: Verification ──────── */}
+              {/* ──────── STEP 4: Verification ──────── */}
               {currentStep === 5 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
@@ -946,59 +1011,65 @@ export function AddApartment() {
 
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold flex items-center gap-1.5">
-                      <Building2 className="h-3.5" /> Property / Apartment Name
+                      <Building2 className="h-3.5" /> Property / Apartment Name *
                     </Label>
                     <Input
                       value={verificationData.propertyName}
                       onChange={(e) => setVerificationData({ ...verificationData, propertyName: e.target.value })}
                       placeholder="e.g., Sunset Heights"
-                      className="rounded-xl border-amber-100"
+                      className={fieldClass("verificationPropertyName")}
                     />
+                    <FieldError field="verificationPropertyName" />
                   </div>
 
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold flex items-center gap-1.5">
-                      <MapPin className="h-3.5" /> Complete Property Address
+                      <MapPin className="h-3.5" /> Complete Property Address *
                     </Label>
                     <Input
                       value={verificationData.propertyAddress}
                       onChange={(e) => setVerificationData({ ...verificationData, propertyAddress: e.target.value })}
                       placeholder="Full address"
-                      className="rounded-xl border-amber-100"
+                      className={fieldClass("verificationPropertyAddress")}
                     />
+                    <FieldError field="verificationPropertyAddress" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label className="text-slate-700 font-bold flex items-center gap-1.5">
-                        <FileText className="h-3.5" /> Business Permit #
+                        <FileText className="h-3.5" /> Business Permit # *
                       </Label>
                       <Input
                         value={verificationData.businessPermit}
                         onChange={(e) => setVerificationData({ ...verificationData, businessPermit: e.target.value })}
                         placeholder="B-2024-XXXXX"
-                        className="rounded-xl border-amber-100"
+                        className={fieldClass("businessPermit")}
                       />
+                      <FieldError field="businessPermit" />
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">TIN Number</Label>
+                      <Label className="text-slate-700 font-bold">TIN Number *</Label>
                       <Input
                         value={verificationData.tinNumber}
                         onChange={(e) => setVerificationData({ ...verificationData, tinNumber: e.target.value })}
                         placeholder="XXX-XXX-XXX-XXX"
-                        className="rounded-xl border-amber-100"
+                        className={fieldClass("tinNumber")}
                       />
+                      <FieldError field="tinNumber" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">Valid ID Type</Label>
+                      <Label className="text-slate-700 font-bold">Valid ID Type *</Label>
                       <select
                         value={verificationData.idType}
                         onChange={(e) => setVerificationData({ ...verificationData, idType: e.target.value })}
-                        className="w-full h-11 rounded-xl border border-amber-100 bg-white px-3 text-sm"
+                        className={`w-full h-11 rounded-xl border bg-white px-3 text-sm ${
+                          validationErrors.idType ? "border-red-300 focus:ring-red-400" : "border-amber-100"
+                        }`}
                       >
                         <option value="">Select ID Type</option>
                         {VALID_ID_TYPES.map((id) => (
@@ -1007,16 +1078,18 @@ export function AddApartment() {
                           </option>
                         ))}
                       </select>
+                      <FieldError field="idType" />
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">ID Number</Label>
+                      <Label className="text-slate-700 font-bold">ID Number *</Label>
                       <Input
                         value={verificationData.idNumber}
                         onChange={(e) => setVerificationData({ ...verificationData, idNumber: e.target.value })}
                         placeholder="Enter ID number"
-                        className="rounded-xl border-amber-100"
+                        className={fieldClass("idNumber")}
                       />
+                      <FieldError field="idNumber" />
                     </div>
                   </div>
                 </div>

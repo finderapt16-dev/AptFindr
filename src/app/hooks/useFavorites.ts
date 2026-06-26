@@ -43,6 +43,11 @@ export function useFavorites() {
         return;
       }
 
+      if (user.role === 'admin') {
+        toast.error('Favorites are not available for admin accounts.');
+        return;
+      }
+
       const wasFavorite = favorites.includes(apartmentId);
 
       try {
@@ -73,7 +78,7 @@ export function useFavorites() {
         });
       }
     },
-    [favorites, isAuthenticated, user?.id],
+    [favorites, isAuthenticated, user?.id, user?.role],
   );
 
   const isFavorite = useCallback(

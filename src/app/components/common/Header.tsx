@@ -50,7 +50,7 @@ export function Header() {
             >
               Browse
             </Link>
-            {(user?.role === "student" || user?.role === "employee") && (
+            {(user?.role === "student" || user?.role === "employee" || user?.role === "landlord") && (
               <Link
                 to="/favorites"
                 className={`flex items-center space-x-2 transition-all duration-300 hover:text-pink-600 font-medium ${
@@ -171,7 +171,7 @@ export function Header() {
                 >
                   Browse Apartments
                 </Link>
-                {(user?.role === "student" || user?.role === "employee") && (
+                {(user?.role === "student" || user?.role === "employee" || user?.role === "landlord") && (
                   <Link
                     to="/favorites"
                     className={`flex items-center space-x-2 text-lg transition-colors hover:text-slate-900 ${

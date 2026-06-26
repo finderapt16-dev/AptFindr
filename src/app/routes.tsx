@@ -7,6 +7,7 @@ import { ApartmentDetail } from "./pages/apartments/ApartmentDetail";
 import { Favorites } from "./pages/apartments/Favorites";
 import { Dashboard } from "./pages/dashboards/Dashboard";
 import { AddApartment } from "./pages/apartments/AddApartment";
+import { ManageRooms } from "./pages/apartments/ManageRooms";
 import { Flowchart } from "./pages/tools/Flowchart";
 import { Settings } from "./pages/settings/Settings";
 import { DesignGuide } from "./pages/tools/DesignGuide";
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
       { path: "apartment/:id", element: <ApartmentDetail /> },
       { path: "admin/apartment/:id", element: <ProtectedRoute allowedRoles={["admin"]}><AdminApartmentDetail /></ProtectedRoute> },
       { path: "add-apartment", element: <ProtectedRoute allowedRoles={["landlord"]}><AddApartment /></ProtectedRoute> },
+      { path: "landlord/properties/:id/rooms", element: <ProtectedRoute allowedRoles={["landlord"]}><ManageRooms /></ProtectedRoute> },
       { path: "favorites", element: <ProtectedRoute><Favorites /></ProtectedRoute> },
       { path: "settings", element: <ProtectedRoute><Settings /></ProtectedRoute> },
       { path: "dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },

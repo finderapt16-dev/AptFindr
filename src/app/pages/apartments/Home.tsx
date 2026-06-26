@@ -83,6 +83,17 @@ function TenantBrowse() {
         return false;
       }
 
+      const rooms = apt.rooms ?? [];
+      if (rooms.length > 0) {
+        const hasAvailableRoom = rooms.some((room) => {
+          const status = room.status ?? (room.isOccupied ? "occupied" : "available");
+          return status === "available";
+        });
+        if (!hasAvailableRoom) return false;
+      } else if (apt.status && apt.status !== "available") {
+        return false;
+      }
+
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
