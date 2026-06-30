@@ -237,6 +237,45 @@ async function recordSignup(profile: User, input: CreateUserInput, authId?: stri
   }
 }
 
+async function notifyAdminsOfLandlordSignup(profile: User, input: CreateUserInput): Promise<void> {
+  if (profile.role !== 'landlord') return;
+
+  const { data: admins, error: adminError } = await supabaseClient
+    .from(APP_USERS_TABLE)
+    .select('id')
+    .eq('role', 'admin');
+
+  if (adminError || !Array.isArray(admins) || admins.length === 0) {
+    if (adminError) console.warn('Failed to load admins for landlord signup notification:', adminError.message);
+    return;
+  }
+
+  const notifications = admins
+    .filter((admin) => typeof admin.id === 'string' && admin.id.length > 0)
+    .map((admin) => ({
+      user_id: admin.id,
+      type: 'landlord_registration',
+      title: 'New landlord registration',
+      message: `${profile.name || 'A landlord'} registered and is waiting for verification review.`,
+      payload: {
+        landlord_id: profile.id,
+        landlordId: profile.id,
+        landlord_name: profile.name,
+        landlord_email: profile.email,
+        permit_number: input.permitNumber ?? null,
+        action: 'landlord_registration',
+      },
+      read: false,
+    }));
+
+  if (notifications.length === 0) return;
+
+  const { error } = await supabaseClient.from('notifications').insert(notifications);
+  if (error) {
+    console.warn('Failed to create landlord signup admin notifications:', error.message);
+  }
+}
+
 async function recordLogin(profile: User | null, authId: string, success = true, metadata: Record<string, unknown> = {}): Promise<void> {
   const { error } = await supabaseClient.from('logins').insert({
     user_id: profile?.id ?? null,
@@ -539,6 +578,7 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
     const profile = normalizeUser(data as AppUserRow);
     await ensureRoleProfile(profile.id, input.role, { ...input, isVerified: input.role !== 'landlord' });
     await recordSignup(profile, input, authData.user.id);
+    await notifyAdminsOfLandlordSignup(profile, input);
     return profile;
   }
 
@@ -568,6 +608,7 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
   const profile = normalizeUser(data as AppUserRow);
   await ensureRoleProfile(profile.id, input.role, { ...input, isVerified: input.role !== 'landlord' });
   await recordSignup(profile, input, authData.user.id);
+  await notifyAdminsOfLandlordSignup(profile, input);
   return profile;
 }
 

@@ -35,8 +35,8 @@ type Room = {
   roomName: string;              // Room number or name (e.g., "Room 101", "Unit A")
   type: string;
   sqft: number;
-  maxOccupants: number;
-  rent: number;
+  maxOccupants?: number;
+  rent?: number;
   hasPrivateBath: boolean;
   bathroomType: string;        // "en-suite" | "separate" | ""
   sharedBathLocation: string;
@@ -58,8 +58,8 @@ const makeRoom = (): Room => ({
   roomName: "",
   type: "Bedroom",
   sqft: 150,
-  maxOccupants: 1,
-  rent: 0,
+  maxOccupants: undefined,
+  rent: undefined,
   hasPrivateBath: false,
   bathroomType: "",
   sharedBathLocation: "",
@@ -134,7 +134,6 @@ export function AddApartment() {
 
   const [formData, setFormData] = useState<Partial<Apartment>>({
     title: "",
-    price: 0,
     sqft: 500,
     address: "",
     city: "La Paz",
@@ -153,6 +152,7 @@ export function AddApartment() {
     utilities: false,
     status: "available",
   });
+  const [locationLookupRequest, setLocationLookupRequest] = useState(0);
 
   // ── Rooms state ───────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<Room[]>([makeRoom()]);
@@ -213,7 +213,7 @@ export function AddApartment() {
       case 2:
         return !!(formData.address);
       case 3:
-        return rooms.length > 0 && rooms.every((r) => r.roomName && r.sqft > 0 && r.rent >= 0);
+        return rooms.length > 0 && rooms.every((r) => r.roomName && r.sqft > 0 && Number(r.rent) > 0);
       case 4:
         return true; // Optional fields
       case 5:
@@ -390,8 +390,8 @@ export function AddApartment() {
           id: room.id,
           name: room.roomName || room.type,
           sqft: room.sqft,
-          maxOccupants: room.maxOccupants,
-          price: room.rent,
+          maxOccupants: Number(room.maxOccupants),
+          price: Number(room.rent),
           hasPrivateBath: room.hasPrivateBath,
           bathroomType: room.bathroomType,
           sharedBathLocation: room.sharedBathLocation,
@@ -403,17 +403,21 @@ export function AddApartment() {
       );
 
       const appUsers = await fetchAppUsers();
-      const admin = appUsers.find((entry) => entry.role === "admin");
+      const admins = appUsers.filter((entry) => entry.role === "admin" && entry.id);
 
-      if (admin?.id) {
-        await createNotification({
-          user_id: admin.id,
-          type: "info",
-          title: "New Property Submitted",
-          message: `${user.name} added "${created.title}" at ${created.address}, ${created.city}`,
-          payload: { apartmentId: created.id, landlordId: created.landlordId ?? resolvedLandlordId },
-        });
-      }
+      await Promise.all(admins.map((admin) => createNotification({
+        user_id: admin.id!,
+        type: "landlord_property_submission",
+        title: "New landlord property submitted",
+        message: `${user.name} added "${created.title}" at ${created.address}, ${created.city}.`,
+        payload: {
+          apartment_id: created.id,
+          apartmentId: created.id,
+          landlord_id: created.landlordId ?? resolvedLandlordId,
+          landlordId: created.landlordId ?? resolvedLandlordId,
+          action: "property_submission",
+        },
+      })));
 
       await refreshApartments();
       toast.success("Apartment added successfully!");
@@ -469,7 +473,7 @@ export function AddApartment() {
             <AlertCircle className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-900">Verification Pending</AlertTitle>
             <AlertDescription className="text-slate-600">
-              Your property will be listed after verification.
+              You can save and manage this property now. Tenants will only see it after an admin verifies your landlord account.
             </AlertDescription>
           </Alert>
         )}
@@ -617,20 +621,26 @@ export function AddApartment() {
                         <Label className="text-slate-700 font-bold">Monthly Rent (₱) *</Label>
                         <Input
                           type="number"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                          inputMode="decimal"
+                          min={0}
+                          step="any"
+                          value={formData.price || ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            price: e.target.value === "" ? undefined : Number(e.target.value),
+                          })}
                           required
-                          className="rounded-xl border-amber-100"
+                          className="hide-number-spinners rounded-xl border-amber-100"
                         />
                       </div>
                       <div className="space-y-3">
                         <Label className="text-slate-700 font-bold">Total Area (sqft) *</Label>
                         <Input
                           type="number"
-                          value={formData.sqft}
+                          value={formData.sqft || ""}
                           onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
                           required
-                          className="rounded-xl border-amber-100"
+                          className="hide-number-spinners rounded-xl border-amber-100"
                         />
                       </div>
                     </div>
@@ -678,6 +688,7 @@ export function AddApartment() {
                     <Input
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onBlur={() => setLocationLookupRequest((request) => request + 1)}
                       placeholder="House number, street, subdivision"
                       required
                       className="rounded-xl border-amber-100"
@@ -706,7 +717,9 @@ export function AddApartment() {
                       <LocationPicker
                         lat={formData.lat ?? 0}
                         lng={formData.lng ?? 0}
-                        onLocationChange={(lat, lng) => setFormData({ ...formData, lat, lng })}
+                        addressQuery={[formData.address, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", ")}
+                        geocodeRequestKey={locationLookupRequest}
+                        onLocationChange={(lat, lng) => setFormData((current) => ({ ...current, lat, lng }))}
                       />
                     </div>
                   </div>
@@ -768,9 +781,9 @@ export function AddApartment() {
                         <Input
                           type="number"
                           min={1}
-                          value={room.sqft}
+                          value={room.sqft || ""}
                           onChange={(e) => updateRoom(room.id, { sqft: Number(e.target.value) })}
-                          className="rounded-xl border-amber-100"
+                          className="hide-number-spinners rounded-xl border-amber-100"
                         />
                       </div>
 
@@ -780,19 +793,25 @@ export function AddApartment() {
                           <Input
                             type="number"
                             min={1}
-                            value={room.maxOccupants}
-                            onChange={(e) => updateRoom(room.id, { maxOccupants: Number(e.target.value) })}
-                            className="rounded-xl border-amber-100"
+                            value={room.maxOccupants || ""}
+                            onChange={(e) => updateRoom(room.id, {
+                              maxOccupants: e.target.value === "" ? undefined : Number(e.target.value),
+                            })}
+                            className="hide-number-spinners rounded-xl border-amber-100"
                           />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs uppercase font-bold">Monthly Rent (₱)</Label>
                           <Input
                             type="number"
+                            inputMode="decimal"
                             min={0}
-                            value={room.rent}
-                            onChange={(e) => updateRoom(room.id, { rent: Number(e.target.value) })}
-                            className="rounded-xl border-amber-100"
+                            step="any"
+                            value={room.rent || ""}
+                            onChange={(e) => updateRoom(room.id, {
+                              rent: e.target.value === "" ? undefined : Number(e.target.value),
+                            })}
+                            className="hide-number-spinners rounded-xl border-amber-100"
                           />
                         </div>
                       </div>

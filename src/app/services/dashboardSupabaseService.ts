@@ -52,6 +52,7 @@ export interface DashboardViolationRow extends DashboardRow {
   issued_at?: string | null;
   expires_at?: string | null;
   related_report_id?: string | null;
+  apartment_id?: string | null;
   active?: boolean | null;
   landlordId?: string | null;
   landlordName?: string | null;
@@ -74,6 +75,19 @@ export interface DashboardNotificationRow extends DashboardRow {
   createdAt?: string | null;
   userId?: string | null;
   is_read?: boolean | null;
+  read_at?: string | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
+}
+
+export interface DashboardAuditLogRow extends DashboardRow {
+  id?: string;
+  admin_id?: string | null;
+  action?: string | null;
+  target_type?: string | null;
+  target_id?: string | null;
+  details?: Record<string, unknown> | null;
+  created_at?: string | null;
 }
 
 export interface DashboardApartmentRow extends DashboardRow {
@@ -101,6 +115,9 @@ export interface DashboardApartmentViewRow extends DashboardRow {
   viewed_at?: string | null;
   apartmentId?: string | null;
   viewerId?: string | null;
+  viewer_role?: string | null;
+  view_count?: number | string | null;
+  view_date?: string | null;
 }
 
 export interface DashboardUserRow extends DashboardRow {
@@ -121,6 +138,25 @@ export interface DashboardUserRow extends DashboardRow {
   department?: string | null;
   admin_level?: string | null;
   adminLevel?: string | null;
+  preferences?: TenantPreferenceSettings | Record<string, unknown> | null;
+}
+
+export type TenantPreferenceSortOption = "recommended" | "price_low" | "price_high" | "newest" | "popular";
+
+export interface TenantPreferenceSettings {
+  preferredArea: string;
+  maxBudget: number;
+  minBedrooms: string;
+  petFriendly: boolean;
+  parking: boolean;
+  furnished: boolean;
+  sortBy: TenantPreferenceSortOption;
+  recommendationLocation: boolean;
+  saveBudgetPreferences: boolean;
+  emailNotifications: boolean;
+  inquiryAlerts: boolean;
+  bookingAlerts: boolean;
+  updatedAt?: string;
 }
 
 export interface DashboardProfilePayload {
@@ -167,6 +203,22 @@ export interface DashboardProfilePayload {
 type TableName = "app_users" | "apartments" | "apartment_views" | "favorites" | "reports" | "violations" | "notifications" | "audit_logs";
 
 const cacheKeyPrefix = "dashboard-supabase-cache";
+const tenantPreferencesStoragePrefix = "userPreferences_";
+
+export const defaultTenantPreferences: TenantPreferenceSettings = {
+  preferredArea: "",
+  maxBudget: 6000,
+  minBedrooms: "any",
+  petFriendly: false,
+  parking: false,
+  furnished: false,
+  sortBy: "recommended",
+  recommendationLocation: true,
+  saveBudgetPreferences: true,
+  emailNotifications: true,
+  inquiryAlerts: true,
+  bookingAlerts: true,
+};
 
 function hasWindow(): boolean {
   return typeof window !== "undefined";
@@ -334,6 +386,7 @@ function toViolationRow(row: DashboardRow): DashboardViolationRow {
     issued_at: getStringValue(row.issued_at),
     expires_at: getStringValue(row.expires_at),
     related_report_id: getStringValue(row.related_report_id),
+    apartment_id: getStringValue(row.apartment_id),
     active: typeof row.active === "boolean" ? row.active : null,
     landlordId: getStringValue(row.landlordId),
     landlordName: getStringValue(row.landlordName),
@@ -359,6 +412,9 @@ function toNotificationRow(row: DashboardRow): DashboardNotificationRow {
     createdAt: getStringValue(row.createdAt),
     userId: getStringValue(row.userId),
     is_read: typeof row.is_read === "boolean" ? row.is_read : null,
+    read_at: getStringValue(row.read_at),
+    is_deleted: typeof row.is_deleted === "boolean" ? row.is_deleted : null,
+    deleted_at: getStringValue(row.deleted_at),
   };
 }
 
@@ -396,6 +452,9 @@ function toApartmentViewRow(row: DashboardRow): DashboardApartmentViewRow {
     viewed_at: getStringValue(row.viewed_at),
     apartmentId: getStringValue(row.apartmentId),
     viewerId: getStringValue(row.viewerId),
+    viewer_role: getStringValue(row.viewer_role),
+    view_count: row.view_count === undefined || row.view_count === null ? 1 : getNumberValue(row.view_count),
+    view_date: getStringValue(row.view_date),
   };
 }
 
@@ -419,6 +478,7 @@ function toUserRow(row: DashboardRow): DashboardUserRow {
     department: getStringValue(row.department),
     admin_level: getStringValue(row.admin_level),
     adminLevel: getStringValue(row.adminLevel),
+    preferences: typeof row.preferences === "object" && row.preferences !== null ? normalizeTenantPreferences(row.preferences) : null,
   };
 }
 
@@ -456,6 +516,7 @@ export async function createViolation(
     issued_at: violation.issued_at ?? violation.issuedAt ?? new Date().toISOString(),
     expires_at: violation.expires_at ?? violation.expiresAt ?? null,
     related_report_id: violation.related_report_id ?? violation.reportId ?? violation.report_id ?? null,
+    apartment_id: violation.apartment_id ?? null,
     active: violation.active ?? true,
   };
 
@@ -492,6 +553,7 @@ export async function updateViolation(
   if (updates.expires_at !== undefined) payload.expires_at = updates.expires_at;
   if (updates.expiresAt !== undefined) payload.expires_at = updates.expiresAt;
   if (updates.related_report_id !== undefined) payload.related_report_id = updates.related_report_id;
+  if (updates.apartment_id !== undefined) payload.apartment_id = updates.apartment_id;
   if (updates.reportId !== undefined) payload.related_report_id = updates.reportId;
   if (updates.issued_at !== undefined) payload.issued_at = updates.issued_at;
   if (updates.issuedAt !== undefined) payload.issued_at = updates.issuedAt;
@@ -533,25 +595,30 @@ export async function deleteViolation(violationId: string): Promise<boolean> {
   return true;
 }
 
-export async function fetchNotifications(userId?: string): Promise<DashboardNotificationRow[]> {
+export async function fetchNotifications(userId?: string, includeArchived = false): Promise<DashboardNotificationRow[]> {
   try {
     if (userId) {
-      const { data, error } = await supabase
+      let query = supabase
         .from("notifications")
         .select("*")
         .eq("user_id", userId)
-        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
+
+      if (!includeArchived) {
+        query = query.eq("is_deleted", false);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching notifications:", error);
-        return safeJsonParse<DashboardNotificationRow[]>(readCachedValue(`notifications:${userId}`), []);
+        const cacheKey = includeArchived ? `notifications:${userId}:all` : `notifications:${userId}`;
+        return safeJsonParse<DashboardNotificationRow[]>(readCachedValue(cacheKey), []);
       }
 
       const normalized = (data || []).map((row: DashboardRow) => toNotificationRow(row));
-      if (normalized.length > 0) {
-        writeCachedValue(`notifications:${userId}`, JSON.stringify(normalized));
-      }
+      const cacheKey = includeArchived ? `notifications:${userId}:all` : `notifications:${userId}`;
+      writeCachedValue(cacheKey, JSON.stringify(normalized));
       return normalized;
     }
 
@@ -601,11 +668,17 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
 
 export async function markNotificationRead(notificationId: string, userId?: string): Promise<DashboardNotificationRow | null> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("notifications")
-      .update({ read: true, read_at: new Date().toISOString() })
+      .update({ read: true })
       .eq("id", notificationId)
-      .eq("is_deleted", false)
+      .eq("is_deleted", false);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query
       .select("*")
       .single();
 
@@ -617,6 +690,7 @@ export async function markNotificationRead(notificationId: string, userId?: stri
     // Invalidate all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
+      writeCachedValue(`notifications:${userId}:all`, "");
     }
     writeCachedValue("notifications", "");
 
@@ -631,7 +705,7 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
   try {
     const { data, error } = await supabase
       .from("notifications")
-      .update({ read: true, read_at: new Date().toISOString() })
+      .update({ read: true })
       .eq("user_id", userId)
       .eq("read", false)
       .eq("is_deleted", false)
@@ -644,6 +718,7 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
 
     // Invalidate all notification caches for this user
     writeCachedValue(`notifications:${userId}`, "");
+    writeCachedValue(`notifications:${userId}:all`, "");
     writeCachedValue("notifications", "");
 
     return data.length;
@@ -655,11 +730,17 @@ export async function markAllNotificationsRead(userId: string): Promise<number> 
 
 export async function markNotificationUnread(notificationId: string, userId?: string): Promise<DashboardNotificationRow | null> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("notifications")
       .update({ read: false })
       .eq("id", notificationId)
-      .eq("is_deleted", false)
+      .eq("is_deleted", false);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query
       .select("*")
       .single();
 
@@ -671,6 +752,7 @@ export async function markNotificationUnread(notificationId: string, userId?: st
     // Invalidate all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
+      writeCachedValue(`notifications:${userId}:all`, "");
     }
     writeCachedValue("notifications", "");
 
@@ -683,7 +765,7 @@ export async function markNotificationUnread(notificationId: string, userId?: st
 
 export async function deleteNotification(notificationId: string, userId?: string): Promise<boolean> {
   try {
-    const { error } = await supabase
+    let query = supabase
       .from("notifications")
       .update({
         is_deleted: true,
@@ -691,7 +773,13 @@ export async function deleteNotification(notificationId: string, userId?: string
       })
       .eq("id", notificationId);
 
-    if (error) {
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query.select("id").maybeSingle();
+
+    if (error || !data) {
       console.error("Error deleting notification:", error);
       return false;
     }
@@ -699,12 +787,99 @@ export async function deleteNotification(notificationId: string, userId?: string
     // Clear all notification caches
     if (userId) {
       writeCachedValue(`notifications:${userId}`, "");
+      writeCachedValue(`notifications:${userId}:all`, "");
     }
     writeCachedValue("notifications", "");
 
     return true;
   } catch (error) {
     console.error("Unexpected error in deleteNotification:", error);
+    return false;
+  }
+}
+
+function getOptionalBooleanValue(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function getPositiveNumberValue(value: unknown, fallback: number): number {
+  const parsed = getNumberValue(value);
+  return parsed > 0 ? parsed : fallback;
+}
+
+function isTenantPreferenceSortOption(value: unknown): value is TenantPreferenceSortOption {
+  return value === "recommended" || value === "price_low" || value === "price_high" || value === "newest" || value === "popular";
+}
+
+function normalizeTenantPreferences(
+  value: unknown,
+  fallback: TenantPreferenceSettings = defaultTenantPreferences,
+): TenantPreferenceSettings {
+  const source = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const minBedrooms = typeof source.minBedrooms === "string" && source.minBedrooms.length > 0 ? source.minBedrooms : fallback.minBedrooms;
+  const sortBy = isTenantPreferenceSortOption(source.sortBy) ? source.sortBy : fallback.sortBy;
+
+  return {
+    preferredArea: typeof source.preferredArea === "string" ? source.preferredArea : fallback.preferredArea,
+    maxBudget: getPositiveNumberValue(source.maxBudget, fallback.maxBudget),
+    minBedrooms,
+    petFriendly: getOptionalBooleanValue(source.petFriendly, fallback.petFriendly),
+    parking: getOptionalBooleanValue(source.parking, fallback.parking),
+    furnished: getOptionalBooleanValue(source.furnished, fallback.furnished),
+    sortBy,
+    recommendationLocation: getOptionalBooleanValue(source.recommendationLocation, fallback.recommendationLocation),
+    saveBudgetPreferences: getOptionalBooleanValue(source.saveBudgetPreferences, fallback.saveBudgetPreferences),
+    emailNotifications: getOptionalBooleanValue(source.emailNotifications, fallback.emailNotifications),
+    inquiryAlerts: getOptionalBooleanValue(source.inquiryAlerts, fallback.inquiryAlerts),
+    bookingAlerts: getOptionalBooleanValue(source.bookingAlerts, fallback.bookingAlerts),
+    updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : fallback.updatedAt,
+  };
+}
+
+export function getTenantPreferencesStorageKey(userId: string): string {
+  return `${tenantPreferencesStoragePrefix}${userId}`;
+}
+
+export function getCachedTenantPreferences(userId?: string | null): TenantPreferenceSettings | null {
+  if (!userId || !hasWindow()) return null;
+  const cached = window.localStorage.getItem(getTenantPreferencesStorageKey(userId));
+  if (!cached) return null;
+  return normalizeTenantPreferences(safeJsonParse<Record<string, unknown> | null>(cached, null));
+}
+
+function cacheTenantPreferences(userId: string, preferences: TenantPreferenceSettings): void {
+  if (!hasWindow()) return;
+  window.localStorage.setItem(getTenantPreferencesStorageKey(userId), JSON.stringify(preferences));
+}
+
+function isMissingTenantPreferencesColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const message = error.message?.toLowerCase() ?? "";
+  return error.code === "PGRST204" || (message.includes("preferences") && message.includes("schema cache"));
+}
+
+export async function permanentlyDeleteNotification(notificationId: string, userId?: string): Promise<boolean> {
+  try {
+    let query = supabase.from("notifications").delete().eq("id", notificationId);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query.select("id").maybeSingle();
+    if (error || !data) {
+      console.error("Error permanently deleting notification:", error);
+      return false;
+    }
+
+    if (userId) {
+      writeCachedValue(`notifications:${userId}`, "");
+      writeCachedValue(`notifications:${userId}:all`, "");
+    }
+    writeCachedValue("notifications", "");
+    return true;
+  } catch (error) {
+    console.error("Unexpected error in permanentlyDeleteNotification:", error);
     return false;
   }
 }
@@ -728,6 +903,7 @@ export async function deleteAllNotifications(userId: string): Promise<number> {
 
     // Clear all notification caches
     writeCachedValue(`notifications:${userId}`, "");
+    writeCachedValue(`notifications:${userId}:all`, "");
     writeCachedValue("notifications", "");
 
     return data.length;
@@ -933,6 +1109,94 @@ export async function createAuditLog(auditLog: {
   return data as DashboardRow;
 }
 
+export async function fetchApartmentChangeLogs(apartmentId: string): Promise<DashboardAuditLogRow[]> {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("target_type", "apartment")
+    .eq("target_id", apartmentId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching apartment change logs:", error);
+    return [];
+  }
+
+  return (data ?? []) as DashboardAuditLogRow[];
+}
+
+export async function fetchAdminActivityLogs(adminId: string): Promise<DashboardAuditLogRow[]> {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("admin_id", adminId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("Error fetching admin activity logs:", error);
+    return [];
+  }
+
+  return (data ?? []) as DashboardAuditLogRow[];
+}
+
+export async function fetchRecentActivityLogs(limit = 50): Promise<DashboardAuditLogRow[]> {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching recent activity logs:", error);
+    return safeJsonParse<DashboardAuditLogRow[]>(readCachedValue("audit_logs:recent"), []);
+  }
+
+  const rows = (data ?? []) as DashboardAuditLogRow[];
+  writeCachedValue("audit_logs:recent", JSON.stringify(rows));
+  return rows;
+}
+
+export async function sendAdminMessageToLandlord(input: {
+  adminId: string;
+  landlordId: string;
+  apartmentId: string;
+  apartmentTitle: string;
+  message: string;
+}): Promise<boolean> {
+  const notification = await createNotification({
+    user_id: input.landlordId,
+    type: "admin_message",
+    title: `Message about ${input.apartmentTitle}`,
+    message: input.message,
+    payload: {
+      action: "admin_message",
+      admin_id: input.adminId,
+      apartment_id: input.apartmentId,
+      apartment_title: input.apartmentTitle,
+      sent_at: new Date().toISOString(),
+    },
+  });
+
+  if (!notification) return false;
+
+  await createAuditLog({
+    admin_id: input.adminId,
+    action: "admin_message_sent",
+    target_type: "apartment",
+    target_id: input.apartmentId,
+    details: {
+      actor_id: input.adminId,
+      landlord_id: input.landlordId,
+      message: input.message,
+      notification_id: notification.id ?? null,
+    },
+  });
+
+  return true;
+}
+
 export async function fetchUsers(): Promise<DashboardUserRow[]> {
   const users = await fetchRows<DashboardUserRow>("app_users");
   const normalized = users.map((row) => toUserRow(row));
@@ -947,6 +1211,63 @@ export async function fetchUsers(): Promise<DashboardUserRow[]> {
 export async function fetchUserById(userId: string): Promise<DashboardUserRow | null> {
   const user = await fetchSingleRowByColumn<DashboardUserRow>("app_users", "id", userId);
   return user ? toUserRow(user) : null;
+}
+
+export async function fetchTenantPreferences(userId: string): Promise<TenantPreferenceSettings | null> {
+  if (!userId) return null;
+
+  const cached = getCachedTenantPreferences(userId);
+  const { data, error } = await supabase.from("app_users").select("preferences").eq("id", userId).maybeSingle();
+
+  if (isMissingTenantPreferencesColumn(error)) {
+    return cached;
+  }
+
+  if (error || !data) {
+    return cached;
+  }
+
+  const preferences = normalizeTenantPreferences((data as DashboardRow).preferences, cached ?? defaultTenantPreferences);
+  cacheTenantPreferences(userId, preferences);
+  return preferences;
+}
+
+export async function saveTenantPreferences(
+  userId: string,
+  preferences: Partial<TenantPreferenceSettings>,
+): Promise<TenantPreferenceSettings | null> {
+  if (!userId) return null;
+
+  const merged = normalizeTenantPreferences(
+    {
+      ...(getCachedTenantPreferences(userId) ?? defaultTenantPreferences),
+      ...preferences,
+      updatedAt: new Date().toISOString(),
+    },
+    defaultTenantPreferences,
+  );
+
+  cacheTenantPreferences(userId, merged);
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .update({ preferences: merged })
+    .eq("id", userId)
+    .select("preferences")
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTenantPreferencesColumn(error)) {
+      console.warn("Tenant preferences were cached locally because app_users.preferences is missing from the Supabase schema cache.");
+      return merged;
+    }
+
+    throw new Error(error.message || "Unable to save tenant preferences.");
+  }
+
+  const saved = normalizeTenantPreferences((data as DashboardRow | null)?.preferences, merged);
+  cacheTenantPreferences(userId, saved);
+  return saved;
 }
 
 export async function updateUserProfile(payload: DashboardProfilePayload): Promise<DashboardUserRow | null> {
@@ -979,6 +1300,20 @@ export async function updateUserProfile(payload: DashboardProfilePayload): Promi
   const next = cached.map((user) => (user.id === payload.id ? normalized : user));
   writeCachedValue("users", JSON.stringify(next));
   return normalized;
+}
+
+export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Please select a valid image file.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Profile photo must be 5MB or smaller.");
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `profiles/${userId}/${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from("apartment-images").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+  if (error) throw new Error(error.message || "Unable to upload profile photo.");
+  return supabase.storage.from("apartment-images").getPublicUrl(path).data.publicUrl;
 }
 
 async function syncRoleProfile(userId: string, role: string | null, payload: DashboardProfilePayload): Promise<void> {
@@ -1025,7 +1360,7 @@ async function syncRoleProfile(userId: string, role: string | null, payload: Das
   if (role === "admin") {
     const profilePayload: Record<string, unknown> = { user_id: userId };
     assignIfProvided(profilePayload, "department", payload.department);
-    assignIfProvided(profilePayload, "admin_level", payload.admin_level ?? "Full Administrator");
+    assignIfProvided(profilePayload, "admin_level", payload.admin_level);
     await supabase.from("admin_profiles").upsert(profilePayload, { onConflict: "user_id" });
   }
 }
@@ -1062,14 +1397,15 @@ export async function fetchApartmentFavorites(apartmentId: string): Promise<Dash
 }
 
 export async function fetchApartmentViews(): Promise<DashboardApartmentViewRow[]> {
-  const views = await fetchRows<DashboardApartmentViewRow>("apartment_views");
-  const normalized = views.map((row) => toApartmentViewRow(row));
-  if (normalized.length > 0) {
-    writeCachedValue("apartment_views", JSON.stringify(normalized));
-    return normalized;
+  const { data, error } = await supabase.from("apartment_views").select("*");
+
+  if (error || !Array.isArray(data)) {
+    return safeJsonParse<DashboardApartmentViewRow[]>(readCachedValue("apartment_views"), []);
   }
 
-  return safeJsonParse<DashboardApartmentViewRow[]>(readCachedValue("apartment_views"), []);
+  const normalized = data.map((row) => toApartmentViewRow(row as DashboardRow));
+  writeCachedValue("apartment_views", JSON.stringify(normalized));
+  return normalized;
 }
 
 export async function getLandlordPropertyStats(landlordId: string): Promise<DashboardPropertyStats> {
@@ -1483,9 +1819,9 @@ export async function fetchLandlordWithDetails(
     // Calculate property statistics
     const views = await fetchApartmentViews();
     const favorites = await fetchApartmentFavorites("");
-    const totalViews = views.filter((v) =>
-      normalizedProperties.some((p) => p.id === (v.apartment_id ?? v.apartmentId)),
-    ).length;
+    const totalViews = views
+      .filter((v) => normalizedProperties.some((p) => p.id === (v.apartment_id ?? v.apartmentId)))
+      .reduce((total, view) => total + (view.view_count === undefined || view.view_count === null ? 1 : getNumberValue(view.view_count)), 0);
     const totalFavorites = favorites.filter((f) =>
       normalizedProperties.some((p) => p.id === (f.apartment_id ?? f.apartmentId)),
     ).length;
@@ -1569,9 +1905,9 @@ export async function notifyLandlordViolation(
   violationType: string,
   violationMessage: string,
   apartmentTitle?: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await createNotification({
+    const notification = await createNotification({
       user_id: landlordId,
       type: "violation_issued",
       title: "⚠️ Violation Issued",
@@ -1583,8 +1919,10 @@ export async function notifyLandlordViolation(
         issued_at: new Date().toISOString(),
       },
     });
+    return Boolean(notification);
   } catch (err) {
     console.error("Error notifying landlord violation:", err);
+    return false;
   }
 }
 
@@ -1595,9 +1933,9 @@ export async function notifyLandlordNotice(
   landlordId: string,
   noticeType: string,
   noticeMessage: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await createNotification({
+    const notification = await createNotification({
       user_id: landlordId,
       type: "notice_issued",
       title: "📋 Official Notice",
@@ -1608,7 +1946,9 @@ export async function notifyLandlordNotice(
         issued_at: new Date().toISOString(),
       },
     });
+    return Boolean(notification);
   } catch (err) {
     console.error("Error notifying landlord notice:", err);
+    return false;
   }
 }

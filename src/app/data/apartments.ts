@@ -15,6 +15,7 @@ export interface ApartmentRoom {
   hasAC?: boolean;
   description?: string;
   images?: string[];
+  createdAt?: string;
 }
 
 export interface Apartment {
@@ -46,6 +47,7 @@ export interface Apartment {
   rooms?: ApartmentRoom[];
   location?: string;
   createdAt?: string;
+  updatedAt?: string;
   propertyType?: string;
   wifi?: boolean;
   features?: Record<string, unknown> | string[];
@@ -115,6 +117,7 @@ export interface ApartmentRoomRow {
   has_ac?: boolean | null;
   is_occupied?: boolean | null;
   status?: string | null;
+  created_at?: string | null;
 }
 
 export interface ApartmentRow {
@@ -142,6 +145,7 @@ export interface ApartmentRow {
   status?: string | null;
   features?: Record<string, unknown> | null;
   created_at?: string | null;
+  updated_at?: string | null;
   apartment_images?: ApartmentImageRow[] | null;
   apartment_rooms?: ApartmentRoomRow[] | null;
 }
@@ -310,6 +314,7 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     isPublished: row.is_published ?? undefined,
     status: toApartmentStatus(row.status),
     createdAt: row.created_at ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
     propertyType: row.features && typeof row.features.propertyType === 'string' ? row.features.propertyType : undefined,
     features: row.features ?? undefined,
     rooms: row.apartment_rooms?.map((room) => ({
@@ -327,6 +332,7 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
       hasAC: toBoolean(room.has_ac),
       description: toString(room.description),
       images: parseStringList(room.images ?? room.image_url),
+      createdAt: room.created_at ?? undefined,
     })),
   };
 };
@@ -335,6 +341,12 @@ export const apartmentFormValuesFromApartment = (apartment: Apartment | null | u
   if (!apartment) {
     return createEmptyApartmentFormValues();
   }
+
+  const customFeatures = Array.isArray(apartment.features)
+    ? apartment.features.filter((item): item is string => typeof item === 'string')
+    : apartment.features && Array.isArray(apartment.features.customFeatures)
+      ? apartment.features.customFeatures.filter((item): item is string => typeof item === 'string')
+      : [];
 
   return {
     title: apartment.title,
@@ -356,6 +368,7 @@ export const apartmentFormValuesFromApartment = (apartment: Apartment | null | u
     furnished: apartment.furnished,
     utilities: utilitiesToFormFlag(apartment.utilities),
     utilityItems: Array.isArray(apartment.utilities) ? apartment.utilities : [],
+    customFeatures,
     lat: String(apartment.lat),
     lng: String(apartment.lng),
     isPublished: apartment.isPublished ?? true,
@@ -448,6 +461,7 @@ export {
   insertApartmentImages,
   replaceApartmentImages,
   uploadApartmentImage,
+  uploadApartmentRoomImage,
   insertApartmentRooms,
   fetchApartmentsForLandlord,
 } from '../services/apartmentsService';

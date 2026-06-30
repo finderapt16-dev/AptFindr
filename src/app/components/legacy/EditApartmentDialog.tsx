@@ -52,9 +52,13 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="price"
                 type="number"
-                value={formData.price}
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={formData.price || ""}
                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
 
@@ -63,9 +67,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="sqft"
                 type="number"
-                value={formData.sqft}
+                value={formData.sqft || ""}
                 onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
           </div>
@@ -76,9 +81,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="bedrooms"
                 type="number"
-                value={formData.bedrooms}
+                value={formData.bedrooms || ""}
                 onChange={(e) => setFormData({ ...formData, bedrooms: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
 
@@ -88,9 +94,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
                 id="bathrooms"
                 type="number"
                 step="0.5"
-                value={formData.bathrooms}
+                value={formData.bathrooms || ""}
                 onChange={(e) => setFormData({ ...formData, bathrooms: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
           </div>

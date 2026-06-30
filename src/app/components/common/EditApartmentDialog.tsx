@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Apartment } from "../../data/apartments";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Checkbox } from "../ui/checkbox";
 import { Switch } from "../ui/switch";
 import { MultiImageUploader, type UploadedImage } from "./MultiImageUploader";
 import { Home, Plus, Trash2, Images, Star, X } from "lucide-react";
@@ -17,9 +16,32 @@ interface EditApartmentDialogProps {
   onSave: (updatedApartment: Apartment) => void | Promise<void>;
 }
 
+const getEditableFeatures = (apartment: Apartment): string[] => {
+  const rawFeatures = apartment.features;
+  const features = Array.isArray(rawFeatures)
+    ? rawFeatures.filter((item): item is string => typeof item === "string")
+    : rawFeatures && typeof rawFeatures === "object" && Array.isArray(rawFeatures.customFeatures)
+      ? rawFeatures.customFeatures.filter((item): item is string => typeof item === "string")
+      : [];
+  const addLegacyFeature = (enabled: boolean, label: string) => {
+    if (enabled && !features.some((item) => item.toLowerCase() === label.toLowerCase())) features.push(label);
+  };
+  addLegacyFeature(apartment.petFriendly, "Pet Friendly");
+  addLegacyFeature(apartment.parking, "Parking");
+  addLegacyFeature(apartment.furnished, "Furnished");
+  return features;
+};
+
 export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: EditApartmentDialogProps) {
   const [formData, setFormData] = useState<Apartment>(apartment);
   const [isSaving, setIsSaving] = useState(false);
+  const [amenitiesInput, setAmenitiesInput] = useState(apartment.amenities.join(", "));
+  const [utilitiesInput, setUtilitiesInput] = useState(
+    Array.isArray(apartment.utilities) ? apartment.utilities.join(", ") : "",
+  );
+  const [featuresInput, setFeaturesInput] = useState(() => {
+    return getEditableFeatures(apartment).join(", ");
+  });
 
   // ── Image Management State ─────────────────────────────────────────────
   const [existingImages, setExistingImages] = useState<UploadedImage[]>(
@@ -31,6 +53,20 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
     }))
   );
   const [newImages, setNewImages] = useState<UploadedImage[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    setFormData(apartment);
+    setAmenitiesInput(apartment.amenities.join(", "));
+    setUtilitiesInput(Array.isArray(apartment.utilities) ? apartment.utilities.join(", ") : "");
+    setFeaturesInput(getEditableFeatures(apartment).join(", "));
+    setExistingImages((apartment.images || []).map((url, index) => ({
+      id: `existing-${index}`,
+      url,
+      isPrimary: url === apartment.image || (!apartment.image && index === 0),
+      sortOrder: index,
+    })));
+    setNewImages([]);
+  }, [apartment, open]);
   // ───────────────────────────────────────────────────────────────────────
 
   const handleExistingImageDelete = (id: string) => {
@@ -50,7 +86,7 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
     id: Date.now().toString() + Math.random(),
     name: "Bedroom",
     sqft: 150,
-    maxOccupants: 1,
+    maxOccupants: undefined,
     price: formData.price || 0,
     hasPrivateBath: false,
     bathroomType: "",
@@ -116,6 +152,13 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
       existingImages.find((img) => img.isPrimary)?.url ||
       newImages.find((img) => img.isPrimary)?.url ||
       allImages[0];
+    const amenities = amenitiesInput.split(",").map((item) => item.trim()).filter(Boolean);
+    const utilities = utilitiesInput.split(",").map((item) => item.trim()).filter(Boolean);
+    const customFeatures = featuresInput.split(",").map((item) => item.trim()).filter(Boolean);
+    const normalizedFeatureNames = customFeatures.map((item) => item.toLowerCase());
+    const existingFeatureRecord = formData.features && !Array.isArray(formData.features)
+      ? formData.features
+      : {};
 
     setIsSaving(true);
     try {
@@ -124,6 +167,12 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
         rooms: normalizedRooms,
         images: allImages,
         image: primaryImage,
+        amenities,
+        utilities,
+        petFriendly: normalizedFeatureNames.includes("pet friendly"),
+        parking: normalizedFeatureNames.includes("parking"),
+        furnished: normalizedFeatureNames.includes("furnished"),
+        features: { ...existingFeatureRecord, customFeatures },
         bedrooms: normalizedRooms.length || formData.bedrooms,
         bathrooms: normalizedRooms.filter((room) => room.hasPrivateBath).length || formData.bathrooms,
         price: normalizedRooms.length > 0
@@ -236,9 +285,13 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="price"
                 type="number"
-                value={formData.price}
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={formData.price || ""}
                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
 
@@ -247,9 +300,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="sqft"
                 type="number"
-                value={formData.sqft}
+                value={formData.sqft || ""}
                 onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
           </div>
@@ -260,9 +314,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="bedrooms"
                 type="number"
-                value={formData.bedrooms}
+                value={formData.bedrooms || ""}
                 onChange={(e) => setFormData({ ...formData, bedrooms: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
 
@@ -272,9 +327,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
                 id="bathrooms"
                 type="number"
                 step="0.5"
-                value={formData.bathrooms}
+                value={formData.bathrooms || ""}
                 onChange={(e) => setFormData({ ...formData, bathrooms: Number(e.target.value) })}
                 required
+                className="hide-number-spinners"
               />
             </div>
           </div>
@@ -400,9 +456,12 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
                         <Label>Monthly Rent</Label>
                         <Input
                           type="number"
+                          inputMode="decimal"
                           min={0}
-                          value={room.price ?? 0}
+                          step="any"
+                          value={room.price || ""}
                           onChange={(e) => updateRoom(room.id, { price: Number(e.target.value) })}
+                          className="hide-number-spinners"
                         />
                       </div>
                     </div>
@@ -413,8 +472,9 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
                         <Input
                           type="number"
                           min={0}
-                          value={room.sqft ?? 0}
+                          value={room.sqft || ""}
                           onChange={(e) => updateRoom(room.id, { sqft: Number(e.target.value) })}
+                          className="hide-number-spinners"
                         />
                       </div>
                       <div className="space-y-2">
@@ -422,8 +482,11 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
                         <Input
                           type="number"
                           min={1}
-                          value={room.maxOccupants ?? 1}
-                          onChange={(e) => updateRoom(room.id, { maxOccupants: Number(e.target.value) })}
+                          value={room.maxOccupants || ""}
+                          onChange={(e) => updateRoom(room.id, {
+                            maxOccupants: e.target.value === "" ? undefined : Number(e.target.value),
+                          })}
+                          className="hide-number-spinners"
                         />
                       </div>
                     </div>
@@ -510,41 +573,25 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
             )}
           </div>
 
-          <div className="space-y-3">
-            <Label>Features</Label>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="petFriendly"
-                  checked={formData.petFriendly}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, petFriendly: checked as boolean })
-                  }
-                />
-                <Label htmlFor="petFriendly" className="cursor-pointer">Pet Friendly</Label>
+          <div className="space-y-4 rounded-lg border border-amber-100 bg-amber-50/30 p-4">
+            <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
+              <Home className="h-5 w-5 text-amber-600" />
+              <div>
+                <Label className="font-bold text-amber-700">Amenities & Features</Label>
+                <p className="text-xs text-slate-500">These values use the same format as Add Property.</p>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="parking"
-                  checked={formData.parking}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, parking: checked as boolean })
-                  }
-                />
-                <Label htmlFor="parking" className="cursor-pointer">Parking Available</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="furnished"
-                  checked={formData.furnished}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, furnished: checked as boolean })
-                  }
-                />
-                <Label htmlFor="furnished" className="cursor-pointer">Furnished</Label>
-              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAmenities">Amenities (comma-separated)</Label>
+              <Textarea id="editAmenities" rows={2} value={amenitiesInput} onChange={(event) => setAmenitiesInput(event.target.value)} placeholder="Parking, WiFi, Gym, Pool" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editUtilities">Utilities Included (comma-separated)</Label>
+              <Textarea id="editUtilities" rows={2} value={utilitiesInput} onChange={(event) => setUtilitiesInput(event.target.value)} placeholder="Water, Electricity, Internet" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editFeatures">Additional Features (comma-separated)</Label>
+              <Textarea id="editFeatures" rows={2} value={featuresInput} onChange={(event) => setFeaturesInput(event.target.value)} placeholder="Pet Friendly, Parking, Furnished" />
             </div>
           </div>
 

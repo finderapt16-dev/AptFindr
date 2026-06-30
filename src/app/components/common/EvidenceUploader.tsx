@@ -236,15 +236,15 @@ export function EvidenceUploader({
   return (
     <div className="space-y-4">
       {/* Evidence Requirement Message */}
-      <div className="flex items-start gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50">
-        <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-blue-600" />
+      {required && <div className="flex items-start gap-3 rounded-lg border border-orange-100 bg-orange-50 p-3">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
         <div>
-          <p className="font-semibold text-blue-900 text-sm">Evidence Required</p>
-          <p className="text-xs text-blue-700 mt-1">
-            Please upload at least one image, screenshot, or document to support your report. This helps our team review and investigate your issue effectively.
+          <p className="text-sm font-black text-orange-900">Evidence required</p>
+          <p className="mt-1 text-xs font-medium text-orange-700">
+            Upload at least one image, screenshot, or document to support this report.
           </p>
         </div>
-      </div>
+      </div>}
 
       {/* Upload Zone */}
       {remainingSlots > 0 && (
@@ -253,10 +253,10 @@ export function EvidenceUploader({
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          className={`relative rounded-2xl border-2 border-dashed p-6 text-center transition-all cursor-pointer ${
+          className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-all ${
             dragActive
-              ? "border-amber-500 bg-amber-50"
-              : "border-amber-200 bg-amber-50/30 hover:border-amber-300"
+              ? "border-violet-500 bg-violet-50"
+              : "border-violet-200 bg-violet-50/30 hover:border-violet-300 hover:bg-violet-50/60"
           }`}
         >
           <input
@@ -265,18 +265,18 @@ export function EvidenceUploader({
             multiple
             accept={ALLOWED_EXTENSIONS.join(",")}
             onChange={handleFileInputChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
 
           <div className="flex flex-col items-center gap-2">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-              <Upload className="h-6 w-6 text-white" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-600 shadow-sm">
+              <Upload className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-bold text-slate-900">
-                Drag files here or click to browse
+              <p className="font-black text-slate-950">
+                Drag and drop files here or click to browse
               </p>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="mt-1 text-xs font-medium text-slate-500">
                 JPG, PNG, WebP, PDF • Max {maxFileSize}MB each • {remainingSlots} slot{remainingSlots !== 1 ? "s" : ""} remaining
               </p>
             </div>
@@ -289,7 +289,7 @@ export function EvidenceUploader({
         <div className="space-y-3">
           {/* Large Preview */}
           {previewImageId && currentPreviewUrl && (
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl border-2 border-amber-100 bg-slate-900">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-slate-900">
               <img
                 src={currentPreviewUrl}
                 alt="Evidence preview"
@@ -301,7 +301,7 @@ export function EvidenceUploader({
                     size="icon"
                     variant="ghost"
                     onClick={previousImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-lg hover:bg-white"
                   >
                     <ChevronLeft className="h-5 w-5 text-slate-900" />
                   </Button>
@@ -309,7 +309,7 @@ export function EvidenceUploader({
                     size="icon"
                     variant="ghost"
                     onClick={nextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-lg hover:bg-white"
                   >
                     <ChevronRight className="h-5 w-5 text-slate-900" />
                   </Button>
@@ -329,8 +329,8 @@ export function EvidenceUploader({
                 onClick={() => goToImage(file.id)}
                 className={`relative aspect-square overflow-hidden rounded-lg cursor-pointer border-2 transition-all hover:opacity-80 ${
                   previewImageId === file.id
-                    ? "border-amber-500 ring-2 ring-amber-300"
-                    : "border-amber-100 hover:border-amber-300"
+                    ? "border-violet-500 ring-2 ring-violet-200"
+                    : "border-slate-100 hover:border-violet-200"
                 }`}
               >
                 <img
@@ -347,14 +347,14 @@ export function EvidenceUploader({
       {/* Files List */}
       {evidenceFiles.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-slate-900">
+          <div className="text-sm font-black text-slate-900">
             Attached Evidence ({evidenceFiles.length}/{maxFiles})
           </div>
           <div className="space-y-2">
             {evidenceFiles.map((file) => (
               <Card
                 key={file.id}
-                className="p-3 flex items-center justify-between border border-amber-100 bg-gradient-to-r from-amber-50/50 to-transparent hover:bg-amber-50"
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:bg-slate-50"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   {file.fileType === "image" ? (
@@ -364,8 +364,8 @@ export function EvidenceUploader({
                       className="h-10 w-10 rounded object-cover flex-shrink-0"
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0">
-                      <FileText className="h-5 w-5 text-white" />
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-rose-50 text-rose-600">
+                      <FileText className="h-5 w-5" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -383,7 +383,7 @@ export function EvidenceUploader({
                       size="icon"
                       variant="ghost"
                       onClick={() => goToImage(file.id)}
-                      className="h-8 w-8 text-slate-600 hover:text-amber-600"
+                      className="h-8 w-8 text-slate-600 hover:text-violet-600"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -405,7 +405,7 @@ export function EvidenceUploader({
 
       {/* Validation Message */}
       {required && evidenceFiles.length === 0 && (
-        <div className="text-sm text-red-600 font-medium">
+        <div className="text-sm font-medium text-red-600">
           ⚠ At least one file is required to submit this report
         </div>
       )}

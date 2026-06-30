@@ -13,7 +13,7 @@ import {
 
 const CURRENT_USER_KEY = 'apartment_finder_current_user';
 const APARTMENT_SELECT =
-  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description)';
+  '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at)';
 const APARTMENT_INSPECTION_SELECT = '*, apartment_images(*), apartment_rooms(*)';
 
 export interface ApartmentInspectionDetails {
@@ -47,6 +47,45 @@ type SupabaseLikeError = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+type AuditChange = { old: unknown; new: unknown };
+
+const comparableValue = (value: unknown): unknown => value === undefined ? null : value;
+
+const valuesDiffer = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(comparableValue(left)) !== JSON.stringify(comparableValue(right));
+
+const buildAuditChanges = (
+  before: Record<string, unknown> | null | undefined,
+  after: Record<string, unknown> | null | undefined,
+  fields: string[],
+): Record<string, AuditChange> => Object.fromEntries(
+  fields
+    .filter((field) => valuesDiffer(before?.[field], after?.[field]))
+    .map((field) => [field, { old: comparableValue(before?.[field]), new: comparableValue(after?.[field]) }]),
+);
+
+const writeApartmentAudit = async (
+  apartmentId: string,
+  actorUserId: string | undefined,
+  action: string,
+  changes: Record<string, AuditChange>,
+  metadata: Record<string, unknown> = {},
+): Promise<void> => {
+  if (Object.keys(changes).length === 0) return;
+
+  const { error } = await supabase.from('audit_logs').insert({
+    admin_id: actorUserId || null,
+    action,
+    target_type: 'apartment',
+    target_id: apartmentId,
+    details: { actor_id: actorUserId || null, changes, ...metadata },
+  });
+
+  if (error) {
+    console.warn('Unable to record apartment change log:', error.message);
+  }
+};
 
 const unwrapErrorMessage = (error: SupabaseLikeError | null | undefined, fallback: string): string => {
   if (!error) {
@@ -388,6 +427,11 @@ export const updateApartment = async (
 ): Promise<Apartment> => {
   const resolvedLandlordId = await resolveAppUserId(landlord);
   const payload: ApartmentInsertRow = apartmentFormValuesToInsertRow(apartment, resolvedLandlordId);
+  const { data: beforeData } = await supabase
+    .from('apartments')
+    .select(APARTMENT_SELECT)
+    .eq('id', id)
+    .maybeSingle();
 
   const { error } = await supabase.from('apartments').update(payload).eq('id', id);
 
@@ -415,6 +459,20 @@ export const updateApartment = async (
     throw new Error(unwrapErrorMessage(reloadError, 'Unable to reload updated apartment.'));
   }
 
+  const propertyFields = [
+    'title', 'price', 'bedrooms', 'bathrooms', 'sqft', 'address', 'city', 'state', 'zip',
+    'description', 'amenities', 'pet_friendly', 'parking', 'furnished', 'utilities', 'lat', 'lng',
+    'landlord_id', 'is_published', 'status', 'features',
+  ];
+  const changes = buildAuditChanges(beforeData as Record<string, unknown> | null, data as Record<string, unknown>, propertyFields);
+  if (valuesDiffer((beforeData as Record<string, unknown> | null)?.apartment_rooms, (data as Record<string, unknown>).apartment_rooms)) {
+    changes.rooms = {
+      old: comparableValue((beforeData as Record<string, unknown> | null)?.apartment_rooms),
+      new: comparableValue((data as Record<string, unknown>).apartment_rooms),
+    };
+  }
+  await writeApartmentAudit(id, resolvedLandlordId, 'apartment_updated', changes);
+
   return apartmentRowToApartment(data as ApartmentRow);
 };
 
@@ -426,23 +484,38 @@ export const deleteApartment = async (id: string): Promise<void> => {
   }
 };
 
-export const updateApartmentPublication = async (id: string, isPublished: boolean): Promise<void> => {
+export const updateApartmentPublication = async (id: string, isPublished: boolean, actorUserId?: string): Promise<void> => {
+  const { data: before } = await supabase.from('apartments').select('is_published').eq('id', id).maybeSingle();
   const { error } = await supabase.from('apartments').update({ is_published: isPublished }).eq('id', id);
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to update listing visibility.'));
   }
+  await writeApartmentAudit(
+    id,
+    actorUserId,
+    'apartment_publication_updated',
+    buildAuditChanges(before as Record<string, unknown> | null, { is_published: isPublished }, ['is_published']),
+  );
 };
 
 export const updateApartmentStatus = async (
   id: string,
   status: Apartment['status'] = 'available',
+  actorUserId?: string,
 ): Promise<void> => {
+  const { data: before } = await supabase.from('apartments').select('status').eq('id', id).maybeSingle();
   const { error } = await supabase.from('apartments').update({ status }).eq('id', id);
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to update apartment status.'));
   }
+  await writeApartmentAudit(
+    id,
+    actorUserId,
+    'apartment_status_updated',
+    buildAuditChanges(before as Record<string, unknown> | null, { status: status ?? 'available' }, ['status']),
+  );
 };
 
 export const getFavoriteApartmentIds = async (userId: string): Promise<string[]> => {
@@ -646,6 +719,7 @@ export const insertApartmentRooms = async (apartmentId: string, rooms: Apartment
       status: room.status ?? (room.isOccupied ? 'occupied' : 'available'),
       is_occupied: (room.status ?? (room.isOccupied ? 'occupied' : 'available')) === 'occupied',
       description: room.description?.trim() || null,
+      images: room.images ?? [],
     }));
 
   if (payload.length === 0) {
@@ -676,6 +750,7 @@ const apartmentRoomToPayload = (apartmentId: string, room: ApartmentRoom) => {
     status,
     is_occupied: status === 'occupied',
     description: room.description?.trim() || null,
+    images: room.images ?? [],
   };
 };
 
@@ -684,6 +759,12 @@ const apartmentRoomRowToRoom = (row: Record<string, unknown>): ApartmentRoom => 
   const status = statusValue === 'occupied' || statusValue === 'reserved' || statusValue === 'maintenance'
     ? statusValue
     : 'available';
+
+  const images = Array.isArray(row.images)
+    ? row.images.filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
+    : typeof row.images === 'string'
+      ? row.images.split(',').map((image) => image.trim()).filter(Boolean)
+      : [];
 
   return {
     id: typeof row.id === 'string' ? row.id : undefined,
@@ -703,7 +784,8 @@ const apartmentRoomRowToRoom = (row: Record<string, unknown>): ApartmentRoom => 
     status,
     isOccupied: status === 'occupied',
     description: typeof row.description === 'string' ? row.description : '',
-    images: [],
+    images,
+    createdAt: typeof row.created_at === 'string' ? row.created_at : undefined,
   };
 };
 
@@ -744,7 +826,7 @@ const syncApartmentRoomSummary = async (apartmentId: string): Promise<void> => {
 export const fetchApartmentRooms = async (apartmentId: string): Promise<ApartmentRoom[]> => {
   const { data, error } = await supabase
     .from('apartment_rooms')
-    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
     .eq('apartment_id', apartmentId);
 
   if (error) {
@@ -754,11 +836,11 @@ export const fetchApartmentRooms = async (apartmentId: string): Promise<Apartmen
   return ((data ?? []) as Array<Record<string, unknown>>).map(apartmentRoomRowToRoom);
 };
 
-export const createApartmentRoom = async (apartmentId: string, room: ApartmentRoom): Promise<ApartmentRoom> => {
+export const createApartmentRoom = async (apartmentId: string, room: ApartmentRoom, actorUserId?: string): Promise<ApartmentRoom> => {
   const { data, error } = await supabase
     .from('apartment_rooms')
     .insert(apartmentRoomToPayload(apartmentId, room))
-    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
     .single();
 
   if (error) {
@@ -766,6 +848,9 @@ export const createApartmentRoom = async (apartmentId: string, room: ApartmentRo
   }
 
   await syncApartmentRoomSummary(apartmentId);
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_created', {
+    room: { old: null, new: data as Record<string, unknown> },
+  }, { room_id: (data as Record<string, unknown>).id ?? null });
   return apartmentRoomRowToRoom(data as Record<string, unknown>);
 };
 
@@ -773,12 +858,14 @@ export const updateApartmentRoom = async (
   apartmentId: string,
   roomId: string,
   room: ApartmentRoom,
+  actorUserId?: string,
 ): Promise<ApartmentRoom> => {
+  const { data: before } = await supabase.from('apartment_rooms').select('*').eq('id', roomId).maybeSingle();
   const { data, error } = await supabase
     .from('apartment_rooms')
     .update(apartmentRoomToPayload(apartmentId, room))
     .eq('id', roomId)
-    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description')
+    .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
     .single();
 
   if (error) {
@@ -786,6 +873,9 @@ export const updateApartmentRoom = async (
   }
 
   await syncApartmentRoomSummary(apartmentId);
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_updated', {
+    room: { old: before ?? null, new: data as Record<string, unknown> },
+  }, { room_id: roomId });
   return apartmentRoomRowToRoom(data as Record<string, unknown>);
 };
 
@@ -793,8 +883,10 @@ export const updateApartmentRoomStatus = async (
   apartmentId: string,
   roomId: string,
   status: ApartmentRoom['status'],
+  actorUserId?: string,
 ): Promise<void> => {
   const nextStatus = status ?? 'available';
+  const { data: before } = await supabase.from('apartment_rooms').select('status').eq('id', roomId).maybeSingle();
   const { error } = await supabase
     .from('apartment_rooms')
     .update({
@@ -808,9 +900,16 @@ export const updateApartmentRoomStatus = async (
   }
 
   await syncApartmentRoomSummary(apartmentId);
+  const statusChanges = buildAuditChanges(
+    { room_status: before?.status ?? null },
+    { room_status: nextStatus },
+    ['room_status'],
+  );
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_status_updated', statusChanges, { room_id: roomId });
 };
 
-export const deleteApartmentRoom = async (apartmentId: string, roomId: string): Promise<void> => {
+export const deleteApartmentRoom = async (apartmentId: string, roomId: string, actorUserId?: string): Promise<void> => {
+  const { data: before } = await supabase.from('apartment_rooms').select('*').eq('id', roomId).maybeSingle();
   const { error } = await supabase.from('apartment_rooms').delete().eq('id', roomId);
 
   if (error) {
@@ -818,6 +917,9 @@ export const deleteApartmentRoom = async (apartmentId: string, roomId: string): 
   }
 
   await syncApartmentRoomSummary(apartmentId);
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_deleted', {
+    room: { old: before ?? null, new: null },
+  }, { room_id: roomId });
 };
 
 export const uploadApartmentImage = async (
@@ -845,6 +947,24 @@ export const uploadApartmentImage = async (
   return data.publicUrl;
 };
 
+export const uploadApartmentRoomImage = async (
+  apartmentId: string,
+  roomUploadId: string,
+  file: File | Blob,
+  fileName = 'room-image.jpg',
+): Promise<string> => {
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const path = `${apartmentId}/rooms/${roomUploadId}/${safeName}`;
+  const { error } = await supabase.storage.from('apartment-images').upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type || 'image/jpeg',
+  });
+  if (error) throw new Error(unwrapErrorMessage(error, 'Unable to upload room image.'));
+  return supabase.storage.from('apartment-images').getPublicUrl(path).data.publicUrl;
+};
+
 export const replaceApartmentImages = async (apartmentId: string, images: string[]): Promise<void> => {
   const { error } = await supabase.from('apartment_images').delete().eq('apartment_id', apartmentId);
 
@@ -858,16 +978,68 @@ export const replaceApartmentImages = async (apartmentId: string, images: string
 export const recordApartmentView = async (
   apartmentId: string,
   viewer: SessionUser,
-): Promise<void> => {
+): Promise<boolean> => {
+  if (viewer.role !== 'student' && viewer.role !== 'employee') return false;
   const viewerId = await resolveAppUserId(viewer);
+  const now = new Date().toISOString();
+  const dateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) => dateParts.find((item) => item.type === type)?.value ?? '';
+  const viewDate = `${part('year')}-${part('month')}-${part('day')}`;
+
+  const incrementExistingView = async () => {
+    const { data: existingViews, error: lookupError } = await supabase
+      .from('apartment_views')
+      .select('id, view_count, viewed_at')
+      .eq('apartment_id', apartmentId)
+      .eq('viewer_id', viewerId)
+      .order('viewed_at', { ascending: false })
+      .limit(1);
+
+    if (lookupError) {
+      throw new Error(unwrapErrorMessage(lookupError, 'Unable to load apartment view record.'));
+    }
+
+    const existingView = Array.isArray(existingViews) ? existingViews[0] : null;
+    if (existingView?.id) {
+      const { error: updateError } = await supabase.from('apartment_views').update({
+        view_count: Math.max(1, Number(existingView.view_count) || 1) + 1,
+        viewed_at: now,
+      }).eq('id', existingView.id);
+      if (updateError) throw new Error(unwrapErrorMessage(updateError, 'Unable to update apartment view.'));
+      return true;
+    }
+
+    const { error: legacyInsertError } = await supabase.from('apartment_views').insert({
+      apartment_id: apartmentId,
+      viewer_id: viewerId,
+      viewed_at: now,
+      view_count: 1,
+    });
+    if (legacyInsertError) throw new Error(unwrapErrorMessage(legacyInsertError, 'Unable to record apartment view.'));
+    return true;
+  };
+
   const { error } = await supabase.from('apartment_views').insert({
     apartment_id: apartmentId,
     viewer_id: viewerId,
+    viewer_role: viewer.role,
+    view_date: viewDate,
+    viewed_at: now,
+    view_count: 1,
   });
 
+  if (error?.code === '42703' || error?.code === 'PGRST204' || error?.code === '23505') {
+    return incrementExistingView();
+  }
   if (error && error.code !== '42P01') {
     throw new Error(unwrapErrorMessage(error, 'Unable to record apartment view.'));
   }
+  return !error;
 };
 
 export const fetchApartmentWithImages = async (id: string): Promise<Apartment | null> => {

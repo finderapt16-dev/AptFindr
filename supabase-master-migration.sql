@@ -86,6 +86,7 @@ create table if not exists public.app_users (
   department text,
   admin_level text,
   signup_source text,
+  preferences jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -102,6 +103,7 @@ alter table public.app_users add column if not exists permit_number text;
 alter table public.app_users add column if not exists department text;
 alter table public.app_users add column if not exists admin_level text;
 alter table public.app_users add column if not exists signup_source text;
+alter table public.app_users add column if not exists preferences jsonb not null default '{}'::jsonb;
 
 create unique index if not exists app_users_legacy_id_key on public.app_users (legacy_id) where legacy_id is not null;
 create index if not exists idx_app_users_role on public.app_users (role);
@@ -300,12 +302,28 @@ create table if not exists public.apartment_views (
   view_count integer not null default 1,
   viewed_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  unique (apartment_id, viewer_id)
+  viewer_role text,
+  view_date date not null default ((now() at time zone 'Asia/Manila')::date)
 );
+
+alter table public.apartment_views add column if not exists viewer_role text;
+alter table public.apartment_views add column if not exists view_date date;
+update public.apartment_views
+set view_date = (viewed_at at time zone 'Asia/Manila')::date
+where view_date is null;
+update public.apartment_views views
+set viewer_role = users.role
+from public.app_users users
+where views.viewer_id = users.id and views.viewer_role is null;
+alter table public.apartment_views alter column view_date set default ((now() at time zone 'Asia/Manila')::date);
+alter table public.apartment_views alter column view_date set not null;
+alter table public.apartment_views drop constraint if exists apartment_views_apartment_id_viewer_id_key;
+drop index if exists public.apartment_views_one_per_user_per_day;
 
 create index if not exists idx_apartment_views_apartment on public.apartment_views (apartment_id);
 create index if not exists idx_apartment_views_viewer on public.apartment_views (viewer_id);
 create index if not exists idx_apartment_views_viewed_at on public.apartment_views (viewed_at);
+create index if not exists idx_apartment_views_view_date on public.apartment_views (view_date);
 
 insert into storage.buckets (id, name, public)
 values ('apartment-images', 'apartment-images', true)
@@ -423,13 +441,17 @@ create table if not exists public.violations (
   issued_at timestamptz not null default now(),
   expires_at timestamptz,
   related_report_id uuid references public.reports (id) on delete set null,
+  apartment_id uuid references public.apartments (id) on delete set null,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table public.violations add column if not exists apartment_id uuid;
+
 create index if not exists idx_violations_landlord on public.violations (landlord_id);
 create index if not exists idx_violations_active on public.violations (active);
+create index if not exists idx_violations_apartment on public.violations (apartment_id);
 
 -- Notifications
 create table if not exists public.notifications (
@@ -968,6 +990,7 @@ select pg_temp.ensure_public_fk('reports', 'apartment_id', 'reports_apartment_id
 select pg_temp.ensure_public_fk('violations', 'landlord_id', 'violations_landlord_id_app_users_fkey', 'app_users', 'id', 'cascade', 'c');
 select pg_temp.ensure_public_fk('violations', 'admin_id', 'violations_admin_id_app_users_fkey', 'app_users', 'id', 'set null', 'n');
 select pg_temp.ensure_public_fk('violations', 'related_report_id', 'violations_related_report_id_reports_fkey', 'reports', 'id', 'set null', 'n');
+select pg_temp.ensure_public_fk('violations', 'apartment_id', 'violations_apartment_id_apartments_fkey', 'apartments', 'id', 'set null', 'n');
 select pg_temp.ensure_public_fk('notifications', 'user_id', 'notifications_user_id_app_users_fkey', 'app_users', 'id', 'cascade', 'c');
 select pg_temp.ensure_public_fk('audit_logs', 'admin_id', 'audit_logs_admin_id_app_users_fkey', 'app_users', 'id', 'set null', 'n');
 

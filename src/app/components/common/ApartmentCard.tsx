@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { Heart, Bed, Bath, Square, MapPin, ShieldCheck, Flag } from "lucide-react";
+import { Heart, Bed, Bath, Square, MapPin, Flag } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Apartment } from "../../data/apartments";
 import { getImageUrl } from "../../utils/images";
 import { useFavorites } from "../../hooks/useFavorites";
-import { User, useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { VerifiedBadge } from "./VerifiedBadge";
 
 interface ApartmentCardProps {
   apartment: Apartment;
@@ -28,23 +29,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function ApartmentCard({ apartment }: ApartmentCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { user } = useAuth();
+  const { user, users } = useAuth();
   const favorite = isFavorite(apartment.id);
   const isOwnListing = user?.role === "landlord" && apartment.landlordId === user.id;
   const showFavoriteButton = user?.role !== "admin" && !isOwnListing;
 
-  // Check if landlord is verified
-  const getLandlordVerification = () => {
-    if (!apartment.landlordId) return null;
-
-    const usersStr = localStorage.getItem("users");
-    const users: User[] = usersStr ? JSON.parse(usersStr) : [];
-    const landlord = users.find(u => u.id === apartment.landlordId);
-
-    return landlord?.isVerified ? landlord : null;
-  };
-
-  const verifiedLandlord = getLandlordVerification();
+  const landlord = apartment.landlordId ? users.find((entry) => entry.id === apartment.landlordId) : undefined;
+  const landlordStatus = String(landlord?.status || "").toLowerCase();
+  const verifiedLandlord = landlord?.isVerified === true || landlordStatus === "verified" || landlordStatus === "approved";
 
 
 
@@ -100,10 +92,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
               </Badge>
             )}
             {verifiedLandlord && (
-              <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 flex items-center gap-1 shadow-lg backdrop-blur-sm">
-                <ShieldCheck className="h-3 w-3" />
-                Verified Landlord
-              </Badge>
+              <VerifiedBadge label="Verified Landlord" className="bg-white/95 shadow-lg backdrop-blur-sm" />
             )}
             {apartment.petFriendly && (
               <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg">Pet Friendly</Badge>

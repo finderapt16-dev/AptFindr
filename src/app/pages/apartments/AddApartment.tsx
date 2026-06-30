@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, Navigate, useBlocker } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import {
   apartmentFormValuesFromApartment,
@@ -25,6 +25,7 @@ import {
   ArrowLeft, AlertCircle, Sparkles, Building2, MapPin, ListChecks,
   ArrowRight, ShieldCheck, FileText, Upload, X, Plus,
   Home, Trash2, Check,
+  Cloud, CloudUpload, RotateCcw,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
 import { toast } from "sonner";
@@ -35,8 +36,8 @@ type Room = {
   roomName: string;              // Room number or name (e.g., "Room 101", "Unit A")
   type: string;
   sqft: number;
-  maxOccupants: number;
-  rent: number;
+  maxOccupants?: number;
+  rent?: number;
   hasPrivateBath: boolean;
   bathroomType: string;        // "en-suite" | "separate" | ""
   sharedBathLocation: string;
@@ -45,7 +46,33 @@ type Room = {
   hasAC: boolean;
   description: string;           // Room description
   images: string[];              // Room images (URLs or data URLs)
-}; 
+};
+
+type PropertyDraft = {
+  version: 1;
+  savedAt: string;
+  currentStep: number;
+  formData: Partial<Apartment>;
+  rooms: Room[];
+  amenitiesInput: string;
+  utilitiesInput: string;
+  features: string[];
+  featureInput: string;
+  verificationData: {
+    propertyName: string;
+    propertyAddress: string;
+    businessPermit: string;
+    tinNumber: string;
+    idType: string;
+    idNumber: string;
+  };
+  uploadedImages: UploadedImage[];
+  requiresImageReupload: boolean;
+};
+
+type DraftStatus = "idle" | "saving" | "saved" | "restored" | "error";
+
+const getDraftStorageKey = (userId: string) => `rentiloilo:add-property-draft:${userId}`;
 
 const ROOM_TYPES = ["Bedroom", "Studio", "Shared room", "Suite", "Loft", "Other"];
 const STATUS_OPTIONS: { value: ApartmentStatus; label: string }[] = [
@@ -58,8 +85,8 @@ const makeRoom = (): Room => ({
   roomName: "",
   type: "Bedroom",
   sqft: 150,
-  maxOccupants: 1,
-  rent: 0,
+  maxOccupants: undefined,
+  rent: undefined,
   hasPrivateBath: false,
   bathroomType: "",
   sharedBathLocation: "",
@@ -110,6 +137,36 @@ const SUGGESTED_FEATURES = [
   "Near School",
 ];
 
+const INITIAL_FORM_DATA: Partial<Apartment> = {
+  title: "",
+  sqft: 500,
+  address: "",
+  city: "La Paz",
+  state: "Iloilo City",
+  zip: "5000",
+  description: "",
+  availableDate: new Date().toISOString().split("T")[0],
+  petFriendly: false,
+  parking: false,
+  furnished: false,
+  lat: 10.7202,
+  lng: 122.5621,
+  image: "",
+  images: [],
+  amenities: [],
+  utilities: false,
+  status: "available",
+};
+
+const INITIAL_VERIFICATION_DATA = {
+  propertyName: "",
+  propertyAddress: "",
+  businessPermit: "",
+  tinNumber: "",
+  idType: "",
+  idNumber: "",
+};
+
 export function AddApartment() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -130,27 +187,8 @@ export function AddApartment() {
   ];
   // ─────────────────────────────────────────────────────────────────────
 
-  const [formData, setFormData] = useState<Partial<Apartment>>({
-    title: "",
-    price: 0,
-    sqft: 500,
-    address: "",
-    city: "La Paz",
-    state: "Iloilo City",
-    zip: "5000",
-    description: "",
-    availableDate: new Date().toISOString().split("T")[0],
-    petFriendly: false,
-    parking: false,
-    furnished: false,
-    lat: 10.7202,
-    lng: 122.5621,
-    image: "modern-loft-apartment",
-    images: ["modern-loft-apartment", "modern-kitchen-interior", "modern-bedroom-interior"],
-    amenities: [],
-    utilities: false,
-    status: "available",
-  });
+  const [formData, setFormData] = useState<Partial<Apartment>>({ ...INITIAL_FORM_DATA });
+  const [locationLookupRequest, setLocationLookupRequest] = useState(0);
 
   // ── Rooms state ───────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<Room[]>([makeRoom()]);
@@ -193,13 +231,185 @@ export function AddApartment() {
     }
   };
 
-  const [verificationData, setVerificationData] = useState({
-    propertyName: "",
-    propertyAddress: "",
-    businessPermit: "",
-    tinNumber: "",
-    idType: "",
-    idNumber: "",
+  const [verificationData, setVerificationData] = useState({ ...INITIAL_VERIFICATION_DATA });
+  const [pendingDraft, setPendingDraft] = useState<PropertyDraft | null>(null);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  const [draftReady, setDraftReady] = useState(false);
+  const [imageReuploadRequired, setImageReuploadRequired] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutoSaveRef = useRef(false);
+  const submissionCompleteRef = useRef(false);
+
+  const hasDraftContent = useMemo(() => {
+    const roomHasContent = rooms.length > 1 || rooms.some((room) =>
+      Boolean(
+        room.roomName.trim()
+        || room.description.trim()
+        || Number(room.rent) > 0
+        || room.images.length > 0
+        || room.hasPrivateBath
+        || room.hasAC
+        || room.status !== "available"
+        || room.type !== "Bedroom"
+        || room.sqft !== 150
+        || (Number(room.maxOccupants) > 0 && Number(room.maxOccupants) !== 1),
+      ),
+    );
+    const verificationHasContent = Object.values(verificationData).some((value) => value.trim().length > 0);
+
+    return Boolean(
+      String(formData.title ?? "").trim()
+      || String(formData.description ?? "").trim()
+      || String(formData.address ?? "").trim()
+      || Number(formData.price) > 0
+      || amenitiesInput.trim()
+      || utilitiesInput.trim()
+      || features.length > 0
+      || featureInput.trim()
+      || uploadedImages.length > 0
+      || roomHasContent
+      || verificationHasContent
+      || currentStep > 1,
+    );
+  }, [amenitiesInput, currentStep, featureInput, features, formData, rooms, uploadedImages, utilitiesInput, verificationData]);
+
+  const resetDraftForm = () => {
+    setCurrentStep(1);
+    setFormData({ ...INITIAL_FORM_DATA });
+    setRooms([makeRoom()]);
+    setUploadedImages([]);
+    setAmenitiesInput("");
+    setUtilitiesInput("");
+    setFeatures([]);
+    setFeatureInput("");
+    setVerificationData({ ...INITIAL_VERIFICATION_DATA });
+    setValidationErrors({});
+    setImageReuploadRequired(false);
+  };
+
+  const discardDraft = (resetForm = true) => {
+    if (user?.id) localStorage.removeItem(getDraftStorageKey(user.id));
+    setPendingDraft(null);
+    setDraftReady(true);
+    setDraftStatus("idle");
+    if (resetForm) resetDraftForm();
+  };
+
+  const continueDraft = () => {
+    if (!pendingDraft) return;
+    skipNextAutoSaveRef.current = true;
+    setCurrentStep(Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1)));
+    setFormData({ ...INITIAL_FORM_DATA, ...pendingDraft.formData, image: "", images: [] });
+    setRooms(pendingDraft.rooms.length > 0 ? pendingDraft.rooms : [makeRoom()]);
+    setUploadedImages(pendingDraft.uploadedImages ?? []);
+    setAmenitiesInput(pendingDraft.amenitiesInput ?? "");
+    setUtilitiesInput(pendingDraft.utilitiesInput ?? "");
+    setFeatures(pendingDraft.features ?? []);
+    setFeatureInput(pendingDraft.featureInput ?? "");
+    setVerificationData({ ...INITIAL_VERIFICATION_DATA, ...pendingDraft.verificationData });
+    setImageReuploadRequired(Boolean(pendingDraft.requiresImageReupload));
+    setPendingDraft(null);
+    setDraftReady(true);
+    setDraftStatus("restored");
+    toast.success("Property draft restored");
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setDraftReady(false);
+    setPendingDraft(null);
+    try {
+      const savedDraft = localStorage.getItem(getDraftStorageKey(user.id));
+      if (!savedDraft) {
+        setDraftReady(true);
+        return;
+      }
+      const parsed = JSON.parse(savedDraft) as PropertyDraft;
+      if (parsed.version !== 1 || !parsed.savedAt) {
+        localStorage.removeItem(getDraftStorageKey(user.id));
+        setDraftReady(true);
+        return;
+      }
+      setPendingDraft(parsed);
+    } catch (error) {
+      console.error("Unable to read the Add Property draft:", error);
+      localStorage.removeItem(getDraftStorageKey(user.id));
+      setDraftReady(true);
+    }
+  }, [user?.id]);
+
+  const persistDraft = useCallback((updateStatus = true) => {
+    if (!user?.id || !hasDraftContent || submissionCompleteRef.current) return;
+    const persistentImages = uploadedImages
+      .filter((image) => !image.file && /^https?:\/\//i.test(image.url))
+      .map((image) => ({ ...image, file: undefined }));
+    const hasLocalPropertyImages = uploadedImages.some((image) => Boolean(image.file) || /^(data:|blob:)/i.test(image.url));
+    const safeRooms = rooms.map((room) => ({
+      ...room,
+      images: room.images.filter((image) => /^https?:\/\//i.test(image)),
+    }));
+    const hasLocalRoomImages = rooms.some((room) => room.images.some((image) => !/^https?:\/\//i.test(image)));
+    const { image: _image, images: _images, ...safeFormData } = formData;
+    const draft: PropertyDraft = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      currentStep,
+      formData: safeFormData,
+      rooms: safeRooms,
+      amenitiesInput,
+      utilitiesInput,
+      features,
+      featureInput,
+      verificationData,
+      uploadedImages: persistentImages,
+      requiresImageReupload: hasLocalPropertyImages || hasLocalRoomImages || imageReuploadRequired,
+    };
+
+    try {
+      localStorage.setItem(getDraftStorageKey(user.id), JSON.stringify(draft));
+      if (updateStatus) setDraftStatus("saved");
+    } catch (error) {
+      console.error("Unable to save the Add Property draft:", error);
+      if (updateStatus) setDraftStatus("error");
+    }
+  }, [amenitiesInput, currentStep, featureInput, features, formData, hasDraftContent, imageReuploadRequired, rooms, uploadedImages, user?.id, utilitiesInput, verificationData]);
+
+  useEffect(() => {
+    if (!draftReady || !user?.id || submissionCompleteRef.current) return;
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (!hasDraftContent) {
+      localStorage.removeItem(getDraftStorageKey(user.id));
+      setDraftStatus("idle");
+      return;
+    }
+
+    setDraftStatus("saving");
+    autoSaveTimerRef.current = setTimeout(() => persistDraft(), 700);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [draftReady, hasDraftContent, persistDraft, user?.id]);
+
+  useEffect(() => {
+    const protectFromUnload = (event: BeforeUnloadEvent) => {
+      if (!hasDraftContent || submissionCompleteRef.current) return;
+      persistDraft(false);
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protectFromUnload);
+    return () => window.removeEventListener("beforeunload", protectFromUnload);
+  }, [hasDraftContent, persistDraft]);
+
+  useBlocker(() => {
+    if (!hasDraftContent || submissionCompleteRef.current || isSubmitting) return false;
+    return !window.confirm("You have unsaved property details. Are you sure you want to leave?");
   });
 
   const fieldClass = (field: string) =>
@@ -441,8 +651,8 @@ export function AddApartment() {
           name: room.roomName || room.type,
           type: room.type,
           sqft: room.sqft,
-          maxOccupants: room.maxOccupants,
-          price: room.rent,
+          maxOccupants: Number(room.maxOccupants),
+          price: Number(room.rent),
           hasPrivateBath: room.hasPrivateBath,
           bathroomType: room.bathroomType,
           sharedBathLocation: room.sharedBathLocation,
@@ -455,19 +665,27 @@ export function AddApartment() {
       );
 
       const appUsers = await fetchAppUsers();
-      const admin = appUsers.find((entry) => entry.role === "admin");
+      const admins = appUsers.filter((entry) => entry.role === "admin" && entry.id);
 
-      if (admin?.id) {
-        await createNotification({
-          user_id: admin.id,
-          type: "info",
-          title: "New Property Submitted",
-          message: `${user.name} added "${created.title}" at ${created.address}, ${created.city}`,
-          payload: { apartmentId: created.id, landlordId: created.landlordId ?? resolvedLandlordId },
-        });
-      }
+      await Promise.all(admins.map((admin) => createNotification({
+        user_id: admin.id!,
+        type: "landlord_property_submission",
+        title: "New landlord property submitted",
+        message: `${user.name} added "${created.title}" at ${created.address}, ${created.city}.`,
+        payload: {
+          apartment_id: created.id,
+          apartmentId: created.id,
+          landlord_id: created.landlordId ?? resolvedLandlordId,
+          landlordId: created.landlordId ?? resolvedLandlordId,
+          action: "property_submission",
+        },
+      })));
 
       await refreshApartments();
+      submissionCompleteRef.current = true;
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      localStorage.removeItem(getDraftStorageKey(user.id));
+      setDraftStatus("idle");
       toast.success("Apartment added successfully!");
       navigate("/dashboard");
     } catch (error) {
@@ -514,6 +732,30 @@ export function AddApartment() {
             List Your <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">Apartment</span>
           </h1>
           <p className="text-slate-600 font-medium">Step {currentStep} of {totalSteps}</p>
+          <div className="mt-3 flex min-h-8 flex-wrap items-center justify-center gap-2">
+            {draftStatus !== "idle" && (
+              <span className={`inline-flex items-center gap-1.5 rounded-full border bg-white px-3 py-1 text-xs font-bold shadow-sm ${
+                draftStatus === "error" ? "border-red-200 text-red-600" : "border-amber-200 text-amber-700"
+              }`}>
+                {draftStatus === "saving" ? <Cloud className="h-3.5 w-3.5 animate-pulse" /> : <CloudUpload className="h-3.5 w-3.5" />}
+                {draftStatus === "saving" && "Saving..."}
+                {draftStatus === "saved" && "Draft saved"}
+                {draftStatus === "restored" && "Restored from draft"}
+                {draftStatus === "error" && "Draft could not be saved"}
+              </span>
+            )}
+            {hasDraftContent && draftReady && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Discard this property draft and clear all entered details?")) discardDraft(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-slate-500 transition hover:bg-white hover:text-red-600"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />Discard Draft
+              </button>
+            )}
+          </div>
         </div>
 
         {!user?.isVerified && (
@@ -521,7 +763,7 @@ export function AddApartment() {
             <AlertCircle className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-900">Verification Pending</AlertTitle>
             <AlertDescription className="text-slate-600">
-              Your property will be listed after verification.
+              You can save and manage this property now. Tenants will only see it after an admin verifies your landlord account.
             </AlertDescription>
           </Alert>
         )}
@@ -591,6 +833,7 @@ export function AddApartment() {
                       images={uploadedImages}
                       onImagesChange={(images) => {
                         setUploadedImages(images);
+                        if (images.length > 0) setImageReuploadRequired(false);
                         setValidationErrors((prev) => {
                           const next = { ...prev };
                           delete next.images;
@@ -600,6 +843,12 @@ export function AddApartment() {
                       maxImages={10}
                       maxFileSize={5}
                     />
+                    {imageReuploadRequired && (
+                      <Alert className="rounded-lg border-amber-200 bg-amber-50">
+                        <Upload className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="font-semibold text-amber-800">Please re-upload images before submitting.</AlertDescription>
+                      </Alert>
+                    )}
                     <FieldError field="images" />
                   </div>
 
@@ -626,10 +875,16 @@ export function AddApartment() {
                         <Label className="text-slate-700 font-bold">Monthly Rent (₱) *</Label>
                         <Input
                           type="number"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                          inputMode="decimal"
+                          min={0}
+                          step="any"
+                          value={formData.price || ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            price: e.target.value === "" ? undefined : Number(e.target.value),
+                          })}
                           required
-                          className={fieldClass("price")}
+                          className={`${fieldClass("price")} hide-number-spinners`}
                         />
                         <FieldError field="price" />
                       </div>
@@ -637,10 +892,10 @@ export function AddApartment() {
                         <Label className="text-slate-700 font-bold">Total Property Area (sqft) *</Label>
                         <Input
                           type="number"
-                          value={formData.sqft}
+                          value={formData.sqft || ""}
                           onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
                           required
-                          className={fieldClass("sqft")}
+                          className={`${fieldClass("sqft")} hide-number-spinners`}
                         />
                         <FieldError field="sqft" />
                       </div>
@@ -675,6 +930,7 @@ export function AddApartment() {
                     <Input
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onBlur={() => setLocationLookupRequest((request) => request + 1)}
                       placeholder="House number, street, subdivision"
                       required
                       className={fieldClass("address")}
@@ -704,7 +960,9 @@ export function AddApartment() {
                       <LocationPicker
                         lat={formData.lat ?? 0}
                         lng={formData.lng ?? 0}
-                        onLocationChange={(lat, lng) => setFormData({ ...formData, lat, lng })}
+                        addressQuery={[formData.address, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", ")}
+                        geocodeRequestKey={locationLookupRequest}
+                        onLocationChange={(lat, lng) => setFormData((current) => ({ ...current, lat, lng }))}
                       />
                     </div>
                     <FieldError field="mapLocation" />
@@ -768,9 +1026,9 @@ export function AddApartment() {
                         <Input
                           type="number"
                           min={1}
-                          value={room.sqft}
+                          value={room.sqft || ""}
                           onChange={(e) => updateRoom(room.id, { sqft: Number(e.target.value) })}
-                          className="rounded-xl border-amber-100"
+                          className="hide-number-spinners rounded-xl border-amber-100"
                         />
                       </div>
 
@@ -780,9 +1038,11 @@ export function AddApartment() {
                           <Input
                             type="number"
                             min={1}
-                            value={room.maxOccupants}
-                            onChange={(e) => updateRoom(room.id, { maxOccupants: Number(e.target.value) })}
-                            className={fieldClass(`rooms.${index}.maxOccupants`)}
+                            value={room.maxOccupants || ""}
+                            onChange={(e) => updateRoom(room.id, {
+                              maxOccupants: e.target.value === "" ? undefined : Number(e.target.value),
+                            })}
+                            className={`${fieldClass(`rooms.${index}.maxOccupants`)} hide-number-spinners`}
                           />
                           <FieldError field={`rooms.${index}.maxOccupants`} />
                         </div>
@@ -790,10 +1050,14 @@ export function AddApartment() {
                           <Label className="text-xs uppercase font-bold">Monthly Rent (₱)</Label>
                           <Input
                             type="number"
+                            inputMode="decimal"
                             min={0}
-                            value={room.rent}
-                            onChange={(e) => updateRoom(room.id, { rent: Number(e.target.value) })}
-                            className={fieldClass(`rooms.${index}.rent`)}
+                            step="any"
+                            value={room.rent || ""}
+                            onChange={(e) => updateRoom(room.id, {
+                              rent: e.target.value === "" ? undefined : Number(e.target.value),
+                            })}
+                            className={`${fieldClass(`rooms.${index}.rent`)} hide-number-spinners`}
                           />
                           <FieldError field={`rooms.${index}.rent`} />
                         </div>
@@ -1130,6 +1394,38 @@ export function AddApartment() {
           </CardContent>
         </Card>
       </div>
+
+      {pendingDraft && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="draft-dialog-title">
+          <div className="w-full max-w-md rounded-2xl border border-white/70 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                <CloudUpload className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <h2 id="draft-dialog-title" className="text-xl font-black text-slate-900">Continue your property draft?</h2>
+                <p className="mt-1 text-sm font-medium leading-5 text-slate-500">
+                  Saved {new Date(pendingDraft.savedAt).toLocaleString("en-PH")}. You can return to step {Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1))} or start over.
+                </p>
+              </div>
+            </div>
+            {pendingDraft.requiresImageReupload && (
+              <div className="mt-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                <Upload className="mt-0.5 h-4 w-4 shrink-0" />
+                Please re-upload images before submitting.
+              </div>
+            )}
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Button type="button" onClick={continueDraft} className="h-11 rounded-lg bg-orange-500 font-bold text-white hover:bg-orange-600">
+                Continue Draft
+              </Button>
+              <Button type="button" variant="outline" onClick={() => discardDraft(true)} className="h-11 rounded-lg border-slate-300 font-bold text-slate-700 hover:bg-slate-50">
+                Discard Draft
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

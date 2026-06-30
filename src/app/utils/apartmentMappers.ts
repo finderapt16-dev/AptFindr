@@ -5,6 +5,12 @@ function utilitiesToFormFlag(utilities: Apartment['utilities']): boolean {
 }
 
 export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues {
+  const customFeatures = Array.isArray(apartment.features)
+    ? apartment.features.filter((item): item is string => typeof item === 'string')
+    : apartment.features && Array.isArray(apartment.features.customFeatures)
+      ? apartment.features.customFeatures.filter((item): item is string => typeof item === 'string')
+      : [];
+
   return {
     title: apartment.title,
     price: String(apartment.price),
@@ -25,6 +31,7 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
     furnished: apartment.furnished,
     utilities: utilitiesToFormFlag(apartment.utilities),
     utilityItems: Array.isArray(apartment.utilities) ? apartment.utilities : [],
+    customFeatures,
     lat: String(apartment.lat),
     lng: String(apartment.lng),
     isPublished: apartment.isPublished ?? true,

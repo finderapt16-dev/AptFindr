@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { Apartment, ApartmentRoom } from "@/app/data/apartments";
@@ -15,11 +15,16 @@ import {
   fetchUserById,
   updateReportStatus,
   createViolation,
+  notifyLandlordViolation,
+  fetchApartmentChangeLogs,
+  sendAdminMessageToLandlord,
   type DashboardLandlordProfileRow,
   type DashboardReportRow,
   type DashboardUserRow,
+  type DashboardAuditLogRow,
 } from "@/app/services/dashboardSupabaseService";
 import { getImageUrl } from "@/app/utils/images";
+import { formatAuditLogForDisplay } from "@/app/utils/auditLogDisplay";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { MapView } from "@/app/components/features/map/MapView";
 import { Button } from "@/app/components/ui/button";
@@ -56,6 +61,7 @@ import {
   FileSearch,
   Building2,
   ExternalLink,
+  Send,
 } from "lucide-react";
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
@@ -167,6 +173,7 @@ function ImageTile({ src, label }: { src: string; label?: string }) {
 export function AdminApartmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const { user } = useAuth();
   const [apartment, setApartment] = useState<Apartment | null>(null);
   const [inspectionDetails, setInspectionDetails] = useState<ApartmentInspectionDetails | null>(null);
@@ -180,6 +187,19 @@ export function AdminApartmentDetail() {
   const [moderationMode, setModerationMode] = useState<"view" | "takeAction">("view");
   const [violationType, setViolationType] = useState("Misleading information");
   const [violationMessage, setViolationMessage] = useState("");
+  const [isIssuingViolation, setIsIssuingViolation] = useState(false);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [changeLogOpen, setChangeLogOpen] = useState(false);
+  const [changeLogLoading, setChangeLogLoading] = useState(false);
+  const [changeLogs, setChangeLogs] = useState<DashboardAuditLogRow[]>([]);
+  const [changeLogActors, setChangeLogActors] = useState<Record<string, string>>({});
+  const returnTo = (() => {
+    const value = (routeLocation.state as { returnTo?: unknown } | null)?.returnTo;
+    return typeof value === "string" && value.startsWith("/") ? value : "/dashboard?section=apartments";
+  })();
+  const handleBack = () => navigate(returnTo);
 
   useEffect(() => {
     let active = true;
@@ -302,6 +322,7 @@ export function AdminApartmentDetail() {
   };
 
   const handleCreateViolation = async () => {
+    if (isIssuingViolation) return;
     if (!apartment?.landlordId || !user?.id) {
       toast.error("Missing required information");
       return;
@@ -312,6 +333,7 @@ export function AdminApartmentDetail() {
       return;
     }
 
+    setIsIssuingViolation(true);
     try {
       const violation = await createViolation({
         landlord_id: apartment.landlordId,
@@ -322,10 +344,21 @@ export function AdminApartmentDetail() {
         issued_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
         related_report_id: selectedReport?.id,
+        apartment_id: apartment.id,
       });
 
       if (violation) {
-        toast.success("Violation issued successfully");
+        const notified = await notifyLandlordViolation(
+          apartment.landlordId,
+          violationType,
+          violationMessage.trim(),
+          apartment.title,
+        );
+        if (notified) {
+          toast.success("Violation issued and landlord notified");
+        } else {
+          toast.error("Violation was saved, but the landlord notification could not be sent");
+        }
         setModerationMode("view");
         setViolationMessage("");
         setSelectedReport(null);
@@ -335,6 +368,89 @@ export function AdminApartmentDetail() {
     } catch (error) {
       console.error("Error creating violation:", error);
       toast.error("Error creating violation");
+    } finally {
+      setIsIssuingViolation(false);
+    }
+  };
+
+  const handleViewListingDetails = () => {
+    if (!apartment?.id) {
+      toast.error("Apartment information is unavailable");
+      return;
+    }
+
+    if (id !== apartment.id) {
+      navigate(`/admin/apartment/${apartment.id}`);
+      return;
+    }
+
+    scrollToSection("admin-property-details");
+  };
+
+  const handleSendMessage = async () => {
+    const landlordId = landlord?.id ?? apartment?.landlordId;
+    if (!user?.id || !apartment?.id || !landlordId) {
+      toast.error("Unable to identify the apartment landlord");
+      return;
+    }
+    if (!messageText.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+
+    setIsSendingMessage(true);
+    try {
+      const sent = await sendAdminMessageToLandlord({
+        adminId: user.id,
+        landlordId,
+        apartmentId: apartment.id,
+        apartmentTitle: apartment.title,
+        message: messageText.trim(),
+      });
+      if (!sent) {
+        toast.error("Failed to send the message");
+        return;
+      }
+
+      setMessageText("");
+      setMessageModalOpen(false);
+      toast.success("Message sent to landlord");
+    } catch (error) {
+      console.error("Error sending landlord message:", error);
+      toast.error("Failed to send the message");
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const handleOpenChangeLog = async () => {
+    if (!apartment?.id) {
+      toast.error("Apartment information is unavailable");
+      return;
+    }
+
+    setChangeLogOpen(true);
+    setChangeLogLoading(true);
+    try {
+      const logs = await fetchApartmentChangeLogs(apartment.id);
+      const listingChanges = logs.filter((log) => {
+        const changes = isRecord(log.details?.changes) ? log.details.changes : null;
+        return changes && Object.keys(changes).length > 0;
+      });
+      setChangeLogs(listingChanges);
+
+      const actorIds = Array.from(new Set(listingChanges.map((log) => {
+        const details = log.details;
+        return String(log.admin_id ?? details?.actor_id ?? "");
+      }).filter(Boolean)));
+      const actors = await Promise.all(actorIds.map(async (actorId) => [actorId, await fetchUserById(actorId)] as const));
+      setChangeLogActors(Object.fromEntries(actors.map(([actorId, actor]) => [actorId, actor?.name || "Administrator"])));
+    } catch (error) {
+      console.error("Error loading apartment change log:", error);
+      setChangeLogs([]);
+      toast.error("Failed to load the change log");
+    } finally {
+      setChangeLogLoading(false);
     }
   };
 
@@ -353,7 +469,7 @@ export function AdminApartmentDetail() {
           <AlertTriangle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-900 mb-2">Apartment Not Found</h2>
           <p className="text-slate-600 mb-6">Unable to load apartment details.</p>
-          <Button onClick={() => navigate(-1)} className="bg-amber-600 hover:bg-amber-700 text-white">
+          <Button onClick={handleBack} className="bg-amber-600 hover:bg-amber-700 text-white">
             Go Back
           </Button>
         </Card>
@@ -400,9 +516,9 @@ export function AdminApartmentDetail() {
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
+          <Button variant="ghost" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Admin
+            Back to Apartments
           </Button>
           <div className="flex items-center gap-3">
             <Button
@@ -488,7 +604,7 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Apartment Info */}
-            <Card className="border-2 border-slate-200">
+            <Card id="admin-property-details" className="border-2 border-slate-200 scroll-mt-6">
               <CardContent className="pt-6">
                 <h1 className="text-3xl font-bold text-slate-900 mb-2">{apartment.title}</h1>
                 <div className="flex items-center text-slate-600 mb-4">
@@ -958,7 +1074,7 @@ export function AdminApartmentDetail() {
 
                 <div className="space-y-3">
                   <Button
-                    onClick={() => navigate(`/admin/apartments/${apartment.id}/edit`)}
+                    onClick={handleViewListingDetails}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start text-xs"
                   >
                     <Eye className="h-4 w-4 mr-2" />
@@ -1010,10 +1126,11 @@ export function AdminApartmentDetail() {
 
                               <Button
                                 onClick={handleCreateViolation}
+                                disabled={isIssuingViolation}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white justify-start text-xs"
                               >
-                                <Lock className="h-4 w-4 mr-2" />
-                                Issue Violation
+                                {isIssuingViolation ? <span className="mr-2 animate-spin">&#8635;</span> : <Lock className="h-4 w-4 mr-2" />}
+                                {isIssuingViolation ? "Saving..." : "Issue Violation"}
                               </Button>
                             </div>
                           </>
@@ -1023,6 +1140,8 @@ export function AdminApartmentDetail() {
                   )}
 
                   <Button
+                    onClick={() => setMessageModalOpen(true)}
+                    disabled={!apartment.landlordId}
                     variant="outline"
                     className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
                   >
@@ -1031,6 +1150,7 @@ export function AdminApartmentDetail() {
                   </Button>
 
                   <Button
+                    onClick={() => void handleOpenChangeLog()}
                     variant="outline"
                     className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
                   >
@@ -1095,6 +1215,73 @@ export function AdminApartmentDetail() {
             </Card>
           </div>
         </div>
+
+        {messageModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" onClick={() => !isSendingMessage && setMessageModalOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="relative z-10 w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Send Message to Landlord</h2>
+                  <p className="mt-1 text-xs text-slate-500">To {landlord?.name || "Apartment landlord"} about {apartment.title}</p>
+                </div>
+                <button onClick={() => setMessageModalOpen(false)} disabled={isSendingMessage} className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"><X className="h-4 w-4" /></button>
+              </div>
+              <textarea
+                value={messageText}
+                onChange={(event) => setMessageText(event.target.value)}
+                rows={6}
+                maxLength={2000}
+                placeholder="Write your message to the landlord..."
+                className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400"><span>The landlord will receive this as a notification.</span><span>{messageText.length}/2000</span></div>
+              <div className="mt-5 flex gap-3">
+                <Button variant="outline" onClick={() => setMessageModalOpen(false)} disabled={isSendingMessage} className="flex-1">Cancel</Button>
+                <Button onClick={() => void handleSendMessage()} disabled={isSendingMessage || !messageText.trim()} className="flex-1 bg-amber-600 text-white hover:bg-amber-700"><Send className="mr-2 h-4 w-4" />{isSendingMessage ? "Sending..." : "Send Message"}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {changeLogOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" onClick={() => setChangeLogOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="relative z-10 flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div><h2 className="text-lg font-bold text-slate-900">Apartment Change Log</h2><p className="mt-0.5 text-xs text-slate-500">{apartment.title}</p></div>
+                <button onClick={() => setChangeLogOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="overflow-y-auto p-6">
+                {changeLogLoading ? (
+                  <div className="py-14 text-center text-sm font-medium text-slate-500">Loading change history...</div>
+                ) : changeLogs.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 py-14 text-center"><ClipboardList className="mx-auto mb-3 h-8 w-8 text-slate-300" /><p className="text-sm font-bold text-slate-700">No listing changes recorded yet.</p><p className="mt-1 text-xs text-slate-500">Future property and room updates will appear here.</p></div>
+                ) : (
+                  <div className="space-y-4">
+                    {changeLogs.map((log) => {
+                      const displayLog = formatAuditLogForDisplay(log);
+                      const actorId = String(log.admin_id ?? log.details?.actor_id ?? "");
+                      return (
+                        <div key={log.id} className="rounded-lg border border-slate-200 p-4">
+                          <div className="mb-3 flex flex-col justify-between gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-center">
+                            <div><p className="text-sm font-bold text-slate-900">{displayLog.title}</p><p className="text-xs text-slate-500">By {changeLogActors[actorId] || (actorId ? "Administrator" : "System")}</p></div>
+                            <p className="text-xs font-medium text-slate-400">{log.created_at ? new Date(log.created_at).toLocaleString("en-PH") : "Date unavailable"}</p>
+                          </div>
+                          <div className="space-y-3">
+                            {(displayLog.changes.length > 0 ? displayLog.changes : [{ key: "summary", summary: displayLog.detail }]).map((change) => (
+                              <div key={change.key} className="rounded-md bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">{change.summary}</div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Selected Report Details */}
         {selectedReport && (
@@ -1180,7 +1367,7 @@ export function AdminApartmentDetail() {
                   <div className="flex gap-2">
                     <Button
                       onClick={() => {
-                        if (id) navigate(`/admin/apartments/${id}`);
+                        if (id) navigate(`/admin/apartment/${id}`);
                       }}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                     >

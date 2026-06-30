@@ -18,6 +18,7 @@ export interface UploadedImage {
   file?: File | Blob;
   isPrimary: boolean;
   sortOrder: number;
+  fingerprint?: string;
 }
 
 interface MultiImageUploaderProps {
@@ -26,6 +27,8 @@ interface MultiImageUploaderProps {
   maxImages?: number;
   maxFileSize?: number; // in MB
   allowedFormats?: string[];
+  uploadProgress?: number | null;
+  disabled?: boolean;
 }
 
 const VALID_FORMATS = ["image/jpeg", "image/png", "image/webp"];
@@ -41,16 +44,20 @@ export function MultiImageUploader({
   maxImages = 10,
   maxFileSize = 5,
   allowedFormats = VALID_FORMATS,
+  uploadProgress = null,
+  disabled = false,
 }: MultiImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
 
   const validateFile = (file: File): boolean => {
     if (!allowedFormats.includes(file.type)) {
@@ -71,7 +78,17 @@ export function MultiImageUploader({
   };
 
   const addImagesToState = (files: File[]) => {
-    const validFiles = files.filter(validateFile);
+    const seen = new Set(images.map((image) => image.fingerprint).filter(Boolean));
+    const validFiles = files.filter((file) => {
+      if (!validateFile(file)) return false;
+      const fingerprint = `${file.name}:${file.size}:${file.lastModified}`;
+      if (seen.has(fingerprint)) {
+        toast.error(`${file.name} has already been selected`);
+        return false;
+      }
+      seen.add(fingerprint);
+      return true;
+    });
     if (validFiles.length === 0) return;
 
     const remainingSlots = maxImages - images.length;
@@ -94,6 +111,7 @@ export function MultiImageUploader({
               file,
               isPrimary: images.length === 0,
               sortOrder: images.length,
+              fingerprint: `${file.name}:${file.size}:${file.lastModified}`,
             });
           };
           reader.readAsDataURL(file);
@@ -117,6 +135,19 @@ export function MultiImageUploader({
     const files = Array.from(e.target.files || []);
     addImagesToState(files);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const reorderImage = (targetId: string) => {
+    if (!draggedImageId || draggedImageId === targetId) return;
+    const fromIndex = images.findIndex((image) => image.id === draggedImageId);
+    const toIndex = images.findIndex((image) => image.id === targetId);
+    if (fromIndex < 0 || toIndex < 0) return;
+    const reordered = [...images];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    onImagesChange(reordered.map((image, index) => ({ ...image, sortOrder: index })));
+    setDraggedImageId(null);
+    setPreviewIndex(toIndex);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -178,12 +209,14 @@ export function MultiImageUploader({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsCameraActive(true);
-      }
+      cameraStreamRef.current = stream;
+      setIsCameraActive(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      });
     } catch {
-      toast.error("Unable to access camera. Please check permissions.");
+      toast.error("Unable to open the live camera. Use the device camera picker instead.");
+      cameraInputRef.current?.click();
     }
   };
 
@@ -205,10 +238,10 @@ export function MultiImageUploader({
   };
 
   const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-      setIsCameraActive(false);
-    }
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setIsCameraActive(false);
   };
 
   const primaryImage = images.find((img) => img.isPrimary) || images[0];
@@ -229,7 +262,7 @@ export function MultiImageUploader({
               ? "border-blue-500 bg-blue-50"
               : "border-amber-200 bg-amber-50 hover:border-amber-300"
           }`}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => !disabled && fileInputRef.current?.click()}
         >
           <Upload className="h-8 w-8 mx-auto mb-3 text-amber-600" />
           <p className="font-semibold text-slate-900 mb-1">
@@ -252,6 +285,7 @@ export function MultiImageUploader({
                 fileInputRef.current?.click();
               }}
               className="border-amber-300 text-amber-700 hover:bg-amber-100"
+              disabled={disabled}
             >
               <ImageIcon className="h-4 w-4 mr-2" />
               Select Images
@@ -262,9 +296,10 @@ export function MultiImageUploader({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                startCamera();
+                void startCamera();
               }}
               className="border-blue-300 text-blue-700 hover:bg-blue-100"
+              disabled={disabled}
             >
               <Camera className="h-4 w-4 mr-2" />
               Take Photo
@@ -278,7 +313,16 @@ export function MultiImageUploader({
             accept="image/jpeg,image/png,image/webp"
             onChange={handleFileInput}
             className="hidden"
+            disabled={disabled}
           />
+          <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFileInput} className="hidden" disabled={disabled} />
+        </div>
+      )}
+
+      {uploadProgress !== null && (
+        <div className="space-y-2 rounded-lg border border-orange-100 bg-orange-50 p-3" role="status" aria-live="polite">
+          <div className="flex justify-between text-xs font-bold text-orange-800"><span>Uploading room images</span><span>{Math.round(uploadProgress)}%</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-orange-100"><div className="h-full bg-orange-500 transition-all" style={{ width: `${Math.max(0, Math.min(100, uploadProgress))}%` }} /></div>
         </div>
       )}
 
@@ -367,6 +411,11 @@ export function MultiImageUploader({
               {images.map((img, idx) => (
                 <div
                   key={img.id}
+                  draggable={!disabled}
+                  onDragStart={() => setDraggedImageId(img.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => reorderImage(img.id)}
+                  onDragEnd={() => setDraggedImageId(null)}
                   className={`relative group rounded-lg overflow-hidden border-2 transition-all aspect-square cursor-pointer ${
                     img.isPrimary
                       ? "border-yellow-400 ring-2 ring-yellow-300"
@@ -419,7 +468,7 @@ export function MultiImageUploader({
           {/* Reorder Info */}
           {images.length > 1 && (
             <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">
-              💡 Click on thumbnails to preview or use the controls to reorder
+              Drag thumbnails to reorder them. The selected cover photo is saved first.
             </div>
           )}
         </div>
