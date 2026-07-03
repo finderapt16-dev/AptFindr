@@ -392,8 +392,8 @@ export function StudentEmployeeDashboard() {
 
   // ── Sidebar ──────────────────────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <div className="px-5 pt-6 pb-5">
+    <div className="app-sidebar flex flex-col h-full overflow-y-auto">
+      <div className="app-sidebar-brand px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
           <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-950/30 shrink-0">
             <Home className="h-6 w-6 text-white fill-white/20" />
@@ -406,7 +406,7 @@ export function StudentEmployeeDashboard() {
       </div>
 
       <div className="px-4 pb-5">
-        <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
+        <div className="app-sidebar-profile flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
           <div className="h-11 w-11 rounded-full bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shrink-0 font-black text-white text-sm shadow overflow-hidden">
             {user?.avatar ? (
               <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" />
@@ -428,6 +428,7 @@ export function StudentEmployeeDashboard() {
           {NAV_MAIN.map(({ icon: Icon, label, section }) => (
             <button
               key={section}
+              aria-current={activeSection === section ? "page" : undefined}
               onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
                 activeSection === section
@@ -438,7 +439,7 @@ export function StudentEmployeeDashboard() {
               <Icon className="h-4 w-4 shrink-0" />
               {label}
               {label === "My Favorites" && favoriteIds.length > 0 && (
-                <span className="ml-auto h-5 px-1.5 bg-pink-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">
+                <span className="app-sidebar-badge ml-auto h-5 px-1.5 bg-pink-500 rounded-full text-white text-[10px] font-black flex items-center justify-center min-w-[20px]">
                   {favoriteIds.length}
                 </span>
               )}
@@ -479,6 +480,7 @@ export function StudentEmployeeDashboard() {
             ) : (
               <button
                 key={section}
+                aria-current={activeSection === section ? "page" : undefined}
                 onClick={() => { setActiveSection(section!); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
                   activeSection === section
@@ -501,6 +503,7 @@ export function StudentEmployeeDashboard() {
             !isLink ? (
               <button
                 key={section}
+                aria-current={activeSection === section ? "page" : undefined}
                 onClick={() => { setActiveSection(section!); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold transition-all ${
                   activeSection === section
@@ -520,7 +523,7 @@ export function StudentEmployeeDashboard() {
 
       <div className="px-4 py-4 border-t border-white/10 mt-2">
         <LogoutConfirmation onConfirm={handleLogout}>
-          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
+          <button className="app-sidebar-logout w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
             <LogOut className="h-4 w-4 shrink-0" />
             Log Out
           </button>
@@ -1295,39 +1298,41 @@ export function StudentEmployeeDashboard() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
-      <div className="relative z-10 flex h-full">
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 h-full bg-[#07142f] shadow-2xl shadow-slate-900/40">
-          <SidebarContent />
+    <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
+      <div className="app-shell-frame relative z-10 flex h-full">
+        <aside className="app-shell-sidebar hidden lg:flex flex-col w-64 shrink-0 h-full bg-[#07142f] shadow-2xl shadow-slate-900/40">
+          {SidebarContent()}
         </aside>
 
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="app-sidebar-overlay fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         <aside
-          className={`fixed top-0 left-0 h-full z-50 w-64 bg-[#07142f] shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+          className={`app-sidebar-drawer fixed top-0 left-0 h-full z-50 w-64 bg-[#07142f] shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <button
+            aria-label="Close navigation"
             onClick={() => setSidebarOpen(false)}
-            className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10"
+            className="app-sidebar-close absolute top-4 right-4 h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10"
           >
             <X className="h-4 w-4" />
           </button>
-          <SidebarContent />
+          {SidebarContent()}
         </aside>
 
         <button
+          aria-label="Open navigation"
           onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-30 lg:hidden h-10 w-10 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-300/40 hover:bg-orange-600 transition-all"
+          className="app-sidebar-trigger fixed top-4 left-4 z-30 lg:hidden h-10 w-10 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-300/40 hover:bg-orange-600 transition-all"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="flex-1 min-w-0 h-full overflow-y-auto">
-          <main className="px-4 py-6 pt-16 md:px-8 lg:px-10 lg:pt-8">
+        <div className="app-shell-main flex-1 min-w-0 h-full overflow-y-auto">
+          <main className="app-shell-content app-shell-content-mobile-nav px-4 py-6 pt-16 md:px-8 lg:px-10 lg:pt-8">
             {(sectionMap[activeSection] ?? renderOverview)()}
           </main>
         </div>

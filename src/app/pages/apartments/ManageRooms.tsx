@@ -374,12 +374,12 @@ export function ManageRooms() {
   const initials = (user.name || user.email || "L").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   const sidebar = (
-    <aside className="flex h-full w-[250px] flex-col bg-[#07172b] px-4 py-5 text-white">
-      <button onClick={() => navigate("/dashboard?section=overview")} className="mb-6 flex items-center gap-3 px-2 text-left">
+    <aside className="app-sidebar flex h-full w-[250px] flex-col bg-[#07172b] px-4 py-5 text-white">
+      <button onClick={() => navigate("/dashboard?section=overview")} className="app-sidebar-brand mb-6 flex items-center gap-3 px-2 pb-4 text-left">
         <span className="grid h-11 w-11 place-items-center rounded-lg bg-orange-500"><Home className="h-6 w-6" /></span>
         <span><strong className="block text-xl">Rent<span className="text-orange-500">Iloilo</span></strong><small className="text-slate-400">Landlord Portal</small></span>
       </button>
-      <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.06] p-3">
+      <div className="app-sidebar-profile mb-6 rounded-lg border border-white/10 bg-white/[0.06] p-3">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-orange-500 font-bold">{initials}</span>
           <div className="min-w-0"><p className="truncate text-sm font-bold">{user.name || "Landlord"}</p><p className="truncate text-xs text-slate-400">{user.email}</p><p className="mt-1 text-xs text-emerald-400">Online</p></div>
@@ -391,7 +391,7 @@ export function ManageRooms() {
             <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
             <div className="space-y-1">
               {group.items.map(({ label, icon: Icon, href, active }) => (
-                <button key={label} onClick={() => { navigate(href); setSidebarOpen(false); }} className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${active ? "bg-orange-500 text-white shadow-lg shadow-orange-950/20" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"}`}>
+                <button key={label} aria-current={active ? "page" : undefined} onClick={() => { navigate(href); setSidebarOpen(false); }} className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${active ? "bg-orange-500 text-white shadow-lg shadow-orange-950/20" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"}`}>
                   <Icon className="h-[18px] w-[18px]" /><span>{label}</span>
                 </button>
               ))}
@@ -399,7 +399,7 @@ export function ManageRooms() {
           </div>
         ))}
       </nav>
-      <LogoutConfirmation onConfirm={handleLogout}><button className="mt-3 flex h-11 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-sm font-bold text-rose-400 hover:bg-rose-500/10"><LogOut className="h-4 w-4" />Log Out</button></LogoutConfirmation>
+      <LogoutConfirmation onConfirm={handleLogout}><button className="app-sidebar-logout mt-3 flex h-11 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-sm font-bold text-rose-400 hover:bg-rose-500/10"><LogOut className="h-4 w-4" />Log Out</button></LogoutConfirmation>
     </aside>
   );
 
@@ -411,14 +411,14 @@ export function ManageRooms() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
-      <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
-      {sidebarOpen && <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Close navigation" className="absolute inset-0 bg-slate-950/55" onClick={() => setSidebarOpen(false)} /><div className="relative h-full w-[250px]">{sidebar}<button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md bg-white/10"><X className="h-4 w-4" /></button></div></div>}
+    <div className="app-shell min-h-screen bg-[#f7f8fa] text-slate-950">
+      <div className="app-shell-fixed-sidebar fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
+      {sidebarOpen && <div className="app-sidebar-overlay fixed inset-0 z-50 lg:hidden"><button aria-label="Close navigation" className="absolute inset-0" onClick={() => setSidebarOpen(false)} /><div className="app-sidebar-drawer relative h-full w-[250px]">{sidebar}<button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="app-sidebar-close absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md bg-white/10"><X className="h-4 w-4" /></button></div></div>}
 
-      <main className="min-h-screen lg:ml-[250px]">
-        <div className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <main className="app-shell-page-main min-h-screen lg:ml-[250px]">
+        <div className="app-shell-content mx-auto max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
           <div className="mb-5 flex items-center justify-between lg:hidden">
-            <button aria-label="Open navigation" onClick={() => setSidebarOpen(true)} className="grid h-10 w-10 place-items-center rounded-lg border bg-white"><Menu className="h-5 w-5" /></button>
+            <button aria-label="Open navigation" onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger grid h-10 w-10 place-items-center rounded-lg border bg-white"><Menu className="h-5 w-5" /></button>
             <span className="font-bold">Room Management</span>
           </div>
 

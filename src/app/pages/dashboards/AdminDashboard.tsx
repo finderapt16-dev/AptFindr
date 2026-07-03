@@ -1070,7 +1070,7 @@ export function AdminDashboard() {
   const handleLogout = () => { logout?.(); navigate("/"); };
 // ── Sidebar ───────────────────────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto bg-slate-950 border-r border-white/[0.06] shadow-2xl relative z-10 select-none">
+    <div className="app-sidebar flex flex-col h-full overflow-y-auto bg-slate-950 border-r border-white/[0.06] shadow-2xl relative z-10 select-none">
       {/* Cinematic Ambient Glow matching the Left Panel Login backdrop */}
       <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/75 to-slate-950/95" />
@@ -1079,7 +1079,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Brand Logo Section */}
-      <div className="px-6 pt-7 pb-5 relative z-10">
+      <div className="app-sidebar-brand px-6 pt-7 pb-5 relative z-10">
         <div className="flex items-center gap-3.5 px-1">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 shadow-xl shadow-orange-500/10 flex items-center justify-center shrink-0 transform transition-transform duration-500 hover:scale-105 hover:rotate-3">
             <Sparkles className="h-5 w-5 text-white filter drop-shadow-sm" />
@@ -1097,7 +1097,7 @@ export function AdminDashboard() {
 
       {/* Admin User Profile Card */}
       <div className="px-4 py-3 relative z-10">
-        <div className="flex items-center gap-3.5 bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent backdrop-blur-xl border border-white/[0.07] rounded-2xl px-3.5 py-3 shadow-lg shadow-black/20 hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-300 group">
+        <div className="app-sidebar-profile flex items-center gap-3.5 bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent backdrop-blur-xl border border-white/[0.07] rounded-2xl px-3.5 py-3 shadow-lg shadow-black/20 hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-300 group">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 p-[1px] shadow-md shrink-0">
             <div className="h-full w-full rounded-[11px] bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center font-black text-white text-sm shadow-inner transform group-hover:scale-105 transition-transform duration-300">
               {user?.name?.[0]?.toUpperCase() ?? "A"}
@@ -1126,6 +1126,7 @@ export function AdminDashboard() {
           {NAV_MAIN.map(({ icon: Icon, label, section }) => (
             <button
               key={section}
+              aria-current={activeSection === section ? "page" : undefined}
               onClick={() => {
                 setActiveSection(section);
                 setSidebarOpen(false);
@@ -1136,10 +1137,6 @@ export function AdminDashboard() {
                   : "text-slate-400 hover:text-white hover:bg-white/[0.04] hover:translate-x-0.5"
               }`}
             >
-              {activeSection === section && (
-                <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-white shadow-[0_0_8px_#fff]" />
-              )}
-              
               <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
                 activeSection === section ? "text-white" : "text-slate-400 group-hover:text-amber-400"
               }`} />
@@ -1148,17 +1145,17 @@ export function AdminDashboard() {
               
               {/* Dynamic Notification Badges designed as Floating Pills */}
               {label === "Reports" && pendingReports > 0 && (
-                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-red-400/20 shadow-md shadow-red-950/50 transform group-hover:scale-105 transition-transform">
+                <span className="app-sidebar-badge ml-auto h-5 px-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-red-400/20 shadow-md shadow-red-950/50 transform group-hover:scale-105 transition-transform">
                   {pendingReports}
                 </span>
               )}
               {label === "Landlords" && pendingCount > 0 && (
-                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-amber-400/20 shadow-md shadow-orange-950/50 transform group-hover:scale-105 transition-transform">
+                <span className="app-sidebar-badge ml-auto h-5 px-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-amber-400/20 shadow-md shadow-orange-950/50 transform group-hover:scale-105 transition-transform">
                   {pendingCount}
                 </span>
               )}
               {label === "Notifications" && unreadNotifsCount > 0 && (
-                <span className="ml-auto h-5 px-2 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-indigo-400/20 shadow-md shadow-indigo-950/50 transform group-hover:scale-105 transition-transform">
+                <span className="app-sidebar-badge ml-auto h-5 px-2 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-indigo-400/20 shadow-md shadow-indigo-950/50 transform group-hover:scale-105 transition-transform">
                   {unreadNotifsCount}
                 </span>
               )}
@@ -1176,6 +1173,7 @@ export function AdminDashboard() {
           {NAV_ACCOUNT.map(({ icon: Icon, label, section }) => (
             <button
               key={section}
+              aria-current={activeSection === section ? "page" : undefined}
               onClick={() => {
                 setActiveSection(section);
                 setSidebarOpen(false);
@@ -1186,9 +1184,6 @@ export function AdminDashboard() {
                   : "text-slate-400 hover:text-white hover:bg-white/[0.04] hover:translate-x-0.5"
               }`}
             >
-              {activeSection === section && (
-                <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-white shadow-[0_0_8px_#fff]" />
-              )}
               <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
                 activeSection === section ? "text-white" : "text-slate-400 group-hover:text-amber-400"
               }`} />
@@ -1203,7 +1198,7 @@ export function AdminDashboard() {
       {/* Danger Logout Action Button Container */}
       <div className="px-4 py-4 border-t border-white/[0.06] mt-2 bg-gradient-to-t from-black/20 to-transparent relative z-10">
         <LogoutConfirmation onConfirm={handleLogout}>
-          <button className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide text-rose-400 bg-rose-500/[0.03] border border-rose-500/10 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-600 hover:border-transparent hover:shadow-lg hover:shadow-red-950/40 transition-all duration-300 active:scale-[0.98] group">
+          <button className="app-sidebar-logout w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide text-rose-400 bg-rose-500/[0.03] border border-rose-500/10 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-600 hover:border-transparent hover:shadow-lg hover:shadow-red-950/40 transition-all duration-300 active:scale-[0.98] group">
             <LogOut className="h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
             <span>Log Out</span>
           </button>
@@ -3140,23 +3135,23 @@ export function AdminDashboard() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-50">
-      <div className="relative z-10 flex h-full">
-        <aside className="hidden lg:flex h-full w-60 shrink-0 flex-col bg-slate-950 shadow-xl">
-          <SidebarContent />
+    <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-slate-50">
+      <div className="app-shell-frame relative z-10 flex h-full">
+        <aside className="app-shell-sidebar hidden lg:flex h-full w-60 shrink-0 flex-col bg-slate-950 shadow-xl">
+          {SidebarContent()}
         </aside>
-        {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />}
-        <aside className={`fixed left-0 top-0 z-50 h-full w-64 bg-slate-950 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-          <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10">
+        {sidebarOpen && <div className="app-sidebar-overlay fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />}
+        <aside className={`app-sidebar-drawer fixed left-0 top-0 z-50 h-full w-64 bg-slate-950 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          <button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="app-sidebar-close absolute top-4 right-4 h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10">
             <X className="h-4 w-4" />
           </button>
-          <SidebarContent />
+          {SidebarContent()}
         </aside>
-        <button onClick={() => setSidebarOpen(true)} className="fixed top-4 left-4 z-30 lg:hidden h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-300/40 hover:from-amber-400 hover:to-orange-500 transition-all">
+        <button aria-label="Open navigation" onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger fixed top-4 left-4 z-30 lg:hidden h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-300/40 hover:from-amber-400 hover:to-orange-500 transition-all">
           <Menu className="h-5 w-5" />
         </button>
-        <div className="flex-1 min-w-0 h-full overflow-y-auto">
-          <main className="px-4 py-5 pt-16 md:px-6 lg:px-8 lg:pt-6">
+        <div className="app-shell-main flex-1 min-w-0 h-full overflow-y-auto">
+          <main className="app-shell-content app-shell-content-mobile-nav px-4 py-5 pt-16 md:px-6 lg:px-8 lg:pt-6">
             {(sectionMap[activeSection] ?? renderOverview)()}
           </main>
         </div>

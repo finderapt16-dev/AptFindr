@@ -176,6 +176,7 @@ export function Favorites() {
   }) => (
     <Link
       to={href}
+      aria-current={active ? "page" : undefined}
       className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold transition ${
         active ? "bg-white text-orange-600 shadow-lg shadow-orange-950/20 ring-1 ring-orange-200" : "text-white/65 hover:bg-white/10 hover:text-white"
       }`}
@@ -183,7 +184,7 @@ export function Favorites() {
       <Icon className="h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-black text-white">
+        <span className="app-sidebar-badge flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-black text-white">
           {badge}
         </span>
       )}
@@ -280,10 +281,10 @@ export function Favorites() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
-      <div className="flex h-full">
-        <aside className="hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
-          <div className="px-5 pb-5 pt-6">
+    <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
+      <div className="app-shell-frame flex h-full">
+        <aside className="app-shell-sidebar app-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
+          <div className="app-sidebar-brand px-5 pb-5 pt-6">
             <Link to="/dashboard" className="flex items-center gap-2.5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-950/30">
                 <Home className="h-6 w-6 fill-white/20 text-white" />
@@ -296,7 +297,7 @@ export function Favorites() {
           </div>
 
           <div className="px-4 pb-5">
-            <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
+            <div className="app-sidebar-profile flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-lime-300 to-orange-500 text-sm font-black text-white shadow">
                 {user?.avatar ? <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase() ?? "U"}
               </div>
@@ -331,7 +332,7 @@ export function Favorites() {
 
           <div className="mt-auto border-t border-white/10 px-4 py-4">
             <LogoutConfirmation onConfirm={handleLogout}>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+              <button className="app-sidebar-logout flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
                 <LogOut className="h-4 w-4" />
                 Log Out
               </button>
@@ -339,8 +340,8 @@ export function Favorites() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 lg:px-10 lg:py-8">
+        <main className="app-shell-main min-w-0 flex-1 overflow-y-auto">
+          <div className="app-shell-content mx-auto max-w-7xl px-4 py-6 md:px-8 lg:px-10 lg:py-8">
             <section className="relative overflow-hidden rounded-lg border border-orange-100 bg-white px-6 py-8 shadow-[0_22px_60px_rgba(15,23,42,0.08)] md:px-9">
               <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-500 shadow-sm">

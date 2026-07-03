@@ -1304,8 +1304,8 @@ export function LandlordDashboard() {
 
   // ── Sidebar ──────────────────────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <div className="px-5 pt-6 pb-4 border-b border-white/10">
+    <div className="app-sidebar flex flex-col h-full overflow-y-auto">
+      <div className="app-sidebar-brand px-5 pt-6 pb-4 border-b border-white/10">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 shadow-sm">
             <Sparkles className="h-4 w-4 text-white" />
@@ -1316,7 +1316,7 @@ export function LandlordDashboard() {
       </div>
 
       <div className="px-4 py-4 border-b border-white/10">
-        <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5">
+        <div className="app-sidebar-profile flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-sm font-black text-white shadow-sm">
             {user?.name?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
           </div>
@@ -1334,6 +1334,7 @@ export function LandlordDashboard() {
           {NAV_MAIN.map(({ icon: Icon, label, section }) => (
             <button
               key={section}
+              aria-current={activeSection === section ? "page" : undefined}
               onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-all ${
                 activeSection === section
@@ -1344,7 +1345,7 @@ export function LandlordDashboard() {
               <Icon className="h-4 w-4 shrink-0" />
               {label}
               {label === "Notifications" && unreadNotificationCount > 0 && (
-                <span className="ml-auto flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">{unreadNotificationCount}</span>
+                <span className="app-sidebar-badge ml-auto flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">{unreadNotificationCount}</span>
               )}
             </button>
           ))}
@@ -1379,6 +1380,7 @@ export function LandlordDashboard() {
           {NAV_ACCOUNT.map(({ icon: Icon, label, section }) => (
             <button
               key={section}
+              aria-current={activeSection === section ? "page" : undefined}
               onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-all ${
                 activeSection === section
@@ -1397,7 +1399,7 @@ export function LandlordDashboard() {
 
       <div className="px-4 py-4 border-t border-white/10 mt-2">
         <LogoutConfirmation onConfirm={handleLogout}>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
+          <button className="app-sidebar-logout w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
             <LogOut className="h-4 w-4 shrink-0" />
             Log Out
           </button>
@@ -2655,41 +2657,43 @@ export function LandlordDashboard() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-50">
-      <div className="flex h-full">
+    <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-slate-50">
+      <div className="app-shell-frame flex h-full">
 
         {/* Desktop Sidebar */}
-        <aside className="hidden h-full w-60 shrink-0 flex-col bg-slate-950 shadow-xl lg:flex">
-          <SidebarContent />
+        <aside className="app-shell-sidebar hidden h-full w-60 shrink-0 flex-col bg-slate-950 shadow-xl lg:flex">
+          {SidebarContent()}
         </aside>
 
         {/* Mobile overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="app-sidebar-overlay fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         {/* Mobile drawer */}
-        <aside className={`fixed left-0 top-0 z-50 h-full w-64 bg-slate-950 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`app-sidebar-drawer fixed left-0 top-0 z-50 h-full w-64 bg-slate-950 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10"
+            aria-label="Close navigation"
+            className="app-sidebar-close absolute top-4 right-4 h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all z-10"
           >
             <X className="h-4 w-4" />
           </button>
-          <SidebarContent />
+          {SidebarContent()}
         </aside>
 
         {/* Mobile menu toggle */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 text-white shadow-lg transition hover:bg-orange-600 lg:hidden"
+          aria-label="Open navigation"
+          className="app-sidebar-trigger fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 text-white shadow-lg transition hover:bg-orange-600 lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 h-full overflow-y-auto">
-          <main className="px-4 py-5 pt-16 md:px-6 lg:px-8 lg:pt-6">
+        <div className="app-shell-main flex-1 min-w-0 h-full overflow-y-auto">
+          <main className="app-shell-content app-shell-content-mobile-nav px-4 py-5 pt-16 md:px-6 lg:px-8 lg:pt-6">
             {(sectionMap[activeSection] ?? renderOverview)()}
           </main>
         </div>

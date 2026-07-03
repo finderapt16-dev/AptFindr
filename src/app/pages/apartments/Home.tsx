@@ -110,8 +110,10 @@ function TenantBrowse() {
     1000,
     savedPreferences?.saveBudgetPreferences === false ? 6000 : Number(savedPreferences?.maxBudget) || 6000,
   ];
+  const initialBudgetFilterEnabled = savedPreferences?.saveBudgetPreferences === true;
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery || savedPreferences?.preferredArea || "");
   const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
+  const [budgetFilterEnabled, setBudgetFilterEnabled] = useState(initialBudgetFilterEnabled);
   const [minPriceInput, setMinPriceInput] = useState(String(initialPriceRange[0]));
   const [maxPriceInput, setMaxPriceInput] = useState(String(initialPriceRange[1]));
   const [bedrooms, setBedrooms] = useState(savedPreferences?.minBedrooms || "any");
@@ -126,10 +128,11 @@ function TenantBrowse() {
   const [favoriteRows, setFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
 
-  const applyPriceRange = (range: [number, number]) => {
+  const applyPriceRange = (range: [number, number], enabled = true) => {
     setPriceRange(range);
     setMinPriceInput(String(range[0]));
     setMaxPriceInput(String(range[1]));
+    setBudgetFilterEnabled(enabled);
   };
 
   useEffect(() => {
@@ -146,7 +149,10 @@ function TenantBrowse() {
       .then((preferences) => {
         if (!mounted || !preferences) return;
         setSearchQuery(preferences.preferredArea || "");
-        applyPriceRange([1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000]);
+        applyPriceRange(
+          [1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000],
+          preferences.saveBudgetPreferences === true,
+        );
         setBedrooms(preferences.minBedrooms || "any");
         setPetFriendly(Boolean(preferences.petFriendly));
         setParking(Boolean(preferences.parking));
@@ -165,7 +171,7 @@ function TenantBrowse() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, priceRange, bedrooms, petFriendly, parking, furnished, sortBy, itemsPerPage]);
+  }, [searchQuery, priceRange, budgetFilterEnabled, bedrooms, petFriendly, parking, furnished, sortBy, itemsPerPage]);
 
   useEffect(() => {
     let mounted = true;
@@ -229,7 +235,7 @@ function TenantBrowse() {
       }
 
       const roomPrice = getLowestAvailableRoomPrice(apt);
-      if (roomPrice !== null && (roomPrice < priceRange[0] || roomPrice > priceRange[1])) return false;
+      if (budgetFilterEnabled && roomPrice !== null && (roomPrice < priceRange[0] || roomPrice > priceRange[1])) return false;
 
       if (bedrooms !== "any") {
         const minBeds = parseInt(bedrooms);
@@ -248,7 +254,7 @@ function TenantBrowse() {
 
       if (isTenant) {
         const preferences: TenantPreferences = {
-          maxBudget: priceRange[1],
+          maxBudget: budgetFilterEnabled ? priceRange[1] : undefined,
           preferredArea: searchQuery || undefined,
           petFriendly,
           parking,
@@ -282,13 +288,13 @@ function TenantBrowse() {
       }
       return (getLowestAvailableRoomPrice(a) ?? Number.MAX_SAFE_INTEGER) - (getLowestAvailableRoomPrice(b) ?? Number.MAX_SAFE_INTEGER);
     });
-  }, [allApartments, searchQuery, priceRange, bedrooms, petFriendly, parking, furnished, sortBy, user?.role, landlordById, userFavorites, viewRows, favoriteRows]);
+  }, [allApartments, searchQuery, priceRange, budgetFilterEnabled, bedrooms, petFriendly, parking, furnished, sortBy, user?.role, landlordById, userFavorites, viewRows, favoriteRows]);
 
   const totalPages = Math.max(1, Math.ceil(filteredApartments.length / itemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
   const pageStart = (safePage - 1) * itemsPerPage;
   const paginatedApartments = filteredApartments.slice(pageStart, pageStart + itemsPerPage);
-  const activeFilterCount = [petFriendly, parking, furnished, bedrooms !== "any", priceRange[0] !== 1000 || priceRange[1] !== 6000].filter(Boolean).length;
+  const activeFilterCount = [petFriendly, parking, furnished, bedrooms !== "any", budgetFilterEnabled].filter(Boolean).length;
   const mappedApartmentCount = filteredApartments.filter((apartment) => Number.isFinite(apartment.lat) && Number.isFinite(apartment.lng) && !(apartment.lat === 0 && apartment.lng === 0)).length;
   const realPriceValues = useMemo(
     () =>
@@ -327,7 +333,7 @@ function TenantBrowse() {
 
   const resetFilters = () => {
     setSearchQuery("");
-    applyPriceRange([1000, 6000]);
+    applyPriceRange([1000, 6000], false);
     setBedrooms("any");
     setPetFriendly(false);
     setParking(false);
@@ -349,7 +355,10 @@ function TenantBrowse() {
     }
 
     setSearchQuery(preferences.preferredArea || "");
-    applyPriceRange([1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000]);
+    applyPriceRange(
+      [1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000],
+      preferences.saveBudgetPreferences === true,
+    );
     setBedrooms(preferences.minBedrooms || "any");
     setPetFriendly(Boolean(preferences.petFriendly));
     setParking(Boolean(preferences.parking));
@@ -398,6 +407,7 @@ function TenantBrowse() {
     if (!value.trim()) return;
     const next = Number(value);
     if (!Number.isFinite(next)) return;
+    setBudgetFilterEnabled(true);
     setPriceRange((current) => [Math.max(0, next), current[1]]);
   };
 
@@ -406,6 +416,7 @@ function TenantBrowse() {
     if (!value.trim()) return;
     const next = Number(value);
     if (!Number.isFinite(next)) return;
+    setBudgetFilterEnabled(true);
     setPriceRange((current) => [current[0], Math.max(0, next)]);
   };
 
@@ -429,6 +440,7 @@ function TenantBrowse() {
   }) => (
     <Link
       to={href}
+      aria-current={active ? "page" : undefined}
       className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold transition ${
         active ? "bg-orange-500 text-white shadow-lg shadow-orange-950/25" : "text-white/65 hover:bg-white/10 hover:text-white"
       }`}
@@ -436,7 +448,7 @@ function TenantBrowse() {
       <Icon className="h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-black text-white">
+        <span className="app-sidebar-badge flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-black text-white">
           {badge}
         </span>
       )}
@@ -600,12 +612,13 @@ function TenantBrowse() {
     const availableRooms = getAvailableRooms(apartment);
     const locationText = [apartment.city, apartment.state].filter(Boolean).join(", ") || apartment.address;
     const favorite = isFavorite(apartment.id);
+    const imageUrl = apartment.image || apartment.images?.[0];
 
     return (
       <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)]">
         <div className="relative aspect-[4/3] bg-slate-100">
-          {apartment.image ? (
-            <img src={getImageUrl(apartment.image)} alt={apartment.title} className="h-full w-full object-cover" />
+          {imageUrl ? (
+            <img src={getImageUrl(imageUrl)} alt={apartment.title} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <Building2 className="h-12 w-12 text-slate-300" />
@@ -617,6 +630,7 @@ function TenantBrowse() {
             {apartment.petFriendly && <Badge className="rounded-md bg-violet-500 text-white">Pet Friendly</Badge>}
           </div>
           <button
+            type="button"
             title={favorite ? "Remove from favorites" : "Add to favorites"}
             onClick={() => void toggleFavorite(apartment.id)}
             className={`absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg transition hover:scale-105 ${favorite ? "text-rose-500" : "text-slate-500"}`}
@@ -655,8 +669,8 @@ function TenantBrowse() {
     <Dialog open={preferencesOpen} onOpenChange={setPreferencesOpen}>
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
       <div className="flex h-full">
-        <aside className="hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
-          <div className="px-5 pb-5 pt-6">
+        <aside className="app-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
+          <div className="app-sidebar-brand px-5 pb-5 pt-6">
             <Link to="/dashboard" className="flex items-center gap-2.5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-950/30">
                 <HomeIcon className="h-6 w-6 fill-white/20 text-white" />
@@ -669,7 +683,7 @@ function TenantBrowse() {
           </div>
 
           <div className="px-4 pb-5">
-            <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
+            <div className="app-sidebar-profile flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.07] px-3 py-3 shadow-inner shadow-white/5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-lime-300 to-orange-500 text-sm font-black text-white shadow">
                 {user?.avatar ? <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase() ?? "U"}
               </div>
@@ -704,7 +718,7 @@ function TenantBrowse() {
 
           <div className="mt-auto border-t border-white/10 px-4 py-4">
             <LogoutConfirmation onConfirm={handleLogout}>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+              <button className="app-sidebar-logout flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
                 <LogOut className="h-4 w-4" />
                 Log Out
               </button>
@@ -912,6 +926,13 @@ function Pagination({
   setCurrentPage: (page: number) => void;
   setItemsPerPage: (count: number) => void;
 }) {
+  const visiblePageCount = Math.min(5, totalPages);
+  const firstVisiblePage = Math.min(
+    Math.max(1, currentPage - Math.floor(visiblePageCount / 2)),
+    Math.max(1, totalPages - visiblePageCount + 1),
+  );
+  const visiblePages = Array.from({ length: visiblePageCount }, (_, index) => firstVisiblePage + index);
+
   return (
     <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm font-medium text-slate-600">
@@ -921,14 +942,11 @@ function Pagination({
         <button disabled={currentPage === 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40">
           <ChevronLeft className="h-4 w-4" />
         </button>
-        {Array.from({ length: totalPages }).slice(0, 5).map((_, index) => {
-          const page = index + 1;
-          return (
+        {visiblePages.map((page) => (
             <button key={page} onClick={() => setCurrentPage(page)} className={`h-10 min-w-10 rounded-lg px-3 text-sm font-black ${currentPage === page ? "bg-orange-500 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>
               {page}
             </button>
-          );
-        })}
+        ))}
         <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40">
           <ChevronRight className="h-4 w-4" />
         </button>
