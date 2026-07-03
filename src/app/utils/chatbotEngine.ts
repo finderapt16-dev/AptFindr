@@ -1,4 +1,5 @@
 import type { Apartment } from '../data/apartments';
+import { isTenantVisibleApartment } from './listingVisibility';
 
 export type TenantRole = 'student' | 'employee' | 'landlord' | 'admin' | null;
 
@@ -32,7 +33,7 @@ export const TENANT_QUICK_PROMPTS: QuickPrompt[] = [
 ];
 
 function publishedListings(apartments: Apartment[]): Apartment[] {
-  return apartments.filter((apt) => apt.isPublished !== false);
+  return apartments.filter(isTenantVisibleApartment);
 }
 
 function formatPrice(amount: number): string {

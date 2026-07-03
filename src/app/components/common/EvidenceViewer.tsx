@@ -1,7 +1,3 @@
-import { useState, useMemo } from "react";
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
-import { Badge } from "../ui/badge";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,6 +6,10 @@ import {
   FileText,
   Image as ImageIcon,
 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 
 export interface EvidenceItem {
   id: string;
@@ -26,7 +26,6 @@ interface EvidenceViewerProps {
   evidence: EvidenceItem[];
   title?: string;
   onDownload?: (fileUrl: string, fileName: string) => void;
-  isAdmin?: boolean;
 }
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -46,7 +45,6 @@ export function EvidenceViewer({
   evidence,
   title = "Supporting Evidence",
   onDownload,
-  isAdmin = false,
 }: EvidenceViewerProps) {
   const [previewImageId, setPreviewImageId] = useState<string | null>(
     evidence.find((e) => e.fileType === "image")?.id || null
@@ -55,11 +53,6 @@ export function EvidenceViewer({
 
   const imageEvidence = useMemo(
     () => evidence.filter((e) => e.fileType === "image"),
-    [evidence]
-  );
-
-  const documentEvidence = useMemo(
-    () => evidence.filter((e) => e.fileType === "document"),
     [evidence]
   );
 

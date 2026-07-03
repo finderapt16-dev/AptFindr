@@ -62,7 +62,6 @@ async function upsertUsers(users) {
     is_verified: !!u.isVerified,
     legacy_id: u.id || null,
     status: u.status || (u.role === 'landlord' && !u.isVerified ? 'pending' : 'active'),
-    password: u.password || null,
   }));
 
   const { data, error } = await supabase.from(USERS_TABLE).upsert(payload, { onConflict: 'email' }).select('id,legacy_id');

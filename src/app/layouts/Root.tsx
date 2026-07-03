@@ -1,8 +1,8 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { Toaster } from "../components/ui/sonner";
 import { Chatbot } from "../components/common/Chatbot";
-import { useAuth } from "../contexts/AuthContext";
+import { Toaster } from "../components/ui/sonner";
 import { ApartmentsProvider } from "../contexts/ApartmentsContext";
+import { useAuth } from "../contexts/AuthContext";
 
 function RootContent() {
   const location = useLocation();

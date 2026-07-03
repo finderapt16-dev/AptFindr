@@ -42,7 +42,12 @@ export interface Apartment {
   lat: number;
   lng: number;
   landlordId?: string;
+  /** Canonical landlord verification loaded from public_landlords.is_verified. */
+  landlordVerified?: boolean;
   isPublished?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  isArchived?: boolean;
+  deletedAt?: string;
   status?: ApartmentStatus;
   rooms?: ApartmentRoom[];
   location?: string;
@@ -142,6 +147,9 @@ export interface ApartmentRow {
   lng: number | string | null;
   landlord_id: string | null;
   is_published: boolean | null;
+  approval_status?: string | null;
+  is_archived?: boolean | null;
+  deleted_at?: string | null;
   status?: string | null;
   features?: Record<string, unknown> | null;
   created_at?: string | null;
@@ -195,7 +203,7 @@ const EMPTY_FORM_VALUES: ApartmentFormValues = {
   utilities: false,
   lat: '',
   lng: '',
-  isPublished: true,
+  isPublished: false,
   landlordId: '',
   status: 'available',
 };
@@ -312,6 +320,9 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     lng: toNumber(row.lng),
     landlordId: row.landlord_id ?? undefined,
     isPublished: row.is_published ?? undefined,
+    approvalStatus: row.approval_status === 'approved' || row.approval_status === 'rejected' ? row.approval_status : 'pending',
+    isArchived: row.is_archived === true,
+    deletedAt: row.deleted_at ?? undefined,
     status: toApartmentStatus(row.status),
     createdAt: row.created_at ?? undefined,
     updatedAt: row.updated_at ?? undefined,
@@ -418,7 +429,9 @@ export const apartmentFormValuesToInsertRow = (
     lat: toNumber(values.lat),
     lng: toNumber(values.lng),
     landlord_id: resolvedLandlordId,
-    is_published: values.isPublished,
+    // Every new property enters the administrator approval queue. Publishing
+    // is performed through fn_set_apartment_publication after approval.
+    is_published: false,
     status: values.status ?? 'available',
     features: {
       availableDate: values.availableDate,
@@ -434,34 +447,8 @@ export const apartmentFormValuesToUpdateRow = (
 ): ApartmentInsertRow => apartmentFormValuesToInsertRow(values, landlordId);
 
 export {
-  getCurrentSessionUser,
-  getCurrentUserId,
-  isApartmentFavorite,
-  getFavoriteApartmentIds,
-  fetchApartments,
-  getApartmentById,
-  createApartment,
-  updateApartment,
-  deleteApartment,
-  updateApartmentPublication,
-  updateApartmentStatus,
-  fetchApartmentRooms,
-  createApartmentRoom,
-  updateApartmentRoom,
-  updateApartmentRoomStatus,
-  deleteApartmentRoom,
-  toggleFavorite,
-  reportApartment,
-  recordApartmentView,
-  resolveAppUserId,
-  getLandlordVerification,
-  listFavoriteApartments,
-  fetchApartmentWithImages,
-  fetchApartmentInspectionDetails,
-  insertApartmentImages,
-  replaceApartmentImages,
-  uploadApartmentImage,
-  uploadApartmentRoomImage,
-  insertApartmentRooms,
-  fetchApartmentsForLandlord,
+  createApartment, createApartmentRoom, deleteApartment, deleteApartmentRoom, fetchApartmentInspectionDetails, fetchApartmentRooms, fetchApartmentWithImages, fetchApartments, fetchApartmentsForLandlord, getApartmentById, getCurrentSessionUser,
+  getCurrentUserId, getFavoriteApartmentIds, getLandlordVerification, insertApartmentImages, insertApartmentRooms, isApartmentFavorite, listFavoriteApartments, recordApartmentView, replaceApartmentImages, reportApartment, resolveAppUserId, toggleFavorite, updateApartment, updateApartmentPublication, updateApartmentRoom,
+  updateApartmentRoomStatus, updateApartmentStatus, uploadApartmentImage,
+  uploadApartmentRoomImage
 } from '../services/apartmentsService';

@@ -52,7 +52,10 @@ const SUMMARY_FIELDS: Record<string, string> = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  apartment_created: "Apartment submitted",
   apartment_updated: "Apartment updated",
+  apartment_deleted: "Apartment deleted",
+  apartment_images_updated: "Apartment images updated",
   apartment_publication_updated: "Listing visibility updated",
   apartment_status_updated: "Apartment status updated",
   apartment_room_created: "Room added",

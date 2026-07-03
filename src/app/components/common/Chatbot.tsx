@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Bot, MessageCircle, Send, Sparkles, User, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { useApartmentsContext } from '../../contexts/ApartmentsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -12,6 +10,9 @@ import {
   TENANT_QUICK_PROMPTS,
   type ChatbotReply,
 } from '../../utils/chatbotEngine';
+import { isTenantVisibleApartment } from '../../utils/listingVisibility';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface Message {
   id: string;
@@ -179,7 +180,7 @@ export function Chatbot({ userRole }: ChatbotProps) {
                     ? 'Loading listings…'
                     : error
                       ? 'Offline tips only'
-                      : `${apartments.filter((a) => a.isPublished !== false).length} live listings`}
+                      : `${apartments.filter(isTenantVisibleApartment).length} live listings`}
                 </p>
               </div>
             </div>

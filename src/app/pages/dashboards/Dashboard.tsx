@@ -1,8 +1,8 @@
-import { Navigate } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { StudentEmployeeDashboard } from "./StudentEmployeeDashboard";
-import { LandlordDashboard } from "./LandlordDashboard";
+import { Navigate } from "react-router-dom";
 import { AdminDashboard } from "./AdminDashboard";
+import { LandlordDashboard } from "./LandlordDashboard";
+import { StudentEmployeeDashboard } from "./StudentEmployeeDashboard";
 
 export function Dashboard() {
   const { user, isAuthenticated } = useAuth();

@@ -42,8 +42,7 @@ export async function uploadReportEvidence(
   try {
     // Upload file to storage bucket
     const fileExt = input.fileName.split(".").pop();
-    const fileName = `${input.reportId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    const bucketPath = `report-evidence/${fileName}`;
+    const bucketPath = `${input.reportId}/${Date.now()}-${Math.random().toString(36).slice(2, 11)}.${fileExt || "bin"}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("report-evidence")
@@ -57,12 +56,12 @@ export async function uploadReportEvidence(
       return null;
     }
 
-    // Get public URL
-    const { data: publicUrl } = supabase.storage
+    // Evidence is private. Return a short-lived signed URL to the uploader.
+    const { data: signedUrl, error: signedUrlError } = await supabase.storage
       .from("report-evidence")
-      .getPublicUrl(uploadData.path);
+      .createSignedUrl(uploadData.path, 60 * 60);
 
-    if (!publicUrl.publicUrl) {
+    if (signedUrlError || !signedUrl?.signedUrl) {
       return null;
     }
 
@@ -70,21 +69,22 @@ export async function uploadReportEvidence(
     const { data, error } = await supabase.from("report_evidence").insert({
       report_id: input.reportId,
       file_name: input.fileName,
-      file_url: publicUrl.publicUrl,
+      file_url: uploadData.path,
       file_type: input.fileType,
       mime_type: input.mimeType,
       file_size: input.file.size,
       uploaded_by: input.uploadedBy,
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !data) {
       console.error("Evidence record creation error:", error);
+      await supabase.storage.from("report-evidence").remove([uploadData.path]);
       return null;
     }
 
     return {
-      id: uploadData.path,
-      url: publicUrl.publicUrl,
+      id: data.id,
+      url: signedUrl.signedUrl,
     };
   } catch (error) {
     console.error("Error uploading report evidence:", error);
@@ -180,7 +180,13 @@ export async function getReportEvidence(reportId: string) {
       return [];
     }
 
-    return data || [];
+    const rows = data || [];
+    return await Promise.all(rows.map(async (row) => {
+      const path = typeof row.file_url === "string" ? row.file_url : "";
+      if (!path || path.startsWith("http://") || path.startsWith("https://")) return row;
+      const { data: signed } = await supabase.storage.from("report-evidence").createSignedUrl(path, 60 * 60);
+      return { ...row, file_url: signed?.signedUrl || "" };
+    }));
   } catch (error) {
     console.error("Error fetching report evidence:", error);
     return [];

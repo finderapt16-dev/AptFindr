@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bath,
   Bed,
@@ -18,7 +16,6 @@ import {
   HelpCircle,
   Home as HomeIcon,
   LayoutDashboard,
-  ListFilter,
   LocateFixed,
   LogOut,
   Map,
@@ -35,35 +32,41 @@ import {
   Star,
   Tag,
   TrendingUp,
-  TriangleAlert,
+  TriangleAlert
 } from "lucide-react";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
-import { Button } from "@/app/components/ui/button";
+import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
+import { MapView } from "@/app/components/features/map/MapView";
 import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Label } from "@/app/components/ui/label";
 import { Switch } from "@/app/components/ui/switch";
-import { toast } from "sonner";
-import { MapView } from "@/app/components/features/map/MapView";
-import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
-import { rankApartments, type TenantPreferences } from "@/app/utils/rankingEngine";
-import { useFavorites } from "@/app/hooks/useFavorites";
-import { getImageUrl } from "@/app/utils/images";
+import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 import type { Apartment } from "@/app/data/apartments";
+import { useFavorites } from "@/app/hooks/useFavorites";
 import {
   fetchApartmentViews,
   fetchFavorites as fetchDashboardFavorites,
   fetchTenantPreferences,
-  fetchUsers,
   getCachedTenantPreferences,
   saveTenantPreferences,
   type DashboardApartmentViewRow,
   type DashboardFavoriteRow,
-  type DashboardUserRow,
   type TenantPreferenceSortOption,
 } from "@/app/services/dashboardSupabaseService";
+import { getImageUrl } from "@/app/utils/images";
+import {
+  getAvailableRoomCount,
+  getLowestAvailableRoomPrice,
+  isTenantVisibleApartment,
+} from "@/app/utils/listingVisibility";
+import { rankApartments, type TenantPreferences } from "@/app/utils/rankingEngine";
+import { toast } from "sonner";
 import { LandlordBrowse } from "./LandlordBrowse";
 
 type SortOption = TenantPreferenceSortOption;
@@ -95,7 +98,7 @@ function BrowseContent() {
 function TenantBrowse() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, logout } = useAuth();
+  const { user, users, logout } = useAuth();
   const { apartments: allApartments, isLoading: apartmentsLoading, error: apartmentsError } = useApartmentsContext();
   const { favorites: userFavorites, isFavorite, toggleFavorite } = useFavorites();
 
@@ -119,7 +122,6 @@ function TenantBrowse() {
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
-  const [users, setUsers] = useState<DashboardUserRow[]>([]);
   const [viewRows, setViewRows] = useState<DashboardApartmentViewRow[]>([]);
   const [favoriteRows, setFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -168,16 +170,14 @@ function TenantBrowse() {
   useEffect(() => {
     let mounted = true;
 
-    void Promise.all([fetchUsers(), fetchApartmentViews(), fetchDashboardFavorites()])
-      .then(([rows, views, favorites]) => {
+    void Promise.all([fetchApartmentViews(), fetchDashboardFavorites()])
+      .then(([views, favorites]) => {
         if (!mounted) return;
-        setUsers(rows);
         setViewRows(views);
         setFavoriteRows(favorites);
       })
       .catch(() => {
         if (!mounted) return;
-        setUsers([]);
         setViewRows([]);
         setFavoriteRows([]);
       });
@@ -187,27 +187,8 @@ function TenantBrowse() {
     };
   }, []);
 
-  const isApartmentAvailable = (apt: Apartment) => {
-    if (apt.rooms?.length) {
-      return apt.rooms.some((room) => {
-        const status = room.status ?? (room.isOccupied ? "occupied" : "available");
-        return status === "available";
-      });
-    }
-
-    return !apt.status || apt.status === "available";
-  };
-
-  const getAvailableRooms = (apt: Apartment) => {
-    if (apt.rooms?.length) {
-      return apt.rooms.filter((room) => {
-        const status = room.status ?? (room.isOccupied ? "occupied" : "available");
-        return status === "available" && !room.isOccupied;
-      }).length;
-    }
-
-    return isApartmentAvailable(apt) ? 1 : 0;
-  };
+  const isApartmentAvailable = isTenantVisibleApartment;
+  const getAvailableRooms = getAvailableRoomCount;
 
   const getViewCount = (apartmentId: string) =>
     viewRows
@@ -222,19 +203,18 @@ function TenantBrowse() {
   const getLandlord = (apartment: Apartment) => apartment.landlordId ? landlordById.get(apartment.landlordId) : undefined;
 
   const isVerifiedListing = (apartment: Apartment) => {
+    if (typeof apartment.landlordVerified === "boolean") return apartment.landlordVerified;
     const landlord = getLandlord(apartment);
-    return landlord?.is_verified === true || landlord?.isVerified === true;
+    return landlord?.isVerified === true;
   };
 
   const getVerificationStatus = (apartment: Apartment) => {
-    const landlord = getLandlord(apartment);
-    return String(landlord?.status || (isVerifiedListing(apartment) ? "verified" : "pending")).toLowerCase();
+    return isVerifiedListing(apartment) ? "verified" : "pending";
   };
 
   const filteredApartments = useMemo(() => {
     const filtered = allApartments.filter((apt) => {
       if (apt.isPublished === false) return false;
-      if ((user?.role === "student" || user?.role === "employee" || !user) && !isVerifiedListing(apt)) return false;
       if (!isApartmentAvailable(apt)) return false;
 
       if (searchQuery) {
@@ -248,7 +228,8 @@ function TenantBrowse() {
         if (!matchesSearch) return false;
       }
 
-      if (apt.price < priceRange[0] || apt.price > priceRange[1]) return false;
+      const roomPrice = getLowestAvailableRoomPrice(apt);
+      if (roomPrice !== null && (roomPrice < priceRange[0] || roomPrice > priceRange[1])) return false;
 
       if (bedrooms !== "any") {
         const minBeds = parseInt(bedrooms);
@@ -275,21 +256,31 @@ function TenantBrowse() {
           tenantType: user?.role === "student" ? "student" : "employee",
         };
 
-        return rankApartments(filtered, preferences, userFavorites);
+        const apartmentViewCounts = new globalThis.Map<string, number>();
+        viewRows.forEach((row) => {
+          const apartmentId = row.apartment_id ?? row.apartmentId ?? "";
+          if (apartmentId) apartmentViewCounts.set(apartmentId, (apartmentViewCounts.get(apartmentId) ?? 0) + (Number(row.view_count) || 1));
+        });
+        const apartmentFavoriteCounts = new globalThis.Map<string, number>();
+        favoriteRows.forEach((row) => {
+          const apartmentId = row.apartment_id ?? row.apartmentId ?? "";
+          if (apartmentId) apartmentFavoriteCounts.set(apartmentId, (apartmentFavoriteCounts.get(apartmentId) ?? 0) + 1);
+        });
+        return rankApartments(filtered, preferences, userFavorites, { apartmentViewCounts, apartmentFavoriteCounts });
       }
 
       return filtered.sort((a, b) => new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime());
     }
 
     return filtered.sort((a, b) => {
-      if (sortBy === "price_high") return b.price - a.price;
+      if (sortBy === "price_high") return (getLowestAvailableRoomPrice(b) ?? -1) - (getLowestAvailableRoomPrice(a) ?? -1);
       if (sortBy === "newest") return new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime();
       if (sortBy === "popular") {
         const leftEngagement = getViewCount(a.id) + getFavoriteCount(a.id) * 2;
         const rightEngagement = getViewCount(b.id) + getFavoriteCount(b.id) * 2;
         return rightEngagement - leftEngagement || new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime();
       }
-      return a.price - b.price;
+      return (getLowestAvailableRoomPrice(a) ?? Number.MAX_SAFE_INTEGER) - (getLowestAvailableRoomPrice(b) ?? Number.MAX_SAFE_INTEGER);
     });
   }, [allApartments, searchQuery, priceRange, bedrooms, petFriendly, parking, furnished, sortBy, user?.role, landlordById, userFavorites, viewRows, favoriteRows]);
 
@@ -302,8 +293,9 @@ function TenantBrowse() {
   const realPriceValues = useMemo(
     () =>
       allApartments
-        .filter((apt) => apt.isPublished !== false && Number.isFinite(Number(apt.price)) && Number(apt.price) > 0)
-        .map((apt) => Number(apt.price)),
+        .filter(isTenantVisibleApartment)
+        .flatMap((apt) => (apt.rooms ?? []).map((room) => Number(room.price)))
+        .filter((price) => Number.isFinite(price) && price > 0),
     [allApartments],
   );
   const quickBudgetChips = useMemo(() => {
@@ -313,7 +305,7 @@ function TenantBrowse() {
     const maxPrice = Math.max(...realPriceValues);
 
     if (minPrice === maxPrice) {
-      return [{ label: `PHP ${minPrice.toLocaleString("en-PH")}`, value: [minPrice, maxPrice] as [number, number] }];
+      return [{ label: `₱${minPrice.toLocaleString("en-PH")}`, value: [minPrice, maxPrice] as [number, number] }];
     }
 
     const roundPrice = (value: number) => Math.round(value / 100) * 100;
@@ -323,7 +315,7 @@ function TenantBrowse() {
       const start = index === 0 ? minPrice : roundPrice(minPrice + step * index);
       const end = index === 3 ? maxPrice : roundPrice(minPrice + step * (index + 1));
       return {
-        label: index === 3 ? `PHP ${start.toLocaleString("en-PH")}+` : `PHP ${start.toLocaleString("en-PH")} - PHP ${end.toLocaleString("en-PH")}`,
+        label: index === 3 ? `₱${start.toLocaleString("en-PH")}+` : `₱${start.toLocaleString("en-PH")} - ₱${end.toLocaleString("en-PH")}`,
         value: [start, end] as [number, number],
       };
     });
@@ -639,8 +631,7 @@ function TenantBrowse() {
               <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-slate-500"><MapPin className="h-4 w-4 text-orange-500" />{locationText}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-2xl font-black text-orange-600">PHP {Number(apartment.price || 0).toLocaleString("en-PH")}</p>
-              <p className="text-xs font-medium text-slate-500">/month</p>
+              <p className="text-sm font-black text-orange-600">View room prices</p>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2 border-t border-slate-100 pt-4 text-sm">
@@ -712,10 +703,12 @@ function TenantBrowse() {
           </nav>
 
           <div className="mt-auto border-t border-white/10 px-4 py-4">
-            <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
-              <LogOut className="h-4 w-4" />
-              Log Out
-            </button>
+            <LogoutConfirmation onConfirm={handleLogout}>
+              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+            </LogoutConfirmation>
           </div>
         </aside>
 
@@ -800,7 +793,7 @@ function TenantBrowse() {
                     apartments={filteredApartments.map((apt) => ({
                       id: apt.id,
                       title: apt.title,
-                      price: apt.price,
+                      price: getLowestAvailableRoomPrice(apt) ?? 0,
                       lat: apt.lat,
                       lng: apt.lng,
                       bedrooms: apt.bedrooms,
@@ -849,15 +842,6 @@ function SortButton({ icon: Icon, label, active, onClick }: { icon: ComponentTyp
   );
 }
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
-      <span className="text-sm font-bold text-slate-700">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
-  );
-}
-
 function PriceField({
   label,
   value,
@@ -871,7 +855,7 @@ function PriceField({
     <div className="space-y-2">
       <Label className="text-sm font-black text-slate-950">{label}</Label>
       <div className="flex h-14 items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 shadow-sm focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-100">
-        <span className="text-base font-black text-slate-500">PHP</span>
+        <span className="text-base font-black text-slate-500">₱</span>
         <input
           type="number"
           value={value}

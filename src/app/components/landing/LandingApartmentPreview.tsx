@@ -1,12 +1,14 @@
-import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { ArrowRight, Bath, Bed, Building2, Loader2, MapPin } from "lucide-react";
 import { motion } from "motion/react";
-import { Bed, Bath, MapPin, ArrowRight, Building2, Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useApartmentsContext } from "../../contexts/ApartmentsContext";
-import { getImageUrl } from "../../utils/images";
 import type { Apartment } from "../../data/apartments";
-import { Button } from "../ui/button";
+import { getImageUrl } from "../../utils/images";
+import { isTenantVisibleApartment } from "../../utils/listingVisibility";
+import { VerifiedBadge } from "../common/VerifiedBadge";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { Button } from "../ui/button";
 
 const PREVIEW_LIMIT = 6;
 
@@ -18,10 +20,6 @@ function resolveApartmentImage(image: string): string {
     return image;
   }
   return getImageUrl(image);
-}
-
-function formatPrice(price: number): string {
-  return `₱${price.toLocaleString("en-PH")}`;
 }
 
 function PreviewCard({ apartment }: { apartment: Apartment }) {
@@ -49,8 +47,11 @@ function PreviewCard({ apartment }: { apartment: Apartment }) {
             animate={{ x: ["0%", "420%"] }}
             transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
           />
+          {apartment.landlordVerified === true && (
+            <VerifiedBadge label="Verified Landlord" className="absolute left-3 top-3 bg-white/95 shadow-lg backdrop-blur-sm" />
+          )}
           {apartment.petFriendly && (
-            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 text-xs font-bold text-emerald-700 shadow">
+            <span className="absolute top-12 left-3 px-2.5 py-1 rounded-full bg-white/90 text-xs font-bold text-emerald-700 shadow">
               Pet friendly
             </span>
           )}
@@ -60,12 +61,7 @@ function PreviewCard({ apartment }: { apartment: Apartment }) {
             <h3 className="font-black text-lg text-slate-900 group-hover:text-amber-700 transition-colors line-clamp-2">
               {apartment.title}
             </h3>
-            <div className="text-right flex-shrink-0">
-              <p className="text-xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                {formatPrice(apartment.price)}
-              </p>
-              <p className="text-xs text-slate-500 font-medium">/month</p>
-            </div>
+            <p className="shrink-0 text-sm font-black text-orange-600">View room prices</p>
           </div>
           <div className="flex items-center text-slate-600 text-sm mb-3">
             <MapPin className="h-4 w-4 mr-1 text-amber-500 flex-shrink-0" />
@@ -113,7 +109,7 @@ export function LandingApartmentPreview({ onBrowseClick }: LandingApartmentPrevi
   const publishedApartments = useMemo(
     () =>
       apartments
-        .filter((apt) => apt.isPublished !== false)
+        .filter(isTenantVisibleApartment)
         .sort((a, b) => new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime()),
     [apartments],
   );
@@ -196,7 +192,7 @@ export function LandingListingsSection({
   const { apartments, isLoading } = useApartmentsContext();
 
   const hasPublishedApartments = useMemo(
-    () => apartments.some((apt) => apt.isPublished !== false),
+    () => apartments.some(isTenantVisibleApartment),
     [apartments],
   );
 

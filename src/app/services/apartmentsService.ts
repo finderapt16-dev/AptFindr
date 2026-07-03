@@ -3,8 +3,8 @@ import type {
   Apartment,
   ApartmentFormValues,
   ApartmentInsertRow,
-  ApartmentRow,
   ApartmentRoom,
+  ApartmentRow,
 } from '../data/apartments';
 import {
   apartmentFormValuesToInsertRow,
@@ -156,23 +156,6 @@ const identityFromInput = (input?: UserIdentityInput): SessionUser | null => {
   };
 };
 
-const toBoolean = (value: unknown): boolean => {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return value === 1;
-  }
-
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'verified' || normalized === 'approved';
-  }
-
-  return false;
-};
-
 const getStoredValue = (): SessionUser | null => {
   if (typeof window === 'undefined') {
     return null;
@@ -212,6 +195,42 @@ export const getCurrentSessionUser = (): SessionUser | null => getStoredValue();
 export const getCurrentUserId = (): string | null => getStoredValue()?.id ?? null;
 
 const normalizeApartmentRows = (rows: ApartmentRow[]): Apartment[] => rows.map((row) => apartmentRowToApartment(row));
+
+type PublicLandlordVerificationRow = { id?: string | null; is_verified?: boolean | null };
+
+const attachLandlordVerification = (
+  apartments: Apartment[],
+  landlordRows: PublicLandlordVerificationRow[] | null | undefined,
+): Apartment[] => {
+  const verificationById = new Map(
+    (landlordRows ?? [])
+      .filter((row): row is PublicLandlordVerificationRow & { id: string } => typeof row.id === 'string')
+      .map((row) => [row.id, row.is_verified === true]),
+  );
+
+  return apartments.map((apartment) => ({
+    ...apartment,
+    landlordVerified: apartment.landlordId && verificationById.has(apartment.landlordId)
+      ? verificationById.get(apartment.landlordId)
+      : undefined,
+  }));
+};
+
+const attachLandlordVerificationFromDatabase = async (apartments: Apartment[]): Promise<Apartment[]> => {
+  const landlordIds = [...new Set(apartments.map((apartment) => apartment.landlordId).filter((id): id is string => Boolean(id)))];
+  if (landlordIds.length === 0) return apartments;
+
+  const { data, error } = await supabase
+    .from('public_landlords')
+    .select('id, is_verified')
+    .in('id', landlordIds);
+
+  if (error) {
+    throw new Error(unwrapErrorMessage(error, 'Unable to verify apartment landlords.'));
+  }
+
+  return attachLandlordVerification(apartments, data as PublicLandlordVerificationRow[] | null);
+};
 
 const ensureUserIdentity = (userId?: string): UserIdentityInput => {
   const explicitUserId = userId?.trim();
@@ -374,16 +393,23 @@ export const resolveAppUserId = async (input?: UserIdentityInput): Promise<strin
 };
 
 export const fetchApartments = async (): Promise<Apartment[]> => {
-  const { data, error } = await supabase
-    .from('apartments')
-    .select(APARTMENT_SELECT)
-    .order('created_at', { ascending: false });
+  const [{ data, error }, { data: landlordRows, error: landlordError }] = await Promise.all([
+    supabase.from('apartments').select(APARTMENT_SELECT).order('created_at', { ascending: false }),
+    supabase.from('public_landlords').select('id, is_verified'),
+  ]);
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to load apartments.'));
   }
 
-  return normalizeApartmentRows((data ?? []) as ApartmentRow[]);
+  if (landlordError) {
+    throw new Error(unwrapErrorMessage(landlordError, 'Unable to verify apartment landlords.'));
+  }
+
+  return attachLandlordVerification(
+    normalizeApartmentRows((data ?? []) as ApartmentRow[]),
+    landlordRows as PublicLandlordVerificationRow[] | null,
+  );
 };
 
 export const getApartmentById = async (id: string): Promise<Apartment | null> => {
@@ -462,7 +488,7 @@ export const updateApartment = async (
   const propertyFields = [
     'title', 'price', 'bedrooms', 'bathrooms', 'sqft', 'address', 'city', 'state', 'zip',
     'description', 'amenities', 'pet_friendly', 'parking', 'furnished', 'utilities', 'lat', 'lng',
-    'landlord_id', 'is_published', 'status', 'features',
+    'landlord_id', 'status', 'features',
   ];
   const changes = buildAuditChanges(beforeData as Record<string, unknown> | null, data as Record<string, unknown>, propertyFields);
   if (valuesDiffer((beforeData as Record<string, unknown> | null)?.apartment_rooms, (data as Record<string, unknown>).apartment_rooms)) {
@@ -485,17 +511,33 @@ export const deleteApartment = async (id: string): Promise<void> => {
 };
 
 export const updateApartmentPublication = async (id: string, isPublished: boolean, actorUserId?: string): Promise<void> => {
-  const { data: before } = await supabase.from('apartments').select('is_published').eq('id', id).maybeSingle();
-  const { error } = await supabase.from('apartments').update({ is_published: isPublished }).eq('id', id);
+  const { data: before } = await supabase
+    .from('apartments')
+    .select('is_published, approval_status, is_archived, deleted_at')
+    .eq('id', id)
+    .maybeSingle();
+  const { error } = await supabase.rpc('fn_set_apartment_publication', {
+    p_apartment_id: id,
+    p_published: isPublished,
+  });
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to update listing visibility.'));
   }
+  const { data: after } = await supabase
+    .from('apartments')
+    .select('is_published, approval_status, is_archived, deleted_at')
+    .eq('id', id)
+    .maybeSingle();
   await writeApartmentAudit(
     id,
     actorUserId,
     'apartment_publication_updated',
-    buildAuditChanges(before as Record<string, unknown> | null, { is_published: isPublished }, ['is_published']),
+    buildAuditChanges(
+      before as Record<string, unknown> | null,
+      after as Record<string, unknown> | null,
+      ['is_published', 'approval_status', 'is_archived', 'deleted_at'],
+    ),
   );
 };
 
@@ -616,7 +658,9 @@ export const listFavoriteApartments = async (userId?: string): Promise<Apartment
     throw new Error(unwrapErrorMessage(error, 'Unable to load favorite apartments.'));
   }
 
-  const apartments = normalizeApartmentRows((data ?? []) as ApartmentRow[]);
+  const apartments = await attachLandlordVerificationFromDatabase(
+    normalizeApartmentRows((data ?? []) as ApartmentRow[]),
+  );
   return apartments.filter((apartment) => favoriteIds.includes(apartment.id));
 };
 
@@ -635,25 +679,12 @@ export const reportApartment = async (report: ApartmentReportInput, userId?: str
   }
 };
 
-const readVerificationValue = (row: AppUserRow): boolean => {
-  const candidateValues: unknown[] = [
-    row.is_verified,
-    row.verified,
-    row.is_landlord_verified,
-    row.landlord_verified,
-    row.verified_landlord,
-    row.verification_status,
-  ];
-
-  return candidateValues.some((value) => toBoolean(value));
-};
-
 export const getLandlordVerification = async (landlordId?: string): Promise<boolean> => {
   if (!landlordId) {
     return false;
   }
 
-  const { data, error } = await supabase.from('app_users').select('*').eq('id', landlordId).maybeSingle();
+  const { data, error } = await supabase.from('public_landlords').select('is_verified').eq('id', landlordId).maybeSingle();
 
   if (error) {
     throw new Error(unwrapErrorMessage(error, 'Unable to load landlord verification.'));
@@ -663,7 +694,7 @@ export const getLandlordVerification = async (landlordId?: string): Promise<bool
     return false;
   }
 
-  return readVerificationValue(data as AppUserRow);
+  return (data as AppUserRow).is_verified === true;
 };
 
 export const fetchApartmentsForLandlord = async (landlordId: string): Promise<Apartment[]> => {
@@ -850,7 +881,11 @@ export const createApartmentRoom = async (apartmentId: string, room: ApartmentRo
   await syncApartmentRoomSummary(apartmentId);
   await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_created', {
     room: { old: null, new: data as Record<string, unknown> },
-  }, { room_id: (data as Record<string, unknown>).id ?? null });
+  }, {
+    room_id: (data as Record<string, unknown>).id ?? null,
+    status: (data as Record<string, unknown>).status ?? 'available',
+    image_count: Array.isArray((data as Record<string, unknown>).images) ? ((data as Record<string, unknown>).images as unknown[]).length : 0,
+  });
   return apartmentRoomRowToRoom(data as Record<string, unknown>);
 };
 
@@ -873,9 +908,24 @@ export const updateApartmentRoom = async (
   }
 
   await syncApartmentRoomSummary(apartmentId);
-  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_updated', {
-    room: { old: before ?? null, new: data as Record<string, unknown> },
-  }, { room_id: roomId });
+  const trackedRoomFields = [
+    'name', 'room_type', 'sqft', 'max_occupants', 'rent', 'has_private_bath',
+    'bathroom_type', 'shared_bath_location', 'has_ac', 'status', 'description', 'images',
+  ];
+  const changedFields = trackedRoomFields.filter((field) => valuesDiffer(
+    (before as Record<string, unknown> | null)?.[field],
+    (data as Record<string, unknown>)[field],
+  ));
+  if (changedFields.length > 0) {
+    await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_updated', {
+      room: { old: before ?? null, new: data as Record<string, unknown> },
+    }, {
+      room_id: roomId,
+      changed_fields: changedFields,
+      status: (data as Record<string, unknown>).status ?? 'available',
+      image_count: Array.isArray((data as Record<string, unknown>).images) ? ((data as Record<string, unknown>).images as unknown[]).length : 0,
+    });
+  }
   return apartmentRoomRowToRoom(data as Record<string, unknown>);
 };
 
@@ -905,7 +955,7 @@ export const updateApartmentRoomStatus = async (
     { room_status: nextStatus },
     ['room_status'],
   );
-  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_status_updated', statusChanges, { room_id: roomId });
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_status_updated', statusChanges, { room_id: roomId, status: nextStatus, changed_fields: ['status'] });
 };
 
 export const deleteApartmentRoom = async (apartmentId: string, roomId: string, actorUserId?: string): Promise<void> => {
@@ -919,7 +969,7 @@ export const deleteApartmentRoom = async (apartmentId: string, roomId: string, a
   await syncApartmentRoomSummary(apartmentId);
   await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_deleted', {
     room: { old: before ?? null, new: null },
-  }, { room_id: roomId });
+  }, { room_id: roomId, status: before?.status ?? null });
 };
 
 export const uploadApartmentImage = async (
@@ -965,7 +1015,12 @@ export const uploadApartmentRoomImage = async (
   return supabase.storage.from('apartment-images').getPublicUrl(path).data.publicUrl;
 };
 
-export const replaceApartmentImages = async (apartmentId: string, images: string[]): Promise<void> => {
+export const replaceApartmentImages = async (apartmentId: string, images: string[], actorUserId?: string): Promise<void> => {
+  const { data: before } = await supabase
+    .from('apartment_images')
+    .select('url, is_primary, sort_order')
+    .eq('apartment_id', apartmentId)
+    .order('sort_order');
   const { error } = await supabase.from('apartment_images').delete().eq('apartment_id', apartmentId);
 
   if (error) {
@@ -973,6 +1028,9 @@ export const replaceApartmentImages = async (apartmentId: string, images: string
   }
 
   await insertApartmentImages(apartmentId, images);
+  await writeApartmentAudit(apartmentId, actorUserId, 'apartment_images_updated', {
+    images: { old: before ?? [], new: images },
+  }, { image_count: images.length, changed_fields: ['images'] });
 };
 
 export const recordApartmentView = async (

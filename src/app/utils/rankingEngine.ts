@@ -49,6 +49,8 @@ export interface RankingContext {
   userViewedIds?: string[];
   landlordVerifications?: Map<string, boolean>;
   apartmentApplications?: Map<string, number>;
+  apartmentViewCounts?: Map<string, number>;
+  apartmentFavoriteCounts?: Map<string, number>;
 }
 
 // ============================================================================
@@ -288,7 +290,7 @@ function calculateVerificationScore(
   let score = 0;
 
   // Landlord verification (primary factor)
-  if (apartment.landlordId && verificationMap?.get(apartment.landlordId)) {
+  if (apartment.landlordVerified === true || (apartment.landlordId && verificationMap?.get(apartment.landlordId))) {
     score += 60;
   }
 
@@ -323,12 +325,12 @@ function calculatePopularityScore(
   let score = 0;
 
   // View count (up to 50 views)
-  const views = getApartmentViewCount(apartment.id);
+  const views = context?.apartmentViewCounts?.get(apartment.id) ?? getApartmentViewCount(apartment.id);
   const normalizedViews = Math.min(views / 50, 1);
   score += normalizedViews * 40;
 
   // Favorite count (up to 20 favorites)
-  const favorites = getApartmentFavoriteCount(apartment.id);
+  const favorites = context?.apartmentFavoriteCounts?.get(apartment.id) ?? getApartmentFavoriteCount(apartment.id);
   const normalizedFavorites = Math.min(favorites / 20, 1);
   score += normalizedFavorites * 40;
 
@@ -423,7 +425,7 @@ function getLandlordVerificationMap(verificationMap?: Map<string, boolean>): Map
   try {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     users.forEach((user: any) => {
-      if (user.id && (user.isVerified || user.is_verified || user.status === 'verified')) {
+      if (user.id && (user.isVerified === true || user.is_verified === true)) {
         map.set(user.id, true);
       }
     });
@@ -493,6 +495,8 @@ export function rankApartments(
     userFavoriteIds,
     landlordVerifications: context?.landlordVerifications,
     apartmentApplications: context?.apartmentApplications,
+    apartmentViewCounts: context?.apartmentViewCounts,
+    apartmentFavoriteCounts: context?.apartmentFavoriteCounts,
   };
 
   return apartments

@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Bell,
@@ -15,15 +13,17 @@ import {
   SlidersHorizontal,
   Trash2,
   Upload,
-  User,
-  X,
+  User
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { useAuth } from "@/app/contexts/AuthContext";
-import { updateUserProfile } from "@/app/services/dashboardSupabaseService";
-import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { deleteUser as deleteUserAccount } from "@/app/services/authService";
+import { fetchUserPreferenceSections, saveUserPreferenceSection, updateUserProfile, uploadUserAvatar } from "@/app/services/dashboardSupabaseService";
 
 type UserSettingsProfile = {
   firstName: string;
@@ -170,6 +170,24 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
 
   const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
 
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) return () => { active = false; };
+    void fetchUserPreferenceSections(user.id)
+      .then((sections) => {
+        if (!active) return;
+        if (sections.alerts && typeof sections.alerts === "object" && !Array.isArray(sections.alerts)) {
+          setAlerts((current) => ({ ...current, ...sections.alerts as Partial<UserAlerts> }));
+        }
+        if (sections.security && typeof sections.security === "object" && !Array.isArray(sections.security)) {
+          const saved = sections.security as Record<string, unknown>;
+          if (typeof saved.passwordLastChanged === "string") setSecurity({ passwordLastChanged: saved.passwordLastChanged });
+        }
+      })
+      .catch((error) => console.error("Unable to load account preferences:", error));
+    return () => { active = false; };
+  }, [user?.id]);
+
   const fullName = `${profile.firstName} ${profile.lastName}`.trim();
   const roleLabel = user?.role === "student" ? "Student" : user?.role === "employee" ? "Employee" : user?.role || "Tenant";
   const hasEmploymentInfo = Boolean(profile.company?.trim() || profile.workAddress?.trim());
@@ -198,7 +216,7 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
     });
   };
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -214,19 +232,18 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const avatar = reader.result as string;
+    if (!user) return;
+    try {
+      const avatar = await uploadUserAvatar(user.id, file);
       updateProfile((p) => ({ ...p, avatar }));
-      if (user) {
-        void updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: avatar })
-          .then(() => toast.success("Profile photo uploaded!"))
-          .catch(() => toast.success("Photo saved locally; sync to cloud failed."));
-      } else {
-        toast.success("Profile photo uploaded!");
-      }
-    };
-    reader.readAsDataURL(file);
+      const synced = await updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: avatar });
+      if (!synced) throw new Error("Unable to update the profile photo.");
+      toast.success("Profile photo uploaded!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to upload the profile photo.");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const handleRemoveAvatar = async () => {
@@ -295,6 +312,7 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
       await updateUser(user.id, { password: passwordForm.next });
       const passwordLastChanged = new Date().toISOString();
       updateSecurity(() => ({ passwordLastChanged }));
+      await saveUserPreferenceSection(user.id, "security", { passwordLastChanged });
       setPasswordForm({ current: "", next: "", confirm: "" });
       toast.success("Password updated successfully!");
     } catch (error) {
@@ -303,23 +321,27 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
     }
   };
 
-  const handleDeleteAccount = () => {
-    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      if (user) {
-        const users = JSON.parse(localStorage.getItem("users") || "[]");
-        localStorage.setItem("users", JSON.stringify(users.filter((u: any) => u.id !== user.id)));
-        const passwords = JSON.parse(localStorage.getItem("passwords") || "{}");
-        delete passwords[user.email];
-        localStorage.setItem("passwords", JSON.stringify(passwords));
-        localStorage.removeItem(`userProfile_${user.id}`);
-        localStorage.removeItem(`userAlerts_${user.id}`);
-        localStorage.removeItem(`userPreferences_${user.id}`);
-        localStorage.removeItem(`userSecurity_${user.id}`);
-      }
+  const handleSaveAlerts = async () => {
+    if (!user?.id) return;
+    try {
+      await saveUserPreferenceSection(user.id, "alerts", alerts);
+      toast.success("Settings saved!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save alert preferences.");
+    }
+  };
 
-      logout();
-      toast.success("Account deleted successfully");
-      navigate("/");
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      if (!user) return;
+      try {
+        await deleteUserAccount(user.id);
+        logout();
+        toast.success("Account deleted successfully");
+        navigate("/");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to delete the account.");
+      }
     }
   };
 
@@ -470,7 +492,7 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
         )}
       </section>
 
-      <SaveBar onSave={() => toast.success("Settings saved!")} />
+      <SaveBar onSave={() => void handleSaveAlerts()} />
     </div>
   );
 

@@ -1,16 +1,16 @@
-import { useState, useRef } from "react";
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 import {
-  Upload,
-  X,
-  Star,
   Camera,
-  Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
+  Image as ImageIcon,
+  Star,
+  Upload,
+  X,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 
 export interface UploadedImage {
   id: string;
@@ -58,6 +58,10 @@ export function MultiImageUploader({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
 
   const validateFile = (file: File): boolean => {
     if (!allowedFormats.includes(file.type)) {

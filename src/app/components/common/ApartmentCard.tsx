@@ -1,12 +1,12 @@
+import { Bath, Bed, Heart, MapPin, Square } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Heart, Bed, Bath, Square, MapPin, Flag } from "lucide-react";
-import { Card, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Apartment } from "../../data/apartments";
-import { getImageUrl } from "../../utils/images";
-import { useFavorites } from "../../hooks/useFavorites";
 import { useAuth } from "../../contexts/AuthContext";
+import { Apartment } from "../../data/apartments";
+import { useFavorites } from "../../hooks/useFavorites";
+import { getImageUrl } from "../../utils/images";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 import { VerifiedBadge } from "./VerifiedBadge";
 
 interface ApartmentCardProps {
@@ -35,26 +35,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
   const showFavoriteButton = user?.role !== "admin" && !isOwnListing;
 
   const landlord = apartment.landlordId ? users.find((entry) => entry.id === apartment.landlordId) : undefined;
-  const landlordStatus = String(landlord?.status || "").toLowerCase();
-  const verifiedLandlord = landlord?.isVerified === true || landlordStatus === "verified" || landlordStatus === "approved";
-
-
-
-  // Check for pending reports (admins only)
-  const getReportCount = () => {
-    if (user?.role !== "admin") return 0;
-    try {
-      const reports = JSON.parse(localStorage.getItem("apartmentReports") || "[]");
-      return reports.filter((r: any) =>
-        r.apartmentId === apartment.id && r.status === "pending"
-      ).length;
-    } catch {
-      return 0;
-    }
-  };
-
-  const reportCount = getReportCount();
-
+  const verifiedLandlord = apartment.landlordVerified ?? landlord?.isVerified === true;
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -85,12 +66,6 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
             </Button>
           )}
           <div className="absolute left-2 top-2 flex flex-col gap-2 animate-slide-in-left">
-            {reportCount > 0 && (
-              <Badge className="bg-gradient-to-r from-red-500 to-rose-600 flex items-center gap-1 shadow-lg backdrop-blur-sm text-white font-bold">
-                <Flag className="h-3 w-3" />
-                {reportCount} {reportCount === 1 ? "Report" : "Reports"}
-              </Badge>
-            )}
             {verifiedLandlord && (
               <VerifiedBadge label="Verified Landlord" className="bg-white/95 shadow-lg backdrop-blur-sm" />
             )}
@@ -114,8 +89,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">${apartment.price}</p>
-              <p className="text-sm text-slate-600">/month</p>
+              <p className="text-sm font-bold text-orange-600">View room prices</p>
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-slate-600 border-t border-amber-100 pt-3 mt-3">

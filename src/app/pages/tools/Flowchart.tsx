@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { ArrowLeft, Palette } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Flowchart() {
   return (

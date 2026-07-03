@@ -1,64 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, type ComponentType, type ReactElement, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "motion/react";
-import { useAuth, type User } from "@/app/contexts/AuthContext";
-import { type ListingRecord } from "@/app/data/apartments";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
 import { EvidenceViewer, type EvidenceItem } from "@/app/components/common/EvidenceViewer";
-import {
-  fetchAdminReports,
-  fetchViolations,
-  fetchNotifications,
-  fetchUsers,
-  fetchApartments,
-  fetchFavorites,
-  markNotificationRead,
-  markAllNotificationsRead,
-  markNotificationUnread,
-  deleteNotification,
-  permanentlyDeleteNotification,
-  deleteAllNotifications,
-  createViolation,
-  updateViolationStatus,
-  updateReportStatus,
-  updateUserProfile,
-  deleteViolation as deleteViolationRecord,
-  getDashboardSummary,
-  fetchPendingAppeals,
-  updateAppealStatus,
-  notifyReportResolved,
-  notifyReportDismissed,
-  fetchReportWithDetails,
-  fetchUserById,
-  fetchLandlordWithDetails,
-  notifyLandlordVerification,
-  notifyLandlordViolation,
-  notifyLandlordNotice,
-  createAuditLog,
-  fetchAdminActivityLogs,
-  fetchRecentActivityLogs,
-  type DashboardUserRow,
-  type DashboardReportRow,
-  type DashboardViolationRow,
-  type DashboardNotificationRow,
-  type DashboardAppealRow,
-  type DashboardLandlordDetailsRow,
-  type DashboardAuditLogRow,
-} from "@/app/services/dashboardSupabaseService";
-import { getReportEvidence } from "@/app/services/reportEvidenceService";
-import {
-  CheckCircle2, XCircle, Shield, Users, Phone, FileText,
-  LayoutDashboard, AlertTriangle, LogOut, Menu, X, Sparkles,
-  ChevronRight, Clock, Flag, CheckCheck, Building2, Eye,
-  MapPin, Wifi, Car, PawPrint, Sofa, Search, AlertOctagon,
-  Bell, BellRing, ShieldAlert, User as UserIcon, Edit2, Trash2, Lock, Calendar,
-  Mail, MailOpen,
-  Archive, RefreshCw,
-  LayoutGrid, List, Ruler,
-  Settings, History, Save, RotateCcw, Globe2, BarChart3, Smartphone,
-} from "lucide-react";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,8 +10,97 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/app/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { useAuth, type User } from "@/app/contexts/AuthContext";
+import { type ListingRecord } from "@/app/data/apartments";
+import {
+  createAuditLog,
+  createViolation,
+  deleteNotification,
+  deleteViolation as deleteViolationRecord,
+  fetchAdminActivityLogs,
+  fetchAdminReports,
+  fetchApartments,
+  fetchLandlordWithDetails,
+  fetchNotifications,
+  fetchPendingAppeals,
+  fetchRecentActivityLogs,
+  fetchReportWithDetails,
+  fetchUserById,
+  fetchUsers,
+  fetchViolations,
+  markAllNotificationsRead,
+  markNotificationRead,
+  markNotificationUnread,
+  notifyReportDismissed,
+  notifyReportResolved,
+  permanentlyDeleteNotification,
+  updateAppealStatus,
+  updateReportStatus,
+  updateUserProfile,
+  type DashboardAppealRow,
+  type DashboardAuditLogRow,
+  type DashboardLandlordDetailsRow,
+  type DashboardNotificationRow,
+  type DashboardReportRow,
+  type DashboardUserRow,
+  type DashboardViolationRow
+} from "@/app/services/dashboardSupabaseService";
+import { getReportEvidence } from "@/app/services/reportEvidenceService";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/app/utils/auditLogDisplay";
+import { supabase } from "@/lib/supabaseclient";
+import {
+  Activity,
+  AlertOctagon,
+  AlertTriangle,
+  Archive,
+  BarChart3,
+  Bell, BellRing,
+  Building2,
+  Calendar,
+  Car,
+  CheckCheck,
+  CheckCircle2,
+  ChevronRight, Clock,
+  Edit2,
+  Eye,
+  FileText,
+  Flag,
+  Globe2,
+  History,
+  LayoutDashboard,
+  LayoutGrid, List,
+  Lock,
+  LogOut,
+  Mail, MailOpen,
+  MapPin,
+  Menu,
+  PawPrint,
+  Phone,
+  RefreshCw,
+  RotateCcw,
+  Ruler,
+  Save,
+  Search,
+  Settings,
+  Shield,
+  ShieldAlert,
+  Smartphone,
+  Sofa,
+  Sparkles,
+  Trash2,
+  User as UserIcon,
+  Users,
+  Wifi,
+  X,
+  XCircle,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 // ── Nav ───────────────────────────────────────────────────────────────────────
 const NAV_MAIN = [
@@ -293,11 +323,9 @@ export function AdminDashboard() {
 
   // Loading states for action prevention
   const [deletingNotifId, setDeletingNotifId] = useState<string | null>(null);
-  const [isDeletingAllNotifs, setIsDeletingAllNotifs] = useState(false);
   const [isMarkingAllNotifs, setIsMarkingAllNotifs] = useState(false);
   const [isResolvingReportId, setIsResolvingReportId] = useState<string | null>(null);
   const [isDismissingReportId, setIsDismissingReportId] = useState<string | null>(null);
-  const [isDeletingViolationId, setIsDeletingViolationId] = useState<string | null>(null);
 
   // reports
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
@@ -364,7 +392,8 @@ export function AdminDashboard() {
   const [adminNotifs, setAdminNotifs] = useState<DashboardNotificationRow[]>([]);
   const [notifSearch, setNotifSearch] = useState("");
   const [notifFilter, setNotifFilter] = useState<"all" | "read" | "unread" | "archived">("all");
-  const [notifTypeFilter, setNotifTypeFilter] = useState<"all" | "system" | "landlord" | "reports" | "appeals">("all");
+  const [notifTypeFilter, setNotifTypeFilter] = useState<"all" | "system" | "landlord" | "activities" | "reports" | "appeals">("all");
+  const [notifActivityFilter, setNotifActivityFilter] = useState("all");
   const [isRefreshingNotifs, setIsRefreshingNotifs] = useState(false);
 
   const isNotificationRead = (notification: DashboardNotificationRow) =>
@@ -378,6 +407,7 @@ export function AdminDashboard() {
     const action = String(payload.action ?? "").toLowerCase();
     const value = `${type} ${title} ${message} ${action}`;
 
+    if (type === "landlord_activity" || payload.category === "landlord_activity" || payload.activity_type) return "activities";
     if (value.includes("report") || value.includes("violation")) return "reports";
     if (value.includes("appeal")) return "appeals";
     if (
@@ -461,28 +491,6 @@ export function AdminDashboard() {
     setIsRefreshingNotifs(false);
   };
 
-  const deleteAllNotifs = async () => {
-    if (isDeletingAllNotifs) {
-      toast.error("Deletion in progress...");
-      return;
-    }
-    if (!user?.id || !window.confirm("Are you sure you want to delete all notifications? This cannot be undone.")) {
-      return;
-    }
-
-    const previousCount = adminNotifs.length;
-    setIsDeletingAllNotifs(true);
-    setAdminNotifs([]);
-
-    const deletedCount = await deleteAllNotifications(user.id);
-    await loadAdminNotifications();
-    setIsDeletingAllNotifs(false);
-
-    if (previousCount > 0 && deletedCount === 0) {
-      toast.error("Could not clear notifications. Please try again.");
-    }
-  };
-
   const toggleNotifReadStatus = async (notificationId: string, isCurrentlyRead: boolean) => {
     if (!user?.id || !notificationId) return;
 
@@ -514,9 +522,12 @@ export function AdminDashboard() {
         ? isArchived
         : !isArchived && (notifFilter === "all" || (notifFilter === "read" ? isRead : !isRead));
       const matchesType = notifTypeFilter === "all" || getNotificationCategory(n) === notifTypeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesActivity = notifActivityFilter === "all" || String(n.payload?.activity_type ?? n.type ?? "") === notifActivityFilter;
+      const payloadText = `${n.payload?.landlord_name ?? ""} ${n.payload?.property_name ?? ""} ${n.payload?.room_name ?? ""}`.toLowerCase();
+      const matchesExpandedSearch = matchesSearch || Boolean(notifSearch && payloadText.includes(notifSearch.toLowerCase()));
+      return matchesExpandedSearch && matchesStatus && matchesType && matchesActivity;
     });
-  }, [adminNotifs, notifSearch, notifFilter, notifTypeFilter]);
+  }, [adminNotifs, notifSearch, notifFilter, notifTypeFilter, notifActivityFilter]);
 
   // apartments
   const [aptSearch, setAptSearch]   = useState("");
@@ -530,6 +541,7 @@ export function AdminDashboard() {
   // landlord details modal
   const [selectedLandlord, setSelectedLandlord] = useState<DashboardUserRow | null>(null);
   const [selectedLandlordDetails, setSelectedLandlordDetails] = useState<DashboardLandlordDetailsRow | null>(null);
+  const [isLoadingLandlordDetails, setIsLoadingLandlordDetails] = useState(false);
 
   const [allApartments, setAllApartments] = useState<ListingRecord[]>([]);
 
@@ -728,21 +740,19 @@ export function AdminDashboard() {
   }, [activeSection, loadAdminNotifications]);
 
   useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === "apartmentReports") {
-        void fetchAdminReports().then(setReports);
-      }
-      if (event.key === "adminViolations") {
-        void fetchViolations().then(setViolations);
-      }
-      if (event.key === "adminNotifications") {
-        void loadAdminNotifications();
-      }
-    };
-
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [loadAdminNotifications]);
+    if (user?.role !== "admin") return;
+    const channel = supabase
+      .channel(`admin-dashboard-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => { void fetchAdminReports().then(setReports); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "violations" }, () => { void fetchViolations().then(setViolations); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => { void loadAdminNotifications(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, () => { void fetchPendingAppeals().then(setAppeals); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartments" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadAdminNotifications, user?.id, user?.role]);
 
   // Fetch full report details when a report is selected
   useEffect(() => {
@@ -773,38 +783,77 @@ export function AdminDashboard() {
 
   // Fetch full landlord details when a landlord is selected
   useEffect(() => {
-    if (selectedLandlord?.id) {
-      void fetchLandlordWithDetails(selectedLandlord.id).then(setSelectedLandlordDetails);
-    } else {
+    if (!selectedLandlord?.id) {
       setSelectedLandlordDetails(null);
+      setIsLoadingLandlordDetails(false);
+      return;
     }
-  }, [selectedLandlord?.id]);
+
+    let active = true;
+    const permitNumber = selectedLandlord.permit_number ?? selectedLandlord.permitNumber ?? null;
+    setSelectedLandlordDetails({
+      user: selectedLandlord,
+      profile: {
+        user_id: selectedLandlord.id,
+        permit_number: permitNumber,
+        business_permit_number: permitNumber,
+        is_verified: selectedLandlord.is_verified ?? selectedLandlord.isVerified ?? false,
+      },
+      properties: [],
+      violations: [],
+      reports: [],
+      propertyStats: {
+        totalProperties: 0,
+        publishedProperties: 0,
+        totalViews: 0,
+        totalFavorites: 0,
+        averagePrice: 0,
+      },
+    });
+    setIsLoadingLandlordDetails(true);
+
+    void fetchLandlordWithDetails(selectedLandlord.id)
+      .then((details) => {
+        if (active && details) setSelectedLandlordDetails(details);
+      })
+      .finally(() => {
+        if (active) setIsLoadingLandlordDetails(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedLandlord]);
 
   const loadLandlords = async () => {
     const users = await fetchUsers();
     setLandlords(users.filter((x) => x.role === "landlord"));
   };
 
-  const saveViolations = async (v: DashboardViolationRow[]) => {
-    setViolations(v);
-    await Promise.resolve();
-  };
-
   const confirmVerification = () => {
     if (!verifyAction) return;
-    const action = verifyAction.verify
-      ? verifyLandlord(verifyAction.landlordId)
-      : updateUser(verifyAction.landlordId, { isVerified: false, status: "pending" });
-    void action.then(async () => {
-      // Send notification to landlord
-      await notifyLandlordVerification(
-        verifyAction.landlordId,
-        verifyAction.verify,
-        user?.id,
-      );
+    const pendingAction = verifyAction;
+    const previousLandlords = landlords;
+    setVerifyAction(null);
+    setLandlords((current) => current.map((landlord) =>
+      landlord.id === pendingAction.landlordId
+        ? {
+            ...landlord,
+            is_verified: pendingAction.verify,
+            isVerified: pendingAction.verify,
+            status: pendingAction.verify ? "verified" : "pending",
+          }
+        : landlord,
+    ));
+    const toastId = toast.loading(pendingAction.verify ? "Verifying landlord…" : "Revoking verification…");
+    const action = verifyLandlord(pendingAction.landlordId, pendingAction.verify);
+    void action.then(() => {
+      toast.success(pendingAction.verify ? "Landlord verified" : "Verification revoked", { id: toastId });
       void loadLandlords();
-      toast.success(verifyAction.verify ? "Landlord verified" : "Verification revoked");
-      setVerifyAction(null);
+    }).catch((error) => {
+      setLandlords(previousLandlords);
+      console.error("Unable to update landlord verification:", error);
+      toast.error(error instanceof Error ? error.message : "Unable to update landlord verification.", { id: toastId });
     });
   };
 
@@ -904,11 +953,6 @@ export function AdminDashboard() {
 
       if (!created) throw new Error("The violation record could not be saved");
 
-      const listingTitle = violationModal.apartmentId ? violationModal.apartmentTitle : undefined;
-      const notified = violationModal.mode === "violation"
-        ? await notifyLandlordViolation(violationModal.landlordId, type, message, listingTitle)
-        : await notifyLandlordNotice(violationModal.landlordId, type, message);
-
       setViolations(await fetchViolations());
       if (violationModal.reportId) {
         const updatedReport = await updateReportStatus(violationModal.reportId, "resolved");
@@ -923,11 +967,7 @@ export function AdminDashboard() {
       setNMessage("");
       setVExpirationDays(90);
 
-      if (notified) {
-        toast.success(violationModal.mode === "violation" ? "Violation issued and landlord notified" : "Notice sent to landlord");
-      } else {
-        toast.error(`${violationModal.mode === "violation" ? "Violation" : "Notice"} was saved, but the landlord notification could not be sent`);
-      }
+      toast.success(violationModal.mode === "violation" ? "Violation issued and landlord notified" : "Notice sent to landlord");
     } catch (error) {
       console.error("Error issuing violation or notice:", error);
       toast.error(error instanceof Error ? error.message : `Unable to issue ${violationModal.mode}`);
@@ -971,17 +1011,6 @@ export function AdminDashboard() {
     }
   };
 
-  // ── Violation Edit ────────────────────────────────────────────────────────
-  const openEditViolation = (violation: DashboardViolationRow) => {
-    setEditViolationModal(violation);
-    setEditVMessage(violation.message ?? "");
-    const expiresAt = violation.expiresAt ?? violation.expires_at;
-    const daysLeft = expiresAt
-      ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-      : 90;
-    setEditVExpirationDays(daysLeft);
-  };
-
   const saveViolationEdit = () => {
     if (!editViolationModal?.id) return;
 
@@ -1009,22 +1038,6 @@ export function AdminDashboard() {
         setEditVMessage("");
         setEditVExpirationDays(90);
       }
-    });
-  };
-
-  const handleDeleteViolation = (violationId: string) => {
-    if (isDeletingViolationId === violationId) {
-      toast.error("Deletion in progress...");
-      return;
-    }
-    setIsDeletingViolationId(violationId);
-    void deleteViolationRecord(violationId).then((removed) => {
-      if (removed) {
-        setViolations((p) => p.filter((v) => v.id !== violationId));
-        toast.success("Violation deleted");
-      }
-    }).finally(() => {
-      setIsDeletingViolationId(null);
     });
   };
 
@@ -1189,263 +1202,15 @@ export function AdminDashboard() {
 
       {/* Danger Logout Action Button Container */}
       <div className="px-4 py-4 border-t border-white/[0.06] mt-2 bg-gradient-to-t from-black/20 to-transparent relative z-10">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide text-rose-400 bg-rose-500/[0.03] border border-rose-500/10 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-600 hover:border-transparent hover:shadow-lg hover:shadow-red-950/40 transition-all duration-300 active:scale-[0.98] group"
-        >
-          <LogOut className="h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-          <span>Log Out</span>
-        </button>
+        <LogoutConfirmation onConfirm={handleLogout}>
+          <button className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide text-rose-400 bg-rose-500/[0.03] border border-rose-500/10 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-600 hover:border-transparent hover:shadow-lg hover:shadow-red-950/40 transition-all duration-300 active:scale-[0.98] group">
+            <LogOut className="h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
+            <span>Log Out</span>
+          </button>
+        </LogoutConfirmation>
       </div>
     </div>
   );
-// ── Section: Overview ─────────────────────────────────────────────────────
-  const renderLegacyOverview = () => {
-    // Dynamically calculate friendly status highlights for the context-driven header
-    const hasUrgentMatters = pendingReports > 0 || pendingCount > 0;
-    
-    // Get formatted current date string for a premium, localized feel
-    const formattedCurrentDate = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-
-    return (
-      <div className="space-y-8 max-w-[1400px] mx-auto p-4 md:p-6 text-slate-900 selection:bg-amber-100 selection:text-amber-900 relative">
-        
-        {/* ── CLIENT-REQUESTED BG ANIMATION (CLEAN & MINIMALIST) ── */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-[24px]">
-          <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-gradient-to-br from-amber-500/[0.03] to-orange-500/[0.03] blur-[80px] animate-pulse [animation-duration:8s]" />
-          <div className="absolute bottom-[20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-orange-600/[0.02] to-transparent blur-[100px] animate-pulse [animation-duration:12s]" />
-        </div>
-
-        <div className="relative z-10 space-y-8">
-          
-          {/* ── DASHBOARD HEADER (AIRBNB / NOTION INSPIRED HERO) ── */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 pb-6">
-            <div className="space-y-2.5 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-md">
-              </div>
-              
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">
-                Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">{user?.name || "Admin"}</span>
-              </h1>
-              
-              <p className="text-slate-500 font-medium text-sm md:text-base leading-relaxed">
-                {hasUrgentMatters ? (
-                  <span>
-                    You currently have <strong className="text-slate-900 font-bold">{pendingCount} verification requests</strong> and <strong className="text-rose-600 font-bold">{pendingReports} community reports</strong> requiring immediate review.
-                  </span>
-                ) : (
-                  "The platform is performing stably. All verification queues and community reports are fully caught up."
-                )}
-              </p>
-            </div>
-            
-            <div className="shrink-0 flex items-center gap-2 bg-slate-50 border border-slate-200/60 px-4 py-2 rounded-xl self-start md:self-end">
-              <Clock className="h-4 w-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-600 tracking-tight">{formattedCurrentDate}</span>
-            </div>
-          </div>
-
-          {/* ── HIGH PRIORITY COMMAND BAR: QUICK ACTIONS (STRIPE INSPIRED) ── */}
-          <div className="space-y-3">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <span>Primary Operations</span>
-              <span className="h-px bg-slate-100 flex-1" />
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { 
-                  section: "reports", 
-                  icon: Flag, 
-                  title: "Review Reports", 
-                  desc: "Investigate tenant issues, flags, and complaints.", 
-                  badge: pendingReports > 0 ? `${pendingReports} Action Required` : "Clear", 
-                  badgeStyle: pendingReports > 0 ? "bg-rose-50 text-rose-700 border-rose-200/60" : "bg-slate-50 text-slate-500 border-slate-200",
-                  grad: "", 
-                  light: true,
-                  isHighPriority: pendingReports > 0
-                },
-                { 
-                  section: "landlords", 
-                  icon: ShieldAlert, 
-                  title: "Verify Landlords", 
-                  desc: "Audit onboarding credentials and unlock partner features.", 
-                  badge: pendingCount > 0 ? `${pendingCount} Awaiting Review` : "All Verified", 
-                  badgeStyle: pendingCount > 0 ? "bg-amber-50 text-amber-700 border-amber-200/60" : "bg-emerald-50 text-emerald-700 border-emerald-200",
-                  grad: "", 
-                  light: true,
-                  isHighPriority: !pendingReports && pendingCount > 0
-                },
-                { 
-                  section: "apartments", 
-                  icon: Building2, 
-                  title: "Manage Apartments", 
-                  desc: "Browse catalog listing indexes, metrics, and global states.", 
-                  badge: `${allApartments.length} Active`, 
-                  badgeStyle: "bg-slate-900 text-slate-100 border-transparent", 
-                  grad: "from-slate-900 to-slate-950", 
-                  light: false,
-                  isHighPriority: false
-                },
-              ].map(({ section, icon: Icon, title, desc, badge, badgeStyle, grad, light, isHighPriority }) => (
-                <button 
-                  key={section} 
-                  onClick={() => setActiveSection(section)}
-                  className={`w-full p-5 rounded-2xl text-left group relative transition-all duration-200 shadow-sm border ${
-                    !light 
-                      ? `bg-gradient-to-b ${grad} text-white border-slate-950 hover:shadow-md hover:-translate-y-0.5` 
-                      : isHighPriority
-                        ? "bg-white border-amber-500 ring-2 ring-amber-500/10 shadow-md hover:-translate-y-0.5"
-                        : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
-                      light ? "bg-amber-50 text-amber-600 border border-amber-200/60" : "bg-white/10 text-amber-400"
-                    }`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    
-                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeStyle}`}>
-                      {badge}
-                    </span>
-                  </div>
-
-                  <h3 className={`text-base font-bold tracking-tight mb-1 ${light ? "text-slate-900" : "text-white"}`}>
-                    {title}
-                  </h3>
-                  
-                  <p className={`text-xs font-medium leading-relaxed min-h-[32px] ${light ? "text-slate-500" : "text-slate-400"}`}>
-                    {desc}
-                  </p>
-                  
-                  <div className={`mt-3 pt-3 border-t flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider ${
-                    light ? "border-slate-100 text-amber-600 group-hover:text-amber-700" : "border-white/10 text-amber-400 group-hover:text-amber-300"
-                  }`}>
-                    <span>Launch Module</span> 
-                    <ChevronRight className="h-3 w-3 transform group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── PLATFORM METRICS AND CONTEXT STATISTICS ── */}
-          <div className="space-y-3">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <span>Platform Health Metrics</span>
-              <span className="h-px bg-slate-100 flex-1" />
-            </h2>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Total Landlords", value: landlords.length,   icon: Users,       grad: "from-amber-500 to-amber-600", borderStyle: "border-slate-200", context: "Registered index", contextStyle: "text-slate-400", section: "landlords" },
-                { label: "Verified Partners",  value: verifiedCount,      icon: CheckCircle2,grad: "from-emerald-500 to-emerald-600", borderStyle: "border-slate-200", context: "Active accounts", contextStyle: "text-emerald-600 font-semibold", section: "landlords" },
-                { label: "Pending Verify", value: pendingCount,       icon: Clock,       grad: "from-orange-500 to-orange-600", borderStyle: pendingCount > 0 ? "border-orange-200 bg-orange-50/[0.15]" : "border-slate-200", context: pendingCount > 0 ? "Requires review" : "Queue empty", contextStyle: pendingCount > 0 ? "text-orange-600 font-bold" : "text-slate-400", section: "landlords" },
-                { label: "Open Reports",     value: pendingReports,     icon: Flag,        grad: "from-rose-500 to-rose-600",    borderStyle: pendingReports > 0 ? "border-rose-200 bg-rose-50/[0.15]" : "border-slate-200", context: pendingReports > 0 ? "Urgent intervention" : "All clean", contextStyle: pendingReports > 0 ? "text-rose-600 font-bold" : "text-slate-400", section: "reports"   },
-              ].map(({ label, value, icon: Icon, grad, borderStyle, context, contextStyle, section }) => (
-                <button 
-                  key={label} 
-                  onClick={() => setActiveSection(section)}
-                  className={`w-full bg-white border rounded-2xl p-5 shadow-sm text-left group transition-all duration-200 hover:border-slate-300 hover:shadow-md ${borderStyle}`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-slate-500 font-bold tracking-tight uppercase truncate mr-2">{label}</span>
-                    <div className={`h-7 w-7 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center text-white shrink-0 shadow-sm`}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                      {value}
-                    </span>
-                  </div>
-
-                  <p className={`text-[11px] mt-2 block tracking-tight ${contextStyle}`}>
-                    {context}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── LINEAR-INSPIRED ACTIVITY & AUDIT FEED TIMELINE ── */}
-          {violations.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <AlertOctagon className="h-3.5 w-3.5 text-rose-500" />
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                    System Audit Log & Notices
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Feed
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <div className="divide-y divide-slate-100">
-                  {violations.slice(0, 3).map((v) => (
-                    <div 
-                      key={v.id} 
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-slate-50/[0.6] transition-colors duration-150 group"
-                    >
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        {/* Compact Context Icon Status Indicator */}
-                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm border mt-0.5 ${
-                          v.mode === "violation" 
-                            ? "bg-rose-50 border-rose-100 text-rose-600" 
-                            : "bg-amber-50 border-amber-100 text-amber-600"
-                        }`}>
-                          {v.mode === "violation" ? <AlertOctagon className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-                        </div>
-                        
-                        <div className="min-w-0 space-y-0.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold text-slate-900 truncate">
-                              {v.type}
-                            </span>
-                            <span className={`text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
-                              v.mode === "violation" 
-                                ? "bg-rose-50 text-rose-700 border-rose-100" 
-                                : "bg-amber-50 text-amber-700 border-amber-100"
-                            }`}>
-                              {v.mode === "violation" ? "Violation" : "Notice"}
-                            </span>
-                          </div>
-                          
-                          <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 truncate">
-                            <span className="text-slate-700 font-semibold">{v.landlordName}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="truncate">{v.apartmentTitle}</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-none border-slate-100">
-                        <span className="sm:hidden text-[10px] text-slate-400 font-bold uppercase tracking-wider">Timeline</span>
-                        <span className="text-xs font-semibold text-slate-400 tracking-tight">
-                          {formatOptionalDate(v.issuedAt ?? v.issued_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
  // ── Section: Notifications ────────────────────────────────────────────────
   const renderOverview = () => {
     const currentDate = new Date().toLocaleDateString("en-PH", {
@@ -1652,7 +1417,7 @@ export function AdminDashboard() {
                 const isPublished = apartment.isPublished === true || apartment.is_published === true;
                 return <button key={apartment.id} onClick={() => setSelectedApt(apartment)} className="flex w-full items-center gap-3 py-3 text-left">
                   <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">{apartment.image ? <img src={apartment.image} alt="" className="h-full w-full object-cover" /> : <Building2 className="h-4 w-4 text-slate-300" />}</span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-800">{apartment.title}</span><span className="block text-[10px] font-semibold text-slate-500">PHP {Number(apartment.price || 0).toLocaleString("en-PH")} / month</span><span className="mt-0.5 block text-[9px] text-slate-400">{formatOptionalDate(apartment.createdAt, { month: "short", day: "numeric", year: "numeric" })}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-800">{apartment.title}</span><span className="block text-[10px] font-semibold text-slate-500">Prices are listed per room</span><span className="mt-0.5 block text-[9px] text-slate-400">{formatOptionalDate(apartment.createdAt, { month: "short", day: "numeric", year: "numeric" })}</span></span>
                   <span className={`rounded-md px-1.5 py-1 text-[9px] font-black ${isPublished ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{isPublished ? "Published" : "Unpublished"}</span>
                 </button>;
               })}</div>
@@ -1660,239 +1425,6 @@ export function AdminDashboard() {
           </motion.section>
         </div>
       </motion.div>
-    );
-  };
-
-  const renderLegacyNotifications = () => {
-    // Auxiliary states extracted safely from existing structures
-    const totalCount = adminNotifs.length;
-    const unreadCount = adminNotifs.filter((n) => !isNotificationRead(n)).length;
-
-    // Strict System Operations Urgency Mapper (Visual styling mapping only)
-    const getSystemUrgency = (notif: any) => {
-      const typeStr = (notif.type || "").toLowerCase();
-      const titleStr = (notif.title || "").toLowerCase();
-      const msgStr = (notif.message || "").toLowerCase();
-
-      if (typeStr.includes("violation") || typeStr.includes("report") || msgStr.includes("violation") || titleStr.includes("urgent")) {
-        return {
-          border: "border-l-rose-500",
-          dot: "bg-rose-500",
-          bgUnread: "bg-rose-50/[0.12] hover:bg-rose-50/[0.18]",
-          badge: "bg-rose-50 text-rose-700 border-rose-200"
-        };
-      }
-      if (typeStr.includes("review") || typeStr.includes("pending") || titleStr.includes("submission") || typeStr.includes("submission")) {
-        return {
-          border: "border-l-amber-500",
-          dot: "bg-amber-500",
-          bgUnread: "bg-amber-50/[0.15] hover:bg-amber-50/[0.22]",
-          badge: "bg-amber-50 text-amber-700 border-amber-200"
-        };
-      }
-      if (typeStr.includes("update") || typeStr.includes("general")) {
-        return {
-          border: "border-l-indigo-500",
-          dot: "bg-indigo-500",
-          bgUnread: "bg-indigo-50/[0.12] hover:bg-indigo-50/[0.18]",
-          badge: "bg-indigo-50 text-indigo-700 border-indigo-200"
-        };
-      }
-      return {
-        border: "border-l-slate-400",
-        dot: "bg-slate-400",
-        bgUnread: "bg-slate-50 hover:bg-slate-100",
-        badge: "bg-slate-100 text-slate-700 border-slate-200"
-      };
-    };
-
-    return (
-      <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 text-slate-900">
-        
-        {/* ── HEADER CONTROL PANEL ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Notifications Center</h2>
-              {unreadCount > 0 ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
-                  {unreadCount} Actions Pending
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                  Up to date
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
-              <span>System Log Operations Panel</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-400 font-mono text-[11px]">{totalCount} total events synchronized</span>
-            </p>
-          </div>
-
-          {/* Bulk Operations Toolbar */}
-          {totalCount > 0 && (
-            <div className="flex items-center gap-2 self-start sm:self-center">
-              {adminNotifs.some((n) => !isNotificationRead(n)) && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={markNotifsRead}
-                  disabled={isMarkingAllNotifs}
-                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-lg text-xs h-8 px-3 transition-colors shadow-2xs"
-                >
-                  <CheckCheck className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
-                  {isMarkingAllNotifs ? "Marking..." : "Mark All Read"}
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={deleteAllNotifs}
-                className="bg-white border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200 font-bold rounded-lg text-xs h-8 px-3 transition-colors shadow-2xs"
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Clear All Logs
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* ── FILTER & SEARCH UTILITY TOOLBAR ── */}
-        {totalCount > 0 && (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row items-stretch md:items-center gap-3 shadow-2xs">
-            <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Filter logs by property reference, title key, or message content..."
-                value={notifSearch}
-                onChange={(e) => setNotifSearch(e.target.value)}
-                className="w-full h-9 rounded-lg border border-slate-200 bg-white pl-9 pr-4 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 transition-all"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden lg:block">View Status:</label>
-              <select
-                value={notifFilter}
-                onChange={(e) => setNotifFilter(e.target.value as any)}
-                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 focus:outline-none focus:border-amber-500 shadow-2xs cursor-pointer"
-              >
-                <option value="all">All Operational Logs</option>
-                <option value="unread">Unread Operations Only</option>
-                <option value="read">Archived / Read Logs</option>
-              </select>
-
-              <div className="bg-white border border-slate-200 rounded-lg h-9 px-3 flex items-center justify-center text-xs font-bold text-slate-500 font-mono shadow-2xs whitespace-nowrap">
-                {filteredNotifs.length} hit{filteredNotifs.length !== 1 ? 's' : ''}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── DENSE ACTIVITY WORKFLOW FEED ── */}
-        {totalCount === 0 ? (
-          <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 max-w-xl mx-auto p-4">
-            <Bell className="h-6 w-6 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">No notifications available</h3>
-            <p className="text-slate-400 text-xs mt-1">System is fully optimized and up to date.</p>
-          </div>
-        ) : filteredNotifs.length === 0 ? (
-          <div className="py-12 text-center bg-white border border-slate-200 rounded-xl max-w-xl mx-auto p-4">
-            <Search className="h-5 w-5 text-slate-300 mx-auto mb-2" />
-            <h4 className="text-xs font-bold text-slate-800">No logs match criteria</h4>
-            <p className="text-slate-400 text-xs mt-0.5">Refine your keyword filter or adjust the view selector.</p>
-          </div>
-        ) : (
-          <div className="border border-slate-200 bg-white rounded-xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
-            {filteredNotifs.map((notif) => {
-              const config = getSystemUrgency(notif);
-
-              return (
-                <div 
-                  key={notif.id}
-                  className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-3.5 border-l-[3px] transition-all duration-150 ${config.border} ${
-                    isNotificationRead(notif)
-                      ? "bg-white hover:bg-slate-50/70" 
-                      : `${config.bgUnread}`
-                  }`}
-                >
-                  {/* Event Meta Details Block */}
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {/* Read Status Absolute Dot Indicator */}
-                    <div className="pt-1.5 shrink-0">
-                      <span className={`h-2 w-2 rounded-full block ${isNotificationRead(notif) ? "bg-transparent border border-slate-300" : `${config.dot}`}`} />
-                    </div>
-
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[13px] tracking-tight text-slate-900 ${isNotificationRead(notif) ? "font-medium text-slate-700" : "font-bold"}`}>
-                          {notif.title}
-                        </span>
-                        {notif.type && (
-                          <span className={`text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded border ${config.badge}`}>
-                            {notif.type}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
-                          {formatOptionalDate(notif.createdAt ?? notif.created_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      
-                      <p className="text-xs text-slate-500 font-medium leading-normal line-clamp-2 md:line-clamp-1 max-w-4xl">
-                        {notif.message}
-                      </p>
-                      
-                      {/* Mobile Timestamp */}
-                      <div className="text-[10px] text-slate-400 font-mono sm:hidden pt-0.5">
-                        {formatOptionalDate(notif.createdAt ?? notif.created_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Operational Controls Drawer Panel */}
-                  <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center bg-slate-50 md:bg-transparent p-1.5 md:p-0 rounded-lg border border-slate-100 md:border-transparent w-full md:w-auto justify-end">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        if (notif.id && !isNotificationRead(notif)) {
-                          void markNotificationRead(notif.id, user?.id).then(() => loadAdminNotifications());
-                        }
-                        setActiveSection("apartments");
-                        const apt = allApartments.find((a: any) => a.id === notif.apartmentId);
-                        if (apt) setSelectedApt(apt);
-                      }}
-                      className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-bold rounded-md text-xs h-7 px-2.5 shadow-2xs"
-                    >
-                      <Eye className="h-3 w-3 mr-1.5 text-amber-500" />
-                      Inspect Property
-                    </Button>
-
-                    <button 
-                      onClick={() => void toggleNotifReadStatus(notif.id || "", isNotificationRead(notif))}
-                      title={isNotificationRead(notif) ? "Mark Unread" : "Mark Read"}
-                      className="h-7 w-7 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors shadow-2xs shrink-0"
-                    >
-                      {isNotificationRead(notif) ? <Mail className="h-3 w-3" /> : <MailOpen className="h-3 w-3" />}
-                    </button>
-
-                    <button 
-                      onClick={() => void deleteNotif(notif.id || "")}
-                      title="Delete Record"
-                      className="h-7 w-7 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors shadow-2xs shrink-0"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -1907,10 +1439,11 @@ export function AdminDashboard() {
     });
     const selectNotificationView = (
       status: "all" | "read" | "unread" | "archived",
-      type: "all" | "system" | "landlord" | "reports" | "appeals" = "all",
+      type: "all" | "system" | "landlord" | "activities" | "reports" | "appeals" = "all",
     ) => {
       setNotifFilter(status);
       setNotifTypeFilter(type);
+      setNotifActivityFilter("all");
     };
     const isViewActive = (status: typeof notifFilter, type: typeof notifTypeFilter = "all") =>
       notifFilter === status && notifTypeFilter === type;
@@ -1918,9 +1451,14 @@ export function AdminDashboard() {
       const category = getNotificationCategory(notification);
       if (category === "reports") return { icon: Flag, bg: "bg-rose-50", text: "text-rose-600", badge: "bg-rose-50 text-rose-700 border-rose-100" };
       if (category === "appeals") return { icon: FileText, bg: "bg-blue-50", text: "text-blue-600", badge: "bg-blue-50 text-blue-700 border-blue-100" };
+      if (category === "activities") return { icon: Activity, bg: "bg-violet-50", text: "text-violet-600", badge: "bg-violet-50 text-violet-700 border-violet-100" };
       if (category === "landlord") return { icon: Users, bg: "bg-amber-50", text: "text-amber-700", badge: "bg-amber-50 text-amber-700 border-amber-100" };
       return { icon: Bell, bg: "bg-slate-100", text: "text-slate-600", badge: "bg-slate-100 text-slate-700 border-slate-200" };
     };
+    const activityTypes = Array.from(new Set(adminNotifs
+      .filter((notification) => getNotificationCategory(notification) === "activities")
+      .map((notification) => String(notification.payload?.activity_type ?? notification.type ?? ""))
+      .filter(Boolean))).sort();
 
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-[1500px] space-y-5">
@@ -1962,6 +1500,7 @@ export function AdminDashboard() {
                 { label: "Read", status: "read", type: "all", icon: MailOpen },
                 { label: "System", status: "all", type: "system", icon: ShieldAlert },
                 { label: "Landlords", status: "all", type: "landlord", icon: Users },
+                { label: "Landlord Activities", status: "all", type: "activities", icon: Activity },
                 { label: "Reports", status: "all", type: "reports", icon: Flag },
                 { label: "Appeals", status: "all", type: "appeals", icon: FileText },
                 { label: "Archived", status: "archived", type: "all", icon: Archive },
@@ -1970,7 +1509,10 @@ export function AdminDashboard() {
                 return <button key={label} onClick={() => selectNotificationView(status as typeof notifFilter, type as typeof notifTypeFilter)} className={`flex h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold transition ${selected ? "bg-orange-50 text-orange-700 ring-1 ring-orange-200" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}><Icon className="h-3.5 w-3.5" />{label}</button>;
               })}
             </div>
-            {unreadCount > 0 && <Button variant="outline" size="sm" onClick={() => void markNotifsRead()} disabled={isMarkingAllNotifs} className="h-9 shrink-0 rounded-md border-orange-200 text-xs font-black text-orange-700 hover:bg-orange-50"><CheckCheck className="mr-1.5 h-3.5 w-3.5" />{isMarkingAllNotifs ? "Marking..." : "Mark all as read"}</Button>}
+            <div className="flex shrink-0 items-center gap-2">
+              {(notifTypeFilter === "activities" || notifActivityFilter !== "all") && <select value={notifActivityFilter} onChange={(event) => setNotifActivityFilter(event.target.value)} className="h-9 max-w-56 rounded-md border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700"><option value="all">All activity types</option>{activityTypes.map((type) => <option key={type} value={type}>{formatNotificationType(type)}</option>)}</select>}
+              {unreadCount > 0 && <Button variant="outline" size="sm" onClick={() => void markNotifsRead()} disabled={isMarkingAllNotifs} className="h-9 shrink-0 rounded-md border-orange-200 text-xs font-black text-orange-700 hover:bg-orange-50"><CheckCheck className="mr-1.5 h-3.5 w-3.5" />{isMarkingAllNotifs ? "Marking..." : "Mark all as read"}</Button>}
+            </div>
           </div>
 
           {adminNotifs.length === 0 ? (
@@ -1989,6 +1531,14 @@ export function AdminDashboard() {
                 const apartmentId = String(notification.payload?.apartment_id ?? notification.apartmentId ?? notification.action_target_id ?? "");
                 const apartment = apartmentId ? allApartments.find((item) => item.id === apartmentId) : undefined;
                 const notificationType = formatNotificationType(notification.type);
+                const rawActionUrl = String(notification.action_url ?? notification.payload?.action_url ?? "");
+                const actionUrl = rawActionUrl.startsWith("/")
+                  ? rawActionUrl
+                  : apartment ? `/admin/apartment/${apartmentId}` : "";
+                const landlordName = String(notification.payload?.landlord_name ?? "");
+                const propertyName = String(notification.payload?.property_name ?? apartment?.title ?? "");
+                const roomName = String(notification.payload?.room_name ?? "");
+                const activityStatus = String(notification.payload?.status ?? "");
                 return (
                   <motion.article key={notification.id} layout className={`flex flex-col gap-3 p-4 transition md:flex-row md:items-center ${!read && !archived ? "bg-amber-50/25" : "hover:bg-slate-50/70"}`}>
                     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tone.bg} ${tone.text}`}><Icon className="h-4 w-4" /></span>
@@ -1999,10 +1549,11 @@ export function AdminDashboard() {
                         {!read && !archived && <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />}
                       </div>
                       <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">{safeNotificationText(notification.message, "No additional details provided.")}</p>
+                      {(landlordName || propertyName || roomName) && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-slate-500">{landlordName && <span>Landlord: <b className="text-slate-700">{landlordName}</b></span>}{propertyName && <span>Property: <b className="text-slate-700">{propertyName}</b></span>}{roomName && <span>Room: <b className="text-slate-700">{roomName}</b></span>}{activityStatus && <span className="rounded-md bg-slate-100 px-1.5 py-0.5 uppercase text-slate-700">{activityStatus}</span>}</div>}
                       <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}{archived && notification.deleted_at ? ` - Archived ${formatOptionalDate(notification.deleted_at, { month: "short", day: "numeric" })}` : ""}</p>
                     </div>
                     <div className="flex shrink-0 items-center justify-end gap-1.5" onClick={(event) => event.stopPropagation()}>
-                      {apartment && !archived && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id) void markNotificationRead(notification.id, user?.id).then(() => loadAdminNotifications()); setSelectedApt(apartment); setActiveSection("apartments"); }} className="h-8 rounded-md border-slate-200 px-2.5 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />Inspect</Button>}
+                      {actionUrl && !archived && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id) void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: "/dashboard?section=notifications" } }); }} className="h-8 rounded-md border-slate-200 px-2.5 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />View Details</Button>}
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark unread" : "Mark read"} className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100">{read ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}</button>}
                       {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"><Archive className="h-3.5 w-3.5" /></button>}
                       <button onClick={() => void deleteNotif(notification.id || "")} title="Delete notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -2022,106 +1573,6 @@ export function AdminDashboard() {
       </motion.div>
     );
   };
-
-  const renderLegacyLandlords = () => (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-          <Users className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h2 className="text-3xl font-black text-slate-900">Landlord Verification</h2>
-          <p className="text-slate-500 text-sm font-medium">Review permits and manage violations</p>
-        </div>
-      </div>
-
-      <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          {landlords.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-amber-300" />
-              </div>
-              <p className="text-slate-400 font-medium">No landlords registered yet</p>
-            </div>
-          ) : (
-            landlords.map((landlord, index) => {
-              const lvs = violationsForLandlord(text(landlord.id));
-              return (
-                <div key={landlord.id}
-                  className={`px-6 py-5 ${index < landlords.length - 1 ? "border-b border-amber-50" : ""} hover:bg-amber-50/30 transition-colors cursor-pointer`}
-                  onClick={() => setSelectedLandlord(landlord)}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center shrink-0 font-black text-amber-700 text-sm shadow">
-                        {landlord.name?.[0]?.toUpperCase() ?? "L"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="font-black text-slate-900">{landlord.name}</h3>
-                          {landlord.isVerified
-                            ? <Badge className="bg-green-100 text-green-800 border border-green-200 font-bold text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Verified</Badge>
-                            : <Badge className="bg-orange-100 text-orange-700 border border-orange-200 font-bold text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>}
-                          {lvs.length > 0 && (
-                            <Badge className="bg-red-100 text-red-700 border border-red-200 font-bold text-xs">
-                              <AlertOctagon className="h-3 w-3 mr-1" />{lvs.length} violation{lvs.length > 1 ? "s" : ""}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-slate-500 font-medium">{landlord.email}</p>
-                        <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400 font-medium">
-                          {landlord.mobileNumber && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{landlord.mobileNumber}</span>}
-                          {landlord.permitNumber && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />Permit: {landlord.permitNumber}</span>}
-                        </div>
-                        {lvs.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {lvs.slice(0, 2).map((v) => (
-                              <span key={v.id} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                v.mode === "violation" ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-700"
-                              }`}>{v.type}</span>
-                            ))}
-                            {lvs.length > 2 && <span className="text-[10px] font-bold text-slate-400">+{lvs.length - 2} more</span>}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {landlord.isVerified
-                        ? <Button variant="outline" size="sm" onClick={() => setVerifyAction({ landlordId: text(landlord.id), verify: false })}
-                            className="border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs">
-                            <XCircle className="h-3.5 w-3.5 mr-1.5" />Revoke
-                          </Button>
-                        : <Button size="sm" onClick={() => setVerifyAction({ landlordId: text(landlord.id), verify: true })}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-md text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Verify
-                          </Button>}
-                      <Button variant="outline" size="sm"
-                        onClick={() => openViolationModal("violation", text(landlord.id), text(landlord.name, "Landlord"), "General")}
-                        className="border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs">
-                        <AlertOctagon className="h-3.5 w-3.5 mr-1.5" />Violation
-                      </Button>
-                      <Button variant="outline" size="sm"
-                        onClick={() => openViolationModal("notice", text(landlord.id), text(landlord.name, "Landlord"), "General")}
-                        className="border-amber-200 text-amber-700 hover:bg-amber-50 font-bold rounded-xl text-xs">
-                        <BellRing className="h-3.5 w-3.5 mr-1.5" />Notice
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </CardContent>
-      </Card>
-      <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-        <Shield className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-900">
-          <p className="font-black mb-0.5">Verification Requirements</p>
-          <p className="text-amber-700 font-medium">Only verified landlords can add and edit apartments. Use violations for serious offenses and notices for warnings.</p>
-        </div>
-      </div>
-    </div>
-  );
 
   // ── Section: Apartments ───────────────────────────────────────────────────
   const renderLandlords = () => {
@@ -2214,7 +1665,6 @@ export function AdminDashboard() {
                         <p className="truncate text-xs font-medium text-slate-500">{landlord.email || "No email provided"}</p>
                         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold text-slate-400">
                           <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Registered {formatOptionalDate(landlord.created_at as string | undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
-                          <span className="max-w-44 truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono">ID: {landlord.id}</span>
                         </div>
                       </div>
                     </div>
@@ -2338,7 +1788,7 @@ export function AdminDashboard() {
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col p-4">
                       <div className="min-w-0"><h3 className="truncate text-base font-black text-slate-900">{apartment.title}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3 w-3 shrink-0 text-orange-500" />{location || "Location not provided"}</p><p className="mt-2 text-xs font-semibold text-slate-500">{apartment.propertyType || "Property type not specified"}</p></div>
-                      <p className="mt-3 text-xl font-black text-orange-600">PHP {Number(apartment.price || 0).toLocaleString("en-PH")}<span className="text-xs font-semibold text-slate-400"> / month</span></p>
+                      <p className="mt-3 text-xs font-black text-orange-600">Prices are listed per room</p>
                       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                         <div className="rounded-md bg-slate-50 p-2"><p className="text-[9px] font-black uppercase text-slate-400">Rooms / Units</p><p className="mt-0.5 font-bold text-slate-800">{roomCount || "Not provided"}</p></div>
                         <div className="rounded-md bg-slate-50 p-2"><p className="text-[9px] font-black uppercase text-slate-400">Floor Area</p><p className="mt-0.5 flex items-center gap-1 font-bold text-slate-800"><Ruler className="h-3 w-3 text-slate-400" />{apartment.sqft ? `${apartment.sqft.toLocaleString()} sqft` : "Not provided"}</p></div>
@@ -2529,7 +1979,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Monthly Rent", value: `₱${selectedApt.price?.toLocaleString()}` },
+                    { label: "Room Pricing", value: "See individual rooms" },
                     { label: "Bedrooms", value: selectedApt.bedrooms ?? "—" },
                     { label: "Bathrooms", value: selectedApt.bathrooms ?? "—" },
                     { label: "Available", value: new Date(selectedApt.availableDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) },
@@ -2936,9 +2386,7 @@ export function AdminDashboard() {
                   </div>
                   <div>
                     <p className="font-black text-slate-900">Report Detail</p>
-                    <p className="text-slate-400 text-xs font-medium">
-                      ID: {selectedReport.id?.slice(0, 8) || "N/A"}
-                    </p>
+                    <p className="text-slate-400 text-xs font-medium">Review submitted report</p>
                   </div>
                 </div>
                 <button onClick={() => setSelectedReport(null)} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
@@ -3076,7 +2524,6 @@ export function AdminDashboard() {
                   <EvidenceViewer
                     evidence={selectedReportEvidence}
                     title="Uploaded Evidence/Image"
-                    isAdmin
                   />
                 </div>
 
@@ -3337,14 +2784,14 @@ export function AdminDashboard() {
                   {selectedAppeal.report_id && (
                     <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
                       <Badge className="bg-blue-600 mb-2">Report Appeal</Badge>
-                      <p className="text-xs text-slate-600"><strong>Report ID:</strong> {selectedAppeal.report_id}</p>
+                      <p className="text-xs text-slate-600">Linked report information is available to the review workflow.</p>
                     </div>
                   )}
 
                   {selectedAppeal.violation_id && (
                     <div className="p-3 rounded-lg bg-red-50 border border-red-200">
                       <Badge className="bg-red-600 mb-2">Violation Appeal</Badge>
-                      <p className="text-xs text-slate-600"><strong>Violation ID:</strong> {selectedAppeal.violation_id}</p>
+                      <p className="text-xs text-slate-600">Linked violation information is available to the review workflow.</p>
                     </div>
                   )}
 
@@ -3586,203 +3033,6 @@ export function AdminDashboard() {
             ))}
           </div>
         )}
-      </div>
-    );
-  };
-
-  // ── Section: Admin Info ───────────────────────────────────────────────────
-  const renderLegacyAdminInfo = () => {
-    return (
-      <div className="space-y-5 max-w-2xl">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-slate-900">Admin Settings</h2>
-            <p className="text-slate-500 text-sm font-medium">Manage your admin account and preferences</p>
-          </div>
-        </div>
-
-        {/* Profile Card */}
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
-          <CardContent className="p-6 space-y-5">
-            {/* Avatar Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-100 rounded-2xl">
-              <div className="relative h-20 w-20 shrink-0">
-                <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-3xl font-black shadow-lg overflow-hidden">
-                  {adminProfile.avatar ? (
-                    <img src={adminProfile.avatar} alt="Profile" className="h-full w-full object-cover" />
-                  ) : (
-                    adminProfile.firstName[0] || user?.name?.[0]?.toUpperCase() || "A"
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-slate-900">{adminProfile.firstName} {adminProfile.lastName}</p>
-                <p className="text-sm text-slate-500 font-medium mb-3">{adminProfile.email}</p>
-                <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Administrator</Badge>
-              </div>
-            </div>
-
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <div className="text-sm font-black text-slate-500 uppercase tracking-widest">Personal Information</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">First Name</label>
-                  <input value={adminProfile.firstName} onChange={(e) => updateAdminProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Last Name</label>
-                  <input value={adminProfile.lastName} onChange={(e) => updateAdminProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Email</label>
-                <input type="email" value={adminProfile.email} onChange={(e) => updateAdminProfile(p => ({ ...p, email: e.target.value }))} placeholder="admin@example.com" className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Mobile Number</label>
-                <input type="tel" value={adminProfile.mobile} onChange={(e) => updateAdminProfile(p => ({ ...p, mobile: e.target.value }))} placeholder="09XXXXXXXXX" className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Bio</label>
-                <textarea rows={3} value={adminProfile.bio} onChange={(e) => updateAdminProfile(p => ({ ...p, bio: e.target.value.slice(0, 200) }))} placeholder="Tell us about yourself…" className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
-                <p className="text-[11px] text-slate-400 font-medium text-right">{adminProfile.bio.length}/200</p>
-              </div>
-            </div>
-
-            {/* Admin Information */}
-            <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-              <div className="text-sm font-black text-amber-700 uppercase tracking-widest">Admin Information</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-amber-600 uppercase tracking-widest">Department</label>
-                  <input value={adminProfile.department} onChange={(e) => updateAdminProfile(p => ({ ...p, department: e.target.value }))} placeholder="e.g. Platform Administration" className="w-full px-4 py-2.5 rounded-xl border-2 border-amber-200 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-amber-600 uppercase tracking-widest">Admin Level</label>
-                  <select value={adminProfile.adminLevel} onChange={(e) => updateAdminProfile(p => ({ ...p, adminLevel: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-amber-200 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    <option value="Full Administrator">Full Administrator</option>
-                    <option value="Senior Moderator">Senior Moderator</option>
-                    <option value="Moderator">Moderator</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Preferences */}
-            <div className="space-y-4">
-              <div className="text-sm font-black text-slate-500 uppercase tracking-widest">Preferences</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Language</label>
-                  <select value={adminProfile.language} onChange={(e) => updateAdminProfile(p => ({ ...p, language: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    <option value="en">English</option>
-                    <option value="fil">Filipino</option>
-                    <option value="hil">Hiligaynon</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">Timezone</label>
-                  <select value={adminProfile.timezone} onChange={(e) => updateAdminProfile(p => ({ ...p, timezone: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <Button onClick={handleUpdateAdminProfile} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-md">
-              Save Admin Profile
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Security Card - Password Change */}
-        <Card className="border-2 border-red-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-3 mb-4">
-              <Lock className="h-5 w-5 text-red-600" />
-              <div className="text-sm font-black text-slate-500 uppercase tracking-widest">Security</div>
-            </div>
-            <p className="text-sm text-slate-600 mb-4">Change your admin account password regularly to keep your account secure.</p>
-            <Button onClick={() => setPasswordModal(true)} className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-bold shadow-md">
-              Change Password
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Admin Stats */}
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
-          <CardContent className="p-6 space-y-3">
-            <div className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4">Platform Statistics</div>
-            {[
-              { label: "Violations Issued", value: violations.length },
-              { label: "Total Landlords", value: landlords.length },
-              { label: "Total Apartments", value: allApartments.length },
-              { label: "Open Reports", value: reports.filter((r: any) => r.status === "pending").length },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between py-3 border-b border-amber-50 last:border-0">
-                <span className="font-bold text-slate-600">{label}</span>
-                <span className="font-black text-slate-900 text-lg">{value}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Violations Management */}
-        <Card className="border-2 border-orange-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-sm font-black text-slate-500 uppercase tracking-widest">Recent Violations</div>
-                <p className="text-xs text-slate-500 mt-1">Manage issued violations and notices</p>
-              </div>
-              <Badge className="bg-orange-100 text-orange-800">{violations.length}</Badge>
-            </div>
-
-            {violations.length === 0 ? (
-              <p className="text-center text-slate-500 py-6">No violations issued yet</p>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {violations.slice(0, 10).map((v) => {
-                  const isExpired = v.expiresAt && new Date(v.expiresAt) < new Date();
-                  const daysLeft = v.expiresAt ? Math.ceil((new Date(v.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
-                  return (
-                    <div key={v.id} className={`p-3 rounded-lg border-2 space-y-2 ${isExpired ? "bg-gray-50 border-gray-200" : "bg-orange-50 border-orange-200"}`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-800 text-sm truncate">{v.landlordName}</p>
-                          <p className="text-xs text-slate-600 truncate">{v.apartmentTitle}</p>
-                          <p className="text-xs font-semibold text-slate-700 mt-1 capitalize">{v.mode}: {v.type}</p>
-                        </div>
-                        <div className="flex gap-1 shrink-0 ml-2">
-                          <button onClick={() => openEditViolation(v)} className="h-7 w-7 rounded-md bg-amber-100 hover:bg-amber-200 flex items-center justify-center text-amber-700 transition-colors">
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => handleDeleteViolation(v.id ?? "")} className="h-7 w-7 rounded-md bg-red-100 hover:bg-red-200 flex items-center justify-center text-red-700 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px]">
-                        {isExpired ? (
-                          <Badge className="bg-gray-200 text-gray-700 text-[10px]">Expired</Badge>
-                        ) : daysLeft !== null ? (
-                          <Badge className={`text-[10px] ${daysLeft <= 7 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                            {daysLeft} days left
-                          </Badge>
-                        ) : null}
-                        <span className="text-slate-500">{formatOptionalDate(v.issuedAt ?? v.issued_at)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     );
   };
@@ -4082,7 +3332,7 @@ export function AdminDashboard() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-black text-slate-900">{selectedLandlord.name}</h2>
-                    {selectedLandlordDetails.profile?.is_verified || selectedLandlord.isVerified || selectedLandlord.is_verified
+                    {selectedLandlord.isVerified || selectedLandlord.is_verified
                       ? <Badge className="bg-green-100 text-green-800 border border-green-200 font-bold text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Verified</Badge>
                       : <Badge className="bg-orange-100 text-orange-700 border border-orange-200 font-bold text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>}
                   </div>
@@ -4096,6 +3346,12 @@ export function AdminDashboard() {
 
             {/* Body - scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {isLoadingLandlordDetails && (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Loading property history and activity…
+                </div>
+              )}
               {/* Account Information */}
               <div>
                 <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -4121,11 +3377,11 @@ export function AdminDashboard() {
                   <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verification</p>
                     <Badge className={`inline-block font-bold text-xs ${
-                      selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified
+                      selectedLandlord.isVerified || selectedLandlord.is_verified
                         ? "bg-green-100 text-green-800 border border-green-200"
                         : "bg-amber-100 text-amber-800 border border-amber-200"
                     }`}>
-                      {selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified ? "Verified" : "Pending"}
+                      {selectedLandlord.isVerified || selectedLandlord.is_verified ? "Verified" : "Pending"}
                     </Badge>
                   </div>
                 </div>
@@ -4139,15 +3395,19 @@ export function AdminDashboard() {
                     Verification Information
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {selectedLandlordDetails.profile.business_permit_number && (
-                      <div className="p-3 bg-green-50/30 border border-green-100 rounded-xl">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Business Permit</p>
-                        <p className="text-sm font-bold text-slate-900">{selectedLandlordDetails.profile.business_permit_number}</p>
-                        {selectedLandlordDetails.profile.permit_expiry && (
-                          <p className="text-xs text-slate-500 mt-1">Expires: {new Date(selectedLandlordDetails.profile.permit_expiry).toLocaleDateString()}</p>
-                        )}
-                      </div>
-                    )}
+                    <div className="p-3 bg-green-50/30 border border-green-100 rounded-xl">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Business Permit</p>
+                      <p className="text-sm font-bold text-slate-900">
+                        {selectedLandlordDetails.profile.business_permit_number
+                          || selectedLandlordDetails.profile.permit_number
+                          || selectedLandlord.permit_number
+                          || selectedLandlord.permitNumber
+                          || "Not provided"}
+                      </p>
+                      {selectedLandlordDetails.profile.permit_expiry && (
+                        <p className="text-xs text-slate-500 mt-1">Expires: {new Date(selectedLandlordDetails.profile.permit_expiry).toLocaleDateString()}</p>
+                      )}
+                    </div>
                     {selectedLandlordDetails.profile.tin_number && (
                       <div className="p-3 bg-green-50/30 border border-green-100 rounded-xl">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">TIN Number</p>
@@ -4310,7 +3570,7 @@ export function AdminDashboard() {
 
             {/* Footer - actions */}
             <div className="px-6 py-4 border-t border-amber-100 bg-amber-50/30 shrink-0 flex gap-2">
-              {selectedLandlordDetails.profile?.is_verified || selectedLandlord.is_verified ? (
+              {selectedLandlord.isVerified || selectedLandlord.is_verified ? (
                 <Button variant="outline" size="sm"
                   onClick={(e) => { e.stopPropagation(); setVerifyAction({ landlordId: text(selectedLandlord.id), verify: false }); setSelectedLandlord(null); }}
                   className="flex-1 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl">

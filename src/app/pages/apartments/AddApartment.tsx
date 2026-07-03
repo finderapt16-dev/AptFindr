@@ -1,33 +1,54 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Navigate, useBlocker } from "react-router-dom";
+import { LocationPicker } from "@/app/components/common/LocationPicker";
+import { MultiImageUploader, type UploadedImage } from "@/app/components/common/MultiImageUploader";
+import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Switch } from "@/app/components/ui/switch";
+import { Textarea } from "@/app/components/ui/textarea";
+import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import {
   apartmentFormValuesFromApartment,
   createApartment,
-  insertApartmentRooms,
+  createApartmentRoom,
   resolveAppUserId,
+  updateApartmentRoom,
   uploadApartmentImage,
+  uploadApartmentRoomImage,
   type Apartment,
   type ApartmentStatus,
 } from "@/app/data/apartments";
-import { createNotification } from "@/app/services/dashboardSupabaseService";
-import { fetchAppUsers } from "@/app/services/authService";
-import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Textarea } from "@/app/components/ui/textarea";
-import { Switch } from "@/app/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { LocationPicker } from "@/app/components/common/LocationPicker";
-import { MultiImageUploader, type UploadedImage } from "@/app/components/common/MultiImageUploader";
 import {
-  ArrowLeft, AlertCircle, Sparkles, Building2, MapPin, ListChecks,
-  ArrowRight, ShieldCheck, FileText, Upload, X, Plus,
-  Home, Trash2, Check,
-  Cloud, CloudUpload, RotateCcw,
+  VERIFICATION_DOCUMENT_TYPES,
+  uploadVerificationDocuments,
+  validateVerificationFile,
+  type PendingVerificationDocument,
+  type VerificationDocumentType,
+} from "@/app/services/verificationDocumentsService";
+import { supabase } from "@/lib/supabaseclient";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Camera,
+  Check,
+  Cloud, CloudUpload,
+  FileText,
+  Home,
+  ListChecks,
+  MapPin,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Upload, X,
 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 // ── Room type ─────────────────────────────────────────────────────────────────
@@ -176,14 +197,13 @@ export function AddApartment() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   const stepConfig = [
     { number: 1, title: "Property Information", description: "Photos, title, and basic details" },
-    { number: 2, title: "Location", description: "Address and map location" },
-    { number: 3, title: "Rooms", description: "Room details and availability" },
+    { number: 2, title: "Verification", description: "Permit details and supporting documents" },
+    { number: 3, title: "Location", description: "Address and map location" },
     { number: 4, title: "Amenities & Features", description: "Utilities and additional features" },
-    { number: 5, title: "Verification", description: "Business permit and ID information" },
   ];
   // ─────────────────────────────────────────────────────────────────────
 
@@ -232,6 +252,7 @@ export function AddApartment() {
   };
 
   const [verificationData, setVerificationData] = useState({ ...INITIAL_VERIFICATION_DATA });
+  const [verificationDocuments, setVerificationDocuments] = useState<PendingVerificationDocument[]>([]);
   const [pendingDraft, setPendingDraft] = useState<PropertyDraft | null>(null);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
   const [draftReady, setDraftReady] = useState(false);
@@ -239,6 +260,31 @@ export function AddApartment() {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutoSaveRef = useRef(false);
   const submissionCompleteRef = useRef(false);
+
+  const selectVerificationDocument = (type: VerificationDocumentType, file?: File) => {
+    if (!file) return;
+    const error = validateVerificationFile(file);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setVerificationDocuments((current) => {
+      const previous = current.find((document) => document.type === type);
+      if (previous?.previewUrl.startsWith("blob:")) URL.revokeObjectURL(previous.previewUrl);
+      return [
+        ...current.filter((document) => document.type !== type),
+        { type, file, previewUrl: URL.createObjectURL(file) },
+      ];
+    });
+  };
+
+  const removePendingVerificationDocument = (type: VerificationDocumentType) => {
+    setVerificationDocuments((current) => {
+      const document = current.find((item) => item.type === type);
+      if (document?.previewUrl.startsWith("blob:")) URL.revokeObjectURL(document.previewUrl);
+      return current.filter((item) => item.type !== type);
+    });
+  };
 
   const hasDraftContent = useMemo(() => {
     const roomHasContent = rooms.length > 1 || rooms.some((room) =>
@@ -261,17 +307,17 @@ export function AddApartment() {
       String(formData.title ?? "").trim()
       || String(formData.description ?? "").trim()
       || String(formData.address ?? "").trim()
-      || Number(formData.price) > 0
       || amenitiesInput.trim()
       || utilitiesInput.trim()
       || features.length > 0
       || featureInput.trim()
       || uploadedImages.length > 0
+      || verificationDocuments.length > 0
       || roomHasContent
       || verificationHasContent
       || currentStep > 1,
     );
-  }, [amenitiesInput, currentStep, featureInput, features, formData, rooms, uploadedImages, utilitiesInput, verificationData]);
+  }, [amenitiesInput, currentStep, featureInput, features, formData, rooms, uploadedImages, utilitiesInput, verificationData, verificationDocuments]);
 
   const resetDraftForm = () => {
     setCurrentStep(1);
@@ -283,6 +329,12 @@ export function AddApartment() {
     setFeatures([]);
     setFeatureInput("");
     setVerificationData({ ...INITIAL_VERIFICATION_DATA });
+    setVerificationDocuments((current) => {
+      current.forEach((document) => {
+        if (document.previewUrl.startsWith("blob:")) URL.revokeObjectURL(document.previewUrl);
+      });
+      return [];
+    });
     setValidationErrors({});
     setImageReuploadRequired(false);
   };
@@ -396,24 +448,18 @@ export function AddApartment() {
     };
   }, [draftReady, hasDraftContent, persistDraft, user?.id]);
 
-  useEffect(() => {
-    const protectFromUnload = (event: BeforeUnloadEvent) => {
-      if (!hasDraftContent || submissionCompleteRef.current) return;
-      persistDraft(false);
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", protectFromUnload);
-    return () => window.removeEventListener("beforeunload", protectFromUnload);
-  }, [hasDraftContent, persistDraft]);
+  const fieldClass = (field: string) => validationErrors[field]
+    ? "rounded-xl border-red-400 focus-visible:border-red-500 focus-visible:ring-red-100"
+    : "rounded-xl border-slate-200 focus-visible:border-amber-500 focus-visible:ring-amber-100";
 
-  useBlocker(() => {
-    if (!hasDraftContent || submissionCompleteRef.current || isSubmitting) return false;
-    return !window.confirm("You have unsaved property details. Are you sure you want to leave?");
-  });
-
-  const fieldClass = (field: string) =>
-    validationErrors[field] ? "rounded-xl border-red-300 focus-visible:ring-red-400" : "rounded-xl border-amber-100";
+  const clearValidationError = (field: string) => {
+    setValidationErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
 
   const FieldError = ({ field }: { field: string }) =>
     validationErrors[field] ? <p className="text-xs font-bold text-red-600">{validationErrors[field]}</p> : null;
@@ -422,7 +468,6 @@ export function AddApartment() {
     const errors: Record<string, string> = {};
 
     if (!String(formData.title ?? "").trim()) errors.title = "Property title is required.";
-    if (!Number(formData.price)) errors.price = "Monthly rent is required.";
     if (!Number(formData.sqft)) errors.sqft = "Total property area is required.";
     if (!String(formData.description ?? "").trim()) errors.description = "Property description is required.";
     if (uploadedImages.length === 0) errors.images = "Upload at least one property image.";
@@ -432,32 +477,14 @@ export function AddApartment() {
       errors.mapLocation = "Map location is required.";
     }
 
-    if (rooms.length === 0) {
-      errors.rooms = "Add at least one room.";
-    }
-    rooms.forEach((room, index) => {
-      const prefix = `rooms.${index}`;
-      if (!room.roomName.trim()) errors[`${prefix}.roomName`] = "Room number/name is required.";
-      if (!Number(room.rent) || Number(room.rent) <= 0) errors[`${prefix}.rent`] = "Room rent is required.";
-      if (!Number(room.maxOccupants) || Number(room.maxOccupants) <= 0) errors[`${prefix}.maxOccupants`] = "Room capacity is required.";
-      if (!room.status) errors[`${prefix}.status`] = "Room status is required.";
-    });
-
-    if (!String(verificationData.propertyName).trim()) errors.verificationPropertyName = "Property name is required for verification.";
-    if (!String(verificationData.propertyAddress).trim()) errors.verificationPropertyAddress = "Property address is required for verification.";
     if (!String(verificationData.businessPermit).trim()) errors.businessPermit = "Business permit number is required.";
-    if (!String(verificationData.tinNumber).trim()) errors.tinNumber = "TIN number is required.";
-    if (!String(verificationData.idType).trim()) errors.idType = "Valid ID type is required.";
-    if (!String(verificationData.idNumber).trim()) errors.idNumber = "ID number is required.";
 
-    const firstStep = errors.title || errors.price || errors.sqft || errors.description || errors.images
+    const firstStep = errors.title || errors.sqft || errors.description || errors.images
       ? 1
-      : errors.address || errors.mapLocation
+      : errors.businessPermit
         ? 2
-        : Object.keys(errors).some((key) => key.startsWith("rooms"))
+        : errors.address || errors.mapLocation
           ? 3
-          : errors.verificationPropertyName || errors.verificationPropertyAddress || errors.businessPermit || errors.tinNumber || errors.idType || errors.idNumber
-            ? 5
             : currentStep;
 
     return { isValid: Object.keys(errors).length === 0, errors, firstStep };
@@ -466,22 +493,37 @@ export function AddApartment() {
   // ── Step validation ────────────────────────────────────────────────────
   const validateStep = (step: number): boolean => {
     const { errors } = validateAllFields();
-    setValidationErrors(errors);
+    const belongsToStep = (field: string) => {
+      if (step === 1) return ["title", "sqft", "description", "images"].includes(field);
+      if (step === 2) return field === "businessPermit";
+      if (step === 3) return ["address", "mapLocation"].includes(field);
+      return false;
+    };
+    const stepErrors = Object.fromEntries(Object.entries(errors).filter(([field]) => belongsToStep(field)));
+    setValidationErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
 
-    switch (step) {
-      case 1:
-        return !errors.title && !errors.price && !errors.sqft && !errors.description && !errors.images;
-      case 2:
-        return !errors.address && !errors.mapLocation;
-      case 3:
-        return !Object.keys(errors).some((key) => key.startsWith("rooms"));
-      case 4:
-        return true;
-      case 5:
-        return !errors.verificationPropertyName && !errors.verificationPropertyAddress && !errors.businessPermit && !errors.tinNumber && !errors.idType && !errors.idNumber;
-      default:
-        return false;
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep === currentStep || isSubmitting) return;
+
+    if (targetStep < currentStep) {
+      setCurrentStep(targetStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
     }
+
+    for (let step = currentStep; step < targetStep; step += 1) {
+      if (!validateStep(step)) {
+        setCurrentStep(step);
+        toast.error(`Complete ${stepConfig[step - 1].title} before continuing.`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
+
+    setCurrentStep(targetStep);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleNextStep = () => {
@@ -547,9 +589,9 @@ export function AddApartment() {
     const draftApartment: Apartment = {
       id: "",
       title: formData.title || "",
-      price: Number(formData.price) || 0,
-      bedrooms: rooms.length,
-      bathrooms: rooms.filter((r) => r.hasPrivateBath).length,
+      price: 0,
+      bedrooms: 0,
+      bathrooms: 0,
       sqft: Number(formData.sqft) || 500,
       address: formData.address || "",
       city: formData.city || "La Paz",
@@ -567,7 +609,7 @@ export function AddApartment() {
       lat: Number(formData.lat) || 10.7202,
       lng: Number(formData.lng) || 122.5621,
       landlordId: user.id,
-      isPublished: true,
+      isPublished: false,
       status: formData.status ?? "available",
     };
 
@@ -578,8 +620,8 @@ export function AddApartment() {
         utilityItems,
         customFeatures: features,
         verification: {
-          propertyName: verificationData.propertyName,
-          propertyAddress: verificationData.propertyAddress,
+          propertyName: verificationData.propertyName || formData.title || "",
+          propertyAddress: verificationData.propertyAddress || formData.address || "",
           businessPermit: verificationData.businessPermit,
           tinNumber: verificationData.tinNumber,
           idType: verificationData.idType,
@@ -598,6 +640,21 @@ export function AddApartment() {
         { ...formValues, landlordId: resolvedLandlordId },
         resolvedLandlordId,
       );
+      const { error: profileSyncError } = await supabase.from("landlord_profiles").upsert({
+        user_id: resolvedLandlordId,
+        permit_number: verificationData.businessPermit.trim(),
+        business_permit_number: verificationData.businessPermit.trim(),
+        tin_number: verificationData.tinNumber.trim() || null,
+        id_type: verificationData.idType || null,
+        id_number: verificationData.idNumber.trim() || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+      if (profileSyncError) throw new Error(profileSyncError.message || "Unable to synchronize verification details.");
+      const { error: userPermitError } = await supabase.from("app_users").update({
+        permit_number: verificationData.businessPermit.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", resolvedLandlordId);
+      if (userPermitError) throw new Error(userPermitError.message || "Unable to synchronize the permit number.");
 
       // Upload all images and collect their URLs
       const uploadedImageUrls: string[] = [];
@@ -634,7 +691,6 @@ export function AddApartment() {
           };
         });
         // Insert directly into database with proper structure
-        const { supabase } = await import("@/lib/supabaseclient");
         const insertPayload = imagesToInsert.map((img) => ({
           apartment_id: created.id,
           url: img.url,
@@ -644,42 +700,40 @@ export function AddApartment() {
         await supabase.from("apartment_images").insert(insertPayload);
       }
 
-      await insertApartmentRooms(
-        created.id,
-        rooms.map((room) => ({
-          id: room.id,
-          name: room.roomName || room.type,
+      for (const room of rooms) {
+        const createdRoom = await createApartmentRoom(created.id, {
+          name: room.roomName,
           type: room.type,
           sqft: room.sqft,
-          maxOccupants: Number(room.maxOccupants),
-          price: Number(room.rent),
+          maxOccupants: room.maxOccupants,
+          price: room.rent,
           hasPrivateBath: room.hasPrivateBath,
           bathroomType: room.bathroomType,
           sharedBathLocation: room.sharedBathLocation,
-          hasAC: room.hasAC,
-          isOccupied: room.status === "occupied",
           status: room.status,
+          isOccupied: room.status === "occupied",
+          hasAC: room.hasAC,
           description: room.description,
-          images: room.images,
-        })),
-      );
+          images: [],
+        }, resolvedLandlordId);
 
-      const appUsers = await fetchAppUsers();
-      const admins = appUsers.filter((entry) => entry.role === "admin" && entry.id);
+        if (createdRoom.id && room.images.length > 0) {
+          const roomImageUrls: string[] = [];
+          for (let imageIndex = 0; imageIndex < room.images.length; imageIndex += 1) {
+            const source = room.images[imageIndex];
+            if (/^https?:\/\//i.test(source)) {
+              roomImageUrls.push(source);
+              continue;
+            }
+            const blob = await (await fetch(source)).blob();
+            const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+            roomImageUrls.push(await uploadApartmentRoomImage(created.id, createdRoom.id, blob, `room-image-${imageIndex}.${extension}`));
+          }
+          await updateApartmentRoom(created.id, createdRoom.id, { ...createdRoom, images: roomImageUrls }, resolvedLandlordId);
+        }
+      }
 
-      await Promise.all(admins.map((admin) => createNotification({
-        user_id: admin.id!,
-        type: "landlord_property_submission",
-        title: "New landlord property submitted",
-        message: `${user.name} added "${created.title}" at ${created.address}, ${created.city}.`,
-        payload: {
-          apartment_id: created.id,
-          apartmentId: created.id,
-          landlord_id: created.landlordId ?? resolvedLandlordId,
-          landlordId: created.landlordId ?? resolvedLandlordId,
-          action: "property_submission",
-        },
-      })));
+      await uploadVerificationDocuments(created.id, resolvedLandlordId, verificationDocuments);
 
       await refreshApartments();
       submissionCompleteRef.current = true;
@@ -772,15 +826,20 @@ export function AddApartment() {
           <div className="flex items-center justify-between">
             {stepConfig.map((step, idx) => (
               <div key={step.number} className="flex items-center flex-1">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(step.number)}
+                  disabled={isSubmitting}
+                  aria-label={`Go to step ${step.number}: ${step.title}`}
+                  aria-current={currentStep === step.number ? "step" : undefined}
+                  className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-bold text-sm transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-60 hover:scale-105 ${
                     currentStep >= step.number
                       ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                       : "bg-slate-200 text-slate-600"
                   }`}
                 >
                   {currentStep > step.number ? <Check className="h-5 w-5" /> : step.number}
-                </div>
+                </button>
                 {idx < stepConfig.length - 1 && (
                   <div
                     className={`flex-1 h-1 mx-2 rounded-full transition-all ${
@@ -795,19 +854,22 @@ export function AddApartment() {
           </div>
           <div className="mt-4 grid grid-cols-5 gap-2">
             {stepConfig.map((step) => (
-              <div key={step.number} className="text-center">
-                <p
-                  className={`text-xs font-bold uppercase ${
+              <button
+                key={step.number}
+                type="button"
+                onClick={() => handleStepClick(step.number)}
+                disabled={isSubmitting}
+                aria-label={`Go to ${step.title}`}
+                className={`rounded-md px-1 py-1 text-center text-xs font-bold uppercase transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                     currentStep === step.number
                       ? "text-amber-600"
                       : currentStep > step.number
                       ? "text-slate-500"
                       : "text-slate-400"
                   }`}
-                >
-                  {step.title}
-                </p>
-              </div>
+              >
+                {step.title}
+              </button>
             ))}
           </div>
         </div>
@@ -819,7 +881,7 @@ export function AddApartment() {
           </CardHeader>
 
           <CardContent className="pt-10">
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} noValidate className="space-y-8">
               {/* ──────── STEP 1: Property Information ──────── */}
               {currentStep === 1 && (
                 <>
@@ -862,9 +924,13 @@ export function AddApartment() {
                       <Label className="text-slate-700 font-bold">Property Title *</Label>
                       <Input
                         value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, title: e.target.value });
+                          if (e.target.value.trim()) clearValidationError("title");
+                        }}
                         placeholder="e.g., Modern Loft"
                         required
+                        aria-invalid={Boolean(validationErrors.title)}
                         className={fieldClass("title")}
                       />
                       <FieldError field="title" />
@@ -872,29 +938,16 @@ export function AddApartment() {
 
                     <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-3">
-                        <Label className="text-slate-700 font-bold">Monthly Rent (₱) *</Label>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min={0}
-                          step="any"
-                          value={formData.price || ""}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            price: e.target.value === "" ? undefined : Number(e.target.value),
-                          })}
-                          required
-                          className={`${fieldClass("price")} hide-number-spinners`}
-                        />
-                        <FieldError field="price" />
-                      </div>
-                      <div className="space-y-3">
                         <Label className="text-slate-700 font-bold">Total Property Area (sqft) *</Label>
                         <Input
                           type="number"
                           value={formData.sqft || ""}
-                          onChange={(e) => setFormData({ ...formData, sqft: Number(e.target.value) })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, sqft: Number(e.target.value) });
+                            if (Number(e.target.value) > 0) clearValidationError("sqft");
+                          }}
                           required
+                          aria-invalid={Boolean(validationErrors.sqft)}
                           className={`${fieldClass("sqft")} hide-number-spinners`}
                         />
                         <FieldError field="sqft" />
@@ -905,9 +958,13 @@ export function AddApartment() {
                       <Label className="text-slate-700 font-bold">Description *</Label>
                       <Textarea
                         value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, description: e.target.value });
+                          if (e.target.value.trim()) clearValidationError("description");
+                        }}
                         rows={4}
                         required
+                        aria-invalid={Boolean(validationErrors.description)}
                         placeholder="Describe your property..."
                         className={`${fieldClass("description")} resize-none`}
                       />
@@ -917,8 +974,8 @@ export function AddApartment() {
                 </>
               )}
 
-              {/* ──────── STEP 2: Location ──────── */}
-              {currentStep === 2 && (
+              {/* ──────── STEP 3: Location ──────── */}
+              {currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
                     <MapPin className="h-5 w-5 text-amber-600" />
@@ -929,10 +986,14 @@ export function AddApartment() {
                     <Label className="text-slate-700 font-bold">Street Address *</Label>
                     <Input
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value });
+                        if (e.target.value.trim()) clearValidationError("address");
+                      }}
                       onBlur={() => setLocationLookupRequest((request) => request + 1)}
                       placeholder="House number, street, subdivision"
                       required
+                      aria-invalid={Boolean(validationErrors.address)}
                       className={fieldClass("address")}
                     />
                     <FieldError field="address" />
@@ -970,8 +1031,8 @@ export function AddApartment() {
                 </div>
               )}
 
-              {/* ──────── STEP 3: Rooms ──────── */}
-              {currentStep === 3 && (
+              {/* Legacy room editor disabled; rooms are managed through Manage Rooms. */}
+              {false && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
                     <Home className="h-5 w-5 text-amber-600" />
@@ -1000,9 +1061,13 @@ export function AddApartment() {
                           <Label className="text-xs uppercase font-bold">Room Number/Name *</Label>
                           <Input
                             value={room.roomName}
-                            onChange={(e) => updateRoom(room.id, { roomName: e.target.value })}
+                            onChange={(e) => {
+                              updateRoom(room.id, { roomName: e.target.value });
+                              if (e.target.value.trim()) clearValidationError(`rooms.${index}.roomName`);
+                            }}
                             placeholder="e.g., Room 101"
                             required
+                            aria-invalid={Boolean(validationErrors[`rooms.${index}.roomName`])}
                             className={fieldClass(`rooms.${index}.roomName`)}
                           />
                           <FieldError field={`rooms.${index}.roomName`} />
@@ -1034,29 +1099,33 @@ export function AddApartment() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Max Occupants</Label>
+                          <Label className="text-xs uppercase font-bold">Max Occupants *</Label>
                           <Input
                             type="number"
                             min={1}
                             value={room.maxOccupants || ""}
-                            onChange={(e) => updateRoom(room.id, {
-                              maxOccupants: e.target.value === "" ? undefined : Number(e.target.value),
-                            })}
+                            onChange={(e) => {
+                              updateRoom(room.id, { maxOccupants: e.target.value === "" ? undefined : Number(e.target.value) });
+                              if (Number(e.target.value) > 0) clearValidationError(`rooms.${index}.maxOccupants`);
+                            }}
+                            aria-invalid={Boolean(validationErrors[`rooms.${index}.maxOccupants`])}
                             className={`${fieldClass(`rooms.${index}.maxOccupants`)} hide-number-spinners`}
                           />
                           <FieldError field={`rooms.${index}.maxOccupants`} />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Monthly Rent (₱)</Label>
+                          <Label className="text-xs uppercase font-bold">Monthly Rent (₱) *</Label>
                           <Input
                             type="number"
                             inputMode="decimal"
                             min={0}
                             step="any"
                             value={room.rent || ""}
-                            onChange={(e) => updateRoom(room.id, {
-                              rent: e.target.value === "" ? undefined : Number(e.target.value),
-                            })}
+                            onChange={(e) => {
+                              updateRoom(room.id, { rent: e.target.value === "" ? undefined : Number(e.target.value) });
+                              if (Number(e.target.value) > 0) clearValidationError(`rooms.${index}.rent`);
+                            }}
+                            aria-invalid={Boolean(validationErrors[`rooms.${index}.rent`])}
                             className={`${fieldClass(`rooms.${index}.rent`)} hide-number-spinners`}
                           />
                           <FieldError field={`rooms.${index}.rent`} />
@@ -1145,6 +1214,19 @@ export function AddApartment() {
                         <span className="text-sm font-bold">Air conditioned</span>
                         <Switch checked={room.hasAC} onCheckedChange={(v) => updateRoom(room.id, { hasAC: v })} />
                       </div>
+
+                      <div className="space-y-3 border-t border-amber-100 pt-4">
+                        <div><Label className="text-xs font-bold uppercase">Room Images</Label><p className="mt-1 text-xs text-slate-500">Upload, take photos, reorder thumbnails, and select the room cover image.</p></div>
+                        <MultiImageUploader
+                          images={room.images.map((url, imageIndex) => ({ id: `${room.id}-image-${imageIndex}`, url, isPrimary: imageIndex === 0, sortOrder: imageIndex }))}
+                          onImagesChange={(nextImages) => {
+                            const ordered = [...nextImages].sort((left, right) => left.isPrimary === right.isPrimary ? left.sortOrder - right.sortOrder : left.isPrimary ? -1 : 1);
+                            updateRoom(room.id, { images: ordered.map((image) => image.url) });
+                          }}
+                          maxImages={10}
+                          maxFileSize={8}
+                        />
+                      </div>
                     </div>
                   ))}
 
@@ -1172,7 +1254,7 @@ export function AddApartment() {
                 </div>
               )}
 
-              {/* ──────── STEP 3: Amenities & Features ──────── */}
+              {/* ──────── STEP 4: Amenities & Features ──────── */}
               {currentStep === 4 && (
                 <>
                   <div className="space-y-6">
@@ -1265,8 +1347,8 @@ export function AddApartment() {
                 </>
               )}
 
-              {/* ──────── STEP 4: Verification ──────── */}
-              {currentStep === 5 && (
+              {/* ──────── STEP 2: Verification ──────── */}
+              {currentStep === 2 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
                     <ShieldCheck className="h-5 w-5 text-amber-600" />
@@ -1275,11 +1357,15 @@ export function AddApartment() {
 
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold flex items-center gap-1.5">
-                      <Building2 className="h-3.5" /> Property / Apartment Name *
+                      <Building2 className="h-3.5" /> Property / Apartment Name
                     </Label>
                     <Input
                       value={verificationData.propertyName}
-                      onChange={(e) => setVerificationData({ ...verificationData, propertyName: e.target.value })}
+                      onChange={(e) => {
+                        setVerificationData({ ...verificationData, propertyName: e.target.value });
+                        if (e.target.value.trim()) clearValidationError("verificationPropertyName");
+                      }}
+                      aria-invalid={Boolean(validationErrors.verificationPropertyName)}
                       placeholder="e.g., Sunset Heights"
                       className={fieldClass("verificationPropertyName")}
                     />
@@ -1288,11 +1374,15 @@ export function AddApartment() {
 
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold flex items-center gap-1.5">
-                      <MapPin className="h-3.5" /> Complete Property Address *
+                      <MapPin className="h-3.5" /> Complete Property Address
                     </Label>
                     <Input
                       value={verificationData.propertyAddress}
-                      onChange={(e) => setVerificationData({ ...verificationData, propertyAddress: e.target.value })}
+                      onChange={(e) => {
+                        setVerificationData({ ...verificationData, propertyAddress: e.target.value });
+                        if (e.target.value.trim()) clearValidationError("verificationPropertyAddress");
+                      }}
+                      aria-invalid={Boolean(validationErrors.verificationPropertyAddress)}
                       placeholder="Full address"
                       className={fieldClass("verificationPropertyAddress")}
                     />
@@ -1306,7 +1396,11 @@ export function AddApartment() {
                       </Label>
                       <Input
                         value={verificationData.businessPermit}
-                        onChange={(e) => setVerificationData({ ...verificationData, businessPermit: e.target.value })}
+                        onChange={(e) => {
+                          setVerificationData({ ...verificationData, businessPermit: e.target.value });
+                          if (e.target.value.trim()) clearValidationError("businessPermit");
+                        }}
+                        aria-invalid={Boolean(validationErrors.businessPermit)}
                         placeholder="B-2024-XXXXX"
                         className={fieldClass("businessPermit")}
                       />
@@ -1314,10 +1408,14 @@ export function AddApartment() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">TIN Number *</Label>
+                      <Label className="text-slate-700 font-bold">TIN Number (optional)</Label>
                       <Input
                         value={verificationData.tinNumber}
-                        onChange={(e) => setVerificationData({ ...verificationData, tinNumber: e.target.value })}
+                        onChange={(e) => {
+                          setVerificationData({ ...verificationData, tinNumber: e.target.value });
+                          if (e.target.value.trim()) clearValidationError("tinNumber");
+                        }}
+                        aria-invalid={Boolean(validationErrors.tinNumber)}
                         placeholder="XXX-XXX-XXX-XXX"
                         className={fieldClass("tinNumber")}
                       />
@@ -1327,12 +1425,16 @@ export function AddApartment() {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">Valid ID Type *</Label>
+                      <Label className="text-slate-700 font-bold">Valid ID Type (optional)</Label>
                       <select
                         value={verificationData.idType}
-                        onChange={(e) => setVerificationData({ ...verificationData, idType: e.target.value })}
-                        className={`w-full h-11 rounded-xl border bg-white px-3 text-sm ${
-                          validationErrors.idType ? "border-red-300 focus:ring-red-400" : "border-amber-100"
+                        onChange={(e) => {
+                          setVerificationData({ ...verificationData, idType: e.target.value });
+                          if (e.target.value) clearValidationError("idType");
+                        }}
+                        aria-invalid={Boolean(validationErrors.idType)}
+                        className={`w-full h-11 rounded-xl border bg-white px-3 text-sm outline-none transition focus:ring-[3px] ${
+                          validationErrors.idType ? "border-red-400 focus:border-red-500 focus:ring-red-100" : "border-slate-200 focus:border-amber-500 focus:ring-amber-100"
                         }`}
                       >
                         <option value="">Select ID Type</option>
@@ -1346,14 +1448,57 @@ export function AddApartment() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">ID Number *</Label>
+                      <Label className="text-slate-700 font-bold">ID Number (optional)</Label>
                       <Input
                         value={verificationData.idNumber}
-                        onChange={(e) => setVerificationData({ ...verificationData, idNumber: e.target.value })}
+                        onChange={(e) => {
+                          setVerificationData({ ...verificationData, idNumber: e.target.value });
+                          if (e.target.value.trim()) clearValidationError("idNumber");
+                        }}
+                        aria-invalid={Boolean(validationErrors.idNumber)}
                         placeholder="Enter ID number"
                         className={fieldClass("idNumber")}
                       />
                       <FieldError field="idNumber" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-t border-amber-100 pt-6">
+                    <div>
+                      <h3 className="font-black text-slate-900">Supporting documents</h3>
+                      <p className="mt-1 text-sm font-medium text-slate-500">Upload available documents now. Missing items appear as “Not provided” for the admin and can be supplied later.</p>
+                      <p className="mt-1 text-xs font-bold text-amber-700">JPG, JPEG, PNG, WebP, or PDF · maximum 10 MB each</p>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {VERIFICATION_DOCUMENT_TYPES.map((documentType) => {
+                        const document = verificationDocuments.find((item) => item.type === documentType.key);
+                        const uploadId = `verification-upload-${documentType.key}`;
+                        const cameraId = `verification-camera-${documentType.key}`;
+                        return (
+                          <div key={documentType.key} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex min-h-16 items-center gap-3 border-b border-slate-100 p-4">
+                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600"><FileText className="h-5 w-5" /></span>
+                              <div className="min-w-0"><p className="text-sm font-black text-slate-900">{documentType.label}</p><p className="truncate text-xs font-medium text-slate-400">{document?.file.name || "Not provided"}</p></div>
+                            </div>
+                            {document && (
+                              <div className="border-b border-slate-100 bg-slate-50 p-3">
+                                {document.file.type === "application/pdf" ? (
+                                  <a href={document.previewUrl} target="_blank" rel="noopener noreferrer" className="flex h-28 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700"><FileText className="h-6 w-6 text-rose-500" />Preview PDF</a>
+                                ) : (
+                                  <a href={document.previewUrl} target="_blank" rel="noopener noreferrer"><img src={document.previewUrl} alt={`${documentType.label} preview`} className="h-28 w-full rounded-xl object-cover" /></a>
+                                )}
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 p-3">
+                              <input id={uploadId} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={(event) => { selectVerificationDocument(documentType.key, event.target.files?.[0]); event.currentTarget.value = ""; }} />
+                              <label htmlFor={uploadId} className="flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-black text-slate-700 hover:bg-slate-50"><Upload className="h-3.5 w-3.5" />{document ? "Replace" : "Upload"}</label>
+                              <input id={cameraId} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={(event) => { selectVerificationDocument(documentType.key, event.target.files?.[0]); event.currentTarget.value = ""; }} />
+                              <label htmlFor={cameraId} className="flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-black text-slate-700 hover:bg-slate-50"><Camera className="h-3.5 w-3.5" />Take photo</label>
+                              {document && <button type="button" onClick={() => removePendingVerificationDocument(documentType.key)} className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-rose-200 text-xs font-black text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Remove file</button>}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

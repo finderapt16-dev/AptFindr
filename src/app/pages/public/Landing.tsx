@@ -1,63 +1,51 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "motion/react";
-import { Button } from "@/app/components/ui/button";
+import { AppLogo } from "@/app/components/common/AppLogo";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
-import {
-  Search,
-  Heart,
-  MapPin,
-  CheckCircle2,
-  Menu,
-  Sparkles,
-  UserCheck,
-  Building2,
-  GraduationCap,
-  Briefcase,
-  UserCog,
-  ShieldCheck,
-  Flag,
-  Zap,
-  Database,
-  Smartphone,
-  ClipboardCheck,
-  Bot,
-  Map,
-  ChevronDown,
-  Star,
-  ArrowRight,
-  BedDouble,
-  DollarSign,
-  CalendarCheck,
-  Users,
-  Phone,
-  Mail,
-  ExternalLink,
-  TrendingUp,
-  BadgeCheck,
-  MessageSquare,
-  FileCheck,
-  Eye,
-  Filter,
-  SlidersHorizontal,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { LandingListingsSection } from "@/app/components/landing/LandingApartmentPreview";
+import { Button } from "@/app/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetTrigger,
-  SheetTitle,
   SheetDescription,
+  SheetTitle,
+  SheetTrigger,
 } from "@/app/components/ui/sheet";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { LandingListingsSection } from "@/app/components/landing/LandingApartmentPreview";
-import { AppLogo } from "@/app/components/common/AppLogo";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BedDouble,
+  Bot,
+  Briefcase,
+  Building2,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  Flag,
+  GraduationCap,
+  Heart,
+  Mail,
+  Map,
+  MapPin,
+  Menu,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Smartphone,
+  Star,
+  TrendingUp,
+  UserCheck,
+  UserCog,
+  Users,
+  Zap
+} from "lucide-react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 /* ─── Animation helpers ──────────────────────────────────── */
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0 } };
-const fadeIn = { hidden: { opacity: 0 }, show: { opacity: 1 } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 
 function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -158,7 +146,7 @@ export function Landing() {
 
   const dashboardPath = user?.role === "admin" ? "/admin" : "/dashboard";
 
-  const handleProtectedAction = (e: React.MouseEvent, path: string) => {
+  const handleProtectedAction = (e: React.MouseEvent) => {
     if (!user) { e.preventDefault(); navigate("/login"); }
   };
 
@@ -205,7 +193,7 @@ export function Landing() {
                 <Link
                   key={to}
                   to={to}
-                  onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                  onClick={isProtected ? handleProtectedAction : undefined}
                   className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-colors rounded-lg ${
                     scrolled ? "text-slate-700 hover:text-amber-600 hover:bg-amber-50" : "text-white/90 hover:text-white hover:bg-white/10"
                   }`}
@@ -250,7 +238,7 @@ export function Landing() {
                     { to: "/favorites", label: "Favorites", protected: true },
                     ...(!user ? [{ to: "/login", label: "Login", protected: false }, { to: "/signup", label: "Sign Up", protected: false }] : [{ to: dashboardPath, label: "Dashboard", protected: false }]),
                   ].map(({ to, label, protected: isProtected }) => (
-                    <Link key={to} to={to} onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                    <Link key={to} to={to} onClick={isProtected ? handleProtectedAction : undefined}
                       className="px-4 py-3 text-slate-700 hover:text-amber-700 hover:bg-amber-50 rounded-xl font-semibold transition-colors">
                       {label}
                     </Link>
@@ -486,7 +474,7 @@ export function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
             {categories.map(({ icon: Icon, label, color, bg, border }, i) => (
               <AnimatedSection key={label} delay={i * 0.07}>
-                <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+                <Link to="/browse" onClick={handleProtectedAction}>
                   <motion.div
                     whileHover={{ y: -6, scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
@@ -513,7 +501,7 @@ export function Landing() {
             <p className="text-slate-500 max-w-lg mx-auto">Recently posted, verified apartments in La Paz</p>
           </AnimatedSection>
         </div>
-        <LandingListingsSection onBrowseClick={(e) => handleProtectedAction(e, "/browse")} />
+        <LandingListingsSection onBrowseClick={handleProtectedAction} />
       </div>
 
       {/* ─── Browse by Location ───────────────────────────────── */}
@@ -528,7 +516,7 @@ export function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {barangays.map(({ name, count, emoji }, i) => (
               <AnimatedSection key={name} delay={i * 0.07}>
-                <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+                <Link to="/browse" onClick={handleProtectedAction}>
                   <motion.div
                     whileHover={{ y: -5 }}
                     className="bg-white border-2 border-amber-100 hover:border-amber-300 rounded-2xl p-5 flex items-center gap-4 cursor-pointer shadow-sm hover:shadow-md transition-all group"
@@ -704,7 +692,7 @@ export function Landing() {
                   Create Free Account
                 </Button>
               </Link>
-              <Link to="/browse" onClick={(e) => handleProtectedAction(e, "/browse")}>
+              <Link to="/browse" onClick={handleProtectedAction}>
                 <Button size="lg" variant="outline" className="border-2 border-white/50 text-white hover:bg-white/10 backdrop-blur font-bold text-base px-8 py-4 h-auto rounded-xl inline-flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
                   Browse Listings
@@ -748,7 +736,7 @@ export function Landing() {
                   { to: "/design-guide", label: "Design Guide", protected: false },
                 ].map(({ to, label, protected: isProtected }) => (
                   <li key={to}>
-                    <Link to={to} onClick={isProtected ? (e) => handleProtectedAction(e, to) : undefined}
+                    <Link to={to} onClick={isProtected ? handleProtectedAction : undefined}
                       className="text-sm hover:text-amber-400 transition-colors flex items-center gap-1.5 group">
                       <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       {label}

@@ -1,29 +1,39 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 import {
   AlertTriangle, ArrowLeft, Bath, BedDouble, Bell, Building2, CalendarDays,
   Check, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen, Edit3, Heart,
   HelpCircle, Home, LayoutDashboard, LogOut, Mail, MapPin, Menu, MessageCircle,
-  Phone, Search, Settings, Share2, ShieldCheck, Square, Star, TrendingUp, Users,
-  Wind, X, Sparkles, Plus, User,
+  Phone,
+  Plus,
+  Search, Settings, Share2, ShieldCheck,
+  Sparkles,
+  Square,
+  TrendingUp,
+  User,
+  Users,
+  X
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
+import { EditApartmentDialog } from "@/app/components/common/EditApartmentDialog";
+import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { RoomImageGallery } from "@/app/components/common/RoomImageGallery";
+import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
+import { MapView } from "@/app/components/features/map/MapView";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 import type { Apartment, ApartmentRoom } from "@/app/data/apartments";
 import { fetchApartmentWithImages, getLandlordVerification, recordApartmentView, updateApartment } from "@/app/data/apartments";
-import { createReport, fetchUserById, type DashboardUserRow } from "@/app/services/dashboardSupabaseService";
+import { useFavorites } from "@/app/hooks/useFavorites";
+import { createReport, fetchPublicLandlordById, type DashboardUserRow } from "@/app/services/dashboardSupabaseService";
 import { uploadReportEvidence } from "@/app/services/reportEvidenceService";
 import { apartmentToFormValues } from "@/app/utils/apartmentMappers";
 import { getImageUrl } from "@/app/utils/images";
-import { useFavorites } from "@/app/hooks/useFavorites";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
-import { MapView } from "@/app/components/features/map/MapView";
-import { EditApartmentDialog } from "@/app/components/common/EditApartmentDialog";
-import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
-import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+import { isTenantVisibleApartment } from "@/app/utils/listingVisibility";
 
 const STATUS_LABEL: Record<string, string> = { available: "Available", occupied: "Occupied", reserved: "Reserved", maintenance: "Maintenance" };
 const STATUS_STYLE: Record<string, string> = { available: "bg-emerald-50 text-emerald-700", occupied: "bg-rose-50 text-rose-700", reserved: "bg-amber-50 text-amber-700", maintenance: "bg-violet-50 text-violet-700" };
@@ -43,7 +53,7 @@ export function ApartmentDetail() {
   const routeLocation = useLocation();
   const { user, canEditApartment, logout } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { refreshApartments } = useApartmentsContext();
+  const { apartments: contextApartments, refreshApartments } = useApartmentsContext();
   const [apartment, setApartment] = useState<Apartment | null>(null);
   const [landlord, setLandlord] = useState<DashboardUserRow | null>(null);
   const [verified, setVerified] = useState(false);
@@ -57,6 +67,7 @@ export function ApartmentDetail() {
   const [evidence, setEvidence] = useState<EvidenceFile[]>([]);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<ApartmentRoom | null>(null);
+  const listingUpdatedAt = id ? contextApartments.find((item) => item.id === id)?.updatedAt : undefined;
 
   const returnTo = (() => {
     const value = (routeLocation.state as { returnTo?: unknown } | null)?.returnTo;
@@ -74,14 +85,14 @@ export function ApartmentDetail() {
         setApartment(listing);
         let landlordVerified = false;
         if (listing?.landlordId) {
-          const [owner, isVerified] = await Promise.all([fetchUserById(listing.landlordId), getLandlordVerification(listing.landlordId)]);
+          const [owner, isVerified] = await Promise.all([fetchPublicLandlordById(listing.landlordId), getLandlordVerification(listing.landlordId)]);
           landlordVerified = isVerified;
           if (active) { setLandlord(owner); setVerified(isVerified); }
         } else if (active) {
           setLandlord(null);
           setVerified(false);
         }
-        if (listing && landlordVerified && listing.isPublished !== false && (user?.role === "student" || user?.role === "employee") && listing.landlordId !== user.id) {
+        if (listing && isTenantVisibleApartment({ ...listing, landlordVerified }) && (user?.role === "student" || user?.role === "employee") && listing.landlordId !== user.id) {
           void recordApartmentView(listing.id, { id: user.id, authId: user.authId, email: user.email, name: user.name, role: user.role })
             .catch((error) => console.error("Unable to record apartment view:", error));
         }
@@ -92,7 +103,12 @@ export function ApartmentDetail() {
     };
     void load();
     return () => { active = false; };
-  }, [id, user?.authId, user?.email, user?.id, user?.name, user?.role]);
+  }, [id, listingUpdatedAt, user?.authId, user?.email, user?.id, user?.name, user?.role]);
+
+  useEffect(() => {
+    if (!selectedRoom?.id || !apartment?.rooms) return;
+    setSelectedRoom(apartment.rooms.find((room) => room.id === selectedRoom.id) ?? null);
+  }, [apartment?.rooms, selectedRoom?.id]);
 
   const images = useMemo(() => apartment
     ? [...new Set([apartment.image, ...apartment.images].filter(Boolean).map(getImageUrl))]
@@ -142,8 +158,7 @@ export function ApartmentDetail() {
 
   if (loading) return <div className="min-h-screen bg-slate-50 grid place-items-center text-sm font-semibold text-slate-500">Loading apartment details...</div>;
   if (!apartment) return <div className="min-h-screen bg-slate-50 grid place-items-center p-6 text-center"><div><Building2 className="mx-auto mb-3 h-10 w-10 text-slate-300" /><h1 className="text-2xl font-bold">Apartment not found</h1><Button className="mt-5" onClick={() => navigate("/browse")}>Back to Browse</Button></div></div>;
-  if (apartment.isPublished === false && !ownListing) return <div className="min-h-screen bg-slate-50 grid place-items-center p-6 text-center"><div><AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-500" /><h1 className="text-2xl font-bold">Listing not available</h1><Button className="mt-5" onClick={handleBack}>Go Back</Button></div></div>;
-  if (!verified && !ownListing && user?.role !== "admin") return <div className="min-h-screen bg-slate-50 grid place-items-center p-6 text-center"><div><AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-500" /><h1 className="text-2xl font-bold">Listing pending verification</h1><p className="mt-2 max-w-md text-sm font-medium text-slate-500">This apartment will be visible to tenants after the landlord is verified by an admin.</p><Button className="mt-5" onClick={handleBack}>Go Back</Button></div></div>;
+  if (!ownListing && user?.role !== "admin" && !isTenantVisibleApartment({ ...apartment, landlordVerified: verified })) return <div className="min-h-screen bg-slate-50 grid place-items-center p-6 text-center"><div><AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-500" /><h1 className="text-2xl font-bold">Listing not available</h1><p className="mt-2 max-w-md text-sm font-medium text-slate-500">This apartment becomes visible after the property is approved, published, active, and its landlord is verified.</p><Button className="mt-5" onClick={handleBack}>Go Back</Button></div></div>;
 
   const locationText = [apartment.address, apartment.city, apartment.state, apartment.zip].filter(Boolean).join(", ") || "Location not provided";
   const status = apartment.status ?? "available";
@@ -152,7 +167,6 @@ export function ApartmentDetail() {
   const featureRecord = !Array.isArray(apartment.features) && apartment.features ? apartment.features : {};
   const rules = listFromUnknown((featureRecord as Record<string, unknown>).safetyRules ?? (featureRecord as Record<string, unknown>).houseRules);
   const propertyFeatures = [apartment.petFriendly && "Pet Friendly", apartment.parking && "Parking", apartment.furnished && "Furnished", ...listFromUnknown((featureRecord as Record<string, unknown>).customFeatures)].filter(Boolean) as string[];
-  const initials = (user?.name || user?.email || "U").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const landlordName = landlord?.name || "Not provided";
 
   const sidebarItems = user?.role === "landlord"
@@ -229,10 +243,12 @@ export function ApartmentDetail() {
           </nav>
 
           <div className="mt-auto border-t border-white/10 px-4 py-4">
-            <button onClick={() => { logout?.(); navigate("/"); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
-              <LogOut className="h-4 w-4" />
-              Log Out
-            </button>
+            <LogoutConfirmation onConfirm={() => { logout?.(); navigate("/"); }}>
+              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+            </LogoutConfirmation>
           </div>
         </aside>
       );
@@ -247,7 +263,7 @@ export function ApartmentDetail() {
       <nav className="px-3 pb-2 pt-4"><p className="mb-2 px-3 text-[10px] font-black uppercase tracking-widest text-white/25">Main</p><div className="space-y-0.5">{navGroup(main)}</div></nav>
       <nav className="mt-2 border-t border-white/10 px-3 pb-2 pt-3"><p className="mb-2 px-3 text-[10px] font-black uppercase tracking-widest text-white/25">Manage</p><div className="space-y-0.5">{navGroup(manage)}</div></nav>
       <nav className="mt-2 border-t border-white/10 px-3 pb-2 pt-3"><p className="mb-2 px-3 text-[10px] font-black uppercase tracking-widest text-white/25">Account</p><div className="space-y-0.5">{navGroup(account)}</div></nav>
-      <div className="flex-1" /><div className="mt-2 border-t border-white/10 px-4 py-4"><button onClick={() => { logout(); navigate("/"); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut className="h-4 w-4" />Log Out</button></div>
+      <div className="flex-1" /><div className="mt-2 border-t border-white/10 px-4 py-4"><LogoutConfirmation onConfirm={() => { logout(); navigate("/"); }}><button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut className="h-4 w-4" />Log Out</button></LogoutConfirmation></div>
     </aside>;
   };
 
@@ -259,7 +275,7 @@ export function ApartmentDetail() {
       <div className="h-full min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-20"><main><div className="mx-auto max-w-[1380px] px-4 py-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><button onClick={() => setMobileNav(true)} className="grid h-10 w-10 place-items-center rounded-lg border bg-white lg:hidden"><Menu className="h-5 w-5" /></button><Button variant="ghost" onClick={handleBack}><ArrowLeft className="mr-2 h-4 w-4" />{ownListing ? "Back to My Properties" : "Back to Browse"}</Button></div><div className="flex gap-2"><Button variant="outline" size="icon" onClick={() => void shareListing()} title="Share listing"><Share2 className="h-4 w-4" /></Button>{!ownListing && user?.role !== "admin" && <Button variant="outline" size="icon" onClick={() => void toggleFavorite(apartment.id)} title={favorite ? "Remove favorite" : "Add favorite"}><Heart className={`h-5 w-5 ${favorite ? "fill-rose-500 text-rose-500" : ""}`} /></Button>}{canEdit && <Button onClick={() => setEditOpen(true)} className="bg-orange-500 hover:bg-orange-600"><Edit3 className="mr-2 h-4 w-4" />Edit</Button>}</div></div>
 
-        <header className="mb-5 grid gap-4 lg:grid-cols-[1fr_330px] lg:items-end"><div><Badge className="mb-3 rounded-md bg-orange-50 text-orange-700">For Rent</Badge><h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-4xl">{apartment.title || "Untitled apartment"}</h1><div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500"><span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-orange-500" />{locationText}</span>{verified && <VerifiedBadge label="Verified Landlord" />}</div></div><div className="rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 p-5 text-white shadow-lg"><p className="text-3xl font-black">PHP {Number(apartment.price || 0).toLocaleString("en-PH")} <span className="text-sm font-semibold">/ month</span></p><div className="mt-4 flex items-center justify-between border-t border-white/25 pt-3 text-xs font-bold"><span>{STATUS_LABEL[status]}</span><span>{availableRooms} rooms available</span></div></div></header>
+        <header className="mb-5 grid gap-4 lg:grid-cols-[1fr_330px] lg:items-end"><div><Badge className="mb-3 rounded-md bg-orange-50 text-orange-700">For Rent</Badge><h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-4xl">{apartment.title || "Untitled apartment"}</h1><div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500"><span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-orange-500" />{locationText}</span>{verified && <VerifiedBadge label="Verified Landlord" />}</div></div><div className="rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 p-5 text-white shadow-lg"><p className="text-xl font-black">Room pricing</p><p className="mt-1 text-sm font-semibold text-orange-50">View each room for its monthly rent.</p><div className="mt-4 flex items-center justify-between border-t border-white/25 pt-3 text-xs font-bold"><span>{STATUS_LABEL[status]}</span><span>{availableRooms} rooms available</span></div></div></header>
 
         <section className="mb-5"><div className="relative aspect-[16/8] min-h-64 overflow-hidden rounded-lg bg-slate-200 shadow-sm">{images.length ? <img src={images[imageIndex]} alt={`${apartment.title} image ${imageIndex + 1}`} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-sm font-semibold text-slate-500">No images uploaded</div>}{images.length > 1 && <><button onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow"><ChevronLeft /></button><button onClick={() => setImageIndex((imageIndex + 1) % images.length)} className="absolute right-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow"><ChevronRight /></button><span className="absolute left-4 top-4 rounded-md bg-slate-950/75 px-3 py-1 text-xs font-bold text-white">{imageIndex + 1} / {images.length}</span></>}</div>{images.length > 1 && <div className="mt-3 flex gap-3 overflow-x-auto pb-1">{images.map((source, index) => <button key={`${source}-${index}`} onClick={() => setImageIndex(index)} className={`h-20 w-28 shrink-0 overflow-hidden rounded-lg border-2 ${index === imageIndex ? "border-orange-500" : "border-transparent"}`}><img src={source} alt={`${apartment.title} thumbnail ${index + 1}`} className="h-full w-full object-cover" /></button>)}</div>}</section>
 
@@ -267,7 +283,7 @@ export function ApartmentDetail() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.75fr)]"><div className="space-y-5">
           <section className="rounded-lg border bg-white p-5 shadow-sm"><h2 className="text-lg font-black">About this apartment</h2><p className="mt-3 text-sm font-medium leading-7 text-slate-600">{apartment.description || "No description provided."}</p><div className="mt-4 flex flex-wrap gap-2">{[...apartment.amenities, ...propertyFeatures].length ? [...new Set([...apartment.amenities, ...propertyFeatures])].map((item) => <span key={item} className="inline-flex items-center gap-2 rounded-md bg-orange-50 px-3 py-2 text-xs font-bold text-slate-700"><Check className="h-3.5 w-3.5 text-orange-600" />{item}</span>) : <p className="text-sm text-slate-500">No amenities provided.</p>}</div></section>
-          <section className="rounded-lg border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">Rooms & Amenities</h2><p className="text-xs text-slate-500">Current room availability from the landlord.</p></div><Badge className="bg-emerald-50 text-emerald-700">{availableRooms} available</Badge></div>{apartment.rooms?.length ? <div className="space-y-3">{apartment.rooms.map((room, index) => <button type="button" key={room.id || index} onClick={() => setSelectedRoom(room)} className="w-full overflow-hidden rounded-lg border bg-slate-50 text-left transition hover:border-orange-200 hover:bg-orange-50/40 focus:outline-none focus:ring-2 focus:ring-orange-200"><div className="grid sm:grid-cols-[150px_1fr]">{room.images?.[0] ? <img src={getImageUrl(room.images[0])} alt={room.name || `Room ${index + 1}`} className="h-36 w-full object-cover sm:h-full" /> : <div className="grid min-h-28 place-items-center bg-slate-100"><DoorOpen className="h-7 w-7 text-slate-300" /></div>}<div className="p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black">{room.name || `Room ${index + 1}`}</h3><p className="text-xs text-slate-500">{room.type || "Room type not provided"}</p></div><Badge className={STATUS_STYLE[roomStatus(room)]}>{STATUS_LABEL[roomStatus(room)]}</Badge></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4"><span><b>PHP {Number(room.price || 0).toLocaleString("en-PH")}</b><small className="block text-slate-500">Monthly rent</small></span><span><b>{room.maxOccupants || "-"}</b><small className="block text-slate-500">Capacity</small></span><span><b>{room.hasPrivateBath ? "Private" : "Shared"}</b><small className="block text-slate-500">Bathroom</small></span><span><b>{room.hasAC ? "Yes" : "No"}</b><small className="block text-slate-500">Air conditioning</small></span></div>{room.description && <p className="mt-3 text-xs leading-5 text-slate-600">{room.description}</p>}<p className="mt-3 text-xs font-black text-orange-600">View room details</p></div></div></button>)}</div> : <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">No room information available.</div>}</section>
+          <section className="rounded-lg border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">Rooms & Amenities</h2><p className="text-xs text-slate-500">Current room availability from the landlord.</p></div><Badge className="bg-emerald-50 text-emerald-700">{availableRooms} available</Badge></div>{apartment.rooms?.length ? <div className="space-y-3">{apartment.rooms.map((room, index) => <button type="button" key={room.id || index} onClick={() => setSelectedRoom(room)} className="w-full overflow-hidden rounded-lg border bg-slate-50 text-left transition hover:border-orange-200 hover:bg-orange-50/40 focus:outline-none focus:ring-2 focus:ring-orange-200"><div className="grid sm:grid-cols-[150px_1fr]">{room.images?.[0] ? <img src={getImageUrl(room.images[0])} alt={room.name || `Room ${index + 1}`} className="h-36 w-full object-cover sm:h-full" /> : <div className="grid min-h-28 place-items-center bg-slate-100"><DoorOpen className="h-7 w-7 text-slate-300" /></div>}<div className="p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black">{room.name || `Room ${index + 1}`}</h3><p className="text-xs text-slate-500">{room.type || "Room type not provided"}</p></div><Badge className={STATUS_STYLE[roomStatus(room)]}>{STATUS_LABEL[roomStatus(room)]}</Badge></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4"><span><b>₱{Number(room.price || 0).toLocaleString("en-PH")}</b><small className="block text-slate-500">Monthly rent</small></span><span><b>{room.maxOccupants || "-"}</b><small className="block text-slate-500">Capacity</small></span><span><b>{room.hasPrivateBath ? "Private" : "Shared"}</b><small className="block text-slate-500">Bathroom</small></span><span><b>{room.hasAC ? "Yes" : "No"}</b><small className="block text-slate-500">Air conditioning</small></span></div>{room.description && <p className="mt-3 text-xs leading-5 text-slate-600">{room.description}</p>}<p className="mt-3 text-xs font-black text-orange-600">View room details</p></div></div></button>)}</div> : <div className="rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">No room information available.</div>}</section>
           <section className="rounded-lg border bg-white p-5 shadow-sm"><h2 className="mb-4 text-lg font-black">Location</h2>{Number.isFinite(apartment.lat) && Number.isFinite(apartment.lng) ? <div className="h-[360px] overflow-hidden rounded-lg"><MapView lat={apartment.lat} lng={apartment.lng} zoom={15} showSingleMarker /></div> : <div className="grid h-48 place-items-center rounded-lg bg-slate-50 text-sm text-slate-500">Map location not provided.</div>}<p className="mt-3 flex gap-2 text-sm text-slate-500"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />{locationText}</p></section>
         </div><aside className="space-y-5">
           <section className="rounded-lg border bg-white p-5 shadow-sm"><h2 className="text-lg font-black">Landlord Information</h2><div className="mt-4 flex items-center gap-3 rounded-lg bg-slate-50 p-4"><span className="grid h-12 w-12 place-items-center rounded-full bg-orange-100 font-black text-orange-700">{landlordName === "Not provided" ? "L" : landlordName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><div><strong className="block">{landlordName}</strong>{verified && <VerifiedBadge label="Verified Landlord" className="mt-1" />}</div></div><div className="mt-4 space-y-2 text-sm text-slate-600"><p className="flex gap-2"><Mail className="h-4 w-4" />{landlord?.email || "Email not provided"}</p><p className="flex gap-2"><Phone className="h-4 w-4" />{landlord?.mobile || landlord?.mobileNumber || "Phone not provided"}</p></div>{renter && <Button onClick={messageLandlord} className="mt-4 w-full bg-orange-500 hover:bg-orange-600"><MessageCircle className="mr-2 h-4 w-4" />Message Landlord</Button>}</section>
@@ -277,12 +293,26 @@ export function ApartmentDetail() {
         </aside></div>
       </div></main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur lg:left-64"><div className="mx-auto flex max-w-[1380px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-8"><div className="mr-auto"><strong className="block text-xl text-orange-600">PHP {Number(apartment.price || 0).toLocaleString("en-PH")} <span className="text-xs">/ month</span></strong><span className="text-xs font-bold text-emerald-600">{STATUS_LABEL[status]}</span></div>{!ownListing && user?.role !== "admin" && <Button variant="outline" onClick={() => void toggleFavorite(apartment.id)}><Heart className={`mr-2 h-4 w-4 ${favorite ? "fill-rose-500 text-rose-500" : ""}`} /><span className="hidden sm:inline">{favorite ? "Saved" : "Add to Favorites"}</span></Button>}{renter && <Button onClick={messageLandlord} className="bg-orange-500 hover:bg-orange-600"><Mail className="mr-2 h-4 w-4" />Message Landlord</Button>}</div></div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur lg:left-64"><div className="mx-auto flex max-w-[1380px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-8"><div className="mr-auto"><strong className="block text-sm font-black text-orange-600">Prices are listed per room</strong><span className="text-xs font-bold text-emerald-600">{STATUS_LABEL[status]}</span></div>{!ownListing && user?.role !== "admin" && <Button variant="outline" onClick={() => void toggleFavorite(apartment.id)}><Heart className={`mr-2 h-4 w-4 ${favorite ? "fill-rose-500 text-rose-500" : ""}`} /><span className="hidden sm:inline">{favorite ? "Saved" : "Add to Favorites"}</span></Button>}{renter && <Button onClick={messageLandlord} className="bg-orange-500 hover:bg-orange-600"><Mail className="mr-2 h-4 w-4" />Message Landlord</Button>}</div></div>
       </div>
       </div>
 
       {editOpen && <EditApartmentDialog apartment={apartment} open={editOpen} onOpenChange={setEditOpen} onSave={saveApartment} />}
-      {selectedRoom && <div className="fixed inset-0 z-[115] grid place-items-center overflow-y-auto bg-slate-950/60 p-4" onClick={() => setSelectedRoom(null)}><div className="my-8 w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-between border-b p-5"><div><h2 className="text-xl font-black text-slate-950">{selectedRoom.name || "Room details"}</h2><p className="text-sm font-medium text-slate-500">{selectedRoom.type || "Room type not provided"}</p></div><button onClick={() => setSelectedRoom(null)} className="grid h-9 w-9 place-items-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200"><X className="h-4 w-4" /></button></div><div className="grid gap-5 p-5 md:grid-cols-[260px_1fr]">{selectedRoom.images?.[0] ? <img src={getImageUrl(selectedRoom.images[0])} alt={selectedRoom.name || "Room"} className="h-64 w-full rounded-lg object-cover md:h-full" /> : <div className="grid min-h-64 place-items-center rounded-lg bg-slate-100"><DoorOpen className="h-12 w-12 text-slate-300" /></div>}<div className="space-y-5"><div className="flex flex-wrap items-center gap-2"><Badge className={STATUS_STYLE[roomStatus(selectedRoom)]}>{STATUS_LABEL[roomStatus(selectedRoom)]}</Badge>{selectedRoom.sqft ? <Badge className="bg-slate-100 text-slate-700">{selectedRoom.sqft} sq ft</Badge> : null}</div><div className="grid grid-cols-2 gap-3 text-sm"><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Monthly rent</p><p className="mt-1 font-black text-slate-950">PHP {Number(selectedRoom.price || 0).toLocaleString("en-PH")}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Capacity</p><p className="mt-1 font-black text-slate-950">{selectedRoom.maxOccupants || "Not provided"}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Bathroom</p><p className="mt-1 font-black text-slate-950">{selectedRoom.hasPrivateBath ? "Private" : selectedRoom.bathroomType || "Shared"}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Air conditioning</p><p className="mt-1 font-black text-slate-950">{selectedRoom.hasAC ? "Yes" : "No"}</p></div></div>{selectedRoom.sharedBathLocation && <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm"><p className="font-black text-blue-900">Shared bathroom location</p><p className="mt-1 font-medium text-blue-700">{selectedRoom.sharedBathLocation}</p></div>}<div><h3 className="font-black text-slate-950">Description</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600">{selectedRoom.description || "No room description provided."}</p></div>{selectedRoom.images && selectedRoom.images.length > 1 && <div><h3 className="mb-3 font-black text-slate-950">Room Photos</h3><div className="grid grid-cols-3 gap-2">{selectedRoom.images.map((image, index) => <img key={`${image}-${index}`} src={getImageUrl(image)} alt={`${selectedRoom.name || "Room"} photo ${index + 1}`} className="h-24 rounded-lg object-cover" />)}</div></div>}</div></div></div></div>}
+      {selectedRoom && <div className="fixed inset-0 z-[115] grid place-items-center overflow-y-auto bg-slate-950/60 p-4" onClick={() => setSelectedRoom(null)}>
+        <div className="my-8 w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between border-b p-5"><div><h2 className="text-xl font-black text-slate-950">{selectedRoom.name || "Room details"}</h2><p className="text-sm font-medium text-slate-500">{selectedRoom.type || "Room type not provided"}</p></div><button onClick={() => setSelectedRoom(null)} className="grid h-9 w-9 place-items-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200"><X className="h-4 w-4" /></button></div>
+          <div className="grid gap-6 p-5 md:grid-cols-2">
+            <RoomImageGallery images={selectedRoom.images} roomName={selectedRoom.name || "Room"} />
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-2"><Badge className={STATUS_STYLE[roomStatus(selectedRoom)]}>{STATUS_LABEL[roomStatus(selectedRoom)]}</Badge>{selectedRoom.sqft ? <Badge className="bg-slate-100 text-slate-700">{selectedRoom.sqft} sq ft</Badge> : null}</div>
+              <div className="grid grid-cols-2 gap-3 text-sm"><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Monthly rent</p><p className="mt-1 font-black text-slate-950">₱{Number(selectedRoom.price || 0).toLocaleString("en-PH")}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Capacity</p><p className="mt-1 font-black text-slate-950">{selectedRoom.maxOccupants || "Not provided"}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Bathroom</p><p className="mt-1 font-black text-slate-950">{selectedRoom.hasPrivateBath ? "Private" : selectedRoom.bathroomType || "Shared"}</p></div><div className="rounded-lg border bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Air conditioning</p><p className="mt-1 font-black text-slate-950">{selectedRoom.hasAC ? "Yes" : "No"}</p></div></div>
+              <div><h3 className="font-black text-slate-950">Amenities</h3><div className="mt-2 flex flex-wrap gap-2"><Badge className="bg-blue-50 text-blue-700">{selectedRoom.hasPrivateBath ? "Private bathroom" : "Shared bathroom"}</Badge>{selectedRoom.hasAC && <Badge className="bg-blue-50 text-blue-700">Air conditioning</Badge>}</div></div>
+              {selectedRoom.sharedBathLocation && <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm"><p className="font-black text-blue-900">Shared bathroom location</p><p className="mt-1 font-medium text-blue-700">{selectedRoom.sharedBathLocation}</p></div>}
+              <div><h3 className="font-black text-slate-950">Description</h3><p className="mt-2 text-sm font-medium leading-6 text-slate-600">{selectedRoom.description || "No room description provided."}</p></div>
+            </div>
+          </div>
+        </div>
+      </div>}
       {reportOpen && <div className="fixed inset-0 z-[110] grid place-items-center overflow-y-auto bg-slate-950/60 p-4" onClick={() => setReportOpen(false)}><div className="my-8 w-full max-w-2xl rounded-lg bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-between border-b p-5"><div><h2 className="font-black">Report a Problem</h2><p className="text-xs text-slate-500">{apartment.title}</p></div><button onClick={() => setReportOpen(false)} className="grid h-9 w-9 place-items-center rounded-md bg-slate-100"><X className="h-4 w-4" /></button></div><div className="max-h-[70vh] space-y-4 overflow-y-auto p-5"><div><label className="text-xs font-bold">Describe the Problem *</label><textarea rows={4} maxLength={1000} value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} className="mt-2 w-full rounded-lg border p-3 text-sm" placeholder="Explain what happened and why the listing should be reviewed." /><p className="text-right text-xs text-slate-400">{reportDetails.length}/1000</p></div><div><label className="mb-2 block text-xs font-bold">Upload Evidence *</label><EvidenceUploader evidenceFiles={evidence} onEvidenceChange={setEvidence} maxFiles={5} maxFileSize={10} required /></div><div><label className="text-xs font-bold">Contact Information</label><input value={reportContact} onChange={(event) => setReportContact(event.target.value)} placeholder={user?.email || "Email or phone number"} className="mt-2 h-10 w-full rounded-lg border px-3 text-sm" /></div></div><div className="flex gap-3 border-t p-5"><Button variant="outline" onClick={() => setReportOpen(false)} disabled={submittingReport} className="flex-1">Cancel</Button><Button onClick={() => void submitReport()} disabled={submittingReport || evidence.length === 0} className="flex-1 bg-orange-500 hover:bg-orange-600">{submittingReport ? "Submitting..." : "Submit Report"}</Button></div></div></div>}
     </div>
   );

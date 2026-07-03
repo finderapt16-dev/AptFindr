@@ -80,6 +80,8 @@ export interface CreateUserInput extends AuthCredentials {
   workAddress?: string;
   permitNumber?: string;
   adminLevel?: string;
+  permitDocument?: File;
+  idDocument?: File;
 }
 
 export interface UpdateUserInput {
@@ -106,8 +108,6 @@ export interface UpdateUserInput {
 
 const APP_USERS_TABLE = 'app_users';
 const CURRENT_SESSION_KEY = 'apartment_finder_current_user';
-
-const PENDING_STATUS_VALUES = new Set(['pending', 'awaiting_approval', 'verification_pending']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -189,7 +189,11 @@ function toUserPayload(input: UpdateUserInput): Record<string, string | boolean 
   if (typeof input.address === 'string') payload.address = input.address;
   if (typeof input.role === 'string') payload.role = input.role;
   if (typeof input.status === 'string') payload.status = input.status;
-  if (typeof input.isVerified === 'boolean') payload.is_verified = input.isVerified;
+  if (typeof input.isVerified === 'boolean') {
+    payload.is_verified = input.isVerified;
+    payload.verification_status = input.isVerified ? 'verified' : 'pending';
+    payload.landlord_status = input.isVerified ? 'verified' : 'pending';
+  }
   if (typeof input.mobile === 'string') payload.mobile = input.mobile;
   if (typeof input.mobileNumber === 'string') payload.mobile = input.mobileNumber;
   if (typeof input.permitNumber === 'string') payload.permit_number = input.permitNumber;
@@ -199,81 +203,8 @@ function toUserPayload(input: UpdateUserInput): Record<string, string | boolean 
   return payload;
 }
 
-function compactRecord(record: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(record).filter(([, value]) => value !== undefined && value !== ''),
-  );
-}
-
 function nonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-async function recordSignup(profile: User, input: CreateUserInput, authId?: string): Promise<void> {
-  const { error } = await supabaseClient.from('signups').insert({
-    user_id: profile.id,
-    auth_id: authId ?? profile.authId ?? null,
-    email: profile.email,
-    role: profile.role,
-    source: 'web',
-    metadata: compactRecord({
-      name: input.name,
-      mobile: input.mobile ?? input.mobileNumber,
-      middleInitial: input.middleInitial,
-      address: input.address,
-      status: input.status,
-      school: input.school,
-      guardianName: input.guardianName,
-      guardianAddress: input.guardianAddress,
-      guardianContact: input.guardianContact,
-      company: input.company,
-      workAddress: input.workAddress,
-      permitNumber: input.permitNumber,
-    }),
-  });
-
-  if (error) {
-    console.warn('Failed to record signup audit row:', error.message);
-  }
-}
-
-async function notifyAdminsOfLandlordSignup(profile: User, input: CreateUserInput): Promise<void> {
-  if (profile.role !== 'landlord') return;
-
-  const { data: admins, error: adminError } = await supabaseClient
-    .from(APP_USERS_TABLE)
-    .select('id')
-    .eq('role', 'admin');
-
-  if (adminError || !Array.isArray(admins) || admins.length === 0) {
-    if (adminError) console.warn('Failed to load admins for landlord signup notification:', adminError.message);
-    return;
-  }
-
-  const notifications = admins
-    .filter((admin) => typeof admin.id === 'string' && admin.id.length > 0)
-    .map((admin) => ({
-      user_id: admin.id,
-      type: 'landlord_registration',
-      title: 'New landlord registration',
-      message: `${profile.name || 'A landlord'} registered and is waiting for verification review.`,
-      payload: {
-        landlord_id: profile.id,
-        landlordId: profile.id,
-        landlord_name: profile.name,
-        landlord_email: profile.email,
-        permit_number: input.permitNumber ?? null,
-        action: 'landlord_registration',
-      },
-      read: false,
-    }));
-
-  if (notifications.length === 0) return;
-
-  const { error } = await supabaseClient.from('notifications').insert(notifications);
-  if (error) {
-    console.warn('Failed to create landlord signup admin notifications:', error.message);
-  }
 }
 
 async function recordLogin(profile: User | null, authId: string, success = true, metadata: Record<string, unknown> = {}): Promise<void> {
@@ -342,6 +273,30 @@ async function ensureRoleProfile(userId: string, role: UserRole, input: Partial<
   }
 }
 
+async function uploadLandlordSignupDocuments(userId: string, input: CreateUserInput): Promise<void> {
+  if (input.role !== 'landlord') return;
+  const files = [
+    { file: input.permitDocument, column: 'verification_document_url', prefix: 'permit' },
+    { file: input.idDocument, column: 'id_document_url', prefix: 'identity' },
+  ].filter((item): item is { file: File; column: string; prefix: string } => item.file instanceof File);
+  if (files.length === 0) return;
+
+  const updates: Record<string, string> = {};
+  for (const item of files) {
+    const extension = item.file.name.split('.').pop()?.toLowerCase() || 'bin';
+    const path = `${userId}/${item.prefix}-${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabaseClient.storage.from('verification-documents').upload(path, item.file, {
+      contentType: item.file.type || undefined,
+      upsert: false,
+    });
+    if (error) throw new Error(`Unable to upload ${item.prefix} document: ${error.message}`);
+    updates[item.column] = path;
+  }
+
+  const { error } = await supabaseClient.from('landlord_profiles').update(updates).eq('user_id', userId);
+  if (error) throw new Error(`Unable to link verification documents: ${error.message}`);
+}
+
 export function readCurrentUserFromStorage(): User | null {
   const rawValue = localStorage.getItem(CURRENT_SESSION_KEY);
   if (!rawValue) return null;
@@ -378,13 +333,21 @@ export function persistCurrentUser(user: User | null): void {
 }
 
 export async function fetchAppUsers(): Promise<User[]> {
-  const { data, error } = await supabaseClient.from(APP_USERS_TABLE).select('*');
+  const [{ data, error }, { data: publicLandlords, error: publicError }] = await Promise.all([
+    supabaseClient.from(APP_USERS_TABLE).select('*'),
+    supabaseClient.from('public_landlords').select('*'),
+  ]);
 
-  if (error) {
+  if (error && publicError) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: AppUserRow) => normalizeUser(row));
+  const users = new Map<string, User>();
+  [...(publicLandlords ?? []), ...(data ?? [])].forEach((row) => {
+    const normalized = normalizeUser(row as AppUserRow);
+    if (normalized.id) users.set(normalized.id, normalized);
+  });
+  return [...users.values()];
 }
 
 export async function fetchUserById(userId: string): Promise<User | null> {
@@ -538,6 +501,13 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
         mobile: input.mobile ?? input.mobileNumber,
         middleInitial: input.middleInitial,
         address: input.address,
+        school: input.school,
+        guardianName: input.guardianName,
+        guardianAddress: input.guardianAddress,
+        guardianContact: input.guardianContact,
+        company: input.company,
+        workAddress: input.workAddress,
+        permitNumber: input.permitNumber,
       },
     },
   });
@@ -548,6 +518,20 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
 
   if (!authData.user) {
     throw new Error('Unable to create Supabase Auth user.');
+  }
+
+  if (!authData.session) {
+    return {
+      id: authData.user.id,
+      authId: authData.user.id,
+      name: input.name,
+      email,
+      role: input.role,
+      status,
+      isVerified: input.role !== 'landlord',
+      mobile: input.mobile ?? input.mobileNumber,
+      mobileNumber: input.mobile ?? input.mobileNumber,
+    };
   }
 
   const existing = await fetchUserByEmail(email);
@@ -577,8 +561,8 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
 
     const profile = normalizeUser(data as AppUserRow);
     await ensureRoleProfile(profile.id, input.role, { ...input, isVerified: input.role !== 'landlord' });
-    await recordSignup(profile, input, authData.user.id);
-    await notifyAdminsOfLandlordSignup(profile, input);
+    await uploadLandlordSignupDocuments(profile.id, input);
+    await supabaseClient.auth.signOut();
     return profile;
   }
 
@@ -607,8 +591,8 @@ export async function signupUser(input: CreateUserInput): Promise<User> {
 
   const profile = normalizeUser(data as AppUserRow);
   await ensureRoleProfile(profile.id, input.role, { ...input, isVerified: input.role !== 'landlord' });
-  await recordSignup(profile, input, authData.user.id);
-  await notifyAdminsOfLandlordSignup(profile, input);
+  await uploadLandlordSignupDocuments(profile.id, input);
+  await supabaseClient.auth.signOut();
   return profile;
 }
 
@@ -672,17 +656,19 @@ export async function updateUser(userId: string, updates: UpdateUserInput): Prom
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-  const { error } = await supabaseClient.from(APP_USERS_TABLE).delete().eq('id', userId);
+  const current = await getCurrentAuthenticatedUser();
+  if (!current || current.id !== userId) {
+    throw new Error('You can only delete your own account from this screen.');
+  }
+
+  const { error } = await supabaseClient.rpc('fn_delete_my_account');
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const storedUser = readCurrentUserFromStorage();
-  if (storedUser?.id === userId) {
-    await supabaseClient.auth.signOut();
-    persistCurrentUser(null);
-  }
+  await supabaseClient.auth.signOut();
+  persistCurrentUser(null);
 }
 
 export async function logoutUser(): Promise<void> {
@@ -693,38 +679,28 @@ export async function logoutUser(): Promise<void> {
   persistCurrentUser(null);
 }
 
-export async function verifyLandlord(userId: string): Promise<User> {
-  const { data, error } = await supabaseClient
-    .from(APP_USERS_TABLE)
-    .update({
-      status: 'verified',
-      is_verified: true,
-    })
-    .eq('id', userId)
-    .select('*')
-    .single();
-
+export async function verifyLandlord(userId: string, verified = true): Promise<User> {
+  const { error } = await supabaseClient.rpc('fn_set_landlord_verification', {
+    p_landlord_id: userId,
+    p_verified: verified,
+  });
   if (error) {
     throw new Error(error.message);
   }
 
-  const user = normalizeUser(data as AppUserRow);
-  await ensureRoleProfile(user.id, user.role, {
-    permitNumber: user.permitNumber,
-    isVerified: true,
-  });
+  const user = await fetchUserById(userId);
+  if (!user) {
+    throw new Error('Landlord account not found after verification update.');
+  }
   return user;
 }
 
 export async function getPendingLandlordCount(): Promise<number> {
-  const { data, error } = await supabaseClient.from(APP_USERS_TABLE).select('*').eq('role', 'landlord');
+  const { data, error } = await supabaseClient.from('public_landlords').select('is_verified');
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).reduce((count: number, row: AppUserRow) => {
-    const normalized = normalizeUser(row);
-    return PENDING_STATUS_VALUES.has(normalized.status.toLowerCase()) ? count + 1 : count;
-  }, 0);
+  return (data ?? []).filter((row: AppUserRow) => row.is_verified !== true).length;
 }

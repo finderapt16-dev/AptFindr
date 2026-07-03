@@ -1,16 +1,24 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { Button } from "@/app/components/ui/button";
-import { Alert, AlertDescription } from "@/app/components/ui/alert";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  AlertCircle, CheckCircle2, Eye, EyeOff,
-  ShieldCheck, BadgeCheck, MapPin, Star,
-  Sparkles, ArrowRight, Mail, Key, Home,
-} from "lucide-react";
 import { AppLogo } from "@/app/components/common/AppLogo";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { Button } from "@/app/components/ui/button";
+import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  AlertCircle,
+  ArrowRight,
+  BadgeCheck,
+  CheckCircle2, Eye, EyeOff,
+  Home,
+  Key,
+  Mail,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 /* ─── Floating label input (identical to Signup) ─────────── */
 function FloatInput({

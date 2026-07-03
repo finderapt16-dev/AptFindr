@@ -1,22 +1,21 @@
-import React from "react";
 import { createBrowserRouter } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { Root } from "./layouts/Root";
-import { Landing } from "./pages/public/Landing";
-import { Home } from "./pages/apartments/Home";
+import { AdminApartmentDetail } from "./pages/admin/AdminApartmentDetail";
+import { AddApartment } from "./pages/apartments/AddApartment";
 import { ApartmentDetail } from "./pages/apartments/ApartmentDetail";
 import { Favorites } from "./pages/apartments/Favorites";
-import { Dashboard } from "./pages/dashboards/Dashboard";
-import { AddApartment } from "./pages/apartments/AddApartment";
+import { Home } from "./pages/apartments/Home";
 import { ManageRooms } from "./pages/apartments/ManageRooms";
-import { Flowchart } from "./pages/tools/Flowchart";
-import { Settings } from "./pages/settings/Settings";
-import { DesignGuide } from "./pages/tools/DesignGuide";
+import { ForgotPassword } from "./pages/auth/ForgotPassword";
 import { Login } from "./pages/auth/Login";
 import { Signup } from "./pages/auth/Signup";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { ForgotPassword } from "./pages/auth/ForgotPassword";
+import { Dashboard } from "./pages/dashboards/Dashboard";
+import { Landing } from "./pages/public/Landing";
 import { NotFound } from "./pages/public/NotFound";
-import { AdminApartmentDetail } from "./pages/admin/AdminApartmentDetail";
+import { Settings } from "./pages/settings/Settings";
+import { DesignGuide } from "./pages/tools/DesignGuide";
+import { Flowchart } from "./pages/tools/Flowchart";
 
 export const router = createBrowserRouter([
   // Standalone pages — no Root wrapper (no app Header / Chatbot)

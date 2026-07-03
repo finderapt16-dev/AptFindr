@@ -1,19 +1,33 @@
-import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth, UserRole } from "@/app/contexts/AuthContext";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Alert, AlertDescription } from "@/app/components/ui/alert";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  AlertCircle, User, Briefcase, Building2, MapPin, Users,
-  GraduationCap, Lock, Mail, Phone, CheckCircle2, Eye, EyeOff,
-  Upload, ShieldCheck, ClipboardList, BadgeCheck, Sparkles,
-  ChevronDown, ChevronRight, ArrowRight, Check, Star,
-  Home, Key, FileText,
-} from "lucide-react";
 import { AppLogo } from "@/app/components/common/AppLogo";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { Button } from "@/app/components/ui/button";
+import { useAuth, UserRole } from "@/app/contexts/AuthContext";
+import {
+  AlertCircle,
+  ArrowRight,
+  BadgeCheck,
+  Briefcase, Building2,
+  Check,
+  CheckCircle2,
+  ChevronDown, ChevronRight,
+  ClipboardList,
+  Eye, EyeOff,
+  GraduationCap,
+  Key,
+  Lock, Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Upload,
+  User,
+  Users
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 /* ─── Floating label input ─────────────────────────────────── */
 function FloatInput({
@@ -78,9 +92,9 @@ const strengthText  = ["", "text-rose-500", "text-orange-500", "text-amber-600",
 
 /* ─── Accordion section ────────────────────────────────────── */
 function AccordionSection({
-  id, title, icon, open, onToggle, done, children,
+  title, icon, open, onToggle, done, children,
 }: {
-  id: string; title: string; icon: React.ReactNode;
+  title: string; icon: React.ReactNode;
   open: boolean; onToggle: () => void; done: boolean;
   children: React.ReactNode;
 }) {
@@ -200,6 +214,8 @@ export function Signup() {
         company: formData.company,
         workAddress: formData.workAddress,
         permitNumber: formData.permitNumber,
+        permitDocument: permitFile ?? undefined,
+        idDocument: idFile ?? undefined,
       });
       if (result.success) {
         navigate("/login", { state: { message: "Account created successfully! Please login." } });
@@ -410,7 +426,6 @@ export function Signup() {
 
               {/* ── Accordion: Personal Info ─────────────────────── */}
               <AccordionSection
-                id="personal"
                 title="Personal Information"
                 icon={<User className="h-4 w-4" />}
                 open={openSection === "personal"}
@@ -433,7 +448,6 @@ export function Signup() {
 
               {/* ── Accordion: Contact Info ──────────────────────── */}
               <AccordionSection
-                id="contact"
                 title="Contact Information"
                 icon={<Phone className="h-4 w-4" />}
                 open={openSection === "contact"}
@@ -452,7 +466,6 @@ export function Signup() {
 
               {/* ── Accordion: Role-specific ─────────────────────── */}
               <AccordionSection
-                id="role-details"
                 title={formData.role === "student" ? "Student Details" : formData.role === "employee" ? "Employment Details" : formData.role === "landlord" ? "Landlord Verification" : "Role Details"}
                 icon={formData.role === "student" ? <GraduationCap className="h-4 w-4" /> : formData.role === "employee" ? <Briefcase className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}
                 open={openSection === "role-details"}
@@ -535,7 +548,6 @@ export function Signup() {
 
               {/* ── Accordion: Account Security ──────────────────── */}
               <AccordionSection
-                id="security"
                 title="Account Security"
                 icon={<Lock className="h-4 w-4" />}
                 open={openSection === "security"}

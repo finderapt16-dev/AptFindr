@@ -1,68 +1,68 @@
-import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import type { ReactNode } from "react";
+import { MapView } from "@/app/components/features/map/MapView";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { useAuth } from "@/app/contexts/AuthContext";
 import type { Apartment, ApartmentRoom } from "@/app/data/apartments";
 import {
   getLandlordVerification,
+  updateApartmentPublication,
 } from "@/app/data/apartments";
 import {
   fetchApartmentInspectionDetails,
   type ApartmentInspectionDetails,
 } from "@/app/services/apartmentsService";
 import {
+  createViolation,
   fetchAdminReports,
+  fetchApartmentChangeLogs,
   fetchLandlordProfile,
   fetchUserById,
-  updateReportStatus,
-  createViolation,
-  notifyLandlordViolation,
-  fetchApartmentChangeLogs,
   sendAdminMessageToLandlord,
+  updateReportStatus,
+  type DashboardAuditLogRow,
   type DashboardLandlordProfileRow,
   type DashboardReportRow,
   type DashboardUserRow,
-  type DashboardAuditLogRow,
 } from "@/app/services/dashboardSupabaseService";
-import { getImageUrl } from "@/app/utils/images";
-import { formatAuditLogForDisplay } from "@/app/utils/auditLogDisplay";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { MapView } from "@/app/components/features/map/MapView";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { toast } from "sonner";
 import {
-  ArrowLeft,
-  ShieldCheck,
-  Home,
-  Users,
-  Droplet,
-  Wind,
-  DoorOpen,
-  CheckCircle2,
-  MapPin,
-  Bed,
-  Bath,
-  Square,
-  Calendar,
-  Check,
-  Flag,
-  Eye,
-  UserCheck,
+  VERIFICATION_DOCUMENT_TYPES,
+  fetchApartmentVerificationDocuments,
+  type VerificationDocumentRecord,
+} from "@/app/services/verificationDocumentsService";
+import { formatAuditLogForDisplay } from "@/app/utils/auditLogDisplay";
+import { getImageUrl } from "@/app/utils/images";
+import { supabase } from "@/lib/supabaseclient";
+import {
   AlertTriangle,
-  X,
-  Mail,
-  Phone,
-  Lock,
-  Trash2,
-  MessageSquare,
-  ClipboardList,
-  Image as ImageIcon,
-  FileSearch,
+  ArrowLeft,
   Building2,
+  Check,
+  CheckCircle2,
+  ClipboardList,
   ExternalLink,
+  Eye,
+  EyeOff,
+  FileSearch,
+  FileText,
+  Flag,
+  Home,
+  Image as ImageIcon,
+  Lock,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
   Send,
+  ShieldCheck,
+  UserCheck,
+  Users,
+  X
 } from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -195,6 +195,8 @@ export function AdminApartmentDetail() {
   const [changeLogLoading, setChangeLogLoading] = useState(false);
   const [changeLogs, setChangeLogs] = useState<DashboardAuditLogRow[]>([]);
   const [changeLogActors, setChangeLogActors] = useState<Record<string, string>>({});
+  const [verificationDocuments, setVerificationDocuments] = useState<VerificationDocumentRecord[]>([]);
+  const [isUpdatingPublication, setIsUpdatingPublication] = useState(false);
   const returnTo = (() => {
     const value = (routeLocation.state as { returnTo?: unknown } | null)?.returnTo;
     return typeof value === "string" && value.startsWith("/") ? value : "/dashboard?section=apartments";
@@ -215,10 +217,12 @@ export function AdminApartmentDetail() {
 
       try {
         const details = await fetchApartmentInspectionDetails(id);
+        const submittedDocuments = await fetchApartmentVerificationDocuments(id);
         if (!active) return;
         const loaded = details?.apartment ?? null;
         setInspectionDetails(details);
         setApartment(loaded);
+        setVerificationDocuments(submittedDocuments);
 
         if (loaded?.landlordId) {
           const landlordData = await fetchUserById(loaded.landlordId);
@@ -261,6 +265,30 @@ export function AdminApartmentDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const refreshInspection = () => {
+      void fetchApartmentInspectionDetails(id).then((details) => {
+        setInspectionDetails(details);
+        setApartment(details?.apartment ?? null);
+      });
+    };
+    const channel = supabase
+      .channel(`admin-apartment-detail-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartments", filter: `id=eq.${id}` }, refreshInspection)
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms", filter: `apartment_id=eq.${id}` }, refreshInspection)
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images", filter: `apartment_id=eq.${id}` }, refreshInspection)
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [id]);
+
+  useEffect(() => {
+    const sectionId = routeLocation.hash.replace(/^#/, "");
+    if (isLoading || !sectionId.startsWith("admin-")) return;
+    const timer = window.setTimeout(() => scrollToSection(sectionId), 100);
+    return () => window.clearTimeout(timer);
+  }, [isLoading, routeLocation.hash]);
+
   const handleResolveReport = async (reportId: string | undefined) => {
     if (!reportId) {
       toast.error("Cannot resolve report - missing ID");
@@ -290,9 +318,11 @@ export function AdminApartmentDetail() {
     try {
       setIsLoading(true);
       const details = await fetchApartmentInspectionDetails(id);
+      const submittedDocuments = await fetchApartmentVerificationDocuments(id);
       if (details?.apartment) {
         setInspectionDetails(details);
         setApartment(details.apartment);
+        setVerificationDocuments(submittedDocuments);
         
         if (details.apartment?.landlordId) {
           const landlordData = await fetchUserById(details.apartment.landlordId);
@@ -318,6 +348,27 @@ export function AdminApartmentDetail() {
       toast.error("Failed to refresh data");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePublicationReview = async () => {
+    if (!apartment?.id || !user?.id || isUpdatingPublication) return;
+    const nextPublished = apartment.isPublished === false;
+    setIsUpdatingPublication(true);
+    try {
+      await updateApartmentPublication(apartment.id, nextPublished, user.id);
+      setApartment((current) => current ? {
+        ...current,
+        isPublished: nextPublished,
+        approvalStatus: nextPublished ? "approved" : "pending",
+        isArchived: nextPublished ? false : current.isArchived,
+        deletedAt: nextPublished ? undefined : current.deletedAt,
+      } : current);
+      toast.success(nextPublished ? "Property approved and published" : "Property unpublished");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update publication status.");
+    } finally {
+      setIsUpdatingPublication(false);
     }
   };
 
@@ -348,17 +399,7 @@ export function AdminApartmentDetail() {
       });
 
       if (violation) {
-        const notified = await notifyLandlordViolation(
-          apartment.landlordId,
-          violationType,
-          violationMessage.trim(),
-          apartment.title,
-        );
-        if (notified) {
-          toast.success("Violation issued and landlord notified");
-        } else {
-          toast.error("Violation was saved, but the landlord notification could not be sent");
-        }
+        toast.success("Violation issued and landlord notified");
         setModerationMode("view");
         setViolationMessage("");
         setSelectedReport(null);
@@ -506,10 +547,10 @@ export function AdminApartmentDetail() {
   const propertyType = getText(rawFeatures, ["propertyType", "property_type", "type"], apartment.propertyType || "—");
   const barangay = getText(rawFeatures, ["barangay", "district", "area"], "—");
   const datePosted = getText(rawApartment, ["created_at", "createdAt"], apartment.createdAt || apartment.availableDate);
-  const documentLinks = [
-    { label: "Verification Document", url: landlordProfile?.verification_document_url },
-    { label: "ID Document", url: landlordProfile?.id_document_url },
-  ].filter((item): item is { label: string; url: string } => typeof item.url === "string" && item.url.trim().length > 0);
+  const submittedDocumentCards = VERIFICATION_DOCUMENT_TYPES.map((definition) => ({
+    ...definition,
+    document: verificationDocuments.find((document) => document.documentType === definition.key),
+  }));
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -521,6 +562,15 @@ export function AdminApartmentDetail() {
             Back to Apartments
           </Button>
           <div className="flex items-center gap-3">
+            <Button
+              onClick={() => void handlePublicationReview()}
+              disabled={isUpdatingPublication}
+              variant={apartment.isPublished === false ? "default" : "outline"}
+              className={apartment.isPublished === false ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border-rose-200 text-rose-600 hover:bg-rose-50"}
+            >
+              {apartment.isPublished === false ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+              {isUpdatingPublication ? "Updating..." : apartment.isPublished === false ? "Approve & Publish" : "Unpublish"}
+            </Button>
             <Button
               onClick={handleRefreshData}
               disabled={isLoading}
@@ -617,7 +667,7 @@ export function AdminApartmentDetail() {
                   <DetailRow label="Property Type" value={propertyType} />
                   <DetailRow label="Property Description" value={apartment.description} />
                   <DetailRow label="Complete Address" value={`${apartment.address}, ${apartment.city}, ${apartment.state} ${apartment.zip}`} />
-                  <DetailRow label="Monthly Rent" value={`₱${apartment.price.toLocaleString()}`} />
+                  <DetailRow label="Room Pricing" value="See individual room records" />
                   <DetailRow label="Available Rooms" value={availableRoomCount} />
                   <DetailRow label="Total Rooms" value={roomsForDisplay.length || apartment.bedrooms} />
                   <DetailRow label="Property Status" value={STATUS_LABEL[apartment.status ?? "available"]} />
@@ -636,10 +686,6 @@ export function AdminApartmentDetail() {
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <p className="text-sm text-slate-600 font-medium mb-1">Square Feet</p>
                     <p className="text-2xl font-bold text-slate-900">{apartment.sqft}</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-sm text-slate-600 font-medium mb-1">Monthly Rent</p>
-                    <p className="text-2xl font-bold text-amber-600">₱{apartment.price.toLocaleString()}</p>
                   </div>
                 </div>
 
@@ -738,6 +784,7 @@ export function AdminApartmentDetail() {
                     {roomsForDisplay.map((room: Record<string, unknown>, index: number) => (
                       <div
                         key={getText(room, ["id"], `room-${index}`)}
+                        id={`admin-room-${getText(room, ["id"], `room-${index}`)}`}
                         className={`p-5 rounded-2xl border-2 ${
                           getRoomStatus(room) === "occupied"
                             ? "bg-slate-100 border-slate-300"
@@ -832,8 +879,7 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Verification Documents */}
-            {documentLinks.length > 0 && (
-              <Card id="admin-verification" className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-slate-50 scroll-mt-6">
+            <Card id="admin-verification" className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-slate-50 scroll-mt-6">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
@@ -841,42 +887,32 @@ export function AdminApartmentDetail() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Verification Documents</h2>
-                      <p className="text-sm text-slate-600 font-medium">Landlord's verification & identity documents</p>
+                      <p className="text-sm text-slate-600 font-medium">{landlord?.name || "Landlord"} · {apartment.title}</p>
                     </div>
                   </div>
 
+                  <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                    <DetailRow label="Permit Number" value={getText(verificationData, ["businessPermit"], landlordProfile?.business_permit_number || "Not provided")} />
+                    <DetailRow label="Verification Status" value={verifiedLandlord ? "Verified" : "Pending review"} />
+                    <DetailRow label="Documents Provided" value={`${verificationDocuments.length} of ${VERIFICATION_DOCUMENT_TYPES.length}`} />
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {documentLinks.map((doc, index) => (
-                      <div key={index} className="p-4 bg-white rounded-lg border border-green-200 hover:border-green-400 transition-all">
+                    {submittedDocumentCards.map(({ key, label, document }) => (
+                      <div key={key} className="p-4 bg-white rounded-lg border border-green-200 hover:border-green-400 transition-all">
                         <div className="flex items-start justify-between mb-3">
-                          <h3 className="font-bold text-slate-900">{doc.label}</h3>
-                          <ExternalLink className="h-4 w-4 text-green-600" />
+                          <div><h3 className="font-bold text-slate-900">{label}</h3><p className={`mt-1 text-xs font-bold ${document ? "text-emerald-600" : "text-slate-400"}`}>{document?.fileName || "Not provided"}</p></div>
+                          {document && <ExternalLink className="h-4 w-4 text-green-600" />}
                         </div>
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block"
-                        >
-                          <img
-                            src={getImageUrl(doc.url)}
-                            alt={doc.label}
-                            className="w-full h-48 object-cover rounded-lg border border-slate-200 hover:opacity-90 transition-opacity cursor-pointer"
-                          />
-                        </a>
-                        <Button
-                          onClick={() => window.open(doc.url, '_blank')}
-                          className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View Full Document
-                        </Button>
+                        {document ? <>
+                          {document.mimeType === "application/pdf" ? <div className="flex h-48 items-center justify-center rounded-lg border border-slate-200 bg-slate-50"><FileText className="h-12 w-12 text-rose-500" /></div> : <img src={document.previewUrl} alt={label} className="h-48 w-full rounded-lg border border-slate-200 object-cover" />}
+                          <Button onClick={() => window.open(document.previewUrl, "_blank", "noopener,noreferrer")} className="mt-3 w-full bg-green-600 text-white hover:bg-green-700"><ExternalLink className="mr-2 h-4 w-4" />View Full Document</Button>
+                        </> : <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm font-bold text-slate-400">Not provided</div>}
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
-            )}
 
             {/* Reports Section */}
             {reports.length > 0 && (
@@ -1051,16 +1087,14 @@ export function AdminApartmentDetail() {
                         <UserCheck className="h-4 w-4 mr-1" />
                         View Profile
                       </Button>
-                      {documentLinks.length > 0 && (
-                        <Button
-                          onClick={() => scrollToSection('admin-verification')}
-                          variant="outline"
-                          className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 text-xs"
-                        >
-                          <FileSearch className="h-4 w-4 mr-1" />
-                          Documents
-                        </Button>
-                      )}
+                      <Button
+                        onClick={() => scrollToSection('admin-verification')}
+                        variant="outline"
+                        className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 text-xs"
+                      >
+                        <FileSearch className="h-4 w-4 mr-1" />
+                        Documents
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

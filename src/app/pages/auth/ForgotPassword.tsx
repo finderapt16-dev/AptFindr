@@ -1,17 +1,24 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/app/components/ui/button";
-import { Alert, AlertDescription } from "@/app/components/ui/alert";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  AlertCircle, CheckCircle2, ArrowLeft, ArrowRight,
-  Mail, ShieldCheck, BadgeCheck, MapPin, Star,
-  Sparkles, Key, Lock, RefreshCw, Home,
-} from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseclient";
 import { AppLogo } from "@/app/components/common/AppLogo";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { Button } from "@/app/components/ui/button";
+import { supabase } from "@/lib/supabaseclient";
+import {
+  AlertCircle,
+  ArrowLeft, ArrowRight,
+  BadgeCheck,
+  CheckCircle2,
+  Home,
+  Key, Lock,
+  Mail,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 /* ─── Floating label input (identical to Login & Signup) ──── */
 function FloatInput({

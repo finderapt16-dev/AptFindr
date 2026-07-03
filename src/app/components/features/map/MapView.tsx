@@ -159,7 +159,7 @@ function buildPopup(apartment: MapApartmentMarker) {
           <div style="font-weight: 900; color: #0f172a; font-size: 15px; line-height: 1.25;">${escapeHtml(apartment.title)}</div>
           <div style="color: #64748b; margin-top: 5px; font-size: 12px; line-height: 1.35;">${escapeHtml(apartment.location || "")}</div>
         </div>
-        <div style="font-weight: 900; color: #ea580c; white-space: nowrap;">PHP ${Number(apartment.price || 0).toLocaleString("en-PH")}</div>
+        <div style="font-weight: 900; color: #ea580c; white-space: nowrap;">View room prices</div>
       </div>
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px;">
         ${verifiedBadge}
@@ -194,7 +194,7 @@ function buildGroupPopup(apartments: MapApartmentMarker[]) {
           : `<div style="height: 54px; width: 58px; border-radius: 8px; background: #f1f5f9;"></div>`}
         <div style="min-width: 0;">
           <div style="font-weight: 900; color: #0f172a; font-size: 13px; line-height: 1.25;">${escapeHtml(apartment.title)}</div>
-          <div style="margin-top: 3px; color: #ea580c; font-weight: 900; font-size: 12px;">PHP ${Number(apartment.price || 0).toLocaleString("en-PH")}</div>
+          <div style="margin-top: 3px; color: #ea580c; font-weight: 900; font-size: 12px;">View room prices</div>
           <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;">
             ${verifiedBadge}
             <span style="border-radius: 999px; background: ${availableRooms > 0 ? "#dcfce7" : "#fee2e2"}; color: ${availableRooms > 0 ? "#166534" : "#991b1b"}; padding: 3px 7px; font-size: 10px; font-weight: 800;">${availableRooms} rooms</span>

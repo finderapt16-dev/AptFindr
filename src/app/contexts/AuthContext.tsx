@@ -9,15 +9,10 @@ import {
   type ReactNode,
 } from 'react';
 
+import { supabase } from '../../lib/supabaseclient';
 import {
-  type AuthCredentials,
-  type CreateUserInput,
-  type UpdateUserInput,
-  type User,
-  type UserRole,
   deleteUser as deleteUserRecord,
   fetchAppUsers,
-  fetchUserById,
   getCurrentAuthenticatedUser,
   getPendingLandlordCount,
   loginUser,
@@ -27,6 +22,11 @@ import {
   signupUser,
   updateUser as updateUserRecord,
   verifyLandlord as verifyLandlordRecord,
+  type AuthCredentials,
+  type CreateUserInput,
+  type UpdateUserInput,
+  type User,
+  type UserRole
 } from '../services/authService';
 
 export type { UserRole };
@@ -49,7 +49,7 @@ export interface AuthContextType {
   signup: (input: CreateUserInput) => Promise<AuthActionResult>;
   updateUser: (userId: string, updates: UpdateUserInput) => Promise<User>;
   deleteUser: (userId: string) => Promise<void>;
-  verifyLandlord: (userId: string) => Promise<User>;
+  verifyLandlord: (userId: string, verified?: boolean) => Promise<User>;
   canEditApartment: (apartmentId: string, landlordId?: string) => boolean;
   logout: () => void;
 }
@@ -139,6 +139,37 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     });
   }, []);
 
+  useEffect(() => {
+    const refreshOnFocus = () => void refreshUsers().catch(() => undefined);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshOnFocus();
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [refreshUsers]);
+
+  useEffect(() => {
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => void refreshUsers().catch(() => undefined), 100);
+    };
+    const channel = supabase
+      .channel('auth-verification-sync')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_users' }, scheduleRefresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apartments' }, scheduleRefresh)
+      .subscribe();
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
+  }, [refreshUsers]);
+
   const login = useCallback(async (credentials: AuthCredentials): Promise<AuthActionResult> => {
     try {
       const user = await loginUser(credentials);
@@ -156,8 +187,6 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const signup = useCallback(async (input: CreateUserInput): Promise<AuthActionResult> => {
     try {
       const user = await signupUser(input);
-      setCurrentUser(user);
-      persistCurrentUser(user);
       void refreshUsers().catch((refreshError) => {
         console.warn('Failed to refresh users after signup:', refreshError);
       });
@@ -195,8 +224,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     setPendingLandlordCount(pendingCount);
   }, [currentUser?.id]);
 
-  const verifyLandlord = useCallback(async (userId: string): Promise<User> => {
-    const updatedUser = await verifyLandlordRecord(userId);
+  const verifyLandlord = useCallback(async (userId: string, verified = true): Promise<User> => {
+    const updatedUser = await verifyLandlordRecord(userId, verified);
     setUsers((previousUsers) => previousUsers.map((user) => (user.id === userId ? updatedUser : user)));
 
     if (currentUser?.id === userId) {

@@ -78,6 +78,22 @@ export interface DashboardNotificationRow extends DashboardRow {
   read_at?: string | null;
   is_deleted?: boolean | null;
   deleted_at?: string | null;
+  action_url?: string | null;
+  action_target_id?: string | null;
+  action_target_type?: string | null;
+}
+
+export interface DashboardSupportTicketRow extends DashboardRow {
+  id?: string;
+  user_id?: string;
+  topic?: string;
+  message?: string;
+  contact?: string | null;
+  status?: string;
+  assigned_admin_id?: string | null;
+  resolved_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DashboardAuditLogRow extends DashboardRow {
@@ -236,30 +252,15 @@ function safeJsonParse<T>(value: string | null, fallback: T): T {
   }
 }
 
-function readCache(): Record<string, string> {
-  if (!hasWindow()) {
-    return {};
-  }
-
-  return safeJsonParse<Record<string, string>>(window.localStorage.getItem(cacheKeyPrefix), {});
-}
-
-function writeCache(cache: Record<string, string>): void {
-  if (!hasWindow()) {
-    return;
-  }
-
-  window.localStorage.setItem(cacheKeyPrefix, JSON.stringify(cache));
-}
-
 function readCachedValue(key: string): string | null {
-  return readCache()[key] ?? null;
+  void key;
+  return null;
 }
 
 function writeCachedValue(key: string, value: string): void {
-  const cache = readCache();
-  cache[key] = value;
-  writeCache(cache);
+  void key;
+  void value;
+  if (hasWindow()) window.localStorage.removeItem(cacheKeyPrefix);
 }
 
 function normalizeRecord<T extends DashboardRow>(record: DashboardRow): T {
@@ -272,10 +273,6 @@ function getStringValue(value: unknown): string | undefined {
   }
 
   return undefined;
-}
-
-function getBooleanValue(value: unknown): boolean {
-  return value === true;
 }
 
 function getNumberValue(value: unknown): number {
@@ -415,6 +412,9 @@ function toNotificationRow(row: DashboardRow): DashboardNotificationRow {
     read_at: getStringValue(row.read_at),
     is_deleted: typeof row.is_deleted === "boolean" ? row.is_deleted : null,
     deleted_at: getStringValue(row.deleted_at),
+    action_url: getStringValue(row.action_url),
+    action_target_id: getStringValue(row.action_target_id),
+    action_target_type: getStringValue(row.action_target_type),
   };
 }
 
@@ -919,6 +919,9 @@ export async function createNotification(notification: {
   title?: string;
   message?: string;
   payload?: Record<string, unknown>;
+  action_url?: string;
+  action_target_id?: string;
+  action_target_type?: string;
 }): Promise<DashboardNotificationRow | null> {
   const { data, error } = await supabase
     .from("notifications")
@@ -929,6 +932,9 @@ export async function createNotification(notification: {
       message: notification.message ?? null,
       payload: notification.payload ?? {},
       read: false,
+      action_url: notification.action_url ?? null,
+      action_target_id: notification.action_target_id ?? null,
+      action_target_type: notification.action_target_type ?? null,
     })
     .select("*")
     .single();
@@ -938,6 +944,30 @@ export async function createNotification(notification: {
   }
 
   return toNotificationRow(data as DashboardRow);
+}
+
+export async function createSupportTicket(input: {
+  userId: string;
+  topic: string;
+  message: string;
+  contact?: string;
+}): Promise<DashboardSupportTicketRow | null> {
+  const { data, error } = await supabase
+    .from("support_tickets")
+    .insert({
+      user_id: input.userId,
+      topic: input.topic.trim(),
+      message: input.message.trim(),
+      contact: input.contact?.trim() || null,
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || "Unable to save the support request.");
+  }
+
+  return data as DashboardSupportTicketRow;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1198,8 +1228,16 @@ export async function sendAdminMessageToLandlord(input: {
 }
 
 export async function fetchUsers(): Promise<DashboardUserRow[]> {
-  const users = await fetchRows<DashboardUserRow>("app_users");
-  const normalized = users.map((row) => toUserRow(row));
+  const [{ data: userRows }, { data: publicLandlordRows }] = await Promise.all([
+    supabase.from("app_users").select("*"),
+    supabase.from("public_landlords").select("*"),
+  ]);
+  const usersById = new Map<string, DashboardUserRow>();
+  [...(publicLandlordRows ?? []), ...(userRows ?? [])].forEach((row) => {
+    const normalizedUser = toUserRow(row as DashboardRow);
+    if (normalizedUser.id) usersById.set(normalizedUser.id, normalizedUser);
+  });
+  const normalized = [...usersById.values()];
   if (normalized.length > 0) {
     writeCachedValue("users", JSON.stringify(normalized));
     return normalized;
@@ -1211,6 +1249,12 @@ export async function fetchUsers(): Promise<DashboardUserRow[]> {
 export async function fetchUserById(userId: string): Promise<DashboardUserRow | null> {
   const user = await fetchSingleRowByColumn<DashboardUserRow>("app_users", "id", userId);
   return user ? toUserRow(user) : null;
+}
+
+export async function fetchPublicLandlordById(userId: string): Promise<DashboardUserRow | null> {
+  const { data, error } = await supabase.from("public_landlords").select("*").eq("id", userId).maybeSingle();
+  if (error || !data) return null;
+  return toUserRow(data as DashboardRow);
 }
 
 export async function fetchTenantPreferences(userId: string): Promise<TenantPreferenceSettings | null> {
@@ -1227,7 +1271,11 @@ export async function fetchTenantPreferences(userId: string): Promise<TenantPref
     return cached;
   }
 
-  const preferences = normalizeTenantPreferences((data as DashboardRow).preferences, cached ?? defaultTenantPreferences);
+  const stored = (data as DashboardRow).preferences;
+  const source = typeof stored === "object" && stored !== null && !Array.isArray(stored) && "tenant" in stored
+    ? (stored as Record<string, unknown>).tenant
+    : stored;
+  const preferences = normalizeTenantPreferences(source, cached ?? defaultTenantPreferences);
   cacheTenantPreferences(userId, preferences);
   return preferences;
 }
@@ -1249,12 +1297,11 @@ export async function saveTenantPreferences(
 
   cacheTenantPreferences(userId, merged);
 
-  const { data, error } = await supabase
-    .from("app_users")
-    .update({ preferences: merged })
-    .eq("id", userId)
-    .select("preferences")
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("fn_merge_user_preference_section", {
+    p_user_id: userId,
+    p_section: "tenant",
+    p_value: merged,
+  });
 
   if (error) {
     if (isMissingTenantPreferencesColumn(error)) {
@@ -1265,9 +1312,36 @@ export async function saveTenantPreferences(
     throw new Error(error.message || "Unable to save tenant preferences.");
   }
 
-  const saved = normalizeTenantPreferences((data as DashboardRow | null)?.preferences, merged);
+  const savedRoot = typeof data === "object" && data !== null && !Array.isArray(data) ? data as Record<string, unknown> : {};
+  const saved = normalizeTenantPreferences(savedRoot.tenant, merged);
   cacheTenantPreferences(userId, saved);
   return saved;
+}
+
+export async function fetchUserPreferenceSections(userId: string): Promise<Record<string, unknown>> {
+  if (!userId) return {};
+  const { data, error } = await supabase.from("app_users").select("preferences").eq("id", userId).maybeSingle();
+  if (error) throw new Error(error.message || "Unable to load account preferences.");
+  const value = (data as DashboardRow | null)?.preferences;
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+export async function saveUserPreferenceSection(
+  userId: string,
+  section: string,
+  value: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase.rpc("fn_merge_user_preference_section", {
+    p_user_id: userId,
+    p_section: section,
+    p_value: value,
+  });
+  if (error) throw new Error(error.message || "Unable to save account preferences.");
+  return typeof data === "object" && data !== null && !Array.isArray(data)
+    ? data as Record<string, unknown>
+    : {};
 }
 
 export async function updateUserProfile(payload: DashboardProfilePayload): Promise<DashboardUserRow | null> {
@@ -1306,14 +1380,14 @@ export async function uploadUserAvatar(userId: string, file: File): Promise<stri
   if (!file.type.startsWith("image/")) throw new Error("Please select a valid image file.");
   if (file.size > 5 * 1024 * 1024) throw new Error("Profile photo must be 5MB or smaller.");
   const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `profiles/${userId}/${Date.now()}.${extension}`;
-  const { error } = await supabase.storage.from("apartment-images").upload(path, file, {
+  const path = `${userId}/${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from("user-avatars").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
     contentType: file.type,
   });
   if (error) throw new Error(error.message || "Unable to upload profile photo.");
-  return supabase.storage.from("apartment-images").getPublicUrl(path).data.publicUrl;
+  return supabase.storage.from("user-avatars").getPublicUrl(path).data.publicUrl;
 }
 
 async function syncRoleProfile(userId: string, role: string | null, payload: DashboardProfilePayload): Promise<void> {
@@ -1774,7 +1848,18 @@ export async function fetchLandlordProfile(
       return null;
     }
 
-    return data as DashboardLandlordProfileRow;
+    const profile = data as DashboardLandlordProfileRow;
+    const signDocument = async (value: unknown): Promise<string | null> => {
+      if (typeof value !== "string" || !value) return null;
+      if (value.startsWith("https://") || value.startsWith("http://")) return value;
+      const { data: signed } = await supabase.storage.from("verification-documents").createSignedUrl(value, 15 * 60);
+      return signed?.signedUrl ?? null;
+    };
+    const [verificationUrl, idUrl] = await Promise.all([
+      signDocument(profile.verification_document_url),
+      signDocument(profile.id_document_url),
+    ]);
+    return { ...profile, verification_document_url: verificationUrl, id_document_url: idUrl };
   } catch (err) {
     console.error("Error fetching landlord profile:", err);
     return null;
@@ -1793,32 +1878,38 @@ export async function fetchLandlordWithDetails(
     const user = await fetchUserById(landlordId);
     if (!user) return null;
 
-    // Fetch landlord profile
-    const profile = await fetchLandlordProfile(landlordId);
+    // Older accounts may have the permit on app_users but no matching
+    // landlord_profiles row yet. Keep verification details visible before the
+    // administrator approves the account instead of relying on verification to
+    // create/repair the profile first.
+    const [storedProfile, properties, allViolations, allReports, views, favorites] = await Promise.all([
+      fetchLandlordProfile(landlordId),
+      fetchRowsByColumn<DashboardApartmentRow>("apartments", "landlord_id", landlordId),
+      fetchViolations(),
+      fetchAdminReports(),
+      fetchApartmentViews(),
+      fetchApartmentFavorites(""),
+    ]);
+    const userPermit = getStringValue(user.permit_number ?? user.permitNumber);
+    const profile: DashboardLandlordProfileRow = {
+      ...(storedProfile ?? {}),
+      user_id: storedProfile?.user_id ?? landlordId,
+      permit_number: storedProfile?.permit_number || userPermit || null,
+      business_permit_number:
+        storedProfile?.business_permit_number || storedProfile?.permit_number || userPermit || null,
+      is_verified: storedProfile?.is_verified ?? user.is_verified ?? user.isVerified ?? false,
+    };
 
-    // Fetch properties
-    const properties = await fetchRowsByColumn<DashboardApartmentRow>(
-      "apartments",
-      "landlord_id",
-      landlordId,
-    );
     const normalizedProperties = properties.map((row) => toApartmentRow(row));
 
-    // Fetch violations for this landlord
-    const allViolations = await fetchViolations();
     const violations = allViolations.filter(
       (v) => (v.landlord_id ?? v.landlordId) === landlordId,
     );
 
-    // Fetch reports related to this landlord's apartments
-    const allReports = await fetchAdminReports();
     const reports = allReports.filter((r) =>
       normalizedProperties.some((p) => p.id === (r.apartment_id ?? r.apartmentId)),
     );
 
-    // Calculate property statistics
-    const views = await fetchApartmentViews();
-    const favorites = await fetchApartmentFavorites("");
     const totalViews = views
       .filter((v) => normalizedProperties.some((p) => p.id === (v.apartment_id ?? v.apartmentId)))
       .reduce((total, view) => total + (view.view_count === undefined || view.view_count === null ? 1 : getNumberValue(view.view_count)), 0);
@@ -1870,8 +1961,7 @@ export async function notifyLandlordVerification(
         user_id: landlordId,
         type: "verification_approved",
         title: "✅ Account Verified",
-        message:
-          "Congratulations! Your landlord account has been verified by our admin team. You can now list properties with the verified badge.",
+        message: "Your landlord account has been verified by the Admin. You can now publish and manage apartment listings.",
         payload: {
           action: "verification_approved",
           verified_at: new Date().toISOString(),

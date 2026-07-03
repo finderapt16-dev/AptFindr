@@ -1,13 +1,13 @@
+import { Home, Images, Plus, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Apartment } from "../../data/apartments";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
 import { Switch } from "../ui/switch";
+import { Textarea } from "../ui/textarea";
 import { MultiImageUploader, type UploadedImage } from "./MultiImageUploader";
-import { Home, Plus, Trash2, Images, Star, X } from "lucide-react";
 
 interface EditApartmentDialogProps {
   apartment: Apartment;
@@ -281,7 +281,7 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Price ($/month)</Label>
+              <Label htmlFor="price">Price (₱/month)</Label>
               <Input
                 id="price"
                 type="number"

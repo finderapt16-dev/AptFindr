@@ -1,76 +1,69 @@
-import { useEffect, useState, useMemo, type ReactElement, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { Settings as AccountSettings } from "@/app/pages/settings/Settings";
+import { ApartmentCard } from "@/app/components/common/ApartmentCard";
+import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
 import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { useFavorites } from "@/app/hooks/useFavorites";
+import { Settings as AccountSettings } from "@/app/pages/settings/Settings";
 import {
   createReport,
+  createSupportTicket,
   fetchApartmentViews,
   fetchFavorites as fetchDashboardFavorites,
   fetchTenantPreferences,
-  saveTenantPreferences,
-  updateUserProfile,
   type DashboardApartmentViewRow,
   type DashboardFavoriteRow,
-  type TenantPreferenceSettings,
+  type TenantPreferenceSettings
 } from "@/app/services/dashboardSupabaseService";
 import { uploadReportEvidence } from "@/app/services/reportEvidenceService";
-import { ApartmentCard } from "@/app/components/common/ApartmentCard";
-import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
-import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
-import { getRecommendationExplanation, rankApartments, type TenantPreferences } from "@/app/utils/rankingEngine";
 import { getImageUrl } from "@/app/utils/images";
-import { Button } from "@/app/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Separator } from "@/app/components/ui/separator";
-import { Switch } from "@/app/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import { toast } from "sonner";
+import { getAvailableRoomCount, isTenantVisibleApartment } from "@/app/utils/listingVisibility";
+import { rankApartments, type TenantPreferences } from "@/app/utils/rankingEngine";
 import {
-  type LucideIcon,
-  Sparkles,
-  TrendingUp,
-  Heart,
-  MapPin,
-  Clock,
-  LayoutDashboard,
-  Search,
-  Home,
-  Bed,
-  Bath,
-  Square,
-  Eye,
-  Bookmark,
-  Building2,
-  Grid2X2,
-  List,
-  Settings,
-  HelpCircle,
-  LogOut,
-  Menu,
-  X,
-  Bell,
-  ChevronRight,
   AlertTriangle,
-  CheckCircle,
-  User,
-  Shield,
-  CreditCard,
-  Trash2,
-  CheckCircle2,
-  XCircle,
+  Bath,
+  Bed,
+  Bookmark,
   BookOpen,
-  MessageCircle,
-  Send,
+  Building2,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  Eye,
+  Grid2X2,
+  Heart,
+  HelpCircle,
+  Home,
   Image as ImageIcon,
-  Mail,
-  RotateCcw,
+  LayoutDashboard,
+  List,
   LockKeyhole,
+  LogOut,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  RotateCcw,
+  Search,
+  Send,
+  Settings,
+  Shield,
+  Sparkles,
+  Square,
+  Trash2,
+  TrendingUp,
+  X,
+  type LucideIcon
 } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const NAV_MAIN = [
   { icon: LayoutDashboard, label: "Overview",    section: "overview",   isLink: false },
@@ -93,7 +86,7 @@ const NAV_ACCOUNT = [
 const DASHBOARD_SECTIONS = ["overview", "favorites", "suggested", "popular", "recent", "settings", "report", "help"];
 
 export function StudentEmployeeDashboard() {
-  const { user, users, logout, updateUser } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { favorites: favoriteIds, toggleFavorite, refreshFavorites } = useFavorites();
@@ -122,38 +115,21 @@ export function StudentEmployeeDashboard() {
   });
 
   // ── Settings state ───────────────────────────────────────────────────────
-  const [name, setName]                       = useState(user?.name || "");
-  const [email, setEmail]                     = useState(user?.email || "");
-  const [mobile, setMobile]                   = useState(user?.mobileNumber || "");
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [inquiryAlerts, setInquiryAlerts]     = useState(true);
-  const [bookingAlerts, setBookingAlerts]     = useState(true);
   const [preferredArea, setPreferredArea]     = useState("");
   const [maxBudget, setMaxBudget]             = useState("6000");
-  const [minBedrooms, setMinBedrooms]         = useState("any");
   const [prefPetFriendly, setPrefPetFriendly] = useState(false);
   const [prefParking, setPrefParking]         = useState(false);
   const [prefFurnished, setPrefFurnished]     = useState(false);
   const [recommendationLocation, setRecommendationLocation] = useState(true);
   const [saveBudgetPreferences, setSaveBudgetPreferences] = useState(true);
-  const [universityName, setUniversityName]   = useState("");
-  const [studentId, setStudentId]             = useState("");
-  const [workplaceInfo, setWorkplaceInfo]     = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword]         = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [dashboardFavoriteRows, setDashboardFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
   const [dashboardViewRows, setDashboardViewRows] = useState<DashboardApartmentViewRow[]>([]);
 
   const { apartments: allApartments } = useApartmentsContext();
 
   const applyTenantPreferences = (preferences: TenantPreferenceSettings) => {
-    setEmailNotifications(preferences.emailNotifications);
-    setInquiryAlerts(preferences.inquiryAlerts);
-    setBookingAlerts(preferences.bookingAlerts);
     setPreferredArea(preferences.preferredArea);
     setMaxBudget(String(preferences.maxBudget || 6000));
-    setMinBedrooms(preferences.minBedrooms || "any");
     setPrefPetFriendly(preferences.petFriendly);
     setPrefParking(preferences.parking);
     setPrefFurnished(preferences.furnished);
@@ -208,47 +184,18 @@ export function StudentEmployeeDashboard() {
     };
   }, [user?.id, user?.role]);
 
-  const verifiedLandlordIds = useMemo(() => {
-    return new Set(
-      users
-        .filter((entry) => {
-          const status = String(entry.status || "").toLowerCase();
-          return entry.role === "landlord" && (entry.isVerified === true || status === "verified" || status === "approved");
-        })
-        .map((entry) => entry.id),
-    );
-  }, [users]);
-
   const publishedApartments = useMemo(() => {
-    return allApartments.filter((apt) => apt.isPublished !== false && Boolean(apt.landlordId && verifiedLandlordIds.has(apt.landlordId)));
-  }, [allApartments, verifiedLandlordIds]);
+    return allApartments.filter(isTenantVisibleApartment);
+  }, [allApartments]);
 
-  const isApartmentAvailable = (apt: (typeof publishedApartments)[number]) => {
-    if (apt.status && apt.status !== "available") return false;
-
-    const availableDate = new Date(apt.availableDate);
-    const dateReady = Number.isNaN(availableDate.getTime()) || availableDate <= new Date();
-    if (!dateReady) return false;
-
-    if (apt.rooms?.length) {
-      return apt.rooms.some((room) => (room.status ?? (room.isOccupied ? "occupied" : "available")) === "available" && !room.isOccupied);
-    }
-
-    return true;
-  };
+  const isApartmentAvailable = isTenantVisibleApartment;
 
   const availableApartments = useMemo(() => {
     return publishedApartments.filter(isApartmentAvailable);
   }, [publishedApartments]);
 
   const availableRoomsCount = useMemo(() => {
-    return publishedApartments.reduce((total, apt) => {
-      if (apt.rooms?.length) {
-        return total + apt.rooms.filter((room) => (room.status ?? (room.isOccupied ? "occupied" : "available")) === "available" && !room.isOccupied).length;
-      }
-
-      return total + (isApartmentAvailable(apt) ? 1 : 0);
-    }, 0);
+    return publishedApartments.reduce((total, apt) => total + getAvailableRoomCount(apt), 0);
   }, [publishedApartments]);
 
   const tenantRankingPreferences = useMemo<TenantPreferences>(() => {
@@ -267,10 +214,20 @@ export function StudentEmployeeDashboard() {
   // Personalized recommendations based on saved tenant preferences
   const suggestedApartments = useMemo(() => {
     if (user?.role === "student" || user?.role === "employee") {
-      return rankApartments(publishedApartments, tenantRankingPreferences, favoriteIds).slice(0, 6);
+      const apartmentViewCounts = new Map<string, number>();
+      dashboardViewRows.forEach((row) => {
+        const apartmentId = row.apartment_id ?? row.apartmentId ?? "";
+        if (apartmentId) apartmentViewCounts.set(apartmentId, (apartmentViewCounts.get(apartmentId) ?? 0) + (Number(row.view_count) || 1));
+      });
+      const apartmentFavoriteCounts = new Map<string, number>();
+      dashboardFavoriteRows.forEach((row) => {
+        const apartmentId = row.apartment_id ?? row.apartmentId ?? "";
+        if (apartmentId) apartmentFavoriteCounts.set(apartmentId, (apartmentFavoriteCounts.get(apartmentId) ?? 0) + 1);
+      });
+      return rankApartments(publishedApartments, tenantRankingPreferences, favoriteIds, { apartmentViewCounts, apartmentFavoriteCounts }).slice(0, 6);
     }
     return publishedApartments.slice(0, 6);
-  }, [favoriteIds, publishedApartments, tenantRankingPreferences, user?.role]);
+  }, [dashboardFavoriteRows, dashboardViewRows, favoriteIds, publishedApartments, tenantRankingPreferences, user?.role]);
 
   // Popular apartments (most viewed, most favorited, highest engagement)
   const popularApartments = useMemo(() => {
@@ -304,13 +261,7 @@ export function StudentEmployeeDashboard() {
   }, [publishedApartments]);
 
   const favoriteApartments = publishedApartments.filter((apt) => favoriteIds.includes(apt.id));
-  const getAvailableRooms = (apt: (typeof publishedApartments)[number]) => {
-    if (apt.rooms?.length) {
-      return apt.rooms.filter((room) => (room.status ?? (room.isOccupied ? "occupied" : "available")) === "available" && !room.isOccupied).length;
-    }
-
-    return isApartmentAvailable(apt) ? 1 : 0;
-  };
+  const getAvailableRooms = getAvailableRoomCount;
 
   const visibleFavoriteApartments = useMemo(() => {
     return [...favoriteApartments]
@@ -403,18 +354,6 @@ export function StudentEmployeeDashboard() {
         throw new Error("Report saved, but one or more evidence files could not be uploaded. Please contact support.");
       }
 
-      const existingReports = JSON.parse(localStorage.getItem("apartmentReports") || "[]");
-      existingReports.unshift({
-        ...createdReport,
-        reporter: user.name || "Guest",
-        role: createdReport.reporter_role,
-        apartment: apartment?.title || "Unknown apartment",
-        apartmentId: createdReport.apartment_id,
-        issueType: createdReport.issue_type,
-        submittedAt: createdReport.submitted_at,
-      });
-      localStorage.setItem("apartmentReports", JSON.stringify(existingReports));
-
       setReportSubmitted(true);
       toast.success("Report submitted successfully. Admin will review it.");
     } catch (error) {
@@ -429,103 +368,25 @@ export function StudentEmployeeDashboard() {
     setReportEvidenceFiles([]);
   };
 
-  const handleSupportSubmit = () => {
+  const handleSupportSubmit = async () => {
     if (!supportForm.topic || !supportForm.message.trim()) {
       toast.error("Please choose a topic and describe your concern.");
       return;
     }
 
-    const tickets = JSON.parse(localStorage.getItem("supportTickets") || "[]");
-    tickets.unshift({
-      id: Date.now().toString(),
-      userId: user?.id,
-      name: user?.name || "Guest",
-      email: user?.email || "",
-      role: user?.role || "renter",
-      topic: supportForm.topic,
-      message: supportForm.message.trim(),
-      contact: supportForm.contact.trim(),
-      status: "open",
-      createdAt: new Date().toISOString(),
-    });
-    localStorage.setItem("supportTickets", JSON.stringify(tickets));
-    setSupportSubmitted(true);
-    setSupportForm({ topic: "", message: "", contact: user?.email || "" });
-    toast.success("Support request sent!");
-  };
-
-  const handleUpdateProfile = async () => {
-    if (user) {
-      try {
-        await updateUser(user.id, { name, email, mobileNumber: mobile });
-        const synced = await updateUserProfile({
-          id: user.id,
-          email,
-          name,
-          role: user.role,
-          mobile,
-        });
-
-        if (!synced) {
-          throw new Error("Unable to sync profile information.");
-        }
-
-        toast.success("Profile updated successfully!");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to update profile.";
-        toast.error(message);
-      }
-    }
-  };
-
-  const handleSaveTenantPreferences = async () => {
-    if (!user?.id || (user.role !== "student" && user.role !== "employee")) {
-      toast.error("Please sign in as a tenant to save preferences.");
-      return;
-    }
-
-    const parsedBudget = Number(maxBudget);
-    if (!Number.isFinite(parsedBudget) || parsedBudget <= 0) {
-      toast.error("Enter a valid maximum budget.");
-      return;
-    }
-
+    if (!user?.id) return void toast.error("Please sign in to contact support.");
     try {
-      const saved = await saveTenantPreferences(user.id, {
-        preferredArea: preferredArea.trim(),
-        maxBudget: parsedBudget,
-        minBedrooms,
-        petFriendly: prefPetFriendly,
-        parking: prefParking,
-        furnished: prefFurnished,
-        recommendationLocation,
-        saveBudgetPreferences,
-        emailNotifications,
-        inquiryAlerts,
-        bookingAlerts,
+      await createSupportTicket({
+        userId: user.id,
+        topic: supportForm.topic,
+        message: supportForm.message,
+        contact: supportForm.contact,
       });
-
-      if (saved) applyTenantPreferences(saved);
-      toast.success("Tenant preferences saved.");
+      setSupportSubmitted(true);
+      setSupportForm({ topic: "", message: "", contact: user.email || "" });
+      toast.success("Support request sent!");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to save tenant preferences.";
-      toast.error(message);
-    }
-  };
-
-  const handleUpdatePassword = () => {
-    if (newPassword !== confirmPassword) { toast.error("Passwords do not match!"); return; }
-    if (newPassword.length < 6) { toast.error("Password must be at least 6 characters!"); return; }
-    toast.success("Password updated successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
-
-  const handleDeleteAccount = () => {
-    if (window.confirm("Are you sure? This action cannot be undone.")) {
-      toast.success("Account deletion initiated. You will be logged out.");
-      setTimeout(() => handleLogout(), 1500);
+      toast.error(error instanceof Error ? error.message : "Unable to send the support request.");
     }
   };
 
@@ -658,13 +519,12 @@ export function StudentEmployeeDashboard() {
       <div className="flex-1" />
 
       <div className="px-4 py-4 border-t border-white/10 mt-2">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Log Out
-        </button>
+        <LogoutConfirmation onConfirm={handleLogout}>
+          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
+            <LogOut className="h-4 w-4 shrink-0" />
+            Log Out
+          </button>
+        </LogoutConfirmation>
       </div>
     </div>
   );
@@ -859,8 +719,7 @@ export function StudentEmployeeDashboard() {
               </div>
             </div>
             <div className="shrink-0 sm:text-right">
-              <p className="text-3xl font-black text-orange-600">PHP {Number(apartment.price || 0).toLocaleString("en-PH")}</p>
-              <p className="text-sm font-medium text-slate-500">/month</p>
+              <p className="text-sm font-black text-orange-600">View room prices</p>
             </div>
           </div>
 
@@ -965,91 +824,6 @@ export function StudentEmployeeDashboard() {
     </div>
   );
 
-  const renderOverviewLegacy = () => (
-    <div className="space-y-6">
-      <div className="animate-fade-in">
-        <div className="inline-block mb-3 px-4 py-1.5 bg-white/70 backdrop-blur-md border border-amber-200/50 rounded-full shadow-sm">
-          <span className="text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent flex items-center justify-center gap-2 uppercase tracking-wider">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            Your Dashboard
-          </span>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-2">
-          Welcome back, <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{user?.name}</span>! 👋
-        </h1>
-        <p className="text-slate-700 text-lg font-medium">
-          {user?.role === "student"
-            ? "Find the perfect place for your studies in La Paz, Iloilo City"
-            : "Discover your ideal home near your workplace"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:transform hover:-translate-y-1">
-          <CardContent className="p-6 bg-gradient-to-br from-white to-pink-50/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1 font-semibold">Your Favorites</p>
-                <p className="text-4xl font-black bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">{favoriteIds.length}</p>
-              </div>
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg">
-                <Heart className="h-7 w-7 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:transform hover:-translate-y-1">
-          <CardContent className="p-6 bg-gradient-to-br from-white to-orange-50/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1 font-semibold">Available Now</p>
-                <p className="text-4xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                  {allApartments.filter((apt) => new Date(apt.availableDate) <= new Date()).length}
-                </p>
-              </div>
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg">
-                <Clock className="h-7 w-7 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          onClick={() => setActiveSection("suggested")}
-          className="p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all hover:transform hover:-translate-y-1 text-left group"
-        >
-          <Sparkles className="h-8 w-8 mb-3 group-hover:scale-110 transition-transform" />
-          <h3 className="text-2xl font-black mb-1">Suggested for You</h3>
-          <p className="text-amber-100 text-sm font-medium">View personalized apartment recommendations</p>
-          <div className="mt-3 flex items-center gap-1 text-sm font-bold">Explore <ChevronRight className="h-4 w-4" /></div>
-        </button>
-
-        <button
-          onClick={() => setActiveSection("popular")}
-          className="p-6 rounded-2xl bg-white/90 backdrop-blur-xl border-2 border-amber-100 shadow-xl hover:shadow-2xl transition-all hover:transform hover:-translate-y-1 text-left group"
-        >
-          <TrendingUp className="h-8 w-8 mb-3 text-orange-600 group-hover:scale-110 transition-transform" />
-          <h3 className="text-2xl font-black mb-1 text-slate-900">Most Popular</h3>
-          <p className="text-slate-600 text-sm font-medium">Browse trending apartments in La Paz</p>
-          <div className="mt-3 flex items-center gap-1 text-sm font-bold text-orange-600">Explore <ChevronRight className="h-4 w-4" /></div>
-        </button>
-
-        <button
-          onClick={() => setActiveSection("recent")}
-          className="p-6 rounded-2xl bg-white/90 backdrop-blur-xl border-2 border-amber-100 shadow-xl hover:shadow-2xl transition-all hover:transform hover:-translate-y-1 text-left group"
-        >
-          <Clock className="h-8 w-8 mb-3 text-rose-600 group-hover:scale-110 transition-transform" />
-          <h3 className="text-2xl font-black mb-1 text-slate-900">Recently Added</h3>
-          <p className="text-slate-600 text-sm font-medium">Check out the latest listings</p>
-          <div className="mt-3 flex items-center gap-1 text-sm font-bold text-rose-600">Explore <ChevronRight className="h-4 w-4" /></div>
-        </button>
-      </div>
-    </div>
-  );
-
   // ── Section: Favorites ───────────────────────────────────────────────────
   const renderFavorites = () => (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -1150,32 +924,6 @@ export function StudentEmployeeDashboard() {
     </div>
   );
 
-  const renderFavoritesLegacy = () => (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg">
-          <Heart className="h-5 w-5 text-white" />
-        </div>
-        <h2 className="text-3xl font-black text-slate-900">Your Favorites</h2>
-      </div>
-      <p className="text-slate-700 text-lg font-medium">Apartments you've saved for later</p>
-      {favoriteApartments.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {favoriteApartments.map((apartment) => (
-            <ApartmentCard key={apartment.id} apartment={apartment} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={Heart}
-          message="No favorites yet. Browse apartments to save listings."
-          actionLabel="Browse Apartments"
-          action={() => navigate("/browse")}
-        />
-      )}
-    </div>
-  );
-
   // ── Section: Suggested ───────────────────────────────────────────────────
   const renderSuggested = () => (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -1213,41 +961,6 @@ export function StudentEmployeeDashboard() {
     </div>
   );
 
-  const renderSuggestedLegacy = () => (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900">Suggested for You</h2>
-          </div>
-          <p className="text-slate-700 text-lg font-medium mt-2">
-            {user?.role === "student"
-              ? "Affordable apartments perfect for students, with parking and pet-friendly options"
-              : "Great value apartments with amenities ideal for working professionals"}
-          </p>
-        </div>
-        <Link to="/browse">
-          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all font-bold rounded-xl">
-            View All
-          </Button>
-        </Link>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {suggestedApartments.map((apartment) => (
-          <div key={apartment.id} className="relative">
-            <Badge className="absolute top-6 left-6 z-10 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-lg text-white font-bold">
-              ✨ Suggested
-            </Badge>
-            <ApartmentCard apartment={apartment} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   // ── Section: Popular ─────────────────────────────────────────────────────
   const renderPopular = () => (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -1280,39 +993,6 @@ export function StudentEmployeeDashboard() {
     </div>
   );
 
-  const renderPopularLegacy = () => (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 flex items-center justify-center shadow-lg">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900">Most Popular</h2>
-          </div>
-          <p className="text-slate-700 text-lg font-medium mt-2">
-            Furnished apartments that are trending among renters in La Paz
-          </p>
-        </div>
-        <Link to="/browse">
-          <Button className="bg-gradient-to-r from-orange-500 to-rose-600 text-white hover:from-orange-600 hover:to-rose-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all font-bold rounded-xl">
-            View All
-          </Button>
-        </Link>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {popularApartments.map((apartment) => (
-          <div key={apartment.id} className="relative">
-            <Badge className="absolute top-6 left-6 z-10 bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 shadow-lg text-white font-bold">
-              🔥 Popular
-            </Badge>
-            <ApartmentCard apartment={apartment} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   // ── Section: Recent ──────────────────────────────────────────────────────
   const renderRecent = () => (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -1341,149 +1021,6 @@ export function StudentEmployeeDashboard() {
         </div>
       ) : (
         <EmptyState icon={Clock} message="No available apartments at the moment." />
-      )}
-    </div>
-  );
-
-  const renderRecentLegacy = () => (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900">Recently Added</h2>
-          </div>
-          <p className="text-slate-700 text-lg font-medium mt-2">Fresh listings just added to our platform</p>
-        </div>
-        <Link to="/browse">
-          <Button className="bg-gradient-to-r from-rose-500 to-pink-600 text-white hover:from-rose-600 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all font-bold rounded-xl">
-            View All
-          </Button>
-        </Link>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {recentApartments.map((apartment) => (
-          <div key={apartment.id} className="relative">
-            <Badge className="absolute top-6 left-6 z-10 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 shadow-lg text-white font-bold">
-              ✨ New
-            </Badge>
-            <ApartmentCard apartment={apartment} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ── Section: Report ──────────────────────────────────────────────────────
-  const renderReport = () => (
-    <div className="space-y-5 max-w-2xl">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-          <AlertTriangle className="h-5 w-5 text-white" />
-        </div>
-        <h2 className="text-3xl font-black text-slate-900">Report a Problem</h2>
-      </div>
-      <p className="text-slate-700 text-lg font-medium">Let us know about any issues you encountered with an apartment listing.</p>
-
-      {reportSubmitted ? (
-        <Card className="border-2 border-green-200 bg-white/90 backdrop-blur-xl shadow-xl">
-          <CardContent className="flex flex-col items-center gap-4 py-14">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center shadow-md">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-900">Report Submitted</h3>
-            <p className="text-slate-500 text-center text-sm font-medium max-w-xs">
-              Thank you for helping us keep listings accurate. Our team will review your report within 1–2 business days.
-            </p>
-            <Button
-              onClick={resetReport}
-              className="mt-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 font-bold rounded-xl shadow-md"
-            >
-              Submit Another Report
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-2 border-amber-100/50 bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl">
-          <CardContent className="pt-6 space-y-5">
-
-            {/* Apartment */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Select Apartment *</label>
-              <select
-                value={reportForm.apartment}
-                onChange={(e) => setReportForm((f) => ({ ...f, apartment: e.target.value }))}
-                className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                <option value="">Select an apartment...</option>
-                {allApartments.map((apt) => (
-                  <option key={apt.id} value={apt.id}>{apt.title}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Describe the Problem *</label>
-                <span className="text-xs text-slate-400 font-medium">{reportForm.details.length}/500</span>
-              </div>
-              <textarea
-                rows={4}
-                maxLength={500}
-                value={reportForm.details}
-                onChange={(e) => setReportForm((f) => ({ ...f, details: e.target.value }))}
-                placeholder="Please describe what you experienced in as much detail as possible..."
-                className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-              />
-            </div>
-
-            {/* Evidence */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">Upload Image/Evidence *</label>
-              <EvidenceUploader
-                evidenceFiles={reportEvidenceFiles}
-                onEvidenceChange={setReportEvidenceFiles}
-                maxFiles={5}
-                maxFileSize={10}
-                required
-              />
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Contact Information</label>
-              <input
-                type="text"
-                value={reportForm.contact}
-                onChange={(e) => setReportForm((f) => ({ ...f, contact: e.target.value }))}
-                placeholder={user?.email || "Email or phone number"}
-                className="w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                onClick={handleReportSubmit}
-                disabled={!reportForm.apartment || reportEvidenceFiles.length === 0}
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 font-bold rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Submit Report
-              </Button>
-              <Button
-                variant="outline"
-                onClick={resetReport}
-                className="flex-1 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold"
-              >
-                Clear Form
-              </Button>
-            </div>
-
-          </CardContent>
-        </Card>
       )}
     </div>
   );
@@ -1585,226 +1122,6 @@ export function StudentEmployeeDashboard() {
   );
 
   const renderSettings = () => <AccountSettings embedded />;
-
-  const renderLegacySettings = () => (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Settings className="h-4 w-4 text-amber-600" />
-        <h2 className="text-xs font-black text-amber-600 uppercase tracking-widest">Settings</h2>
-      </div>
-
-      <Tabs defaultValue="profile" className="space-y-5">
-        <TabsList className="grid w-full grid-cols-4 bg-white/80 border border-amber-100 rounded-2xl p-1 shadow-sm">
-          <TabsTrigger value="profile" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold text-xs">
-            <User className="h-3.5 w-3.5 mr-1.5" /> Profile
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold text-xs">
-            <Bell className="h-3.5 w-3.5 mr-1.5" /> Alerts
-          </TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold text-xs">
-            <User className="h-3.5 w-3.5 mr-1.5" /> {user?.role === "student" ? "Academic" : "Work"}
-          </TabsTrigger>
-          <TabsTrigger value="security" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold text-xs">
-            <Shield className="h-3.5 w-3.5 mr-1.5" /> Security
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Profile Tab */}
-        <TabsContent value="profile">
-          <Card className="border-amber-100 shadow-lg bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-amber-50 pb-4">
-              <CardTitle className="text-slate-900 font-black">Profile Information</CardTitle>
-              <CardDescription>Update your personal information and account details</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-5 space-y-5">
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-2xl">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shrink-0">
-                  {user?.name?.charAt(0).toUpperCase() ?? "S"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-slate-900">{user?.name}</h3>
-                  <p className="text-sm text-slate-500 truncate">{user?.email}</p>
-                  <Badge className="mt-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-xs capitalize">
-                    {user?.role}
-                  </Badge>
-                </div>
-              </div>
-              <Separator className="bg-amber-50" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Full Name *</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Email Address *</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Mobile Number *</Label>
-                <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="09XX-XXX-XXXX" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button onClick={handleUpdateProfile} className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-md shadow-amber-200">
-                  Save Changes
-                </Button>
-                <Button variant="outline" className="flex-1 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 font-bold">
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <Card className="border-amber-100 shadow-lg bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-amber-50 pb-4">
-              <CardTitle className="text-slate-900 font-black">Notification Preferences</CardTitle>
-              <CardDescription>Choose how you want to receive updates and alerts</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-5 space-y-4">
-              {[
-                { id: "email-notif", label: "Email Notifications", desc: "Receive updates via email",                                            value: emailNotifications, setter: setEmailNotifications },
-                { id: "inquiry",     label: "Inquiry Alerts",       desc: "Get notified when someone inquires about listings you're interested in", value: inquiryAlerts,       setter: setInquiryAlerts },
-                { id: "booking",     label: "Booking Alerts",       desc: "Get notified about booking requests and confirmations",                value: bookingAlerts,       setter: setBookingAlerts },
-              ].map(({ id, label, desc, value, setter }) => (
-                <div key={id} className="flex items-center justify-between p-4 border border-amber-100 rounded-xl bg-amber-50/30">
-                  <div>
-                    <Label htmlFor={id} className="font-bold text-slate-800">{label}</Label>
-                    <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                  </div>
-                  <Switch id={id} checked={value} onCheckedChange={setter} />
-                </div>
-              ))}
-              <Button onClick={handleSaveTenantPreferences} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-md shadow-amber-200 mt-2">
-                Save Preferences
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Academic/Work Tab */}
-        <TabsContent value="academic">
-          <Card className="border-amber-100 shadow-lg bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-amber-50 pb-4">
-              <CardTitle className="text-slate-900 font-black">
-                {user?.role === "student" ? "Academic Information" : "Work Information"}
-              </CardTitle>
-              <CardDescription>
-                {user?.role === "student" 
-                  ? "Manage your university and student details" 
-                  : "Manage your workplace and employment details"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-5 space-y-4">
-              {user?.role === "student" ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">University / College Name</Label>
-                    <Input value={universityName} onChange={(e) => setUniversityName(e.target.value)} placeholder="Your University Name" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Student ID</Label>
-                    <Input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="Your Student ID" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Workplace / Company Name</Label>
-                  <Input value={workplaceInfo} onChange={(e) => setWorkplaceInfo(e.target.value)} placeholder="Your Company Name" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                </div>
-              )}
-              <Separator className="bg-amber-50" />
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Preferences</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Preferred Area</Label>
-                    <Input value={preferredArea} onChange={(e) => setPreferredArea(e.target.value)} placeholder="City, barangay, or landmark" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Maximum Budget</Label>
-                    <Input type="number" min="1" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} placeholder="6000" className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">Minimum Bedrooms</Label>
-                  <select value={minBedrooms} onChange={(event) => setMinBedrooms(event.target.value)} className="h-11 w-full rounded-xl border border-amber-100 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-amber-300 focus:ring-2 focus:ring-amber-100">
-                    <option value="any">Any beds</option>
-                    <option value="1">1+ beds</option>
-                    <option value="2">2+ beds</option>
-                    <option value="3">3+ beds</option>
-                  </select>
-                </div>
-                {[
-                  { id: "location-pref", label: "Receive apartment recommendations based on my location", value: recommendationLocation, setter: setRecommendationLocation },
-                  { id: "budget-pref", label: "Save my budget preferences for faster searches", value: saveBudgetPreferences, setter: setSaveBudgetPreferences },
-                  { id: "pet-pref", label: "Prefer pet-friendly apartments", value: prefPetFriendly, setter: setPrefPetFriendly },
-                  { id: "parking-pref", label: "Prefer apartments with parking", value: prefParking, setter: setPrefParking },
-                  { id: "furnished-pref", label: "Prefer fully furnished apartments", value: prefFurnished, setter: setPrefFurnished },
-                ].map(({ id, label, value, setter }) => (
-                  <div key={id} className="flex items-center justify-between gap-4 p-3 border border-amber-100 rounded-xl bg-amber-50/30">
-                    <Label htmlFor={id} className="font-bold text-slate-800 text-sm">{label}</Label>
-                    <Switch id={id} checked={value} onCheckedChange={setter} />
-                  </div>
-                ))}
-              </div>
-              <Button onClick={handleSaveTenantPreferences} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-md shadow-amber-200 mt-2">
-                Save Information
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <div className="space-y-4">
-            <Card className="border-amber-100 shadow-lg bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden">
-              <CardHeader className="border-b border-amber-50 pb-4">
-                <CardTitle className="text-slate-900 font-black">Change Password</CardTitle>
-                <CardDescription>Update your password to keep your account secure</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-5 space-y-4">
-                {[
-                  { id: "cur-pass",  label: "Current Password",     val: currentPassword, set: setCurrentPassword },
-                  { id: "new-pass",  label: "New Password",         val: newPassword,      set: setNewPassword },
-                  { id: "conf-pass", label: "Confirm New Password", val: confirmPassword,  set: setConfirmPassword },
-                ].map(({ id, label, val, set }) => (
-                  <div key={id} className="space-y-1.5">
-                    <Label className="text-slate-700 font-bold text-xs uppercase tracking-wide">{label}</Label>
-                    <Input id={id} type="password" value={val} onChange={(e) => set(e.target.value)} placeholder={`Enter ${label.toLowerCase()}`} className="rounded-xl border-amber-100 focus:ring-amber-500" />
-                  </div>
-                ))}
-                <Button onClick={handleUpdatePassword} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-md shadow-amber-200">
-                  Update Password
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-red-200 bg-red-50/50 rounded-2xl overflow-hidden shadow-lg">
-              <CardHeader className="border-b border-red-100 pb-4">
-                <CardTitle className="text-red-700 font-black">Danger Zone</CardTitle>
-                <CardDescription className="text-red-600">Irreversible actions that affect your account</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-5">
-                <div className="p-4 border border-red-200 rounded-xl bg-red-50 flex items-start gap-4">
-                  <Trash2 className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-                  <div className="flex-1">
-                    <h4 className="font-black text-slate-900 text-sm">Delete Account</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Once you delete your account, there is no going back. Please be certain.</p>
-                    <Button variant="destructive" size="sm" className="mt-3 rounded-xl font-bold" onClick={handleDeleteAccount}>
-                      Delete My Account
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
 
   // ── Section: Help ────────────────────────────────────────────────────────
   const renderHelp = () => (

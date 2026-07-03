@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   Bath,
   Bed,
@@ -24,13 +22,23 @@ import {
   TrendingUp,
   TriangleAlert,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
+import { VerifiedBadge } from "@/app/components/common/VerifiedBadge";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { listFavoriteApartments, type Apartment } from "@/app/data/apartments";
 import { useFavorites } from "@/app/hooks/useFavorites";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
-import { useAuth } from "@/app/contexts/AuthContext";
 import { getImageUrl } from "@/app/utils/images";
+import {
+  getAvailableRoomCount,
+  getLowestAvailableRoomPrice,
+  isTenantVisibleApartment,
+} from "@/app/utils/listingVisibility";
 
 const STATUS_LABEL: Record<string, string> = {
   available: "Available",
@@ -54,6 +62,7 @@ export function Favorites() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { refreshFavorites, toggleFavorite } = useFavorites();
+  const { apartments } = useApartmentsContext();
   const [favoriteApartments, setFavoriteApartments] = useState<Awaited<ReturnType<typeof listFavoriteApartments>>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<FavoriteFilter>("all");
@@ -78,7 +87,7 @@ export function Favorites() {
         if (active) {
           setFavoriteApartments(
             apartments.filter((apt) => (
-              apt.isPublished !== false &&
+              isTenantVisibleApartment(apt) &&
               !(user.role === "landlord" && apt.landlordId === user.id)
             )),
           );
@@ -97,26 +106,10 @@ export function Favorites() {
     return () => {
       active = false;
     };
-  }, [user?.id, user?.role, refreshFavorites]);
+  }, [apartments, user?.id, user?.role, refreshFavorites]);
 
-  const isApartmentAvailable = (apartment: Apartment) => {
-    if (apartment.status && apartment.status !== "available") return false;
-
-    if (apartment.rooms?.length) {
-      return apartment.rooms.some((room) => (room.status ?? (room.isOccupied ? "occupied" : "available")) === "available" && !room.isOccupied);
-    }
-
-    const availableDate = new Date(apartment.availableDate);
-    return Number.isNaN(availableDate.getTime()) || availableDate <= new Date();
-  };
-
-  const getAvailableRooms = (apartment: Apartment) => {
-    if (apartment.rooms?.length) {
-      return apartment.rooms.filter((room) => (room.status ?? (room.isOccupied ? "occupied" : "available")) === "available" && !room.isOccupied).length;
-    }
-
-    return isApartmentAvailable(apartment) ? 1 : 0;
-  };
+  const isApartmentAvailable = isTenantVisibleApartment;
+  const getAvailableRooms = getAvailableRoomCount;
 
   const visibleFavorites = useMemo(() => {
     return [...favoriteApartments]
@@ -126,8 +119,8 @@ export function Favorites() {
         return true;
       })
       .sort((a, b) => {
-        if (sort === "price-low") return Number(a.price || 0) - Number(b.price || 0);
-        if (sort === "price-high") return Number(b.price || 0) - Number(a.price || 0);
+        if (sort === "price-low") return (getLowestAvailableRoomPrice(a) ?? Number.MAX_SAFE_INTEGER) - (getLowestAvailableRoomPrice(b) ?? Number.MAX_SAFE_INTEGER);
+        if (sort === "price-high") return (getLowestAvailableRoomPrice(b) ?? -1) - (getLowestAvailableRoomPrice(a) ?? -1);
         if (sort === "name") return a.title.localeCompare(b.title);
 
         const bDate = new Date(b.updatedAt || b.createdAt || b.availableDate).getTime();
@@ -150,7 +143,7 @@ export function Favorites() {
       const apartments = await listFavoriteApartments(user.id);
       setFavoriteApartments(
         apartments.filter((apt) => (
-          apt.isPublished !== false &&
+          isTenantVisibleApartment(apt) &&
           !(user.role === "landlord" && apt.landlordId === user.id)
         )),
       );
@@ -216,6 +209,7 @@ export function Favorites() {
             )}
           </div>
           <div className="absolute left-4 top-4 flex flex-col gap-2">
+            {apartment.landlordVerified === true && <VerifiedBadge label="Verified Landlord" className="bg-white/95 shadow-lg backdrop-blur-sm" />}
             {apartment.petFriendly && <Badge className="rounded-full bg-emerald-600 text-white">Pet Friendly</Badge>}
             <Badge className={`rounded-full ${STATUS_CLASS[status] ?? STATUS_CLASS.available}`}>{STATUS_LABEL[status] ?? "Available"}</Badge>
           </div>
@@ -248,8 +242,7 @@ export function Favorites() {
               </div>
             </div>
             <div className="shrink-0 sm:text-right">
-              <p className="text-3xl font-black text-orange-600">PHP {Number(apartment.price || 0).toLocaleString("en-PH")}</p>
-              <p className="text-sm font-medium text-slate-500">/month</p>
+              <p className="text-sm font-black text-orange-600">View room prices</p>
             </div>
           </div>
 
@@ -337,10 +330,12 @@ export function Favorites() {
           </nav>
 
           <div className="mt-auto border-t border-white/10 px-4 py-4">
-            <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
-              <LogOut className="h-4 w-4" />
-              Log Out
-            </button>
+            <LogoutConfirmation onConfirm={handleLogout}>
+              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+            </LogoutConfirmation>
           </div>
         </aside>
 

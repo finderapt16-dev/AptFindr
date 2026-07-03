@@ -14,7 +14,7 @@ Use this map when you need to find or change a feature quickly.
 ## Shared App Code
 
 - `layouts` - app shell/layout wrappers
-- `components/common` - reusable app-specific UI like header, apartment card, chatbot
+- `components/common` - reusable app-specific UI like the app logo, apartment card, and chatbot
 - `components/features` - feature-specific components such as the map view
 - `components/landing` - landing-page-only components
 - `components/ui` - base shadcn-style UI primitives
@@ -23,7 +23,3 @@ Use this map when you need to find or change a feature quickly.
 - `hooks` - reusable React hooks
 - `services` - Supabase read/write logic
 - `utils` - pure helper functions
-
-## Legacy
-
-- `components/legacy` contains older duplicate component versions kept out of TypeScript builds. Prefer `components/common` or `components/features` for active code.

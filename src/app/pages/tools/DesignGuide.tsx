@@ -1,25 +1,25 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  Home,
-  Building2,
-  Heart,
-  Settings,
-  LayoutDashboard,
-  PlusCircle,
-  LogIn,
-  UserPlus,
-  Palette,
-  Layout,
-  Search,
-  ArrowLeft,
-  GitBranch,
-  Shield
-} from "lucide-react";
+import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import { Badge } from "@/app/components/ui/badge";
+import {
+  ArrowLeft,
+  Building2,
+  GitBranch,
+  Heart,
+  Home,
+  Layout,
+  LayoutDashboard,
+  LogIn,
+  Palette,
+  PlusCircle,
+  Search,
+  Settings,
+  Shield,
+  UserPlus
+} from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export function DesignGuide() {
   const [_selectedPage, setSelectedPage] = useState<string>("overview");

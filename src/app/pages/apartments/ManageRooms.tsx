@@ -1,7 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 import {
   ArrowLeft,
   Bath,
@@ -31,9 +27,23 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
-import { useAuth } from "@/app/contexts/AuthContext";
+import { MultiImageUploader, type UploadedImage } from "@/app/components/common/MultiImageUploader";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Switch } from "@/app/components/ui/switch";
+import { Textarea } from "@/app/components/ui/textarea";
 import { useApartmentsContext } from "@/app/contexts/ApartmentsContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { supabase } from "@/lib/supabaseclient";
 import {
   createApartmentRoom,
   deleteApartmentRoom,
@@ -46,14 +56,6 @@ import {
   type ApartmentRoom,
   type ApartmentStatus,
 } from "@/app/data/apartments";
-import { Button } from "@/app/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Textarea } from "@/app/components/ui/textarea";
-import { Switch } from "@/app/components/ui/switch";
-import { Badge } from "@/app/components/ui/badge";
-import { MultiImageUploader, type UploadedImage } from "@/app/components/common/MultiImageUploader";
 
 const ROOM_TYPES = ["Bedroom", "Studio", "Shared room", "Suite", "Loft", "Other"];
 const ROOM_STATUS_OPTIONS: Array<{ value: ApartmentStatus; label: string; className: string }> = [
@@ -199,6 +201,23 @@ export function ManageRooms() {
     };
     void load();
     return () => { active = false; };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const refreshRooms = () => { void fetchApartmentRooms(id).then(setRooms).catch(() => undefined); };
+    const refreshProperty = () => { void fetchApartmentWithImages(id).then(setProperty).catch(() => undefined); };
+    const channel = supabase
+      .channel(`manage-rooms-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms", filter: `apartment_id=eq.${id}` }, refreshRooms)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "apartments", filter: `id=eq.${id}` }, refreshProperty)
+      .subscribe();
+    const refreshOnFocus = () => { refreshRooms(); refreshProperty(); };
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      void supabase.removeChannel(channel);
+    };
   }, [id]);
 
   const roomCounts = useMemo(() => ({
@@ -380,7 +399,7 @@ export function ManageRooms() {
           </div>
         ))}
       </nav>
-      <button onClick={handleLogout} className="mt-3 flex h-11 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-sm font-bold text-rose-400 hover:bg-rose-500/10"><LogOut className="h-4 w-4" />Log Out</button>
+      <LogoutConfirmation onConfirm={handleLogout}><button className="mt-3 flex h-11 items-center justify-center gap-2 rounded-lg border border-rose-500/30 text-sm font-bold text-rose-400 hover:bg-rose-500/10"><LogOut className="h-4 w-4" />Log Out</button></LogoutConfirmation>
     </aside>
   );
 
@@ -471,7 +490,7 @@ export function ManageRooms() {
                             <div className="relative flex items-center gap-2"><Badge className={`${statusOption.className} border px-3 py-1`}>{statusOption.label}</Badge><button aria-label={`Actions for ${room.name || "room"}`} onClick={() => setOpenRoomMenuId((current) => current === room.id ? null : room.id ?? null)} className="grid h-9 w-9 place-items-center rounded-md hover:bg-slate-100"><MoreVertical className="h-5 w-5" /></button>{openRoomMenuId === room.id && <div className="absolute right-0 top-11 z-20 w-52 rounded-lg border bg-white p-1.5 shadow-xl">{status !== "maintenance" && <button onClick={() => void changeRoomStatus(room, "maintenance")} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-violet-700 hover:bg-violet-50"><Wrench className="h-4 w-4" />Mark as Maintenance</button>}<button onClick={() => { openEditForm(room); setOpenRoomMenuId(null); }} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50"><Edit3 className="h-4 w-4" />Edit Room</button><button onClick={() => void removeRoom(room)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4" />Delete Room</button></div>}</div>
                           </div>
                           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                            <div className="rounded-lg bg-orange-50 p-3"><p className="text-xs font-semibold text-slate-500">Monthly Rent</p><p className="mt-1 font-bold">PHP {(room.price ?? 0).toLocaleString("en-PH")}</p></div>
+                            <div className="rounded-lg bg-orange-50 p-3"><p className="text-xs font-semibold text-slate-500">Monthly Rent</p><p className="mt-1 font-bold">₱{(room.price ?? 0).toLocaleString("en-PH")}</p></div>
                             <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-500">Capacity</p><p className="mt-1 flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-orange-500" />{room.maxOccupants ?? 1}</p></div>
                             <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-500">Room Type</p><p className="mt-1 font-bold">{room.type || "Not provided"}</p></div>
                             <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-500">Room Size</p><p className="mt-1 font-bold">{room.sqft ? `${room.sqft.toLocaleString("en-PH")} sq ft` : "Not provided"}</p></div>
