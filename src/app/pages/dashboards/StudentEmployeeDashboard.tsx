@@ -14,6 +14,7 @@ import { Settings as AccountSettings } from "@/app/pages/settings/Settings";
 import {
   createReport,
   createSupportTicket,
+  defaultTenantPreferences,
   fetchApartmentViews,
   fetchFavorites as fetchDashboardFavorites,
   fetchTenantPreferences,
@@ -66,7 +67,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const NAV_MAIN = [
-  { icon: LayoutDashboard, label: "Overview",    section: "overview",   isLink: false },
+  { icon: LayoutDashboard, label: "Dashboard",   section: "overview",   isLink: false },
   { icon: Heart,           label: "My Favorites",section: "favorites",  isLink: false },
   { icon: Sparkles,        label: "Suggested",   section: "suggested",  isLink: false },
   { icon: TrendingUp,      label: "Popular",     section: "popular",    isLink: false },
@@ -165,11 +166,14 @@ export function StudentEmployeeDashboard() {
   }, []);
 
   useEffect(() => {
+    applyTenantPreferences(defaultTenantPreferences);
+
     if (!user?.id || (user.role !== "student" && user.role !== "employee")) return;
 
     let mounted = true;
+    const tenantId = user.id;
 
-    void fetchTenantPreferences(user.id)
+    void fetchTenantPreferences(tenantId)
       .then((preferences) => {
         if (!mounted || !preferences) return;
         applyTenantPreferences(preferences);
@@ -739,7 +743,7 @@ export function StudentEmployeeDashboard() {
 
           <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row">
             <Button asChild variant="outline" className="h-12 flex-1 rounded-lg border-slate-200 font-black text-slate-700 hover:bg-slate-50">
-              <Link to={`/apartment/${apartment.id}`}>
+              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/dashboard?section=favorites", backLabel: "Back to Favorites" }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </Link>
@@ -949,7 +953,7 @@ export function StudentEmployeeDashboard() {
           {suggestedApartments.map((apartment) => (
             <div key={apartment.id} className="relative">
               <Badge className="absolute top-6 left-6 z-10 bg-orange-500 hover:bg-orange-600 shadow-lg text-white font-bold">Suggested</Badge>
-              <ApartmentCard apartment={apartment} />
+              <ApartmentCard apartment={apartment} detailState={{ returnTo: "/dashboard?section=suggested", backLabel: "Back to Suggested" }} />
             </div>
           ))}
         </div>
@@ -986,7 +990,7 @@ export function StudentEmployeeDashboard() {
           {popularApartments.map((apartment) => (
             <div key={apartment.id} className="relative">
               <Badge className="absolute top-6 left-6 z-10 bg-indigo-600 hover:bg-indigo-700 shadow-lg text-white font-bold">Popular</Badge>
-              <ApartmentCard apartment={apartment} />
+              <ApartmentCard apartment={apartment} detailState={{ returnTo: "/dashboard?section=popular", backLabel: "Back to Popular" }} />
             </div>
           ))}
         </div>
@@ -1018,7 +1022,7 @@ export function StudentEmployeeDashboard() {
           {recentApartments.map((apartment) => (
             <div key={apartment.id} className="relative">
               <Badge className="absolute top-6 left-6 z-10 bg-emerald-600 hover:bg-emerald-700 shadow-lg text-white font-bold">New</Badge>
-              <ApartmentCard apartment={apartment} />
+              <ApartmentCard apartment={apartment} detailState={{ returnTo: "/dashboard?section=recent", backLabel: "Back to Recently Added" }} />
             </div>
           ))}
         </div>

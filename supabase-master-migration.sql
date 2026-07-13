@@ -62,6 +62,9 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 
+alter type public.appeal_status add value if not exists 'needs_information';
+alter type public.appeal_status add value if not exists 'dismissed';
+
 -- app_users table
 create table if not exists public.app_users (
   id uuid primary key default gen_random_uuid(),
@@ -270,6 +273,10 @@ create index if not exists idx_apartments_approval on public.apartments (approva
 create index if not exists idx_apartments_legacy on public.apartments (legacy_id);
 drop index if exists public.idx_apartments_browse;
 create index idx_apartments_browse on public.apartments (is_published, approval_status, is_archived, status, city, price);
+create index if not exists idx_apartments_gis_coordinates on public.apartments (lat, lng)
+where lat is not null and lng is not null and lat <> 0 and lng <> 0;
+create index if not exists idx_apartments_tenant_visibility on public.apartments (is_published, approval_status, is_archived, status, landlord_id, created_at)
+where is_published = true and approval_status = 'approved' and is_archived = false and deleted_at is null and status = 'available';
 
 create table if not exists public.apartment_images (
   id uuid primary key default gen_random_uuid(),
@@ -344,6 +351,8 @@ for each row execute function public.sync_apartment_room_rent_columns();
 
 create index if not exists idx_apartment_rooms_apartment on public.apartment_rooms (apartment_id);
 create index if not exists idx_apartment_rooms_status on public.apartment_rooms (status);
+create index if not exists idx_apartment_rooms_available_by_apartment on public.apartment_rooms (apartment_id, rent)
+where status = 'available' and is_occupied = false;
 
 -- Apartment views (tracking)
 create table if not exists public.apartment_views (
@@ -1065,7 +1074,10 @@ begin
     new.message,
     jsonb_build_object(
       'violation_id', new.id, 'mode', new.mode, 'type', new.type,
-      'expires_at', new.expires_at, 'related_report_id', new.related_report_id
+      'expires_at', new.expires_at, 'related_report_id', new.related_report_id,
+      'apartment_id', new.apartment_id,
+      'apartment_title', (select title from public.apartments where id = new.apartment_id),
+      'status', 'open', 'category', 'reports'
     )
   );
   return new;
@@ -1118,11 +1130,13 @@ as $$
 declare
   v_status_messages text;
 begin
-  if old.status != new.status then
-    case new.status
+  if old.status != new.status or old.admin_response is distinct from new.admin_response then
+    case new.status::text
       when 'under_review' then v_status_messages := 'Your appeal is now under review by our team.';
+      when 'needs_information' then v_status_messages := 'The administrator requested more information for your appeal.';
       when 'approved' then v_status_messages := 'Good news! Your appeal has been approved.';
       when 'rejected' then v_status_messages := 'Your appeal has been reviewed and rejected.';
+      when 'dismissed' then v_status_messages := 'Your appeal has been dismissed.';
       else v_status_messages := 'Your appeal status has been updated.';
     end case;
 
@@ -1292,6 +1306,48 @@ as $$
     select 1 from public.app_users
     where auth_id = auth.uid() and role = 'admin' and status <> 'disabled'
   )
+$$;
+
+-- Landlords can append information only when an administrator explicitly asks
+-- for it. Keeping this mutation in a function prevents arbitrary appeal edits.
+create or replace function public.fn_submit_appeal_followup(
+  p_appeal_id uuid,
+  p_description text,
+  p_supporting_docs jsonb default '[]'::jsonb
+)
+returns public.appeals
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appeal public.appeals;
+begin
+  if nullif(trim(p_description), '') is null then
+    raise exception 'Additional appeal information is required.';
+  end if;
+
+  update public.appeals
+  set description = concat_ws(E'\n\n', nullif(description, ''), 'Additional information:', trim(p_description)),
+      supporting_docs = coalesce(supporting_docs, '[]'::jsonb) || coalesce(p_supporting_docs, '[]'::jsonb),
+      updated_at = now()
+  where id = p_appeal_id
+    and landlord_id = public.current_app_user_id()
+    and status::text = 'needs_information'
+  returning * into v_appeal;
+
+  if v_appeal.id is null then
+    raise exception 'This appeal is not awaiting additional information.';
+  end if;
+
+  insert into public.notifications (user_id, type, title, message, payload)
+  select id, 'appeal_information_submitted', 'Appeal Information Submitted',
+    'A landlord submitted additional information for an appeal.',
+    jsonb_build_object('appeal_id', v_appeal.id, 'landlord_id', v_appeal.landlord_id, 'category', 'appeals')
+  from public.app_users where role = 'admin';
+
+  return v_appeal;
+end;
 $$;
 
 -- Record landlord property submissions/deletions in the same transaction as
@@ -1586,6 +1642,13 @@ as $$
       and landlord.role = 'landlord'
       and landlord.is_verified = true
       and landlord.status <> 'disabled'
+      and exists (
+        select 1
+        from public.apartment_rooms room
+        where room.apartment_id = a.id
+          and coalesce(room.status, case when room.is_occupied then 'occupied' else 'available' end) = 'available'
+          and coalesce(room.is_occupied, false) = false
+      )
   );
 $$;
 
@@ -2259,6 +2322,7 @@ alter default privileges in schema public grant execute on functions to authenti
 grant execute on function public.fn_mark_notification_read(uuid) to authenticated, service_role;
 grant execute on function public.fn_mark_all_notifications_read(uuid) to authenticated, service_role;
 grant execute on function public.fn_get_unread_notification_count(uuid) to authenticated, service_role;
+grant execute on function public.fn_submit_appeal_followup(uuid, text, jsonb) to authenticated, service_role;
 grant execute on function public.fn_merge_user_preference_section(uuid, text, jsonb) to authenticated, service_role;
 revoke execute on function public.fn_set_landlord_verification(uuid, boolean) from public, anon;
 grant execute on function public.fn_set_landlord_verification(uuid, boolean) to authenticated, service_role;

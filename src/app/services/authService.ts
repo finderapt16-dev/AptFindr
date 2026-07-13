@@ -18,13 +18,14 @@ export interface User {
   mobileNumber?: string;
   mobile?: string;
   bio?: string;
-  language?: string;
-  timezone?: string;
   avatar?: string;
   department?: string;
   adminLevel?: string;
   permitNumber?: string;
   school?: string;
+  guardianName?: string;
+  guardianAddress?: string;
+  guardianContact?: string;
   yearLevel?: string;
   studentId?: string;
   course?: string;
@@ -51,8 +52,6 @@ type AppUserRow = {
   mobile?: string;
   avatar_url?: string;
   bio?: string;
-  language?: string;
-  timezone?: string;
   permit_number?: string;
   department?: string;
   admin_level?: string;
@@ -108,6 +107,8 @@ export interface UpdateUserInput {
 
 const APP_USERS_TABLE = 'app_users';
 const CURRENT_SESSION_KEY = 'apartment_finder_current_user';
+const VALID_ROLES = new Set(['student', 'employee', 'landlord', 'admin']);
+let latestAuthProfileRequestId = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -153,8 +154,19 @@ function normalizeStatus(row: Record<string, unknown>): string {
   return 'active';
 }
 
+function normalizeRoleValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function assertValidRole(role: string): void {
+  if (!VALID_ROLES.has(role)) {
+    throw new Error('Your account role is missing or invalid. Please contact support.');
+  }
+}
+
 function normalizeUser(row: AppUserRow): User {
   const record: Record<string, unknown> = isRecord(row) ? row : {};
+  const role = normalizeRoleValue(record.role);
 
   return {
     id: getStringValue(record, ['id']),
@@ -163,7 +175,7 @@ function normalizeUser(row: AppUserRow): User {
     email: getStringValue(record, ['email']),
     middleInitial: getStringValue(record, ['middle_initial']),
     address: getStringValue(record, ['address']),
-    role: getStringValue(record, ['role']),
+    role,
     status: normalizeStatus(record),
     createdAt: getStringValue(record, ['created_at']),
     updatedAt: getStringValue(record, ['updated_at']),
@@ -172,8 +184,6 @@ function normalizeUser(row: AppUserRow): User {
     mobile: getStringValue(record, ['mobile']),
     avatar: getStringValue(record, ['avatar_url']),
     bio: getStringValue(record, ['bio']),
-    language: getStringValue(record, ['language']),
-    timezone: getStringValue(record, ['timezone']),
     permitNumber: getStringValue(record, ['permit_number']),
     department: getStringValue(record, ['department']),
     adminLevel: getStringValue(record, ['admin_level']),
@@ -228,41 +238,31 @@ async function ensureRoleProfile(userId: string, role: UserRole, input: Partial<
 
   if (role === 'student') {
     table = 'student_profiles';
-    payload = {
-      ...payload,
-      school: nonEmptyString(input.school),
-      guardian_name: nonEmptyString(input.guardianName),
-      guardian_address: nonEmptyString(input.guardianAddress),
-      guardian_contact: nonEmptyString(input.guardianContact),
-    };
+    if (typeof input.school === 'string') payload.school = nonEmptyString(input.school);
+    if (typeof input.guardianName === 'string') payload.guardian_name = nonEmptyString(input.guardianName);
+    if (typeof input.guardianAddress === 'string') payload.guardian_address = nonEmptyString(input.guardianAddress);
+    if (typeof input.guardianContact === 'string') payload.guardian_contact = nonEmptyString(input.guardianContact);
   }
 
   if (role === 'employee') {
     table = 'employee_profiles';
-    payload = {
-      ...payload,
-      company: nonEmptyString(input.company),
-      work_address: nonEmptyString(input.workAddress),
-    };
+    if (typeof input.company === 'string') payload.company = nonEmptyString(input.company);
+    if (typeof input.workAddress === 'string') payload.work_address = nonEmptyString(input.workAddress);
   }
 
   if (role === 'landlord') {
     table = 'landlord_profiles';
-    payload = {
-      ...payload,
-      permit_number: nonEmptyString(input.permitNumber),
-      business_permit_number: nonEmptyString(input.permitNumber),
-      is_verified: input.isVerified ?? false,
-    };
+    if (typeof input.permitNumber === 'string') {
+      payload.permit_number = nonEmptyString(input.permitNumber);
+      payload.business_permit_number = nonEmptyString(input.permitNumber);
+    }
+    if (typeof input.isVerified === 'boolean') payload.is_verified = input.isVerified;
   }
 
   if (role === 'admin') {
     table = 'admin_profiles';
-    payload = {
-      ...payload,
-      admin_level: input.adminLevel ?? 'Full Administrator',
-      department: input.department ?? 'Platform Administration',
-    };
+    if (typeof input.adminLevel === 'string') payload.admin_level = input.adminLevel;
+    if (typeof input.department === 'string') payload.department = input.department;
   }
 
   if (!table) return;
@@ -387,12 +387,26 @@ async function ensureProfileForAuthUser(authUser: {
 }): Promise<User> {
   const existingByAuthId = await fetchUserByAuthId(authUser.id);
   if (existingByAuthId) {
+    assertValidRole(existingByAuthId.role);
+    await ensureRoleProfile(existingByAuthId.id, existingByAuthId.role, {
+      school: typeof authUser.user_metadata?.school === 'string' ? authUser.user_metadata.school : undefined,
+      guardianName: typeof authUser.user_metadata?.guardianName === 'string' ? authUser.user_metadata.guardianName : undefined,
+      guardianAddress: typeof authUser.user_metadata?.guardianAddress === 'string' ? authUser.user_metadata.guardianAddress : undefined,
+      guardianContact: typeof authUser.user_metadata?.guardianContact === 'string' ? authUser.user_metadata.guardianContact : undefined,
+      company: typeof authUser.user_metadata?.company === 'string' ? authUser.user_metadata.company : undefined,
+      workAddress: typeof authUser.user_metadata?.workAddress === 'string' ? authUser.user_metadata.workAddress : undefined,
+      permitNumber: existingByAuthId.permitNumber,
+      adminLevel: existingByAuthId.adminLevel,
+      department: existingByAuthId.department,
+      isVerified: existingByAuthId.isVerified,
+    });
     return existingByAuthId;
   }
 
   const email = authUser.email ?? '';
   const existingByEmail = email ? await fetchUserByEmail(email) : null;
   if (existingByEmail) {
+    assertValidRole(existingByEmail.role);
     const { data, error } = await supabaseClient
       .from(APP_USERS_TABLE)
       .update({ auth_id: authUser.id })
@@ -405,6 +419,7 @@ async function ensureProfileForAuthUser(authUser: {
     }
 
     const profile = normalizeUser(data as AppUserRow);
+    assertValidRole(profile.role);
     await ensureRoleProfile(profile.id, profile.role, {
       adminLevel: profile.adminLevel,
       department: profile.department,
@@ -414,10 +429,12 @@ async function ensureProfileForAuthUser(authUser: {
     return profile;
   }
 
-  const role = typeof authUser.user_metadata?.role === 'string' ? authUser.user_metadata.role : 'student';
+  const role = normalizeRoleValue(authUser.user_metadata?.role);
+  assertValidRole(role);
   const name = typeof authUser.user_metadata?.name === 'string' ? authUser.user_metadata.name : email.split('@')[0] || 'User';
   const middleInitial = typeof authUser.user_metadata?.middleInitial === 'string' ? authUser.user_metadata.middleInitial : null;
   const address = typeof authUser.user_metadata?.address === 'string' ? authUser.user_metadata.address : null;
+  const mobile = typeof authUser.user_metadata?.mobile === 'string' ? authUser.user_metadata.mobile : null;
   const status = role === 'landlord' ? 'pending' : 'active';
 
   const { data, error } = await supabaseClient
@@ -428,6 +445,7 @@ async function ensureProfileForAuthUser(authUser: {
       name,
       middle_initial: nonEmptyString(middleInitial),
       address: nonEmptyString(address),
+      mobile: nonEmptyString(mobile),
       role,
       status,
       is_verified: role !== 'landlord',
@@ -440,7 +458,16 @@ async function ensureProfileForAuthUser(authUser: {
   }
 
   const profile = normalizeUser(data as AppUserRow);
-  await ensureRoleProfile(profile.id, profile.role, { isVerified: profile.isVerified });
+  await ensureRoleProfile(profile.id, profile.role, {
+    school: typeof authUser.user_metadata?.school === 'string' ? authUser.user_metadata.school : undefined,
+    guardianName: typeof authUser.user_metadata?.guardianName === 'string' ? authUser.user_metadata.guardianName : undefined,
+    guardianAddress: typeof authUser.user_metadata?.guardianAddress === 'string' ? authUser.user_metadata.guardianAddress : undefined,
+    guardianContact: typeof authUser.user_metadata?.guardianContact === 'string' ? authUser.user_metadata.guardianContact : undefined,
+    company: typeof authUser.user_metadata?.company === 'string' ? authUser.user_metadata.company : undefined,
+    workAddress: typeof authUser.user_metadata?.workAddress === 'string' ? authUser.user_metadata.workAddress : undefined,
+    permitNumber: typeof authUser.user_metadata?.permitNumber === 'string' ? authUser.user_metadata.permitNumber : undefined,
+    isVerified: profile.isVerified,
+  });
   return profile;
 }
 
@@ -464,6 +491,7 @@ export async function getCurrentAuthenticatedUser(): Promise<User | null> {
 
 export function onAuthStateChange(callback: (user: User | null) => void): () => void {
   const { data } = supabaseClient.auth.onAuthStateChange((_event: string, session) => {
+    const requestId = ++latestAuthProfileRequestId;
     const authUser = session?.user;
 
     if (!authUser) {
@@ -474,10 +502,12 @@ export function onAuthStateChange(callback: (user: User | null) => void): () => 
 
     void ensureProfileForAuthUser(authUser)
       .then((profile) => {
+        if (requestId !== latestAuthProfileRequestId) return;
         persistCurrentUser(profile);
         callback(profile);
       })
       .catch((error) => {
+        if (requestId !== latestAuthProfileRequestId) return;
         console.error('Failed to load Supabase Auth profile:', error);
         persistCurrentUser(null);
         callback(null);
@@ -672,6 +702,8 @@ export async function deleteUser(userId: string): Promise<void> {
 }
 
 export async function logoutUser(): Promise<void> {
+  latestAuthProfileRequestId += 1;
+  persistCurrentUser(null);
   const { error } = await supabaseClient.auth.signOut();
   if (error) {
     throw new Error(error.message);

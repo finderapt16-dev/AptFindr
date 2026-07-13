@@ -1,4 +1,5 @@
 import { MapView } from "@/app/components/features/map/MapView";
+import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
@@ -14,12 +15,14 @@ import {
 } from "@/app/services/apartmentsService";
 import {
   createViolation,
+  fetchPendingAppeals,
   fetchAdminReports,
   fetchApartmentChangeLogs,
   fetchLandlordProfile,
   fetchUserById,
   sendAdminMessageToLandlord,
   updateReportStatus,
+  type DashboardAppealRow,
   type DashboardAuditLogRow,
   type DashboardLandlordProfileRow,
   type DashboardReportRow,
@@ -31,15 +34,18 @@ import {
   type VerificationDocumentRecord,
 } from "@/app/services/verificationDocumentsService";
 import { formatAuditLogForDisplay } from "@/app/utils/auditLogDisplay";
-import { getImageUrl } from "@/app/utils/images";
 import { supabase } from "@/lib/supabaseclient";
 import {
   AlertTriangle,
   ArrowLeft,
   Building2,
+  CalendarCheck,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
+  Edit3,
   ExternalLink,
   Eye,
   EyeOff,
@@ -55,7 +61,6 @@ import {
   Phone,
   Send,
   ShieldCheck,
-  UserCheck,
   Users,
   X
 } from "lucide-react";
@@ -117,6 +122,15 @@ const STATUS_LABEL: Record<string, string> = {
   maintenance: "Under Maintenance",
 };
 
+const SHOW_SELECTED_REPORT_DETAILS = false;
+
+const getAdminPropertyStatusLabel = (status: string | undefined, isPublished: boolean | undefined): string => {
+  if (isPublished === false) return "Unpublished";
+  const normalizedStatus = status ?? "available";
+  if (normalizedStatus === "available") return "Published";
+  return STATUS_LABEL[normalizedStatus] ?? STATUS_LABEL.available;
+};
+
 const getRoomStatus = (room: Record<string, unknown>): string => {
   const raw = typeof room.status === "string" ? room.status : room.isOccupied ? "occupied" : "available";
   return raw === "occupied" || raw === "reserved" || raw === "maintenance" ? raw : "available";
@@ -150,6 +164,13 @@ const scrollToSection = (id: string) => {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
+const scrollToFirstVisibleSection = (ids: string[]) => {
+  const target = ids
+    .map((id) => document.getElementById(id))
+    .find((element) => element && element.offsetParent !== null);
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -163,7 +184,7 @@ function ImageTile({ src, label }: { src: string; label?: string }) {
   return (
     <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
       <div className="aspect-video bg-slate-100">
-        <img src={getImageUrl(src)} alt={label || "Apartment image"} className="h-full w-full object-cover" />
+        <ImageWithFallback src={src} alt={label || "Apartment image"} className="h-full w-full object-cover" />
       </div>
       {label && <p className="px-3 py-2 text-xs font-bold text-slate-600">{label}</p>}
     </div>
@@ -182,6 +203,7 @@ export function AdminApartmentDetail() {
   const [landlordProfile, setLandlordProfile] = useState<DashboardLandlordProfileRow | null>(null);
   const [verifiedLandlord, setVerifiedLandlord] = useState<{ name?: string } | null>(null);
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
+  const [appeals, setAppeals] = useState<DashboardAppealRow[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedReport, setSelectedReport] = useState<DashboardReportRow | null>(null);
   const [moderationMode, setModerationMode] = useState<"view" | "takeAction">("view");
@@ -190,16 +212,22 @@ export function AdminApartmentDetail() {
   const [isIssuingViolation, setIsIssuingViolation] = useState(false);
   const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
+  const [quickNotes, setQuickNotes] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [changeLogOpen, setChangeLogOpen] = useState(false);
   const [changeLogLoading, setChangeLogLoading] = useState(false);
   const [changeLogs, setChangeLogs] = useState<DashboardAuditLogRow[]>([]);
   const [changeLogActors, setChangeLogActors] = useState<Record<string, string>>({});
   const [verificationDocuments, setVerificationDocuments] = useState<VerificationDocumentRecord[]>([]);
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
   const [isUpdatingPublication, setIsUpdatingPublication] = useState(false);
   const returnTo = (() => {
     const value = (routeLocation.state as { returnTo?: unknown } | null)?.returnTo;
     return typeof value === "string" && value.startsWith("/") ? value : "/dashboard?section=apartments";
+  })();
+  const backLabel = (() => {
+    const value = (routeLocation.state as { backLabel?: unknown } | null)?.backLabel;
+    return typeof value === "string" && value.trim() ? value : "Back to Apartments";
   })();
   const handleBack = () => navigate(returnTo);
 
@@ -246,6 +274,8 @@ export function AdminApartmentDetail() {
           const apartmentReports = allReports.filter((r) => r.apartment_id === id || r.apartmentId === id);
           setReports(apartmentReports);
         }
+        const allAppeals = await fetchPendingAppeals();
+        if (active) setAppeals(allAppeals);
       } catch (error) {
         console.error("Failed to load apartment data:", error);
         if (active) {
@@ -278,6 +308,7 @@ export function AdminApartmentDetail() {
       .on("postgres_changes", { event: "*", schema: "public", table: "apartments", filter: `id=eq.${id}` }, refreshInspection)
       .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms", filter: `apartment_id=eq.${id}` }, refreshInspection)
       .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images", filter: `apartment_id=eq.${id}` }, refreshInspection)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, () => { void fetchPendingAppeals().then(setAppeals); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [id]);
@@ -421,7 +452,7 @@ export function AdminApartmentDetail() {
     }
 
     if (id !== apartment.id) {
-      navigate(`/admin/apartment/${apartment.id}`);
+      navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo, backLabel } });
       return;
     }
 
@@ -447,6 +478,7 @@ export function AdminApartmentDetail() {
         apartmentId: apartment.id,
         apartmentTitle: apartment.title,
         message: messageText.trim(),
+        reportId: selectedReport?.id ?? null,
       });
       if (!sent) {
         toast.error("Failed to send the message");
@@ -551,22 +583,46 @@ export function AdminApartmentDetail() {
     ...definition,
     document: verificationDocuments.find((document) => document.documentType === definition.key),
   }));
+  const relatedAppeals = appeals.filter((appeal) => {
+    const source = Array.isArray(appeal.supporting_docs)
+      ? appeal.supporting_docs.find((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === "source") as Record<string, unknown> | undefined
+      : undefined;
+    return source?.apartment_id === apartment.id || reports.some((report) => report.id === appeal.report_id);
+  });
+  const selectedImage = images[currentImageIndex] || coverImage;
+  const imageCount = images.length;
+  const canNavigateImages = imageCount > 1;
+  const handlePreviousImage = () => {
+    if (!canNavigateImages) return;
+    setCurrentImageIndex((index) => (index - 1 + imageCount) % imageCount);
+  };
+  const handleNextImage = () => {
+    if (!canNavigateImages) return;
+    setCurrentImageIndex((index) => (index + 1) % imageCount);
+  };
+  const listingStatusLabel = getAdminPropertyStatusLabel(apartment.status, apartment.isPublished);
+  const formattedDatePosted = datePosted
+    ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    : "—";
+  const formattedDatePostedTime = datePosted
+    ? new Date(datePosted).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
+    : "";
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-[#f8fafc] pb-28">
+      <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Apartments
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Button variant="ghost" onClick={handleBack} className="w-fit rounded-lg px-2 font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600">
+            <ArrowLeft className="mr-2 h-4 w-4 text-orange-600" />
+            {backLabel}
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => void handlePublicationReview()}
               disabled={isUpdatingPublication}
-              variant={apartment.isPublished === false ? "default" : "outline"}
-              className={apartment.isPublished === false ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border-rose-200 text-rose-600 hover:bg-rose-50"}
+              variant="outline"
+              className={apartment.isPublished === false ? "h-10 rounded-lg border-emerald-200 bg-emerald-600 px-4 font-black text-white hover:bg-emerald-700" : "h-10 rounded-lg border-red-200 px-4 font-black text-red-600 hover:bg-red-50"}
             >
               {apartment.isPublished === false ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
               {isUpdatingPublication ? "Updating..." : apartment.isPublished === false ? "Approve & Publish" : "Unpublish"}
@@ -575,7 +631,7 @@ export function AdminApartmentDetail() {
               onClick={handleRefreshData}
               disabled={isLoading}
               variant="outline"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+              className="h-10 rounded-lg border-orange-200 px-4 font-black text-slate-700 hover:bg-orange-50"
             >
               {isLoading ? (
                 <span className="animate-spin">⟳</span>
@@ -585,52 +641,91 @@ export function AdminApartmentDetail() {
               {isLoading ? "Syncing..." : "Refresh"}
             </Button>
             <div className="flex items-center gap-2">
-              <Badge className="bg-purple-600">Admin View</Badge>
-              <Badge className={STATUS_BADGE[apartment.status ?? "available"]}>
-                {STATUS_LABEL[apartment.status ?? "available"]}
+              <Badge className="rounded-lg bg-purple-600 px-3 py-1.5 text-white">Admin View</Badge>
+              <Badge className={`rounded-lg px-3 py-1.5 ${STATUS_BADGE[apartment.status ?? "available"]}`}>
+                {listingStatusLabel}
               </Badge>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)_360px]">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="grid gap-6 xl:col-span-2 xl:grid-cols-2 xl:items-start">
             {/* Image Gallery */}
-            <Card id="admin-images" className="border-2 border-slate-200 scroll-mt-6">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl">
-                <img
-                  src={getImageUrl(images[currentImageIndex] || coverImage)}
-                  alt={apartment.title}
-                  className="h-full w-full object-cover"
-                />
+            <Card id="admin-images" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-1">
+              <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
+                {selectedImage ? (
+                  <ImageWithFallback
+                    src={selectedImage}
+                    alt={apartment.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center text-slate-400">
+                    <Building2 className="h-14 w-14" />
+                    <p className="mt-3 text-sm font-bold">No apartment images uploaded</p>
+                  </div>
+                )}
                 <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                  <Badge className="bg-black/70 text-white">Main Cover Photo</Badge>
-                  <Badge className="bg-black/70 text-white">{images.length} uploaded image(s)</Badge>
+                  {coverImage && <Badge className="rounded-lg bg-slate-950/85 px-3 py-1.5 text-white">Main Cover Photo</Badge>}
+                  <Badge className="rounded-lg bg-orange-500 px-3 py-1.5 text-white">{imageCount} uploaded image(s)</Badge>
                 </div>
+                {canNavigateImages && (
+                  <>
+                    <button
+                      type="button"
+                      title="Previous image"
+                      onClick={handlePreviousImage}
+                      className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg transition hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Next image"
+                      onClick={handleNextImage}
+                      className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg transition hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
               </div>
-              <CardContent className="pt-4">
-                {images.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
+              <CardContent className="p-4 sm:p-5">
+                {imageCount > 0 && (
+                  <div className="flex gap-4 overflow-x-auto pb-1">
                     {images.map((img, index) => (
-                      <div
-                        key={index}
-                        className={`relative aspect-square overflow-hidden rounded-lg cursor-pointer border-2 transition-all ${
-                          currentImageIndex === index ? "border-amber-600" : "border-slate-200 hover:border-slate-300"
+                      <button
+                        type="button"
+                        key={`${img}-${index}`}
+                        title={`View image ${index + 1}`}
+                        className={`relative h-24 w-36 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-100 transition ${
+                          currentImageIndex === index ? "border-orange-500 shadow-md" : "border-slate-200 hover:border-orange-200"
                         }`}
                         onClick={() => setCurrentImageIndex(index)}
                       >
-                        <img
-                          src={getImageUrl(img)}
+                        <ImageWithFallback
+                          src={img}
                           alt={`View ${index + 1}`}
                           className="h-full w-full object-cover"
                         />
-                      </div>
+                      </button>
                     ))}
+                    {imageRows.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => scrollToSection("admin-all-images")}
+                        className="flex h-24 w-28 shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white text-xs font-black text-slate-700 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        <span className="text-xl leading-none">+</span>
+                        View All Images ({imageRows.length})
+                      </button>
+                    )}
                   </div>
                 )}
                 {imageRows.length > 0 && (
-                  <div className="mt-4">
+                  <div id="admin-all-images" className="mt-4 scroll-mt-6">
                     <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                       <ImageIcon className="h-5 w-5 text-amber-600" />
                       All Property Images
@@ -653,16 +748,101 @@ export function AdminApartmentDetail() {
               </CardContent>
             </Card>
 
+            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-8 xl:col-span-2">
+              <CardContent className="p-5 sm:p-6">
+                <div className="mb-5 flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                    <FileSearch className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-950">Inspection Overview</h2>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">Review and verify apartment listing details and landlord information.</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    { label: "Listing Status", value: listingStatusLabel, helper: apartment.isPublished === false ? "Pending admin approval" : "Active and visible to tenants", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
+                    { label: "Submitted On", value: formattedDatePosted, helper: formattedDatePostedTime, icon: CalendarCheck, tone: "bg-blue-50 text-blue-600" },
+                    { label: "Reports", value: `${reports.length} report(s)`, helper: reports.length > 0 ? "Requires review" : "No active reports", icon: Flag, tone: "bg-rose-50 text-rose-600" },
+                    { label: "Visibility", value: apartment.isPublished === false ? "Hidden" : "Public", helper: apartment.isPublished === false ? "Not visible to tenants" : "Visible to all tenants", icon: Eye, tone: "bg-orange-50 text-orange-600" },
+                  ].map(({ label, value, helper, icon: Icon, tone }) => (
+                    <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon className="h-5 w-5" /></span>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-black text-slate-500">{label}</p>
+                          <p className="mt-1 truncate text-base font-black text-slate-950">{value}</p>
+                          <p className="mt-0.5 truncate text-xs font-medium text-slate-400">{helper || "—"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-9 xl:col-span-2">
+              <CardContent className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div>
+                  <div className="mb-4 flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                      <Edit3 className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h2 className="font-black text-slate-950">Quick Notes</h2>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">Add notes about this inspection for your records.</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={quickNotes}
+                      onChange={(event) => setQuickNotes(event.target.value)}
+                      maxLength={500}
+                      rows={5}
+                      placeholder="Write your inspection notes here..."
+                      className="w-full resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                    />
+                    <span className="absolute bottom-3 right-4 text-[11px] font-bold text-slate-400">{quickNotes.length}/500</span>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-orange-50 p-5 text-sm">
+                  <h3 className="mb-3 font-black text-orange-900">Inspection Tips</h3>
+                  <div className="space-y-2 font-semibold text-slate-700">
+                    {["Verify landlord information", "Check property images", "Review listing details", "Ensure compliance"].map((tip) => (
+                      <div key={tip} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-orange-600" />
+                        <span>{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {relatedAppeals.length > 0 && <Card className="border border-blue-200"><CardContent className="pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-black text-slate-900">Related Appeals</h2><p className="text-xs font-medium text-slate-500">Landlord appeals connected to this apartment or its reports.</p></div><Badge className="bg-blue-100 text-blue-700">{relatedAppeals.length}</Badge></div><div className="divide-y divide-slate-100">{relatedAppeals.map((appeal) => <div key={appeal.id} className="flex items-center gap-3 py-3"><FileText className="h-4 w-4 shrink-0 text-blue-600" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{appeal.reason || "Appeal"}</p><p className="line-clamp-2 text-xs font-medium text-slate-500">{appeal.description || "No explanation provided."}</p></div><Badge className="shrink-0 bg-slate-100 text-slate-700">{String(appeal.status || "pending").replace(/_/g, " ")}</Badge></div>)}</div><Button variant="outline" onClick={() => navigate("/dashboard?section=appeals")} className="mt-3 w-full border-blue-200 font-bold text-blue-700">Open Appeal Management</Button></CardContent></Card>}
+
+
             {/* Apartment Info */}
-            <Card id="admin-property-details" className="border-2 border-slate-200 scroll-mt-6">
-              <CardContent className="pt-6">
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">{apartment.title}</h1>
-                <div className="flex items-center text-slate-600 mb-4">
+            <Card id="admin-property-details" className="rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-2">
+              <CardContent className="p-5 sm:p-6">
+                <div className="mb-5 flex items-start gap-4">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                    <Building2 className="h-7 w-7" />
+                  </span>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-2xl font-black text-slate-950">{apartment.title}</h1>
+                    <div className="mt-2 flex items-start text-sm font-semibold text-slate-500">
+                      <MapPin className="mr-2 mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>{apartment.address}, {apartment.city}, {apartment.state} {apartment.zip}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden items-center text-slate-600 mb-4">
                   <MapPin className="h-5 w-5 mr-2" />
                   <span>{apartment.address}, {apartment.city}, {apartment.state} {apartment.zip}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-1 gap-3 mb-6 sm:grid-cols-2 xl:grid-cols-3">
                   <DetailRow label="Property Name" value={apartment.title} />
                   <DetailRow label="Property Type" value={propertyType} />
                   <DetailRow label="Property Description" value={apartment.description} />
@@ -670,11 +850,11 @@ export function AdminApartmentDetail() {
                   <DetailRow label="Room Pricing" value="See individual room records" />
                   <DetailRow label="Available Rooms" value={availableRoomCount} />
                   <DetailRow label="Total Rooms" value={roomsForDisplay.length || apartment.bedrooms} />
-                  <DetailRow label="Property Status" value={STATUS_LABEL[apartment.status ?? "available"]} />
+                  <DetailRow label="Property Status" value={getAdminPropertyStatusLabel(apartment.status, apartment.isPublished)} />
                   <DetailRow label="Date Posted" value={datePosted ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"} />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <p className="text-sm text-slate-600 font-medium mb-1">Bedrooms</p>
                     <p className="text-2xl font-bold text-slate-900">{apartment.bedrooms}</p>
@@ -709,10 +889,10 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Amenities & Utilities */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 xl:order-4">
               {apartment.amenities.length > 0 && (
-                <Card className="border-2 border-slate-200">
-                  <CardContent className="pt-6">
+                <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <CardContent className="p-5">
                     <h2 className="text-lg font-bold text-slate-900 mb-3">Amenities</h2>
                     <div className="space-y-2">
                       {apartment.amenities.map((amenity: string, index: number) => (
@@ -727,8 +907,8 @@ export function AdminApartmentDetail() {
               )}
 
               {Array.isArray(apartment.utilities) && apartment.utilities.length > 0 && (
-                <Card className="border-2 border-slate-200">
-                  <CardContent className="pt-6">
+                <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <CardContent className="p-5">
                     <h2 className="text-lg font-bold text-slate-900 mb-3">Utilities Included</h2>
                     <div className="flex flex-wrap gap-2">
                       {apartment.utilities.map((utility: string, index: number) => (
@@ -741,8 +921,8 @@ export function AdminApartmentDetail() {
                 </Card>
               )}
               {(customFeatures.length > 0 || Object.keys(verificationData).length > 0) && (
-                <Card className="border-2 border-slate-200">
-                  <CardContent className="pt-6">
+                <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <CardContent className="p-5">
                     <h2 className="text-lg font-bold text-slate-900 mb-3">Property Features</h2>
                     {customFeatures.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">
@@ -768,8 +948,8 @@ export function AdminApartmentDetail() {
 
             {/* Room Details */}
             {roomsForDisplay.length > 0 && (
-              <Card id="admin-rooms" className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-slate-50 scroll-mt-6">
-                <CardContent className="pt-6">
+              <Card id="admin-rooms" className="rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-3">
+                <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
                       <Home className="h-6 w-6 text-white" />
@@ -852,8 +1032,8 @@ export function AdminApartmentDetail() {
             )}
 
             {/* Location Details */}
-            <Card className="border-2 border-slate-200">
-              <CardContent className="pt-6">
+            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-5">
+              <CardContent className="p-5">
                 <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-amber-600" />
                   Location Details
@@ -879,8 +1059,8 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Verification Documents */}
-            <Card id="admin-verification" className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-slate-50 scroll-mt-6">
-                <CardContent className="pt-6">
+            <Card id="admin-verification" className="rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm scroll-mt-6 xl:order-6 xl:col-span-2 xl:hidden">
+                <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
                       <FileSearch className="h-6 w-6 text-white" />
@@ -898,7 +1078,7 @@ export function AdminApartmentDetail() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {submittedDocumentCards.map(({ key, label, document }) => (
+                    {(showAllDocuments ? submittedDocumentCards : submittedDocumentCards.slice(0, 4)).map(({ key, label, document }) => (
                       <div key={key} className="p-4 bg-white rounded-lg border border-green-200 hover:border-green-400 transition-all">
                         <div className="flex items-start justify-between mb-3">
                           <div><h3 className="font-bold text-slate-900">{label}</h3><p className={`mt-1 text-xs font-bold ${document ? "text-emerald-600" : "text-slate-400"}`}>{document?.fileName || "Not provided"}</p></div>
@@ -911,6 +1091,15 @@ export function AdminApartmentDetail() {
                       </div>
                     ))}
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAllDocuments((current) => !current)}
+                    className="mt-4 w-full rounded-lg border-emerald-200 bg-white font-black text-emerald-700 hover:bg-emerald-50"
+                  >
+                    <FileSearch className="mr-2 h-4 w-4" />
+                    {showAllDocuments ? "Show Fewer Documents" : `View All Documents (${submittedDocumentCards.length})`}
+                  </Button>
                 </CardContent>
               </Card>
 
@@ -982,13 +1171,13 @@ export function AdminApartmentDetail() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6 xl:col-span-1">
             {/* Landlord Info */}
             {landlord && (
-              <Card className="border-2 border-slate-200">
-                <CardContent className="pt-6">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <Users className="h-5 w-5 text-amber-600" />
+              <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                <CardContent className="p-5">
+                  <h2 className="mb-5 flex items-center gap-3 text-lg font-black text-slate-950">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-600"><Users className="h-5 w-5" /></span>
                     Landlord Information
                   </h2>
 
@@ -1027,9 +1216,9 @@ export function AdminApartmentDetail() {
                     )}
 
                     {landlord.is_verified && (
-                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <ShieldCheck className="h-4 w-4 text-blue-600" />
-                        <span className="text-xs font-bold text-blue-900">Verified Landlord</span>
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                        <span className="text-xs font-bold text-emerald-800">Verified Landlord</span>
                       </div>
                     )}
 
@@ -1079,21 +1268,14 @@ export function AdminApartmentDetail() {
                       </>
                     )}
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="grid gap-2 pt-2">
                       <Button
-                        onClick={() => navigate(`/admin/landlords/${landlord.id}`)}
-                        className="flex-1 bg-slate-600 hover:bg-slate-700 text-white text-xs"
-                      >
-                        <UserCheck className="h-4 w-4 mr-1" />
-                        View Profile
-                      </Button>
-                      <Button
-                        onClick={() => scrollToSection('admin-verification')}
+                        onClick={() => scrollToFirstVisibleSection(["admin-verification-rail", "admin-verification"])}
                         variant="outline"
-                        className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 text-xs"
+                        className="h-10 w-full rounded-lg border-orange-200 text-xs font-black text-slate-700 hover:bg-orange-50"
                       >
                         <FileSearch className="h-4 w-4 mr-1" />
-                        Documents
+                        View Documents
                       </Button>
                     </div>
                   </div>
@@ -1102,14 +1284,17 @@ export function AdminApartmentDetail() {
             )}
 
             {/* Admin Actions */}
-            <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-slate-50">
-              <CardContent className="pt-6">
-                <h2 className="text-lg font-bold text-slate-900 mb-4">Admin Actions</h2>
+            <Card className="rounded-xl border border-orange-200 bg-orange-50/40 shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="mb-5 flex items-center gap-3 text-lg font-black text-slate-950">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-orange-600"><ShieldCheck className="h-5 w-5" /></span>
+                  Admin Actions
+                </h2>
 
                 <div className="space-y-3">
                   <Button
                     onClick={handleViewListingDetails}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start text-xs"
+                    className="h-11 w-full justify-start rounded-lg bg-orange-600 text-xs font-black text-white hover:bg-orange-700"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Listing Details
@@ -1120,7 +1305,7 @@ export function AdminApartmentDetail() {
                       <div className="border-t border-amber-300 pt-3">
                         <Button
                           onClick={() => setModerationMode(moderationMode === "view" ? "takeAction" : "view")}
-                          className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start text-xs"
+                          className="h-10 w-full justify-start rounded-lg bg-orange-600 text-xs font-black text-white hover:bg-orange-700"
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           {moderationMode === "view" ? "Take Action" : "Cancel"}
@@ -1130,7 +1315,7 @@ export function AdminApartmentDetail() {
                           <>
                             <Button
                               onClick={() => handleResolveReport(selectedReport.id)}
-                              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white justify-start text-xs"
+                              className="mt-2 h-10 w-full justify-start rounded-lg bg-green-600 text-xs font-black text-white hover:bg-green-700"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Resolve Report
@@ -1161,7 +1346,7 @@ export function AdminApartmentDetail() {
                               <Button
                                 onClick={handleCreateViolation}
                                 disabled={isIssuingViolation}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white justify-start text-xs"
+                                className="h-10 w-full justify-start rounded-lg bg-red-600 text-xs font-black text-white hover:bg-red-700"
                               >
                                 {isIssuingViolation ? <span className="mr-2 animate-spin">&#8635;</span> : <Lock className="h-4 w-4 mr-2" />}
                                 {isIssuingViolation ? "Saving..." : "Issue Violation"}
@@ -1177,7 +1362,7 @@ export function AdminApartmentDetail() {
                     onClick={() => setMessageModalOpen(true)}
                     disabled={!apartment.landlordId}
                     variant="outline"
-                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
+                    className="h-10 w-full justify-start rounded-lg border-slate-200 bg-white text-xs font-black text-slate-700 hover:bg-slate-50"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Send Message to Landlord
@@ -1186,7 +1371,7 @@ export function AdminApartmentDetail() {
                   <Button
                     onClick={() => void handleOpenChangeLog()}
                     variant="outline"
-                    className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 justify-start text-xs"
+                    className="h-10 w-full justify-start rounded-lg border-slate-200 bg-white text-xs font-black text-slate-700 hover:bg-slate-50"
                   >
                     <ClipboardList className="h-4 w-4 mr-2" />
                     View Change Log
@@ -1211,10 +1396,67 @@ export function AdminApartmentDetail() {
               </CardContent>
             </Card>
 
+            <Card id="admin-verification-rail" className="hidden rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm xl:block">
+              <CardContent className="p-5">
+                <div className="mb-4 flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                    <FileSearch className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="font-black text-slate-950">Verification Documents</h2>
+                    <p className="mt-1 truncate text-xs font-semibold text-slate-600">{landlord?.name || "Landlord"} - {apartment.title}</p>
+                  </div>
+                </div>
+
+                <div className="mb-4 grid grid-cols-3 gap-2">
+                  <DetailRow label="Record Number" value={getText(verificationData, ["businessPermit"], landlordProfile?.business_permit_number || "Not provided")} />
+                  <DetailRow label="Verification Status" value={verifiedLandlord ? "Verified" : "Pending"} />
+                  <DetailRow label="Documents Provided" value={`${verificationDocuments.length} of ${VERIFICATION_DOCUMENT_TYPES.length}`} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {(showAllDocuments ? submittedDocumentCards : submittedDocumentCards.slice(0, 4)).map(({ key, label, document }) => (
+                    <div key={key} className="rounded-lg border border-emerald-100 bg-white p-3">
+                      <div className="mb-2 min-h-10">
+                        <h3 className="line-clamp-1 text-xs font-black text-slate-900">{label}</h3>
+                        <p className={`mt-0.5 truncate text-[11px] font-bold ${document ? "text-emerald-600" : "text-slate-400"}`}>{document?.fileName || "Not provided"}</p>
+                      </div>
+                      {document ? (
+                        <>
+                          {document.mimeType === "application/pdf" ? (
+                            <div className="flex h-24 items-center justify-center rounded-lg border border-slate-200 bg-slate-50"><FileText className="h-8 w-8 text-rose-500" /></div>
+                          ) : (
+                            <img src={document.previewUrl} alt={label} className="h-24 w-full rounded-lg border border-slate-200 object-cover" />
+                          )}
+                          <Button onClick={() => window.open(document.previewUrl, "_blank", "noopener,noreferrer")} className="mt-2 h-8 w-full rounded-md bg-emerald-600 text-[11px] font-black text-white hover:bg-emerald-700">
+                            View Full Document
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-400">Not provided</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAllDocuments((current) => !current)}
+                  className="mt-4 w-full rounded-lg border-emerald-200 bg-white font-black text-emerald-700 hover:bg-emerald-50"
+                >
+                  {showAllDocuments ? "Show Fewer Documents" : `View All Documents (${submittedDocumentCards.length})`}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Listing Info */}
-            <Card className="border-2 border-slate-200">
-              <CardContent className="pt-6">
-                <h2 className="text-lg font-bold text-slate-900 mb-4">Listing Information</h2>
+            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="mb-5 flex items-center gap-3 text-lg font-black text-slate-950">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-600"><FileText className="h-5 w-5" /></span>
+                  Listing Information
+                </h2>
 
                 <div className="space-y-3">
                   <div>
@@ -1230,8 +1472,8 @@ export function AdminApartmentDetail() {
 
                   <div>
                     <p className="text-xs text-slate-500 font-semibold mb-1">Status</p>
-                    <Badge className={STATUS_BADGE[apartment.status ?? "available"]}>
-                      {STATUS_LABEL[apartment.status ?? "available"]}
+                    <Badge className={`rounded-lg px-3 py-1 ${STATUS_BADGE[apartment.status ?? "available"]}`}>
+                      {listingStatusLabel}
                     </Badge>
                   </div>
 
@@ -1242,7 +1484,7 @@ export function AdminApartmentDetail() {
 
                   <div>
                     <p className="text-xs text-slate-500 font-semibold mb-1">Rooms</p>
-                    <p className="font-bold text-slate-900">{apartment.rooms?.length || 0} room(s)</p>
+                    <p className="font-bold text-slate-900">{roomsForDisplay.length || apartment.rooms?.length || 0} room(s)</p>
                   </div>
                 </div>
               </CardContent>
@@ -1318,7 +1560,7 @@ export function AdminApartmentDetail() {
         )}
 
         {/* Selected Report Details */}
-        {selectedReport && (
+        {SHOW_SELECTED_REPORT_DETAILS && selectedReport && (
           <Card className="mt-6 border-2 border-red-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-6">
@@ -1401,7 +1643,7 @@ export function AdminApartmentDetail() {
                   <div className="flex gap-2">
                     <Button
                       onClick={() => {
-                        if (id) navigate(`/admin/apartment/${id}`);
+                        if (id) navigate(`/admin/apartment/${id}`, { state: { returnTo, backLabel } });
                       }}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                     >

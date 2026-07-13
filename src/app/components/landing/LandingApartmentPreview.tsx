@@ -22,7 +22,13 @@ function resolveApartmentImage(image: string): string {
   return getImageUrl(image);
 }
 
-function PreviewCard({ apartment }: { apartment: Apartment }) {
+function PreviewCard({
+  apartment,
+  onApartmentClick,
+}: {
+  apartment: Apartment;
+  onApartmentClick: (e: React.MouseEvent) => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 26 }}
@@ -33,6 +39,7 @@ function PreviewCard({ apartment }: { apartment: Apartment }) {
     >
       <Link
         to={`/apartment/${apartment.id}`}
+        onClick={onApartmentClick}
         className="group block bg-white/90 backdrop-blur border-2 border-amber-100 rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:border-amber-300 transition-all duration-300"
       >
         <div className="relative aspect-[4/3] overflow-hidden">
@@ -162,7 +169,7 @@ export function LandingApartmentPreview({ onBrowseClick }: LandingApartmentPrevi
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {previewApartments.map((apartment) => (
-            <PreviewCard key={apartment.id} apartment={apartment} />
+            <PreviewCard key={apartment.id} apartment={apartment} onApartmentClick={onBrowseClick} />
           ))}
         </div>
 

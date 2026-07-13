@@ -1,5 +1,6 @@
 import { EvidenceViewer, type EvidenceItem } from "@/app/components/common/EvidenceViewer";
 import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
+import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { useAuth, type User } from "@/app/contexts/AuthContext";
 import { type ListingRecord } from "@/app/data/apartments";
+import { updateApartmentPublication } from "@/app/services/apartmentsService";
 import {
   createAuditLog,
   createViolation,
@@ -28,6 +30,7 @@ import {
   fetchPendingAppeals,
   fetchRecentActivityLogs,
   fetchReportWithDetails,
+  fetchSupportTicketById,
   fetchUserById,
   fetchUsers,
   fetchViolations,
@@ -37,6 +40,7 @@ import {
   notifyReportDismissed,
   notifyReportResolved,
   permanentlyDeleteNotification,
+  unarchiveNotification,
   updateAppealStatus,
   updateReportStatus,
   updateUserProfile,
@@ -45,6 +49,7 @@ import {
   type DashboardLandlordDetailsRow,
   type DashboardNotificationRow,
   type DashboardReportRow,
+  type DashboardSupportTicketRow,
   type DashboardUserRow,
   type DashboardViolationRow
 } from "@/app/services/dashboardSupabaseService";
@@ -68,7 +73,6 @@ import {
   Eye,
   FileText,
   Flag,
-  Globe2,
   History,
   LayoutDashboard,
   LayoutGrid, List,
@@ -149,8 +153,6 @@ type AdminProfileState = {
   email: string;
   mobile: string;
   bio: string;
-  language: string;
-  timezone: string;
   avatar: string;
   department: string;
   adminLevel: string;
@@ -178,8 +180,6 @@ function toAdminProfileState(source: User | DashboardUserRow | null | undefined)
     email: String(source?.email ?? ""),
     mobile: String(dashboardSource?.mobile ?? dashboardSource?.mobileNumber ?? authSource?.mobileNumber ?? authSource?.mobile ?? ""),
     bio: String(dashboardSource?.bio ?? authSource?.bio ?? ""),
-    language: String(dashboardSource?.language ?? authSource?.language ?? "en"),
-    timezone: String(dashboardSource?.timezone ?? authSource?.timezone ?? "Asia/Manila"),
     avatar: String(dashboardSource?.avatar_url ?? authSource?.avatar ?? ""),
     department: String(dashboardSource?.department ?? authSource?.department ?? ""),
     adminLevel: String(dashboardSource?.admin_level ?? dashboardSource?.adminLevel ?? authSource?.adminLevel ?? ""),
@@ -303,7 +303,7 @@ function SettingsField({ label, wide = false, children }: { label: string; wide?
 }
 
 export function AdminDashboard() {
-  const { user, verifyLandlord, updateUser, logout } = useAuth();
+  const { user, verifyLandlord, updateUser, refreshUsers, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedSection = searchParams.get("section") ?? "overview";
@@ -318,7 +318,7 @@ export function AdminDashboard() {
   const [landlords, setLandlords] = useState<DashboardUserRow[]>([]);
   const [verifyAction, setVerifyAction] = useState<{ landlordId: string; verify: boolean } | null>(null);
   const [landlordSearch, setLandlordSearch] = useState("");
-  const [landlordStatusFilter, setLandlordStatusFilter] = useState<"all" | "pending" | "verified">("all");
+  const [landlordStatusFilter, setLandlordStatusFilter] = useState<"all" | "pending" | "verified" | "violations">("all");
   const [landlordSort, setLandlordSort] = useState<"newest" | "oldest" | "name">("newest");
 
   // Loading states for action prevention
@@ -351,10 +351,21 @@ export function AdminDashboard() {
   const [appeals, setAppeals] = useState<DashboardAppealRow[]>([]);
   const [selectedAppeal, setSelectedAppeal] = useState<DashboardAppealRow | null>(null);
   const [appealResponse, setAppealResponse] = useState("");
-  const [appealStatus, setAppealStatus] = useState<"under_review" | "approved" | "rejected">("under_review");
+  const [appealStatus, setAppealStatus] = useState<"under_review" | "needs_information" | "approved" | "rejected" | "dismissed">("under_review");
   const [appealSearch, setAppealSearch] = useState("");
   const [appealTypeFilter, setAppealTypeFilter] = useState<"all" | "report" | "violation" | "general">("all");
   const [appealSort, setAppealSort] = useState<"newest" | "oldest">("newest");
+
+  useEffect(() => {
+    if (!selectedAppeal) return;
+    const status = selectedAppeal.status;
+    if (status === "under_review" || status === "needs_information" || status === "approved" || status === "rejected" || status === "dismissed") {
+      setAppealStatus(status);
+    } else {
+      setAppealStatus("under_review");
+    }
+    setAppealResponse(selectedAppeal.admin_response ?? "");
+  }, [selectedAppeal?.id]);
 
   // violation modal
   const [violationModal, setViolationModal] = useState<{
@@ -395,6 +406,11 @@ export function AdminDashboard() {
   const [notifTypeFilter, setNotifTypeFilter] = useState<"all" | "system" | "landlord" | "activities" | "reports" | "appeals">("all");
   const [notifActivityFilter, setNotifActivityFilter] = useState("all");
   const [isRefreshingNotifs, setIsRefreshingNotifs] = useState(false);
+  const [selectedSupportRequest, setSelectedSupportRequest] = useState<{
+    ticket: DashboardSupportTicketRow;
+    submitter: DashboardUserRow | null;
+  } | null>(null);
+  const [loadingSupportRequestId, setLoadingSupportRequestId] = useState<string | null>(null);
 
   const isNotificationRead = (notification: DashboardNotificationRow) =>
     (notification.read ?? notification.is_read) === true;
@@ -407,6 +423,7 @@ export function AdminDashboard() {
     const action = String(payload.action ?? "").toLowerCase();
     const value = `${type} ${title} ${message} ${action}`;
 
+    if (type === "support_request" || payload.ticket_id || payload.support_ticket_id) return "reports";
     if (type === "landlord_activity" || payload.category === "landlord_activity" || payload.activity_type) return "activities";
     if (value.includes("report") || value.includes("violation")) return "reports";
     if (value.includes("appeal")) return "appeals";
@@ -484,6 +501,63 @@ export function AdminDashboard() {
     if (!archived) toast.error("Could not archive the notification. Please try again.");
   };
 
+  const unarchiveNotif = async (notificationId: string) => {
+    if (!user?.id || !notificationId || deletingNotifId === notificationId) return;
+    setDeletingNotifId(notificationId);
+    setAdminNotifs((previous) => previous.map((notification) => notification.id === notificationId
+      ? { ...notification, is_deleted: false, deleted_at: null }
+      : notification));
+
+    const restored = await unarchiveNotification(notificationId, user.id);
+    await loadAdminNotifications();
+    setDeletingNotifId(null);
+    if (!restored) toast.error("Could not unarchive the notification. Please try again.");
+  };
+
+  const openSupportRequest = async (notification: DashboardNotificationRow) => {
+    const ticketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
+    if (!ticketId || loadingSupportRequestId) {
+      if (!ticketId) toast.error("This support request is missing its ticket reference.");
+      return;
+    }
+
+    setLoadingSupportRequestId(notification.id ?? ticketId);
+    try {
+      const ticket = await fetchSupportTicketById(ticketId);
+      if (!ticket) {
+        toast.error("The support request could not be loaded.");
+        return;
+      }
+
+      const submitter = ticket.user_id ? await fetchUserById(ticket.user_id) : null;
+      setSelectedSupportRequest({ ticket, submitter });
+
+      if (notification.id && !notification.is_deleted && !isNotificationRead(notification)) {
+        await markNotificationRead(notification.id, user?.id);
+        await loadAdminNotifications();
+      }
+    } catch (error) {
+      console.error("Unable to open support request:", error);
+      toast.error("The support request could not be loaded.");
+    } finally {
+      setLoadingSupportRequestId(null);
+    }
+  };
+
+  const openAppealNotification = async (notification: DashboardNotificationRow) => {
+    const appealId = String(notification.payload?.appeal_id ?? "");
+    if (!appealId) return void toast.error("This notification is missing its appeal reference.");
+    let appeal = appeals.find((item) => item.id === appealId);
+    if (!appeal) {
+      const latestAppeals = await fetchPendingAppeals();
+      setAppeals(latestAppeals);
+      appeal = latestAppeals.find((item) => item.id === appealId);
+    }
+    if (!appeal) return void toast.error("The linked appeal could not be found.");
+    setSelectedAppeal(appeal);
+    setActiveSection("appeals");
+  };
+
   const refreshAdminNotifications = async () => {
     if (isRefreshingNotifs) return;
     setIsRefreshingNotifs(true);
@@ -512,6 +586,8 @@ export function AdminDashboard() {
 
   const filteredNotifs = useMemo(() => {
     return adminNotifs.filter((n) => {
+      const category = getNotificationCategory(n);
+      if (category === "reports" || category === "appeals") return false;
       const matchesSearch = !notifSearch || 
         n.title?.toLowerCase().includes(notifSearch.toLowerCase()) ||
         n.message?.toLowerCase().includes(notifSearch.toLowerCase()) ||
@@ -521,9 +597,9 @@ export function AdminDashboard() {
       const matchesStatus = notifFilter === "archived"
         ? isArchived
         : !isArchived && (notifFilter === "all" || (notifFilter === "read" ? isRead : !isRead));
-      const matchesType = notifTypeFilter === "all" || getNotificationCategory(n) === notifTypeFilter;
+      const matchesType = notifTypeFilter === "all" || category === notifTypeFilter;
       const matchesActivity = notifActivityFilter === "all" || String(n.payload?.activity_type ?? n.type ?? "") === notifActivityFilter;
-      const payloadText = `${n.payload?.landlord_name ?? ""} ${n.payload?.property_name ?? ""} ${n.payload?.room_name ?? ""}`.toLowerCase();
+      const payloadText = `${n.payload?.landlord_name ?? ""} ${n.payload?.property_name ?? ""} ${n.payload?.room_name ?? ""} ${n.payload?.topic ?? ""}`.toLowerCase();
       const matchesExpandedSearch = matchesSearch || Boolean(notifSearch && payloadText.includes(notifSearch.toLowerCase()));
       return matchesExpandedSearch && matchesStatus && matchesType && matchesActivity;
     });
@@ -537,6 +613,7 @@ export function AdminDashboard() {
   const [aptPropertyTypeFilter, setAptPropertyTypeFilter] = useState("all");
   const [aptSort, setAptSort] = useState<"newest" | "oldest" | "price-low" | "price-high" | "name">("newest");
   const [aptViewMode, setAptViewMode] = useState<"grid" | "list">("grid");
+  const [publishingApartmentId, setPublishingApartmentId] = useState<string | null>(null);
 
   // landlord details modal
   const [selectedLandlord, setSelectedLandlord] = useState<DashboardUserRow | null>(null);
@@ -573,14 +650,13 @@ export function AdminDashboard() {
     setIsSavingAdminProfile(true);
     const updatedUser = {
       id: user.id,
-      email: adminProfile.email,
-      name: `${adminProfile.firstName} ${adminProfile.lastName}`,
-      mobile: adminProfile.mobile,
+      role: user.role,
+      email: adminProfile.email.trim(),
+      name: `${adminProfile.firstName.trim()} ${adminProfile.lastName.trim()}`,
+      mobile: adminProfile.mobile.trim(),
       avatar_url: adminProfile.avatar || null,
-      bio: adminProfile.bio,
-      language: adminProfile.language,
-      timezone: adminProfile.timezone,
-      department: adminProfile.department,
+      bio: adminProfile.bio.trim(),
+      department: adminProfile.department.trim(),
       admin_level: adminProfile.adminLevel,
       is_verified: user.isVerified ?? false,
       permit_number: user.permitNumber ?? null,
@@ -589,20 +665,17 @@ export function AdminDashboard() {
     try {
       const result = await updateUserProfile(updatedUser);
       if (result) {
-        await updateUser(user.id, {
-          name: `${adminProfile.firstName.trim()} ${adminProfile.lastName.trim()}`,
-          email: adminProfile.email.trim(),
-        });
         const savedProfile = toAdminProfileState(result);
         setAdminProfile(savedProfile);
         setSavedAdminProfile(savedProfile);
         setIsEditingAdminProfile(false);
+        await refreshUsers();
         await createAuditLog({
           admin_id: user.id,
           action: "admin_profile_updated",
           target_type: "user",
           target_id: user.id,
-          details: { fields: ["name", "email", "mobile", "bio", "language", "timezone", "department", "admin_level"] },
+          details: { fields: ["name", "email", "mobile", "bio", "department", "admin_level"] },
         });
         toast.success("Profile updated successfully!");
       } else {
@@ -639,6 +712,34 @@ export function AdminDashboard() {
   const getApartmentReportCount = (apartmentId: string | undefined) => {
     if (!apartmentId) return 0;
     return reports.filter((r) => r.apartmentId === apartmentId && r.status === "pending").length;
+  };
+
+  const handleApproveAndPublishApartment = async (apartment: ListingRecord) => {
+    if (!apartment.id || !user?.id || publishingApartmentId) return;
+
+    setPublishingApartmentId(apartment.id);
+    try {
+      await updateApartmentPublication(apartment.id, true, user.id);
+      const updatedApartment = {
+        ...apartment,
+        isPublished: true,
+        is_published: true,
+        approvalStatus: "approved" as const,
+        approval_status: "approved",
+        isArchived: false,
+        is_archived: false,
+        deletedAt: undefined,
+        deleted_at: null,
+      };
+      setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
+      setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
+      toast.success("Property approved and published");
+      void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[]));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
+    } finally {
+      setPublishingApartmentId(null);
+    }
   };
 
   const filteredApts = useMemo(() => {
@@ -1060,12 +1161,19 @@ export function AdminDashboard() {
     landlords.find((l) => l.id === apt.landlordId) ?? null;
 
   const violationsForLandlord = (lid: string) =>
-    violations.filter((v) => v.landlordId === lid);
+    violations.filter((v) => {
+      const violationLandlordId = text(v.landlordId ?? v.landlord_id);
+      return violationLandlordId === lid && v.active !== false;
+    });
 
   const verifiedCount      = landlords.filter((l) => l.isVerified ?? l.is_verified).length;
   const pendingCount       = landlords.filter((l) => !(l.isVerified ?? l.is_verified)).length;
   const pendingReports     = reports.filter((r) => r.status === "pending").length;
-  const unreadNotifsCount  = adminNotifs.filter((n) => !n.is_deleted && !isNotificationRead(n)).length;
+  const activeAppealsCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
+  const unreadNotifsCount  = adminNotifs.filter((n) => {
+    const category = getNotificationCategory(n);
+    return category !== "reports" && category !== "appeals" && !n.is_deleted && !isNotificationRead(n);
+  }).length;
 
   const handleLogout = () => { logout?.(); navigate("/"); };
 // ── Sidebar ───────────────────────────────────────────────────────────────
@@ -1147,6 +1255,11 @@ export function AdminDashboard() {
               {label === "Reports" && pendingReports > 0 && (
                 <span className="app-sidebar-badge ml-auto h-5 px-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-red-400/20 shadow-md shadow-red-950/50 transform group-hover:scale-105 transition-transform">
                   {pendingReports}
+                </span>
+              )}
+              {label === "Appeals" && activeAppealsCount > 0 && (
+                <span className="app-sidebar-badge ml-auto h-5 px-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full text-white text-[10px] font-black tracking-tight flex items-center justify-center min-w-[22px] border border-violet-400/20 shadow-md shadow-purple-950/50 transform group-hover:scale-105 transition-transform">
+                  {activeAppealsCount}
                 </span>
               )}
               {label === "Landlords" && pendingCount > 0 && (
@@ -1398,7 +1511,7 @@ export function AdminDashboard() {
               const apartment = getReportApartment(report);
               const severity = SEVERITY_LABEL[report.severity ?? "low"] ?? SEVERITY_LABEL.low;
               return <button key={report.id} onClick={() => setSelectedReport(report)} className="flex w-full items-center gap-3 py-3 text-left">
-                <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">{apartment?.image ? <img src={apartment.image} alt="" className="h-full w-full object-cover" /> : <Building2 className="h-4 w-4 text-slate-300" />}</span>
+                <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">{apartment?.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="h-full w-full object-cover" /> : <Building2 className="h-4 w-4 text-slate-300" />}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-800">{getReportTitle(report)}</span><span className="block truncate text-[10px] text-slate-500">{report.issueType ?? report.issue_type ?? report.details ?? "Problem reported"}</span><span className="mt-0.5 block text-[9px] text-slate-400">{formatOptionalDate(report.submittedAt ?? report.submitted_at, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span></span>
                 <span className={`rounded-md border px-1.5 py-1 text-[9px] font-black ${severity.class}`}>{severity.label}</span>
               </button>;
@@ -1411,7 +1524,7 @@ export function AdminDashboard() {
               <div className="divide-y divide-slate-100">{recentApartments.map((apartment) => {
                 const isPublished = apartment.isPublished === true || apartment.is_published === true;
                 return <button key={apartment.id} onClick={() => setSelectedApt(apartment)} className="flex w-full items-center gap-3 py-3 text-left">
-                  <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">{apartment.image ? <img src={apartment.image} alt="" className="h-full w-full object-cover" /> : <Building2 className="h-4 w-4 text-slate-300" />}</span>
+                  <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">{apartment.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="h-full w-full object-cover" /> : <Building2 className="h-4 w-4 text-slate-300" />}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-800">{apartment.title}</span><span className="block text-[10px] font-semibold text-slate-500">Prices are listed per room</span><span className="mt-0.5 block text-[9px] text-slate-400">{formatOptionalDate(apartment.createdAt, { month: "short", day: "numeric", year: "numeric" })}</span></span>
                   <span className={`rounded-md px-1.5 py-1 text-[9px] font-black ${isPublished ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{isPublished ? "Published" : "Unpublished"}</span>
                 </button>;
@@ -1425,8 +1538,12 @@ export function AdminDashboard() {
 
   // ── Section: Landlords ────────────────────────────────────────────────────
   const renderNotifications = () => {
-    const activeNotifications = adminNotifs.filter((notification) => !notification.is_deleted);
-    const archivedCount = adminNotifs.filter((notification) => notification.is_deleted).length;
+    const notificationCenterItems = adminNotifs.filter((notification) => {
+      const category = getNotificationCategory(notification);
+      return category !== "reports" && category !== "appeals";
+    });
+    const activeNotifications = notificationCenterItems.filter((notification) => !notification.is_deleted);
+    const archivedCount = notificationCenterItems.filter((notification) => notification.is_deleted).length;
     const unreadCount = activeNotifications.filter((notification) => !isNotificationRead(notification)).length;
     const readCount = activeNotifications.filter(isNotificationRead).length;
     const currentDate = new Date().toLocaleDateString("en-PH", {
@@ -1450,7 +1567,7 @@ export function AdminDashboard() {
       if (category === "landlord") return { icon: Users, bg: "bg-amber-50", text: "text-amber-700", badge: "bg-amber-50 text-amber-700 border-amber-100" };
       return { icon: Bell, bg: "bg-slate-100", text: "text-slate-600", badge: "bg-slate-100 text-slate-700 border-slate-200" };
     };
-    const activityTypes = Array.from(new Set(adminNotifs
+    const activityTypes = Array.from(new Set(notificationCenterItems
       .filter((notification) => getNotificationCategory(notification) === "activities")
       .map((notification) => String(notification.payload?.activity_type ?? notification.type ?? ""))
       .filter(Boolean))).sort();
@@ -1474,7 +1591,7 @@ export function AdminDashboard() {
 
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
-            { label: "Total Notifications", value: adminNotifs.length, note: "Database records", icon: Bell, tone: "bg-orange-50 text-orange-600" },
+            { label: "Total Notifications", value: notificationCenterItems.length, note: "Database records", icon: Bell, tone: "bg-orange-50 text-orange-600" },
             { label: "Unread", value: unreadCount, note: unreadCount === 0 ? "All caught up" : "Needs attention", icon: Mail, tone: "bg-amber-50 text-amber-700" },
             { label: "Read", value: readCount, note: "Active notifications", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
             { label: "Archived", value: archivedCount, note: "Stored history", icon: Archive, tone: "bg-blue-50 text-blue-600" },
@@ -1496,8 +1613,6 @@ export function AdminDashboard() {
                 { label: "System", status: "all", type: "system", icon: ShieldAlert },
                 { label: "Landlords", status: "all", type: "landlord", icon: Users },
                 { label: "Landlord Activities", status: "all", type: "activities", icon: Activity },
-                { label: "Reports", status: "all", type: "reports", icon: Flag },
-                { label: "Appeals", status: "all", type: "appeals", icon: FileText },
                 { label: "Archived", status: "archived", type: "all", icon: Archive },
               ].map(({ label, status, type, icon: Icon }) => {
                 const selected = isViewActive(status as typeof notifFilter, type as typeof notifTypeFilter);
@@ -1510,7 +1625,7 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          {adminNotifs.length === 0 ? (
+          {notificationCenterItems.length === 0 ? (
             <NotificationEmpty title="No notifications yet." message="New administrative notifications will appear here." onRefresh={() => void refreshAdminNotifications()} refreshing={isRefreshingNotifs} />
           ) : filteredNotifs.length === 0 ? (
             notifFilter === "unread" && !notifSearch && notifTypeFilter === "all"
@@ -1534,8 +1649,26 @@ export function AdminDashboard() {
                 const propertyName = String(notification.payload?.property_name ?? apartment?.title ?? "");
                 const roomName = String(notification.payload?.room_name ?? "");
                 const activityStatus = String(notification.payload?.status ?? "");
+                const supportTicketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
+                const isSupportRequest = String(notification.type ?? "").toLowerCase() === "support_request"
+                  || Boolean(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id);
+                const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
+                const supportRequestLoading = loadingSupportRequestId === (notification.id ?? supportTicketId);
                 return (
-                  <motion.article key={notification.id} layout className={`flex flex-col gap-3 p-4 transition md:flex-row md:items-center ${!read && !archived ? "bg-amber-50/25" : "hover:bg-slate-50/70"}`}>
+                  <motion.article
+                    key={notification.id}
+                    layout
+                    role={isSupportRequest ? "button" : undefined}
+                    tabIndex={isSupportRequest ? 0 : undefined}
+                    onClick={isSupportRequest ? () => void openSupportRequest(notification) : undefined}
+                    onKeyDown={isSupportRequest ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        void openSupportRequest(notification);
+                      }
+                    } : undefined}
+                    className={`flex flex-col gap-3 p-4 transition md:flex-row md:items-center ${isSupportRequest ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-300" : ""} ${!read && !archived ? "bg-amber-50/25" : "hover:bg-slate-50/70"}`}
+                  >
                     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tone.bg} ${tone.text}`}><Icon className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1548,9 +1681,12 @@ export function AdminDashboard() {
                       <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}{archived && notification.deleted_at ? ` - Archived ${formatOptionalDate(notification.deleted_at, { month: "short", day: "numeric" })}` : ""}</p>
                     </div>
                     <div className="flex shrink-0 items-center justify-end gap-1.5" onClick={(event) => event.stopPropagation()}>
-                      {actionUrl && !archived && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id) void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: "/dashboard?section=notifications" } }); }} className="h-8 rounded-md border-slate-200 px-2.5 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />View Details</Button>}
+                      {isSupportRequest && <Button size="sm" variant="outline" disabled={supportRequestLoading} onClick={() => void openSupportRequest(notification)} className="h-8 rounded-md border-slate-200 px-2.5 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />{supportRequestLoading ? "Loading..." : "View Details"}</Button>}
+                      {isAppealNotification && <Button size="sm" variant="outline" onClick={() => void openAppealNotification(notification)} className="h-8 rounded-md border-blue-200 px-2.5 text-[10px] font-black text-blue-700"><Eye className="mr-1 h-3 w-3" />Review Appeal</Button>}
+                      {actionUrl && !archived && !isSupportRequest && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id) void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: "/dashboard?section=notifications", backLabel: "Back to Notifications" } }); }} className="h-8 rounded-md border-slate-200 px-2.5 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />View Details</Button>}
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark unread" : "Mark read"} className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100">{read ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}</button>}
                       {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"><Archive className="h-3.5 w-3.5" /></button>}
+                      {archived && <Button size="sm" variant="outline" disabled={deletingNotifId === notification.id} onClick={() => void unarchiveNotif(notification.id || "")} className="h-8 rounded-md border-blue-200 px-2.5 text-[10px] font-black text-blue-700 hover:bg-blue-50"><RotateCcw className="mr-1 h-3 w-3" />Unarchive</Button>}
                       <button onClick={() => void deleteNotif(notification.id || "")} title="Delete notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </motion.article>
@@ -1575,8 +1711,9 @@ export function AdminDashboard() {
     const visibleLandlords = landlords
       .filter((landlord) => {
         const verified = (landlord.isVerified ?? landlord.is_verified) === true;
+        const hasActiveViolation = violationsForLandlord(text(landlord.id)).length > 0;
         const matchesStatus = landlordStatusFilter === "all"
-          || (landlordStatusFilter === "verified" ? verified : !verified);
+          || (landlordStatusFilter === "violations" ? hasActiveViolation : landlordStatusFilter === "verified" ? verified : !verified);
         const matchesSearch = !normalizedSearch || [landlord.name, landlord.email, landlord.id]
           .some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
         return matchesStatus && matchesSearch;
@@ -1620,10 +1757,10 @@ export function AdminDashboard() {
             { label: "Verified", value: verifiedCount, note: "Active landlords", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
             { label: "Violations", value: activeViolationCount, note: "Require attention", icon: AlertTriangle, tone: "bg-rose-50 text-rose-600" },
           ].map(({ label, value, note, icon: Icon, tone }, index) => (
-            <div key={label} className={`flex min-h-[112px] items-center gap-3 p-4 md:p-5 ${index % 2 !== 0 ? "border-l border-slate-100" : ""} ${index > 1 ? "border-t border-slate-100 lg:border-t-0" : ""} ${index > 0 ? "lg:border-l" : ""}`}>
+            <button key={label} type="button" onClick={() => label === "Violations" ? setLandlordStatusFilter("violations") : undefined} className={`flex min-h-[112px] items-center gap-3 p-4 text-left transition ${label === "Violations" ? "hover:bg-rose-50/60" : "cursor-default"} md:p-5 ${index % 2 !== 0 ? "border-l border-slate-100" : ""} ${index > 1 ? "border-t border-slate-100 lg:border-t-0" : ""} ${index > 0 ? "lg:border-l" : ""}`}>
               <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon className="h-5 w-5" /></span>
               <span className="min-w-0"><span className="block text-2xl font-black text-slate-950">{value}</span><span className="block truncate text-xs font-bold text-slate-700">{label}</span><span className="block truncate text-[10px] font-semibold text-slate-400">{note}</span></span>
-            </div>
+            </button>
           ))}
         </section>
 
@@ -1632,8 +1769,8 @@ export function AdminDashboard() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={landlordSearch} onChange={(event) => setLandlordSearch(event.target.value)} placeholder="Search landlords by name, email, or ID" className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100" />
           </label>
-          <select value={landlordStatusFilter} onChange={(event) => setLandlordStatusFilter(event.target.value as "all" | "pending" | "verified")} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400">
-            <option value="all">Status: All</option><option value="pending">Status: Pending</option><option value="verified">Status: Verified</option>
+          <select value={landlordStatusFilter} onChange={(event) => setLandlordStatusFilter(event.target.value as "all" | "pending" | "verified" | "violations")} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400">
+            <option value="all">Status: All</option><option value="pending">Status: Pending</option><option value="verified">Status: Verified</option><option value="violations">Status: Violations</option>
           </select>
           <select value={landlordSort} onChange={(event) => setLandlordSort(event.target.value as "newest" | "oldest" | "name")} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400">
             <option value="newest">Sort: Newest</option><option value="oldest">Sort: Oldest</option><option value="name">Sort: Name</option>
@@ -1668,7 +1805,7 @@ export function AdminDashboard() {
                       <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${verified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                         {verified ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}{verified ? "Verified" : "Pending"}
                       </span>
-                      {landlordViolations.length > 0 && <p className="mt-2 text-[10px] font-bold text-rose-600">{landlordViolations.length} recorded {landlordViolations.length === 1 ? "action" : "actions"}</p>}
+                      {landlordViolations.length > 0 && <p className="mt-2 text-[10px] font-bold text-rose-600">{landlordViolations.length} active {landlordViolations.length === 1 ? "violation" : "violations"}</p>}
                     </div>
 
                     <div className="min-w-0">
@@ -1701,7 +1838,6 @@ export function AdminDashboard() {
   const renderApartments = () => {
     const reportedCount = allApartments.filter((a) => getApartmentReportCount(a.id) > 0).length;
     const availableCount = allApartments.filter((apartment) => apartment.isPublished !== false && apartment.status === "available").length;
-    const occupiedCount = allApartments.filter((apartment) => apartment.isPublished !== false && apartment.status === "occupied").length;
     const reviewCount = allApartments.filter((apartment) => apartment.isPublished === false).length;
     const propertyTypes = Array.from(new Set(allApartments.map((apartment) => apartment.propertyType).filter((value): value is string => Boolean(value)))).sort();
     const currentDate = new Date().toLocaleDateString("en-PH", {
@@ -1724,7 +1860,6 @@ export function AdminDashboard() {
 
           <nav className="flex gap-2 overflow-x-auto">
             <button onClick={() => setAptFilter("all")} className={`flex h-10 shrink-0 items-center gap-2 rounded-lg border px-4 text-xs font-black transition ${aptFilter === "all" ? "border-orange-300 bg-orange-50 text-orange-700 shadow-sm" : "border-transparent text-slate-500 hover:bg-white"}`}><Building2 className="h-4 w-4" />All Apartments ({allApartments.length})</button>
-            <button onClick={() => setAptFilter("reported")} className={`flex h-10 shrink-0 items-center gap-2 rounded-lg border px-4 text-xs font-black transition ${aptFilter === "reported" ? "border-rose-300 bg-rose-50 text-rose-700 shadow-sm" : "border-transparent text-slate-500 hover:bg-white"}`}><Flag className="h-4 w-4" />Reported ({reportedCount})</button>
           </nav>
 
           <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(220px,1fr)_150px_180px_150px_auto]">
@@ -1732,7 +1867,7 @@ export function AdminDashboard() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input value={aptSearch} onChange={(event) => setAptSearch(event.target.value)} placeholder="Search by name, location, or landlord" className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100" />
             </label>
-            <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value as typeof aptStatusFilter)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400"><option value="all">Status: All</option><option value="available">Available</option><option value="occupied">Occupied</option><option value="review">Under Review</option></select>
+            <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value as typeof aptStatusFilter)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400"><option value="all">Status: All</option><option value="available">Published</option><option value="occupied">Occupied</option><option value="review">Under Review</option></select>
             <select value={aptPropertyTypeFilter} onChange={(event) => setAptPropertyTypeFilter(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400"><option value="all">Property Type: All</option>{propertyTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
             <select value={aptSort} onChange={(event) => setAptSort(event.target.value as typeof aptSort)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-400"><option value="newest">Sort: Newest</option><option value="oldest">Sort: Oldest</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option><option value="name">Sort: Name</option></select>
             <div className="grid grid-cols-2 rounded-lg border border-slate-200 p-1">
@@ -1744,8 +1879,7 @@ export function AdminDashboard() {
           <section className="grid grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm lg:grid-cols-4">
             {[
               { label: "Total Apartments", value: allApartments.length, note: "All listings", icon: Building2, tone: "bg-orange-50 text-orange-600" },
-              { label: "Available", value: availableCount, note: "Ready for rent", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
-              { label: "Occupied", value: occupiedCount, note: "Currently rented", icon: Users, tone: "bg-amber-50 text-amber-700" },
+              { label: "Published", value: availableCount, note: "Visible to tenants", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
               { label: "Under Review", value: reviewCount, note: "Requires inspection", icon: Clock, tone: "bg-rose-50 text-rose-600" },
             ].map(({ label, value, note, icon: Icon, tone }, index) => (
               <div key={label} className={`flex min-h-[108px] items-center gap-3 p-4 md:p-5 ${index % 2 ? "border-l border-slate-100" : ""} ${index > 1 ? "border-t border-slate-100 lg:border-t-0" : ""} ${index > 0 ? "lg:border-l" : ""}`}><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0"><span className="block text-2xl font-black text-slate-950">{value}</span><span className="block truncate text-xs font-bold text-slate-700">{label}</span><span className="block truncate text-[10px] font-semibold text-slate-400">{note}</span></span></div>
@@ -1765,7 +1899,7 @@ export function AdminDashboard() {
                   : apartment.status === "occupied" ? "Occupied"
                     : apartment.status === "reserved" ? "Reserved"
                       : apartment.status === "maintenance" ? "Maintenance"
-                        : "Available";
+                        : "Published";
                 const statusClass = isReview
                   ? "bg-rose-500 text-white"
                   : apartment.status === "occupied" ? "bg-slate-800 text-white"
@@ -1777,7 +1911,7 @@ export function AdminDashboard() {
                 return (
                   <motion.article key={apartment.id} whileHover={{ y: -3 }} onClick={() => setSelectedApt(apartment)} className={`group cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg ${aptViewMode === "list" ? "md:flex" : ""}`}>
                     <div className={`relative shrink-0 overflow-hidden bg-slate-100 ${aptViewMode === "list" ? "h-52 md:h-auto md:w-64" : "h-52"}`}>
-                      {apartment.image ? <img src={apartment.image} alt={apartment.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full w-full items-center justify-center"><Building2 className="h-10 w-10 text-slate-300" /></div>}
+                      {apartment.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full w-full items-center justify-center"><Building2 className="h-10 w-10 text-slate-300" /></div>}
                       <span className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[10px] font-black ${statusClass}`}>{status}</span>
                       {reportCount > 0 && <span className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-rose-500 px-2 py-1 text-[10px] font-black text-white"><Flag className="h-3 w-3" />{reportCount}</span>}
                     </div>
@@ -1789,7 +1923,7 @@ export function AdminDashboard() {
                         <div className="rounded-md bg-slate-50 p-2"><p className="text-[9px] font-black uppercase text-slate-400">Floor Area</p><p className="mt-0.5 flex items-center gap-1 font-bold text-slate-800"><Ruler className="h-3 w-3 text-slate-400" />{apartment.sqft ? `${apartment.sqft.toLocaleString()} sqft` : "Not provided"}</p></div>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-[10px]"><div><p className="font-black uppercase text-slate-400">Added</p><p className="mt-0.5 font-bold text-slate-700">{formatOptionalDate(apartment.createdAt, { month: "short", day: "numeric", year: "numeric" })}</p></div><div className="min-w-0"><p className="font-black uppercase text-slate-400">Landlord</p><p className="mt-0.5 truncate font-bold text-slate-700">{landlord?.name || "Not available"}</p></div></div>
-                      <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=apartments" } }); }} className="mt-3 h-9 w-full rounded-md border-orange-300 text-xs font-black text-orange-700 hover:bg-orange-50"><Eye className="mr-1.5 h-3.5 w-3.5" />Inspect</Button>
+                      <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=apartments", backLabel: "Back to Apartments" } }); }} className="mt-3 h-9 w-full rounded-md border-orange-300 text-xs font-black text-orange-700 hover:bg-orange-50"><Eye className="mr-1.5 h-3.5 w-3.5" />Inspect</Button>
                     </div>
                   </motion.article>
                 );
@@ -1870,7 +2004,7 @@ export function AdminDashboard() {
                 <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
                   <span className={`text-[10px] font-black px-2.5 py-1 rounded-full shadow ${
                     isAvailable ? "bg-green-500 text-white" : "bg-slate-500 text-white"
-                  }`}>{isAvailable ? "Available" : "Occupied"}</span>
+                  }`}>{isAvailable ? "Published" : "Occupied"}</span>
                   {aptReportCount > 0 && (
                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-orange-500 text-white shadow flex items-center gap-1">
                       <Flag className="h-3 w-3" />{aptReportCount} {aptReportCount === 1 ? "Report" : "Reports"}
@@ -1952,7 +2086,7 @@ export function AdminDashboard() {
               {/* Header image */}
               <div className="relative h-52 bg-gradient-to-br from-amber-100 to-orange-100 shrink-0">
                 {selectedApt.images?.[0]
-                  ? <img src={selectedApt.images[0]} alt={selectedApt.title} className="w-full h-full object-cover" />
+                  ? <ImageWithFallback src={selectedApt.images[0]} alt={selectedApt.title} className="w-full h-full object-cover" />
                   : <div className="w-full h-full flex items-center justify-center"><Building2 className="h-16 w-16 text-amber-300" /></div>}
                 <button onClick={() => setSelectedApt(null)}
                   className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center text-white transition-all">
@@ -1960,7 +2094,7 @@ export function AdminDashboard() {
                 </button>
                 <div className="absolute bottom-4 left-4">
                   <span className={`text-xs font-black px-3 py-1.5 rounded-full shadow ${isAvailable ? "bg-green-500 text-white" : "bg-slate-600 text-white"}`}>
-                    {isAvailable ? "Available" : "Occupied"}
+                    {isAvailable ? "Published" : "Occupied"}
                   </span>
                 </div>
               </div>
@@ -2153,10 +2287,20 @@ export function AdminDashboard() {
                   </div>
                 )}
               </div>
-              {/* Footer actions */}
-              {landlord && (
-                <div className="px-6 py-4 border-t border-amber-50 flex gap-3 shrink-0 flex-wrap">
-                  <Button onClick={() => navigate(`/admin/apartment/${selectedApt.id}`)}
+                {/* Footer actions */}
+                {landlord && (
+                  <div className="px-6 py-4 border-t border-amber-50 flex gap-3 shrink-0 flex-wrap">
+                  {selectedApt.isPublished === false && (
+                    <Button
+                      onClick={() => void handleApproveAndPublishApartment(selectedApt)}
+                      disabled={publishingApartmentId === selectedApt.id}
+                      className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold rounded-xl shadow-md"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      {publishingApartmentId === selectedApt.id ? "Publishing..." : "Approve & Publish"}
+                    </Button>
+                  )}
+                  <Button onClick={() => navigate(`/admin/apartment/${selectedApt.id}`, { state: { returnTo: "/dashboard?section=apartments", backLabel: "Back to Apartments" } })}
                     className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-xl shadow-md">
                     <Eye className="h-4 w-4 mr-2" />Full Inspection
                   </Button>
@@ -2208,6 +2352,11 @@ export function AdminDashboard() {
 
     const ReportRow = ({ report }: { report: any }) => {
       const sev = SEVERITY_LABEL[report.severity] ?? SEVERITY_LABEL["med"];
+      const reporterLabel = getReporterLabel(report);
+      const reporterRole = String(report.reporter_role ?? report.role ?? "tenant");
+      const reporterInitials = reporterLabel.split(/\s+/).map((name: string) => name[0]).join("").slice(0, 2).toUpperCase() || "T";
+      const apartmentLabel = getReportApartmentTitle(report);
+      const issueType = String(report.issueType ?? report.issue_type ?? report.category ?? "Report");
       return (
         <div
           className={`px-6 py-4 hover:bg-amber-50/40 transition-colors cursor-pointer ${
@@ -2218,22 +2367,22 @@ export function AdminDashboard() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <div className={`mt-1 h-8 w-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs shadow ${
-                report.role === "student" ? "bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700" : "bg-gradient-to-br from-purple-100 to-violet-100 text-purple-700"
+                reporterRole === "student" ? "bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700" : "bg-gradient-to-br from-purple-100 to-violet-100 text-purple-700"
               }`}>
-                {report.reporter.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                {reporterInitials}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                  <span className="font-black text-slate-900 text-sm">{report.reporter}</span>
+                  <span className="font-black text-slate-900 text-sm">{reporterLabel}</span>
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    report.role === "student" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
-                  }`}>{report.role}</span>
+                    reporterRole === "student" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                  }`}>{reporterRole}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${sev.class}`}>{sev.label}</span>
                   {report.status === "resolved"  && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Resolved</span>}
                   {report.status === "dismissed" && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">Dismissed</span>}
                 </div>
                 <p className="text-xs text-slate-500 font-medium truncate">
-                  <span className="text-amber-700 font-bold">{report.apartment}</span> — {report.issueType}
+                  <span className="text-amber-700 font-bold">{apartmentLabel}</span> — {issueType}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{report.details}</p>
               </div>
@@ -2305,12 +2454,12 @@ export function AdminDashboard() {
                   return (
                     <motion.article key={report.id} whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.85)" }} onClick={() => setSelectedReport(report)} className="grid cursor-pointer gap-4 p-4 md:p-5 xl:grid-cols-[minmax(260px,1.35fr)_minmax(180px,0.8fr)_150px_190px] xl:items-center">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-14 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">{apartment?.image ? <img src={apartment.image} alt="" className="h-full w-full object-cover" /> : <Flag className="h-5 w-5 text-slate-300" />}</span>
+                        <span className="flex h-14 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">{apartment?.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="h-full w-full object-cover" /> : <Flag className="h-5 w-5 text-slate-300" />}</span>
                         <div className="min-w-0"><h3 className="truncate text-sm font-black text-slate-900">{getReportApartmentTitle(report)}</h3><p className="mt-1 truncate text-xs font-medium text-slate-500">{String(report.issueType ?? report.issue_type ?? report.category ?? "Report type not specified")}</p><p className="mt-1 line-clamp-1 text-[10px] text-slate-400">{report.details || "No description provided."}</p></div>
                       </div>
                       <div className="min-w-0"><p className="text-[9px] font-black uppercase text-slate-400">Reported by</p><p className="mt-1 truncate text-xs font-bold text-slate-700">{getReporterLabel(report)}</p><p className="mt-1 text-[10px] font-medium capitalize text-slate-400">{report.reporter_role ?? report.role ?? "Role unavailable"}</p></div>
                       <div className="flex flex-wrap gap-1.5 xl:block"><span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase ${statusClass}`}>{report.status || "Pending"}</span><span className={`ml-1.5 inline-flex rounded-md border px-2 py-1 text-[9px] font-black ${severity.class}`}>{severity.label}</span><p className="mt-2 text-[10px] font-semibold text-slate-400">{formatOptionalDate(report.submittedAt ?? report.submitted_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
-                      <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()}><Button size="sm" variant="outline" onClick={() => setSelectedReport(report)} className="h-8 rounded-md border-slate-200 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />Details</Button><Button size="sm" variant="outline" disabled={!apartment?.id} onClick={() => apartment?.id && navigate(`/admin/apartment/${apartment.id}`)} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Building2 className="mr-1 h-3 w-3" />Apartment</Button></div>
+                      <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()}><Button size="sm" variant="outline" onClick={() => setSelectedReport(report)} className="h-8 rounded-md border-slate-200 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />Details</Button><Button size="sm" variant="outline" disabled={!apartment?.id} onClick={() => apartment?.id && navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=reports", backLabel: "Back to Reports" } })} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Building2 className="mr-1 h-3 w-3" />Apartment</Button></div>
                     </motion.article>
                   );
                 })}
@@ -2465,7 +2614,7 @@ export function AdminDashboard() {
                           onClick={() => {
                             if (selectedReportDetails?.apartment?.id) {
                               setSelectedReport(null);
-                              navigate(`/admin/apartment/${selectedReportDetails.apartment.id}`);
+                              navigate(`/admin/apartment/${selectedReportDetails.apartment.id}`, { state: { returnTo: "/dashboard?section=reports", backLabel: "Back to Reports" } });
                             }
                           }}
                           className="flex-1 border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-bold rounded-lg"
@@ -2664,13 +2813,26 @@ export function AdminDashboard() {
     landlords.forEach((l) => {
       if (l.id) landlordMap.set(l.id, l);
     });
+    const getAppealMetadata = (appeal: DashboardAppealRow, kind: string) => {
+      const documents = Array.isArray(appeal.supporting_docs) ? appeal.supporting_docs : [];
+      return [...documents].reverse().find((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === kind) as Record<string, unknown> | undefined;
+    };
+    const getAppealContext = (appeal: DashboardAppealRow) => {
+      const report = reports.find((item) => item.id === appeal.report_id);
+      const violation = violations.find((item) => item.id === appeal.violation_id);
+      const source = getAppealMetadata(appeal, "source");
+      const apartmentId = String(report?.apartment_id ?? report?.apartmentId ?? violation?.apartment_id ?? source?.apartment_id ?? "");
+      const apartment = allApartments.find((item) => item.id === apartmentId);
+      return { report, violation, source, apartmentId, apartment };
+    };
     const normalizedSearch = appealSearch.trim().toLowerCase();
     const visibleAppeals = appeals
       .filter((appeal) => {
         const landlord = landlordMap.get(appeal.landlord_id ?? "");
         const type = appeal.report_id ? "report" : appeal.violation_id ? "violation" : "general";
         const matchesType = appealTypeFilter === "all" || appealTypeFilter === type;
-        const matchesSearch = !normalizedSearch || [landlord?.name, landlord?.email, appeal.reason, appeal.description, appeal.id]
+        const context = getAppealContext(appeal);
+        const matchesSearch = !normalizedSearch || [landlord?.name, landlord?.email, appeal.reason, appeal.description, appeal.id, context.apartment?.title, context.source?.related_label]
           .some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
         return matchesType && matchesSearch;
       })
@@ -2681,6 +2843,7 @@ export function AdminDashboard() {
       });
     const reportAppealCount = appeals.filter((appeal) => Boolean(appeal.report_id)).length;
     const violationAppealCount = appeals.filter((appeal) => Boolean(appeal.violation_id)).length;
+    const pendingAppealCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
     const currentDate = new Date().toLocaleDateString("en-PH", {
       weekday: "short", month: "short", day: "numeric", year: "numeric",
     });
@@ -2691,16 +2854,21 @@ export function AdminDashboard() {
         return;
       }
 
+      if (["needs_information", "approved", "rejected", "dismissed"].includes(appealStatus) && !appealResponse.trim()) {
+        toast.error("Please enter a message for the landlord.");
+        return;
+      }
+
       try {
         const updated = await updateAppealStatus(
           selectedAppeal.id,
           appealStatus,
           user.id,
-          appealResponse
+          appealResponse.trim()
         );
 
         if (updated) {
-          toast.success(`Appeal marked as ${appealStatus}`);
+          toast.success(`Appeal marked as ${appealStatus.replace(/_/g, " ")}`);
           setAppeals((prev) => prev.map((a) => (a.id === selectedAppeal.id ? updated : a)));
           setSelectedAppeal(null);
           setAppealResponse("");
@@ -2772,6 +2940,17 @@ export function AdminDashboard() {
                   </div>
                 )}
 
+                {(() => {
+                  const context = getAppealContext(selectedAppeal);
+                  const contact = getAppealMetadata(selectedAppeal, "contact");
+                  return <div className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/50 p-4 sm:grid-cols-2">
+                    <div><p className="text-[10px] font-black uppercase text-blue-500">Apartment</p><p className="mt-1 text-sm font-bold text-slate-800">{context.apartment?.title || String(context.source?.apartment_title ?? "Unavailable")}</p>{context.apartmentId && <Button size="sm" variant="outline" onClick={() => navigate(`/admin/apartment/${context.apartmentId}`, { state: { returnTo: "/dashboard?section=appeals", backLabel: "Back to Appeals" } })} className="mt-2 h-8 border-blue-200 text-[10px] font-black text-blue-700"><Eye className="mr-1 h-3 w-3" />Open Apartment</Button>}</div>
+                    <div><p className="text-[10px] font-black uppercase text-blue-500">Related record</p><p className="mt-1 break-all text-xs font-bold text-slate-800">{selectedAppeal.violation_id ? `${context.violation?.mode === "notice" ? "Notice" : "Violation"}: ${selectedAppeal.violation_id}` : selectedAppeal.report_id ? `Report: ${selectedAppeal.report_id}` : String(context.source?.related_label ?? "Admin message")}</p>{context.report && <Button size="sm" variant="outline" onClick={() => { setSelectedReport(context.report!); setActiveSection("reports"); }} className="mt-2 h-8 border-blue-200 text-[10px] font-black text-blue-700"><Flag className="mr-1 h-3 w-3" />Open Report</Button>}</div>
+                    <div><p className="text-[10px] font-black uppercase text-blue-500">Contact information</p><p className="mt-1 break-all text-xs font-bold text-slate-800">{String(contact?.value ?? landlordMap.get(selectedAppeal.landlord_id ?? "")?.email ?? "Not provided")}</p></div>
+                  <div><p className="text-[10px] font-black uppercase text-blue-500">Submitted</p><p className="mt-1 text-xs font-bold text-slate-800">{formatOptionalDate(selectedAppeal.submitted_at ?? selectedAppeal.created_at, { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
+                  </div>;
+                })()}
+
                 {/* Appeal Details */}
                 <div className="space-y-3">
                   <h3 className="font-bold text-sm text-slate-900">Appeal Details</h3>
@@ -2785,8 +2964,8 @@ export function AdminDashboard() {
 
                   {selectedAppeal.violation_id && (
                     <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                      <Badge className="bg-red-600 mb-2">Violation Appeal</Badge>
-                      <p className="text-xs text-slate-600">Linked violation information is available to the review workflow.</p>
+                      <Badge className="bg-red-600 mb-2">{getAppealContext(selectedAppeal).violation?.mode === "notice" ? "Notice Appeal" : "Violation Appeal"}</Badge>
+                      <p className="text-xs text-slate-600">The linked {getAppealContext(selectedAppeal).violation?.mode === "notice" ? "notice" : "violation"} is attached to this review.</p>
                     </div>
                   )}
 
@@ -2806,12 +2985,13 @@ export function AdminDashboard() {
                     </div>
                   )}
 
-                  {selectedAppeal.supporting_docs && selectedAppeal.supporting_docs.length > 0 && (
+                  {selectedAppeal.supporting_docs && selectedAppeal.supporting_docs.some((doc) => typeof doc === "string" || (doc && typeof doc === "object" && !Array.isArray(doc) && (doc as Record<string, unknown>).kind === "evidence")) && (
                     <div>
                       <label className="block text-xs font-bold text-slate-900 mb-1">Supporting Documents</label>
                       <div className="space-y-1">
                         {selectedAppeal.supporting_docs.map((doc, i) => {
                           const document = typeof doc === "object" && doc !== null ? doc as Record<string, unknown> : null;
+                          if (document && document.kind !== "evidence") return null;
                           const url = typeof doc === "string" ? doc : String(document?.file_url ?? document?.url ?? "");
                           const name = String(document?.file_name ?? document?.name ?? `Supporting document ${i + 1}`);
                           return url ? (
@@ -2865,22 +3045,22 @@ export function AdminDashboard() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-900 mb-2">Update Status</label>
-                    <div className="flex gap-2">
-                      {(["under_review", "approved", "rejected"] as const).map((status) => (
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      {(["under_review", "needs_information", "approved", "rejected", "dismissed"] as const).map((status) => (
                         <Button
                           key={status}
                           onClick={() => setAppealStatus(status)}
                           className={`flex-1 text-xs font-bold py-2 ${
                             appealStatus === status
-                              ? status === "under_review"
-                                ? "bg-blue-600 text-white"
-                                : status === "approved"
-                                  ? "bg-green-600 text-white"
-                                  : "bg-red-600 text-white"
+                              ? status === "under_review" ? "bg-blue-600 text-white"
+                                : status === "needs_information" ? "bg-violet-600 text-white"
+                                  : status === "approved" ? "bg-green-600 text-white"
+                                    : status === "dismissed" ? "bg-slate-700 text-white"
+                                      : "bg-red-600 text-white"
                               : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                           }`}
                         >
-                          {status === "under_review" ? "Under Review" : status.charAt(0).toUpperCase() + status.slice(1)}
+                          {status === "under_review" ? "Under Review" : status === "needs_information" ? "Request Info" : status.charAt(0).toUpperCase() + status.slice(1)}
                         </Button>
                       ))}
                     </div>
@@ -2924,7 +3104,7 @@ export function AdminDashboard() {
           <div className="mx-auto max-w-[1500px] space-y-5">
             <section className="grid gap-3 md:grid-cols-3">
               {[
-                { label: "Pending Appeals", value: appeals.length, note: "Awaiting review", icon: AlertTriangle, tone: "bg-orange-50 text-orange-600" },
+                { label: "Active Appeals", value: pendingAppealCount, note: "Pending, reviewing, or awaiting info", icon: AlertTriangle, tone: "bg-orange-50 text-orange-600" },
                 { label: "Report Appeals", value: reportAppealCount, note: "Related to reports", icon: Flag, tone: "bg-blue-50 text-blue-600" },
                 { label: "Violation Appeals", value: violationAppealCount, note: "Related to violations", icon: ShieldAlert, tone: "bg-rose-50 text-rose-600" },
               ].map(({ label, value, note, icon: Icon, tone }) => (
@@ -2939,18 +3119,19 @@ export function AdminDashboard() {
             </section>
 
             {appeals.length === 0 ? (
-              <section className="flex min-h-[420px] flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm"><span className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-orange-50 text-orange-500"><AlertTriangle className="h-10 w-10" /></span><h3 className="text-xl font-black text-slate-900">No pending appeals.</h3><p className="mt-1 max-w-sm text-sm font-medium text-slate-500">All submitted appeals have been reviewed.</p></section>
+              <section className="flex min-h-[420px] flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm"><span className="mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-orange-50 text-orange-500"><AlertTriangle className="h-10 w-10" /></span><h3 className="text-xl font-black text-slate-900">No appeals submitted.</h3><p className="mt-1 max-w-sm text-sm font-medium text-slate-500">Landlord appeals will appear here when submitted.</p></section>
             ) : visibleAppeals.length === 0 ? (
               <section className="rounded-lg border border-slate-200 bg-white shadow-sm"><OverviewEmpty icon={Search} text="No appeals match the selected filters." /></section>
             ) : (
               <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div className="divide-y divide-slate-100">{visibleAppeals.map((appeal) => {
                   const landlord = landlordMap.get(appeal.landlord_id ?? "");
-                  const type = appeal.report_id ? "Report Appeal" : appeal.violation_id ? "Violation Appeal" : "General Appeal";
+                  const context = getAppealContext(appeal);
+                  const type = appeal.report_id ? "Report Appeal" : appeal.violation_id ? context.violation?.mode === "notice" ? "Notice Appeal" : "Violation Appeal" : "General Appeal";
                   const typeClass = appeal.report_id ? "bg-blue-50 text-blue-700 border-blue-100" : appeal.violation_id ? "bg-rose-50 text-rose-700 border-rose-100" : "bg-slate-100 text-slate-700 border-slate-200";
                   return <motion.article key={appeal.id} whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.85)" }} onClick={() => setSelectedAppeal(appeal)} className="grid cursor-pointer gap-4 p-4 md:p-5 xl:grid-cols-[minmax(240px,1fr)_minmax(220px,1.2fr)_170px_110px] xl:items-center">
                     <div className="flex min-w-0 items-center gap-3">{landlord?.avatar_url ? <img src={landlord.avatar_url} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" /> : <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-sm font-black text-amber-700">{landlord?.name?.[0]?.toUpperCase() ?? "L"}</span>}<div className="min-w-0"><h3 className="truncate text-sm font-black text-slate-900">{landlord?.name || "Landlord unavailable"}</h3><p className="truncate text-xs font-medium text-slate-500">{landlord?.email || "Contact unavailable"}</p></div></div>
-                    <div className="min-w-0"><span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase ${typeClass}`}>{type}</span><p className="mt-2 line-clamp-2 text-xs font-medium text-slate-600">{appeal.reason || "No reason provided."}</p></div>
+                    <div className="min-w-0"><span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase ${typeClass}`}>{type}</span><p className="mt-2 truncate text-xs font-black text-slate-800">{context.apartment?.title || String(context.source?.apartment_title ?? "Apartment unavailable")}</p><p className="mt-1 line-clamp-2 text-xs font-medium text-slate-600">{appeal.description || appeal.reason || "No appeal message provided."}</p></div>
                     <div><span className="inline-flex rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-[9px] font-black uppercase text-orange-700">{appeal.status || "Pending"}</span><p className="mt-2 text-[10px] font-semibold text-slate-400">{formatOptionalDate(appeal.submitted_at ?? appeal.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
                     <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setSelectedAppeal(appeal); }} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Eye className="mr-1 h-3 w-3" />Review</Button>
                   </motion.article>;
@@ -3101,16 +3282,6 @@ export function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-lg border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-5 sm:p-6">
-                <SettingsSectionTitle icon={Globe2} tone="bg-emerald-50 text-emerald-600" title="Preferences" description="Language and regional settings for your account." />
-                <fieldset disabled={!isEditingAdminProfile || isSavingAdminProfile} className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <SettingsField label="Language"><select value={adminProfile.language} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, language: event.target.value }))} className={inputClass}><option value="en">English</option><option value="fil">Filipino</option><option value="hil">Hiligaynon</option></select></SettingsField>
-                  <SettingsField label="Timezone"><select value={adminProfile.timezone} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, timezone: event.target.value }))} className={inputClass}><option value="Asia/Manila">Asia/Manila (GMT+8)</option></select></SettingsField>
-                </fieldset>
-              </CardContent>
-            </Card>
-
             {isEditingAdminProfile && <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="outline" onClick={handleResetAdminProfile} disabled={isSavingAdminProfile} className="h-10 rounded-md font-bold"><RotateCcw className="mr-2 h-4 w-4" />Reset Changes</Button><Button onClick={() => void handleUpdateAdminProfile()} disabled={isSavingAdminProfile} className="h-10 rounded-md bg-orange-500 px-6 font-bold text-white hover:bg-orange-600"><Save className="mr-2 h-4 w-4" />{isSavingAdminProfile ? "Saving..." : "Save Changes"}</Button></div>}
           </div>
 
@@ -3174,6 +3345,40 @@ export function AdminDashboard() {
               className={`rounded-xl font-bold ${verifyAction?.verify ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
               {verifyAction?.verify ? "Verify" : "Revoke"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Support request details */}
+      <AlertDialog open={selectedSupportRequest !== null} onOpenChange={(open) => { if (!open) setSelectedSupportRequest(null); }}>
+        <AlertDialogContent className="max-w-2xl rounded-2xl border-rose-100 p-0 overflow-hidden">
+          <AlertDialogHeader className="border-b border-slate-100 bg-rose-50/60 px-6 py-5 text-left">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600"><Flag className="h-5 w-5" /></span>
+              <div className="min-w-0">
+                <AlertDialogTitle className="font-black text-slate-950">Support Request Details</AlertDialogTitle>
+                <AlertDialogDescription className="mt-1">Review the complete request submitted to platform support.</AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          {selectedSupportRequest && (
+            <div className="max-h-[65vh] space-y-5 overflow-y-auto px-6 py-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Submitted by</p><p className="mt-1 text-sm font-bold text-slate-800">{selectedSupportRequest.submitter?.name || "User unavailable"}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">User role</p><p className="mt-1 text-sm font-bold capitalize text-slate-800">{selectedSupportRequest.submitter?.role || "Unavailable"}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Contact email</p><p className="mt-1 break-all text-sm font-bold text-slate-800">{selectedSupportRequest.ticket.contact || selectedSupportRequest.submitter?.email || "Not provided"}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Date submitted</p><p className="mt-1 text-sm font-bold text-slate-800">{formatOptionalDate(selectedSupportRequest.ticket.created_at, { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Topic</p><p className="mt-1 text-sm font-bold text-slate-800">{selectedSupportRequest.ticket.topic || "Not provided"}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</p><p className="mt-1 text-sm font-bold capitalize text-slate-800">{(selectedSupportRequest.ticket.status || "Unavailable").replace(/_/g, " ")}</p></div>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Full message</p>
+                <p className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium leading-6 text-slate-700">{selectedSupportRequest.ticket.message || "No message provided."}</p>
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter className="border-t border-slate-100 px-6 py-4">
+            <AlertDialogCancel className="rounded-lg font-bold">Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -3437,7 +3642,7 @@ export function AdminDashboard() {
                       <div
                         key={apt.id}
                         onClick={() => {
-                          navigate(`/admin/apartment/${apt.id}`);
+                          navigate(`/admin/apartment/${apt.id}`, { state: { returnTo: "/dashboard?section=landlords", backLabel: "Back to Landlord Details" } });
                           setSelectedLandlord(null);
                         }}
                         className="p-3 bg-white border border-amber-100 rounded-xl hover:shadow-md transition-all cursor-pointer">

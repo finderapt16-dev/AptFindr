@@ -239,6 +239,12 @@ export function AddApartment() {
     }
     setFeatures((prev) => [...prev, trimmed]);
     setFeatureInput("");
+    setValidationErrors((previous) => {
+      if (!previous.features) return previous;
+      const next = { ...previous };
+      delete next.features;
+      return next;
+    });
   };
 
   const removeFeature = (index: number) =>
@@ -464,6 +470,16 @@ export function AddApartment() {
   const FieldError = ({ field }: { field: string }) =>
     validationErrors[field] ? <p className="text-xs font-bold text-red-600">{validationErrors[field]}</p> : null;
 
+  const getSubmittedAmenities = () =>
+    amenitiesInput.split(",").map((amenity) => amenity.trim()).filter(Boolean);
+
+  const getSubmittedFeatures = () => {
+    const submittedFeatures = featureInput.trim() ? [...features, featureInput.trim()] : features;
+    return submittedFeatures.filter((feature, index, list) =>
+      list.findIndex((item) => item.toLowerCase() === feature.toLowerCase()) === index,
+    );
+  };
+
   const validateAllFields = (): { isValid: boolean; errors: Record<string, string>; firstStep: number } => {
     const errors: Record<string, string> = {};
 
@@ -479,12 +495,21 @@ export function AddApartment() {
 
     if (!String(verificationData.businessPermit).trim()) errors.businessPermit = "Business permit number is required.";
 
+    if (getSubmittedAmenities().length === 0) {
+      errors.amenities = "Please select at least one amenity before submitting your property.";
+    }
+    if (getSubmittedFeatures().length === 0) {
+      errors.features = "Please add at least one feature before submitting your property.";
+    }
+
     const firstStep = errors.title || errors.sqft || errors.description || errors.images
       ? 1
       : errors.businessPermit
         ? 2
         : errors.address || errors.mapLocation
           ? 3
+          : errors.amenities || errors.features
+            ? 4
             : currentStep;
 
     return { isValid: Object.keys(errors).length === 0, errors, firstStep };
@@ -497,6 +522,7 @@ export function AddApartment() {
       if (step === 1) return ["title", "sqft", "description", "images"].includes(field);
       if (step === 2) return field === "businessPermit";
       if (step === 3) return ["address", "mapLocation"].includes(field);
+      if (step === 4) return ["amenities", "features"].includes(field);
       return false;
     };
     const stepErrors = Object.fromEntries(Object.entries(errors).filter(([field]) => belongsToStep(field)));
@@ -580,7 +606,9 @@ export function AddApartment() {
       return;
     }
 
-    const featureLower = features.map((f) => f.toLowerCase());
+    const submittedAmenities = getSubmittedAmenities();
+    const submittedFeatures = getSubmittedFeatures();
+    const featureLower = submittedFeatures.map((f) => f.toLowerCase());
     const utilityItems = utilitiesInput.split(",").map((u) => u.trim()).filter(Boolean);
 
     // Get primary image or use first image
@@ -600,7 +628,7 @@ export function AddApartment() {
       image: primaryImageUrl,
       images: uploadedImages.map((img) => img.url),
       description: formData.description || "",
-      amenities: amenitiesInput.split(",").map((a) => a.trim()).filter(Boolean),
+      amenities: submittedAmenities,
       availableDate: formData.availableDate || new Date().toISOString().split("T")[0],
       petFriendly: featureLower.includes("pet friendly"),
       parking: featureLower.includes("parking"),
@@ -618,7 +646,7 @@ export function AddApartment() {
       const formValues = {
         ...apartmentFormValuesFromApartment(draftApartment),
         utilityItems,
-        customFeatures: features,
+        customFeatures: submittedFeatures,
         verification: {
           propertyName: verificationData.propertyName || formData.title || "",
           propertyAddress: verificationData.propertyAddress || formData.address || "",
@@ -1263,14 +1291,21 @@ export function AddApartment() {
                       <h3 className="text-sm font-bold text-amber-600 uppercase">Amenities</h3>
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold">Amenities (comma-separated)</Label>
+                      <Label className="text-slate-700 font-bold">Amenities (comma-separated) *</Label>
                       <Textarea
                         value={amenitiesInput}
-                        onChange={(e) => setAmenitiesInput(e.target.value)}
+                        onChange={(e) => {
+                          setAmenitiesInput(e.target.value);
+                          if (e.target.value.split(",").some((amenity) => amenity.trim())) {
+                            clearValidationError("amenities");
+                          }
+                        }}
+                        aria-invalid={Boolean(validationErrors.amenities)}
                         placeholder="e.g., Parking, WiFi, Gym, Pool"
                         rows={3}
-                        className="rounded-xl border-amber-100 resize-none"
+                        className={`${fieldClass("amenities")} resize-none`}
                       />
+                      <FieldError field="amenities" />
                     </div>
                   </div>
 
@@ -1300,15 +1335,20 @@ export function AddApartment() {
                     <div className="flex gap-2">
                       <Input
                         value={featureInput}
-                        onChange={(e) => setFeatureInput(e.target.value)}
+                        onChange={(e) => {
+                          setFeatureInput(e.target.value);
+                          if (e.target.value.trim()) clearValidationError("features");
+                        }}
                         onKeyDown={handleFeatureKeyDown}
+                        aria-invalid={Boolean(validationErrors.features)}
                         placeholder="Type feature and press Enter"
-                        className="rounded-xl border-amber-100 flex-1"
+                        className={`${fieldClass("features")} flex-1`}
                       />
                       <Button type="button" onClick={() => addFeature(featureInput)} className="bg-amber-500 rounded-xl px-4">
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
+                    <FieldError field="features" />
 
                     {features.length > 0 && (
                       <div className="flex flex-wrap gap-2">

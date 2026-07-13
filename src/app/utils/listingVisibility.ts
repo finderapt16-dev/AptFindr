@@ -21,8 +21,9 @@ export const getLowestAvailableRoomPrice = (apartment: Apartment): number | null
  * database RLS, so tenant clients never receive published rows belonging to
  * an unverified landlord.
  *
- * Rooms are optional while a landlord completes setup. Once rooms exist, at
- * least one must be available for the property to appear in tenant discovery.
+ * Tenant discovery is intentionally stricter than internal Admin/Landlord
+ * management. A listing must be fully approved, active, published, live, and
+ * backed by at least one real available room before renters can see it.
  */
 export const isTenantVisibleApartment = (apartment: Apartment): boolean => {
   if (apartment.landlordVerified !== true) return false;
@@ -30,9 +31,10 @@ export const isTenantVisibleApartment = (apartment: Apartment): boolean => {
   if (apartment.approvalStatus !== "approved") return false;
   if (apartment.isArchived === true || apartment.deletedAt) return false;
   if (apartment.status !== "available") return false;
+  if (!apartment.rooms?.length) return false;
 
   const availableDate = new Date(apartment.availableDate);
   if (!Number.isNaN(availableDate.getTime()) && availableDate > new Date()) return false;
 
-  return !apartment.rooms?.length || getAvailableRoomCount(apartment) > 0;
+  return getAvailableRoomCount(apartment) > 0;
 };

@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseclient";
+import { apartmentRowToApartment, type ApartmentRow } from "../data/apartments";
 import { resolveAppUserId } from "./apartmentsService";
 
 export type DashboardRow = Record<string, unknown>;
@@ -23,6 +24,7 @@ export interface DashboardReportRow extends DashboardRow {
   id?: string;
   reporter_id?: string | null;
   reporter_role?: string | null;
+  user_id?: string | null;
   apartment_id?: string | null;
   issue_type?: string | null;
   tags?: string[] | null;
@@ -32,6 +34,9 @@ export interface DashboardReportRow extends DashboardRow {
   submitted_at?: string | null;
   status?: string | null;
   resolved_at?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  landlord_id?: string | null;
   apartment_title?: string | null;
   reporter_name?: string | null;
   apartment?: string | null;
@@ -145,10 +150,10 @@ export interface DashboardUserRow extends DashboardRow {
   isVerified?: boolean | null;
   mobile?: string | null;
   mobileNumber?: string | null;
+  middle_initial?: string | null;
+  address?: string | null;
   avatar_url?: string | null;
   bio?: string | null;
-  language?: string | null;
-  timezone?: string | null;
   permit_number?: string | null;
   permitNumber?: string | null;
   department?: string | null;
@@ -183,8 +188,6 @@ export interface DashboardProfilePayload {
   mobile?: string | null;
   avatar_url?: string | null;
   bio?: string | null;
-  language?: string | null;
-  timezone?: string | null;
   middle_initial?: string | null;
   address?: string | null;
   is_verified?: boolean | null;
@@ -214,6 +217,22 @@ export interface DashboardProfilePayload {
   smoking_policy?: string | null;
   maintenance_response_hours?: string | number | null;
   listing_visibility?: string | null;
+}
+
+export interface DashboardUserProfileDetails {
+  user: DashboardUserRow;
+  studentProfile?: {
+    school?: string | null;
+    guardian_name?: string | null;
+    guardian_address?: string | null;
+    guardian_contact?: string | null;
+  } | null;
+  employeeProfile?: {
+    company?: string | null;
+    work_address?: string | null;
+  } | null;
+  landlordProfile?: DashboardRow | null;
+  adminProfile?: DashboardRow | null;
 }
 
 type TableName = "app_users" | "apartments" | "apartment_views" | "favorites" | "reports" | "violations" | "notifications" | "audit_logs";
@@ -351,6 +370,7 @@ function toReportRow(row: DashboardRow): DashboardReportRow {
     id: getStringValue(row.id),
     reporter_id: getStringValue(row.reporter_id),
     reporter_role: getStringValue(row.reporter_role),
+    user_id: getStringValue(row.user_id),
     apartment_id: getStringValue(row.apartment_id),
     issue_type: getStringValue(row.issue_type),
     tags: Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === "string") : null,
@@ -360,6 +380,9 @@ function toReportRow(row: DashboardRow): DashboardReportRow {
     submitted_at: getStringValue(row.submitted_at),
     status: getStringValue(row.status),
     resolved_at: getStringValue(row.resolved_at),
+    reviewed_by: getStringValue(row.reviewed_by),
+    reviewed_at: getStringValue(row.reviewed_at),
+    landlord_id: getStringValue(row.landlord_id),
     apartment_title: getStringValue(row.apartment_title),
     reporter_name: getStringValue(row.reporter_name),
     apartment: getStringValue(row.apartment),
@@ -419,13 +442,15 @@ function toNotificationRow(row: DashboardRow): DashboardNotificationRow {
 }
 
 function toApartmentRow(row: DashboardRow): DashboardApartmentRow {
+  const apartment = apartmentRowToApartment(row as unknown as ApartmentRow);
   return {
     ...row,
+    ...apartment,
     id: getStringValue(row.id),
     landlord_id: getStringValue(row.landlord_id),
-    landlordId: getStringValue(row.landlordId),
+    landlordId: apartment.landlordId ?? getStringValue(row.landlordId),
     is_published: typeof row.is_published === "boolean" ? row.is_published : null,
-    isPublished: typeof row.isPublished === "boolean" ? row.isPublished : null,
+    isPublished: apartment.isPublished ?? (typeof row.isPublished === "boolean" ? row.isPublished : null),
     price:
       typeof row.price === "string" || typeof row.price === "number" ? row.price : null,
   };
@@ -469,10 +494,10 @@ function toUserRow(row: DashboardRow): DashboardUserRow {
     isVerified: typeof row.isVerified === "boolean" ? row.isVerified : null,
     mobile: getStringValue(row.mobile),
     mobileNumber: getStringValue(row.mobileNumber),
+    middle_initial: getStringValue(row.middle_initial),
+    address: getStringValue(row.address),
     avatar_url: getStringValue(row.avatar_url),
     bio: getStringValue(row.bio),
-    language: getStringValue(row.language),
-    timezone: getStringValue(row.timezone),
     permit_number: getStringValue(row.permit_number),
     permitNumber: getStringValue(row.permitNumber),
     department: getStringValue(row.department),
@@ -884,6 +909,38 @@ export async function permanentlyDeleteNotification(notificationId: string, user
   }
 }
 
+export async function unarchiveNotification(notificationId: string, userId?: string): Promise<boolean> {
+  try {
+    let query = supabase
+      .from("notifications")
+      .update({ is_deleted: false, deleted_at: null })
+      .eq("id", notificationId)
+      .eq("is_deleted", true);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query.select("id").maybeSingle();
+
+    if (error || !data) {
+      console.error("Error unarchiving notification:", error);
+      return false;
+    }
+
+    if (userId) {
+      writeCachedValue(`notifications:${userId}`, "");
+      writeCachedValue(`notifications:${userId}:all`, "");
+    }
+    writeCachedValue("notifications", "");
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error unarchiving notification:", error);
+    return false;
+  }
+}
+
 export async function deleteAllNotifications(userId: string): Promise<number> {
   try {
     const { data, error } = await supabase
@@ -970,6 +1027,21 @@ export async function createSupportTicket(input: {
   return data as DashboardSupportTicketRow;
 }
 
+export async function fetchSupportTicketById(ticketId: string): Promise<DashboardSupportTicketRow | null> {
+  const { data, error } = await supabase
+    .from("support_tickets")
+    .select("*")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching support request:", error);
+    return null;
+  }
+
+  return data ? data as DashboardSupportTicketRow : null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // APPEALS MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────
@@ -991,18 +1063,40 @@ export interface DashboardAppealRow extends DashboardRow {
   updated_at?: string;
 }
 
+export interface AppealEvidenceInput {
+  file: File | Blob;
+  fileName: string;
+  mimeType: string;
+}
+
+async function hydrateAppealDocuments(appeal: DashboardAppealRow): Promise<DashboardAppealRow> {
+  const documents = Array.isArray(appeal.supporting_docs) ? appeal.supporting_docs : [];
+  const supporting_docs = await Promise.all(documents.map(async (entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+    const document = entry as Record<string, unknown>;
+    const path = typeof document.path === "string" ? document.path : "";
+    const bucket = typeof document.bucket === "string" ? document.bucket : "verification-documents";
+    if (!path || document.kind !== "evidence") return entry;
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
+    return { ...document, file_url: data?.signedUrl || "" };
+  }));
+  return { ...appeal, supporting_docs };
+}
+
 export async function createAppeal(appeal: {
+  id?: string;
   landlord_id: string;
   report_id?: string | null;
   violation_id?: string | null;
   reason: string;
   description?: string;
   supporting_docs?: any[];
-}): Promise<DashboardAppealRow | null> {
+}): Promise<DashboardAppealRow> {
   try {
     const { data, error } = await supabase
       .from("appeals")
       .insert({
+        ...(appeal.id ? { id: appeal.id } : {}),
         landlord_id: appeal.landlord_id,
         report_id: appeal.report_id ?? null,
         violation_id: appeal.violation_id ?? null,
@@ -1015,14 +1109,91 @@ export async function createAppeal(appeal: {
       .single();
 
     if (error || !data) {
-      console.error("Error creating appeal:", error);
-      return null;
+      throw new Error(error?.message || "Unable to save the appeal.");
     }
 
-    return data as DashboardAppealRow;
+    return hydrateAppealDocuments(data as DashboardAppealRow);
   } catch (error) {
     console.error("Unexpected error in createAppeal:", error);
-    return null;
+    throw error;
+  }
+}
+
+export async function createAppealWithEvidence(
+  appeal: Parameters<typeof createAppeal>[0],
+  evidenceFiles: AppealEvidenceInput[],
+): Promise<DashboardAppealRow> {
+  const appealId = appeal.id || crypto.randomUUID();
+  const uploadedPaths: string[] = [];
+  const evidenceDocuments: Record<string, unknown>[] = [];
+
+  try {
+    for (const evidence of evidenceFiles) {
+      const extension = evidence.fileName.split(".").pop()?.toLowerCase() || "bin";
+      const safeBaseName = evidence.fileName.replace(/[^a-z0-9._-]+/gi, "-").slice(-100);
+      const path = `${appeal.landlord_id}/appeals/${appealId}/${crypto.randomUUID()}-${safeBaseName || `evidence.${extension}`}`;
+      const { error } = await supabase.storage.from("verification-documents").upload(path, evidence.file, {
+        contentType: evidence.mimeType || undefined,
+        upsert: false,
+      });
+      if (error) throw new Error(error.message || `Unable to upload ${evidence.fileName}.`);
+      uploadedPaths.push(path);
+      evidenceDocuments.push({
+        kind: "evidence",
+        bucket: "verification-documents",
+        path,
+        file_name: evidence.fileName,
+        mime_type: evidence.mimeType,
+        file_size: evidence.file.size,
+      });
+    }
+
+    const created = await createAppeal({
+      ...appeal,
+      id: appealId,
+      supporting_docs: [...(appeal.supporting_docs ?? []), ...evidenceDocuments],
+    });
+    return created;
+  } catch (error) {
+    if (uploadedPaths.length > 0) {
+      await supabase.storage.from("verification-documents").remove(uploadedPaths);
+    }
+    throw error;
+  }
+}
+
+export async function submitAppealFollowupWithEvidence(
+  appealId: string,
+  landlordId: string,
+  description: string,
+  contact: string,
+  evidenceFiles: AppealEvidenceInput[],
+): Promise<DashboardAppealRow> {
+  const uploadedPaths: string[] = [];
+  const documents: Record<string, unknown>[] = [{ kind: "contact", value: contact }];
+  try {
+    for (const evidence of evidenceFiles) {
+      const safeName = evidence.fileName.replace(/[^a-z0-9._-]+/gi, "-").slice(-100) || "evidence.bin";
+      const path = `${landlordId}/appeals/${appealId}/${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage.from("verification-documents").upload(path, evidence.file, {
+        contentType: evidence.mimeType || undefined,
+        upsert: false,
+      });
+      if (error) throw new Error(error.message || `Unable to upload ${evidence.fileName}.`);
+      uploadedPaths.push(path);
+      documents.push({ kind: "evidence", bucket: "verification-documents", path, file_name: evidence.fileName, mime_type: evidence.mimeType, file_size: evidence.file.size });
+    }
+
+    const { data, error } = await supabase.rpc("fn_submit_appeal_followup", {
+      p_appeal_id: appealId,
+      p_description: description,
+      p_supporting_docs: documents,
+    });
+    if (error || !data) throw new Error(error?.message || "Unable to submit additional appeal information.");
+    return hydrateAppealDocuments(data as DashboardAppealRow);
+  } catch (error) {
+    if (uploadedPaths.length > 0) await supabase.storage.from("verification-documents").remove(uploadedPaths);
+    throw error;
   }
 }
 
@@ -1039,7 +1210,7 @@ export async function fetchAppealsByLandlord(landlordId: string): Promise<Dashbo
       return [];
     }
 
-    return (data ?? []) as DashboardAppealRow[];
+    return Promise.all(((data ?? []) as DashboardAppealRow[]).map(hydrateAppealDocuments));
   } catch (error) {
     console.error("Unexpected error in fetchAppealsByLandlord:", error);
     return [];
@@ -1051,15 +1222,14 @@ export async function fetchPendingAppeals(): Promise<DashboardAppealRow[]> {
     const { data, error } = await supabase
       .from("appeals")
       .select("*")
-      .eq("status", "pending")
-      .order("submitted_at", { ascending: true });
+      .order("submitted_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching pending appeals:", error);
       return [];
     }
 
-    return (data ?? []) as DashboardAppealRow[];
+    return Promise.all(((data ?? []) as DashboardAppealRow[]).map(hydrateAppealDocuments));
   } catch (error) {
     console.error("Unexpected error in fetchPendingAppeals:", error);
     return [];
@@ -1068,7 +1238,7 @@ export async function fetchPendingAppeals(): Promise<DashboardAppealRow[]> {
 
 export async function updateAppealStatus(
   appealId: string,
-  status: "pending" | "under_review" | "approved" | "rejected",
+  status: "pending" | "under_review" | "needs_information" | "approved" | "rejected" | "dismissed",
   adminId?: string,
   adminResponse?: string
 ): Promise<DashboardAppealRow | null> {
@@ -1090,7 +1260,7 @@ export async function updateAppealStatus(
       return null;
     }
 
-    return data as DashboardAppealRow;
+    return hydrateAppealDocuments(data as DashboardAppealRow);
   } catch (error) {
     console.error("Unexpected error in updateAppealStatus:", error);
     return null;
@@ -1194,6 +1364,8 @@ export async function sendAdminMessageToLandlord(input: {
   apartmentId: string;
   apartmentTitle: string;
   message: string;
+  reportId?: string | null;
+  violationId?: string | null;
 }): Promise<boolean> {
   const notification = await createNotification({
     user_id: input.landlordId,
@@ -1205,6 +1377,11 @@ export async function sendAdminMessageToLandlord(input: {
       admin_id: input.adminId,
       apartment_id: input.apartmentId,
       apartment_title: input.apartmentTitle,
+      report_id: input.reportId ?? null,
+      violation_id: input.violationId ?? null,
+      related_type: input.reportId ? "report" : input.violationId ? "violation" : "apartment_issue",
+      status: "open",
+      category: "reports",
       sent_at: new Date().toISOString(),
     },
   });
@@ -1220,6 +1397,8 @@ export async function sendAdminMessageToLandlord(input: {
       actor_id: input.adminId,
       landlord_id: input.landlordId,
       message: input.message,
+      report_id: input.reportId ?? null,
+      violation_id: input.violationId ?? null,
       notification_id: notification.id ?? null,
     },
   });
@@ -1251,6 +1430,49 @@ export async function fetchUserById(userId: string): Promise<DashboardUserRow | 
   return user ? toUserRow(user) : null;
 }
 
+export async function fetchUserProfileDetails(userId: string): Promise<DashboardUserProfileDetails | null> {
+  if (!userId) return null;
+
+  const { data: userData, error: userError } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (userError) throw new Error(userError.message || "Unable to load profile.");
+  if (!userData) return null;
+
+  const user = toUserRow(userData as DashboardRow);
+  const role = user.role;
+  const details: DashboardUserProfileDetails = { user };
+
+  if (role === "student") {
+    const { data, error } = await supabase.from("student_profiles").select("*").eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message || "Unable to load student profile.");
+    details.studentProfile = data as DashboardUserProfileDetails["studentProfile"];
+  }
+
+  if (role === "employee") {
+    const { data, error } = await supabase.from("employee_profiles").select("*").eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message || "Unable to load employee profile.");
+    details.employeeProfile = data as DashboardUserProfileDetails["employeeProfile"];
+  }
+
+  if (role === "landlord") {
+    const { data, error } = await supabase.from("landlord_profiles").select("*").eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message || "Unable to load landlord profile.");
+    details.landlordProfile = data as DashboardRow | null;
+  }
+
+  if (role === "admin") {
+    const { data, error } = await supabase.from("admin_profiles").select("*").eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message || "Unable to load admin profile.");
+    details.adminProfile = data as DashboardRow | null;
+  }
+
+  return details;
+}
+
 export async function fetchPublicLandlordById(userId: string): Promise<DashboardUserRow | null> {
   const { data, error } = await supabase.from("public_landlords").select("*").eq("id", userId).maybeSingle();
   if (error || !data) return null;
@@ -1267,8 +1489,12 @@ export async function fetchTenantPreferences(userId: string): Promise<TenantPref
     return cached;
   }
 
-  if (error || !data) {
-    return cached;
+  if (error) {
+    throw new Error(error.message || "Unable to load tenant preferences.");
+  }
+
+  if (!data) {
+    return defaultTenantPreferences;
   }
 
   const stored = (data as DashboardRow).preferences;
@@ -1294,8 +1520,6 @@ export async function saveTenantPreferences(
     },
     defaultTenantPreferences,
   );
-
-  cacheTenantPreferences(userId, merged);
 
   const { data, error } = await supabase.rpc("fn_merge_user_preference_section", {
     p_user_id: userId,
@@ -1353,8 +1577,6 @@ export async function updateUserProfile(payload: DashboardProfilePayload): Promi
   assignIfProvided(updatePayload, "mobile", payload.mobile);
   assignIfProvided(updatePayload, "avatar_url", payload.avatar_url);
   assignIfProvided(updatePayload, "bio", payload.bio);
-  assignIfProvided(updatePayload, "language", payload.language);
-  assignIfProvided(updatePayload, "timezone", payload.timezone);
   assignIfProvided(updatePayload, "middle_initial", payload.middle_initial);
   assignIfProvided(updatePayload, "address", payload.address);
   assignIfProvided(updatePayload, "is_verified", payload.is_verified);
@@ -1364,7 +1586,7 @@ export async function updateUserProfile(payload: DashboardProfilePayload): Promi
 
   const { data, error } = await supabase.from("app_users").update(updatePayload).eq("id", payload.id).select("*").single();
   if (error || !data) {
-    return null;
+    throw new Error(error?.message || "Unable to update the user profile.");
   }
 
   const normalized = toUserRow(data as DashboardRow);
@@ -1397,14 +1619,16 @@ async function syncRoleProfile(userId: string, role: string | null, payload: Das
     assignIfProvided(profilePayload, "guardian_name", payload.guardian_name);
     assignIfProvided(profilePayload, "guardian_address", payload.guardian_address);
     assignIfProvided(profilePayload, "guardian_contact", payload.guardian_contact);
-    await supabase.from("student_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    const { error } = await supabase.from("student_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    if (error) throw new Error(error.message || "Unable to update student profile.");
   }
 
   if (role === "employee") {
     const profilePayload: Record<string, unknown> = { user_id: userId };
     assignIfProvided(profilePayload, "company", payload.company);
     assignIfProvided(profilePayload, "work_address", payload.work_address);
-    await supabase.from("employee_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    const { error } = await supabase.from("employee_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    if (error) throw new Error(error.message || "Unable to update employee profile.");
   }
 
   if (role === "landlord") {
@@ -1435,19 +1659,30 @@ async function syncRoleProfile(userId: string, role: string | null, payload: Das
     const profilePayload: Record<string, unknown> = { user_id: userId };
     assignIfProvided(profilePayload, "department", payload.department);
     assignIfProvided(profilePayload, "admin_level", payload.admin_level);
-    await supabase.from("admin_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    const { error } = await supabase.from("admin_profiles").upsert(profilePayload, { onConflict: "user_id" });
+    if (error) throw new Error(error.message || "Unable to save the administrator profile.");
   }
 }
 
 export async function fetchApartments(): Promise<DashboardApartmentRow[]> {
-  const apartments = await fetchRows<DashboardApartmentRow>("apartments");
-  const normalized = apartments.map((row) => toApartmentRow(row));
+  const { data, error } = await supabase
+    .from("apartments")
+    .select("*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at)")
+    .order("created_at", { ascending: false });
+
+  if (error || !Array.isArray(data)) {
+    console.error("Error fetching dashboard apartments:", error);
+    return safeJsonParse<DashboardApartmentRow[]>(readCachedValue("apartments"), []);
+  }
+
+  const normalized = data.map((row) => toApartmentRow(row as DashboardRow));
   if (normalized.length > 0) {
     writeCachedValue("apartments", JSON.stringify(normalized));
     return normalized;
   }
 
-  return safeJsonParse<DashboardApartmentRow[]>(readCachedValue("apartments"), []);
+  writeCachedValue("apartments", "[]");
+  return [];
 }
 
 export async function fetchFavorites(): Promise<DashboardFavoriteRow[]> {
@@ -1746,10 +1981,15 @@ export async function createReport(report: {
   const reporterId = report.reporter_id ? await resolveAppUserId(report.reporter_id) : null;
   const landlordId = report.landlord_id ? await resolveAppUserId(report.landlord_id) : null;
 
+  if (!reporterId) {
+    throw new Error("Please sign in to submit a report.");
+  }
+
   const { data, error } = await supabase
     .from("reports")
     .insert({
       reporter_id: reporterId,
+      user_id: reporterId,
       reporter_role: report.reporter_role ?? null,
       apartment_id: report.apartment_id ?? null,
       issue_type: report.issue_type ?? null,
@@ -1768,8 +2008,12 @@ export async function createReport(report: {
     .select("*")
     .single();
 
-  if (error || !data) {
-    return null;
+  if (error) {
+    throw new Error(error.message || "Unable to save report.");
+  }
+
+  if (!data) {
+    throw new Error("Unable to save report.");
   }
 
   const normalized = toReportRow(data as DashboardRow);

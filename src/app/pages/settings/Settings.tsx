@@ -6,11 +6,12 @@ import {
   Check,
   ChevronRight,
   Clock,
+  Eye,
+  EyeOff,
   HelpCircle,
   Lock,
   Settings as SettingsIcon,
   Shield,
-  SlidersHorizontal,
   Trash2,
   Upload,
   User
@@ -23,20 +24,26 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { deleteUser as deleteUserAccount } from "@/app/services/authService";
-import { fetchUserPreferenceSections, saveUserPreferenceSection, updateUserProfile, uploadUserAvatar } from "@/app/services/dashboardSupabaseService";
+import { fetchUserPreferenceSections, fetchUserProfileDetails, saveUserPreferenceSection, updateUserProfile, uploadUserAvatar } from "@/app/services/dashboardSupabaseService";
 
 type UserSettingsProfile = {
   firstName: string;
   lastName: string;
+  middleInitial: string;
   email: string;
   mobile: string;
   bio: string;
-  language: string;
-  timezone: string;
   avatar: string;
+  address: string;
+  school?: string;
+  guardianName?: string;
+  guardianAddress?: string;
+  guardianContact?: string;
   company?: string;
   workAddress?: string;
   permitNumber?: string;
+  department?: string;
+  adminLevel?: string;
 };
 
 type UserAlerts = {
@@ -84,6 +91,28 @@ const CardTitle = ({ icon: Icon, title, subtitle, tone = "bg-orange-50 text-oran
   </div>
 );
 
+function profileStateFromUser(user: ReturnType<typeof useAuth>["user"]): UserSettingsProfile {
+  return {
+    firstName: user?.name?.split(" ")[0] || "",
+    lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+    middleInitial: user?.middleInitial || "",
+    email: user?.email || "",
+    mobile: user?.mobileNumber || user?.mobile || "",
+    bio: user?.bio || "",
+    avatar: user?.avatar || "",
+    address: user?.address || "",
+    school: user?.school || "",
+    guardianName: user?.guardianName || "",
+    guardianAddress: user?.guardianAddress || "",
+    guardianContact: user?.guardianContact || "",
+    company: user?.company || "",
+    workAddress: "",
+    permitNumber: user?.permitNumber || "",
+    department: user?.department || "",
+    adminLevel: user?.adminLevel || "",
+  };
+}
+
 const AlertRow = ({ label, hint, pushVal, onPush }: { label: string; hint?: string; pushVal: boolean; onPush: (v: boolean) => void }) => (
   <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-4 last:border-0">
     <div className="min-w-0 flex-1">
@@ -100,32 +129,7 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
   const [settingsTab, setSettingsTab] = useState<"profile" | "alerts" | "security">("profile");
   const [settingsMenu, setSettingsMenu] = useState<"personal" | "employment">("personal");
 
-  const [profile, setProfile] = useState<UserSettingsProfile>(() => {
-    if (user) {
-      const storageKey = `userProfile_${user.id}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          return JSON.parse(saved) as UserSettingsProfile;
-        } catch {
-          // Fall through to session data.
-        }
-      }
-    }
-
-    return {
-      firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ").slice(1).join(" ") || "",
-      email: user?.email || "",
-      mobile: user?.mobileNumber || "",
-      bio: user?.bio || "",
-      language: user?.language || "en",
-      timezone: user?.timezone || "Asia/Manila",
-      avatar: user?.avatar || "",
-      company: user?.company || "",
-      workAddress: "",
-    };
-  });
+  const [profile, setProfile] = useState<UserSettingsProfile>(() => profileStateFromUser(user));
 
   const [alerts, setAlerts] = useState<UserAlerts>(() => {
     if (user) {
@@ -169,13 +173,44 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
   });
 
   const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
+  const [visiblePasswords, setVisiblePasswords] = useState({ current: false, next: false, confirm: false });
 
   useEffect(() => {
     let active = true;
     if (!user?.id) return () => { active = false; };
-    void fetchUserPreferenceSections(user.id)
-      .then((sections) => {
+    void Promise.all([
+      fetchUserPreferenceSections(user.id),
+      fetchUserProfileDetails(user.id),
+    ])
+      .then(([sections, details]) => {
         if (!active) return;
+        if (details?.user) {
+          const nameParts = String(details.user.name ?? "").trim().split(/\s+/).filter(Boolean);
+          const middleInitial = String(details.user.middle_initial ?? "").trim();
+          const lastName = middleInitial
+            ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")
+            : nameParts.slice(1).join(" ");
+          setProfile((current) => ({
+            ...current,
+            firstName: nameParts[0] ?? "",
+            lastName,
+            middleInitial,
+            email: String(details.user.email ?? ""),
+            mobile: String(details.user.mobile ?? details.user.mobileNumber ?? ""),
+            bio: String(details.user.bio ?? ""),
+            avatar: String(details.user.avatar_url ?? ""),
+            address: String(details.user.address ?? ""),
+            school: String(details.studentProfile?.school ?? ""),
+            guardianName: String(details.studentProfile?.guardian_name ?? ""),
+            guardianAddress: String(details.studentProfile?.guardian_address ?? ""),
+            guardianContact: String(details.studentProfile?.guardian_contact ?? ""),
+            company: String(details.employeeProfile?.company ?? ""),
+            workAddress: String(details.employeeProfile?.work_address ?? ""),
+            permitNumber: String(details.landlordProfile?.permit_number ?? details.user.permit_number ?? ""),
+            department: String(details.adminProfile?.department ?? details.user.department ?? ""),
+            adminLevel: String(details.adminProfile?.admin_level ?? details.user.admin_level ?? ""),
+          }));
+        }
         if (sections.alerts && typeof sections.alerts === "object" && !Array.isArray(sections.alerts)) {
           setAlerts((current) => ({ ...current, ...sections.alerts as Partial<UserAlerts> }));
         }
@@ -190,14 +225,27 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
 
   const fullName = `${profile.firstName} ${profile.lastName}`.trim();
   const roleLabel = user?.role === "student" ? "Student" : user?.role === "employee" ? "Employee" : user?.role || "Tenant";
-  const hasEmploymentInfo = Boolean(profile.company?.trim() || profile.workAddress?.trim());
+  const roleProfileLabel = user?.role === "student"
+    ? "Student Profile Information"
+    : user?.role === "employee"
+      ? "Employment Information"
+      : user?.role === "landlord"
+        ? "Landlord / Business Information"
+        : user?.role === "admin"
+          ? "Admin Profile Information"
+          : "Profile Information";
+  const roleProfileSubtitle = user?.role === "student"
+    ? "School, guardian, and contact details."
+    : user?.role === "employee"
+      ? "Your company and work details."
+      : user?.role === "landlord"
+        ? "Business and permit details."
+        : user?.role === "admin"
+          ? "Administrative account details."
+          : "Role-specific details.";
 
   const updateProfile = (updater: (prev: UserSettingsProfile) => UserSettingsProfile) => {
-    setProfile((p) => {
-      const updated = updater(p);
-      if (user) localStorage.setItem(`userProfile_${user.id}`, JSON.stringify(updated));
-      return updated;
-    });
+    setProfile((p) => updater(p));
   };
 
   const setA = (key: keyof UserAlerts, val: unknown) => {
@@ -272,22 +320,68 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
     }
 
     try {
-      const name = `${profile.firstName} ${profile.lastName}`.trim();
-      await updateUser(user.id, { name, email: profile.email, mobileNumber: profile.mobile });
-      await updateUserProfile({
+      const name = `${profile.firstName.trim()} ${profile.middleInitial.trim() ? `${profile.middleInitial.trim()}. ` : ""}${profile.lastName.trim()}`.trim();
+      await updateUser(user.id, {
+        name,
+        email: profile.email.trim(),
+        mobileNumber: profile.mobile.trim(),
+        middleInitial: profile.middleInitial.trim(),
+        address: profile.address.trim(),
+        school: profile.school?.trim(),
+        guardianName: profile.guardianName?.trim(),
+        guardianAddress: profile.guardianAddress?.trim(),
+        guardianContact: profile.guardianContact?.trim(),
+        company: profile.company?.trim(),
+        workAddress: profile.workAddress?.trim(),
+        permitNumber: profile.permitNumber?.trim(),
+        department: profile.department?.trim(),
+        adminLevel: profile.adminLevel?.trim(),
+      });
+      const updated = await updateUserProfile({
         id: user.id,
-        email: profile.email,
+        email: profile.email.trim(),
         name,
         role: user.role,
-        mobile: profile.mobile,
+        mobile: profile.mobile.trim(),
         avatar_url: profile.avatar,
         bio: profile.bio,
-        language: profile.language,
-        timezone: profile.timezone,
-        permit_number: user.role === "landlord" ? profile.permitNumber : undefined,
-        company: profile.company,
-        work_address: profile.workAddress,
+        middle_initial: profile.middleInitial.trim(),
+        address: profile.address.trim(),
+        permit_number: user.role === "landlord" ? profile.permitNumber?.trim() : undefined,
+        school: profile.school?.trim(),
+        guardian_name: profile.guardianName?.trim(),
+        guardian_address: profile.guardianAddress?.trim(),
+        guardian_contact: profile.guardianContact?.trim(),
+        company: profile.company?.trim(),
+        work_address: profile.workAddress?.trim(),
+        department: profile.department?.trim(),
+        admin_level: profile.adminLevel?.trim(),
       });
+      if (updated) {
+        const refreshed = await fetchUserProfileDetails(user.id);
+        if (refreshed?.user) {
+          const nameParts = String(refreshed.user.name ?? "").trim().split(/\s+/).filter(Boolean);
+          const middleInitial = String(refreshed.user.middle_initial ?? "").trim();
+          const lastName = middleInitial
+            ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")
+            : nameParts.slice(1).join(" ");
+          setProfile((current) => ({
+            ...current,
+            firstName: nameParts[0] ?? "",
+            lastName,
+            middleInitial,
+            email: String(refreshed.user.email ?? ""),
+            mobile: String(refreshed.user.mobile ?? refreshed.user.mobileNumber ?? ""),
+            address: String(refreshed.user.address ?? ""),
+            school: String(refreshed.studentProfile?.school ?? ""),
+            guardianName: String(refreshed.studentProfile?.guardian_name ?? ""),
+            guardianAddress: String(refreshed.studentProfile?.guardian_address ?? ""),
+            guardianContact: String(refreshed.studentProfile?.guardian_contact ?? ""),
+            company: String(refreshed.employeeProfile?.company ?? ""),
+            workAddress: String(refreshed.employeeProfile?.work_address ?? ""),
+          }));
+        }
+      }
       toast.success("Profile updated successfully!");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update profile.";
@@ -382,7 +476,7 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
         <aside className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="mb-4 px-2 text-sm font-black text-slate-950">Settings Menu</h3>
           <MenuButton icon={User} label="Personal Information" active={settingsMenu === "personal"} onClick={() => setSettingsMenu("personal")} />
-          <MenuButton icon={BriefcaseBusiness} label="Employment Information" active={settingsMenu === "employment"} onClick={() => setSettingsMenu("employment")} />
+          <MenuButton icon={BriefcaseBusiness} label={roleProfileLabel} active={settingsMenu === "employment"} onClick={() => setSettingsMenu("employment")} />
           <div className="mt-8 rounded-lg border border-slate-100 bg-slate-50 p-4">
             <HelpCircle className="mb-3 h-7 w-7 text-orange-500" />
             <p className="font-black text-slate-950">Need help?</p>
@@ -394,57 +488,91 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
         </aside>
 
         <div className="space-y-5">
-          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <CardTitle icon={User} title="Personal Information" subtitle="Update your personal details." />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="First Name">
-                <input className={inputClass} value={profile.firstName} onChange={(e) => updateProfile((p) => ({ ...p, firstName: e.target.value }))} placeholder="Not provided" />
-              </Field>
-              <Field label="Last Name">
-                <input className={inputClass} value={profile.lastName} onChange={(e) => updateProfile((p) => ({ ...p, lastName: e.target.value }))} placeholder="Not provided" />
-              </Field>
-            </div>
-            <div className="mt-4 space-y-4">
-              <Field label="Email Address" hint="Used for account login and notifications">
-                <input className={inputClass} type="email" value={profile.email} onChange={(e) => updateProfile((p) => ({ ...p, email: e.target.value }))} placeholder="Not provided" />
-              </Field>
-              <Field label="Mobile Number" hint="Optional contact number">
-                <input className={inputClass} type="tel" value={profile.mobile} onChange={(e) => updateProfile((p) => ({ ...p, mobile: e.target.value }))} placeholder="Not provided" />
-              </Field>
-              <Field label="Bio / About You" hint="Short description (max 200 characters)">
-                <textarea className={textareaClass} value={profile.bio} onChange={(e) => updateProfile((p) => ({ ...p, bio: e.target.value.slice(0, 200) }))} placeholder="Not provided" />
-                <p className="text-right text-xs font-medium text-slate-400">{profile.bio.length}/200</p>
-              </Field>
-            </div>
-          </section>
+          {settingsMenu === "personal" && (
+            <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+              <CardTitle icon={User} title="Personal Information" subtitle="Update your personal details." />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="First Name">
+                  <input className={inputClass} value={profile.firstName} onChange={(e) => updateProfile((p) => ({ ...p, firstName: e.target.value }))} placeholder="Not provided" />
+                </Field>
+                <Field label="Last Name">
+                  <input className={inputClass} value={profile.lastName} onChange={(e) => updateProfile((p) => ({ ...p, lastName: e.target.value }))} placeholder="Not provided" />
+                </Field>
+                <Field label="Middle Initial">
+                  <input className={inputClass} value={profile.middleInitial} onChange={(e) => updateProfile((p) => ({ ...p, middleInitial: e.target.value.slice(0, 3) }))} placeholder="Not provided" />
+                </Field>
+                <Field label="Home Address">
+                  <input className={inputClass} value={profile.address} onChange={(e) => updateProfile((p) => ({ ...p, address: e.target.value }))} placeholder="Not provided" />
+                </Field>
+              </div>
+              <div className="mt-4 space-y-4">
+                <Field label="Email Address" hint="Used for account login and notifications">
+                  <input className={inputClass} type="email" value={profile.email} onChange={(e) => updateProfile((p) => ({ ...p, email: e.target.value }))} placeholder="Not provided" />
+                </Field>
+                <Field label="Mobile Number" hint="Optional contact number">
+                  <input className={inputClass} type="tel" value={profile.mobile} onChange={(e) => updateProfile((p) => ({ ...p, mobile: e.target.value }))} placeholder="Not provided" />
+                </Field>
+                <Field label="Bio / About You" hint="Short description (max 200 characters)">
+                  <textarea className={textareaClass} value={profile.bio} onChange={(e) => updateProfile((p) => ({ ...p, bio: e.target.value.slice(0, 200) }))} placeholder="Not provided" />
+                  <p className="text-right text-xs font-medium text-slate-400">{profile.bio.length}/200</p>
+                </Field>
+              </div>
+            </section>
+          )}
 
-          <DisclosureCard icon={BriefcaseBusiness} title="Employment Information" subtitle={hasEmploymentInfo ? "Your company and work details." : "No employment information added"} tone="bg-violet-50 text-violet-600">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Company / Organization">
-                <input className={inputClass} value={profile.company || ""} onChange={(e) => updateProfile((p) => ({ ...p, company: e.target.value }))} placeholder="Not provided" />
-              </Field>
-              <Field label="Work Address">
-                <input className={inputClass} value={profile.workAddress || ""} onChange={(e) => updateProfile((p) => ({ ...p, workAddress: e.target.value }))} placeholder="Not provided" />
-              </Field>
-            </div>
-          </DisclosureCard>
-
-          <DisclosureCard icon={SlidersHorizontal} title="Language & Region" subtitle="Language and timezone settings." tone="bg-emerald-50 text-emerald-600">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Language">
-                <select className={inputClass} value={profile.language} onChange={(e) => updateProfile((p) => ({ ...p, language: e.target.value }))}>
-                  <option value="en">English</option>
-                  <option value="fil">Filipino</option>
-                  <option value="hil">Hiligaynon</option>
-                </select>
-              </Field>
-              <Field label="Timezone">
-                <select className={inputClass} value={profile.timezone} onChange={(e) => updateProfile((p) => ({ ...p, timezone: e.target.value }))}>
-                  <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
-                </select>
-              </Field>
-            </div>
-          </DisclosureCard>
+          {settingsMenu === "employment" && (
+            <DisclosureCard icon={BriefcaseBusiness} title={roleProfileLabel} subtitle={roleProfileSubtitle} tone="bg-violet-50 text-violet-600">
+              {user?.role === "student" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="School">
+                    <input className={inputClass} value={profile.school || ""} onChange={(e) => updateProfile((p) => ({ ...p, school: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Guardian Name">
+                    <input className={inputClass} value={profile.guardianName || ""} onChange={(e) => updateProfile((p) => ({ ...p, guardianName: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Guardian Contact Number">
+                    <input className={inputClass} type="tel" value={profile.guardianContact || ""} onChange={(e) => updateProfile((p) => ({ ...p, guardianContact: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Guardian Address">
+                    <input className={inputClass} value={profile.guardianAddress || ""} onChange={(e) => updateProfile((p) => ({ ...p, guardianAddress: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Home Address">
+                    <input className={inputClass} value={profile.address} onChange={(e) => updateProfile((p) => ({ ...p, address: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Mobile Number">
+                    <input className={inputClass} type="tel" value={profile.mobile} onChange={(e) => updateProfile((p) => ({ ...p, mobile: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Email Address">
+                    <input className={inputClass} type="email" value={profile.email} onChange={(e) => updateProfile((p) => ({ ...p, email: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                </div>
+              ) : user?.role === "employee" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Company / Organization">
+                    <input className={inputClass} value={profile.company || ""} onChange={(e) => updateProfile((p) => ({ ...p, company: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Work Address">
+                    <input className={inputClass} value={profile.workAddress || ""} onChange={(e) => updateProfile((p) => ({ ...p, workAddress: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                </div>
+              ) : user?.role === "landlord" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Permit Number">
+                    <input className={inputClass} value={profile.permitNumber || ""} onChange={(e) => updateProfile((p) => ({ ...p, permitNumber: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                </div>
+              ) : user?.role === "admin" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Department">
+                    <input className={inputClass} value={profile.department || ""} onChange={(e) => updateProfile((p) => ({ ...p, department: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                  <Field label="Admin Level">
+                    <input className={inputClass} value={profile.adminLevel || ""} onChange={(e) => updateProfile((p) => ({ ...p, adminLevel: e.target.value }))} placeholder="Not provided" />
+                  </Field>
+                </div>
+              ) : null}
+            </DisclosureCard>
+          )}
         </div>
       </div>
 
@@ -496,19 +624,51 @@ export function Settings({ embedded = false }: { embedded?: boolean } = {}) {
     </div>
   );
 
+  const PasswordField = ({
+    id,
+    value,
+    visible,
+    placeholder,
+    onChange,
+  }: {
+    id: keyof typeof passwordForm;
+    value: string;
+    visible: boolean;
+    placeholder: string;
+    onChange: (value: string) => void;
+  }) => (
+    <div className="relative">
+      <input
+        className={`${inputClass} pr-12`}
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        aria-label={visible ? "Hide password" : "Show password"}
+        onClick={() => setVisiblePasswords((current) => ({ ...current, [id]: !current[id] }))}
+        className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+      >
+        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <CardTitle icon={Lock} title="Password" subtitle={security.passwordLastChanged ? `Last changed: ${new Date(security.passwordLastChanged).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}` : "Password change date not provided."} tone="bg-blue-50 text-blue-600" />
         <div className="space-y-4">
           <Field label="Current Password">
-            <input className={inputClass} type="password" value={passwordForm.current} onChange={(e) => setPasswordForm((p) => ({ ...p, current: e.target.value }))} placeholder="Current password" />
+            <PasswordField id="current" value={passwordForm.current} visible={visiblePasswords.current} onChange={(value) => setPasswordForm((p) => ({ ...p, current: value }))} placeholder="Current password" />
           </Field>
           <Field label="New Password" hint="At least 6 characters">
-            <input className={inputClass} type="password" value={passwordForm.next} onChange={(e) => setPasswordForm((p) => ({ ...p, next: e.target.value }))} placeholder="New password" />
+            <PasswordField id="next" value={passwordForm.next} visible={visiblePasswords.next} onChange={(value) => setPasswordForm((p) => ({ ...p, next: value }))} placeholder="New password" />
           </Field>
           <Field label="Confirm New Password">
-            <input className={inputClass} type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm((p) => ({ ...p, confirm: e.target.value }))} placeholder="Repeat new password" />
+            <PasswordField id="confirm" value={passwordForm.confirm} visible={visiblePasswords.confirm} onChange={(value) => setPasswordForm((p) => ({ ...p, confirm: value }))} placeholder="Repeat new password" />
           </Field>
           <Button onClick={handlePasswordChange} className="rounded-lg bg-orange-500 font-black text-white hover:bg-orange-600">Update Password</Button>
         </div>

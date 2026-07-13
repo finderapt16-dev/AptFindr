@@ -11,6 +11,10 @@ import { VerifiedBadge } from "./VerifiedBadge";
 
 interface ApartmentCardProps {
   apartment: Apartment;
+  detailState?: {
+    returnTo?: string;
+    backLabel?: string;
+  };
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -27,7 +31,7 @@ const STATUS_LABEL: Record<string, string> = {
   maintenance: "Under Maintenance",
 };
 
-export function ApartmentCard({ apartment }: ApartmentCardProps) {
+export function ApartmentCard({ apartment, detailState }: ApartmentCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user, users } = useAuth();
   const favorite = isFavorite(apartment.id);
@@ -43,7 +47,7 @@ export function ApartmentCard({ apartment }: ApartmentCardProps) {
   };
 
   return (
-    <Link to={`/apartment/${apartment.id}`}>
+    <Link to={`/apartment/${apartment.id}`} state={detailState}>
       <Card className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:transform hover:-translate-y-2 border-2 hover:border-amber-200 animate-fade-in">
         <div className="relative aspect-[4/3] overflow-hidden group">
           <img

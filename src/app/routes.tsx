@@ -17,6 +17,8 @@ import { Settings } from "./pages/settings/Settings";
 import { DesignGuide } from "./pages/tools/DesignGuide";
 import { Flowchart } from "./pages/tools/Flowchart";
 
+const APARTMENT_LOGIN_MESSAGE = "Please sign in or create an account to view apartment details.";
+
 export const router = createBrowserRouter([
   // Standalone pages — no Root wrapper (no app Header / Chatbot)
   { path: "/flowchart", element: <Flowchart /> },
@@ -28,8 +30,8 @@ export const router = createBrowserRouter([
     element: <Root />,
     children: [
       { index: true, element: <Landing /> },
-      { path: "browse", element: <Home /> },
-      { path: "apartment/:id", element: <ApartmentDetail /> },
+      { path: "browse", element: <ProtectedRoute preserveReturnDestination loginMessage={APARTMENT_LOGIN_MESSAGE}><Home /></ProtectedRoute> },
+      { path: "apartment/:id", element: <ProtectedRoute preserveReturnDestination loginMessage={APARTMENT_LOGIN_MESSAGE}><ApartmentDetail /></ProtectedRoute> },
       { path: "admin/apartment/:id", element: <ProtectedRoute allowedRoles={["admin"]}><AdminApartmentDetail /></ProtectedRoute> },
       { path: "add-apartment", element: <ProtectedRoute allowedRoles={["landlord"]}><AddApartment /></ProtectedRoute> },
       { path: "landlord/properties/:id/rooms", element: <ProtectedRoute allowedRoles={["landlord"]}><ManageRooms /></ProtectedRoute> },

@@ -67,6 +67,11 @@ export function ApartmentsProvider({ children }: { children: ReactNode }): React
       .on('postgres_changes', { event: '*', schema: 'public', table: 'apartments' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'apartment_rooms' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'apartment_images' }, scheduleRefresh)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_users', filter: 'role=eq.landlord' },
+        scheduleRefresh,
+      )
       .subscribe();
     const refreshOnFocus = () => void refreshApartments();
     window.addEventListener('focus', refreshOnFocus);

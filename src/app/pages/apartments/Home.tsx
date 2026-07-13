@@ -50,13 +50,14 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import type { Apartment } from "@/app/data/apartments";
 import { useFavorites } from "@/app/hooks/useFavorites";
 import {
+  defaultTenantPreferences,
   fetchApartmentViews,
   fetchFavorites as fetchDashboardFavorites,
   fetchTenantPreferences,
-  getCachedTenantPreferences,
   saveTenantPreferences,
   type DashboardApartmentViewRow,
   type DashboardFavoriteRow,
+  type TenantPreferenceSettings,
   type TenantPreferenceSortOption,
 } from "@/app/services/dashboardSupabaseService";
 import { getImageUrl } from "@/app/utils/images";
@@ -102,25 +103,22 @@ function TenantBrowse() {
   const { apartments: allApartments, isLoading: apartmentsLoading, error: apartmentsError } = useApartmentsContext();
   const { favorites: userFavorites, isFavorite, toggleFavorite } = useFavorites();
 
-  const readSavedPreferences = () => getCachedTenantPreferences(user?.id);
-
-  const savedPreferences = readSavedPreferences();
   const urlSearchQuery = searchParams.get("search")?.trim() || "";
   const initialPriceRange: [number, number] = [
     1000,
-    savedPreferences?.saveBudgetPreferences === false ? 6000 : Number(savedPreferences?.maxBudget) || 6000,
+    defaultTenantPreferences.saveBudgetPreferences === false ? 6000 : Number(defaultTenantPreferences.maxBudget) || 6000,
   ];
-  const initialBudgetFilterEnabled = savedPreferences?.saveBudgetPreferences === true;
-  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || savedPreferences?.preferredArea || "");
+  const initialBudgetFilterEnabled = defaultTenantPreferences.saveBudgetPreferences === true;
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || defaultTenantPreferences.preferredArea || "");
   const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
   const [budgetFilterEnabled, setBudgetFilterEnabled] = useState(initialBudgetFilterEnabled);
   const [minPriceInput, setMinPriceInput] = useState(String(initialPriceRange[0]));
   const [maxPriceInput, setMaxPriceInput] = useState(String(initialPriceRange[1]));
-  const [bedrooms, setBedrooms] = useState(savedPreferences?.minBedrooms || "any");
-  const [petFriendly, setPetFriendly] = useState(Boolean(savedPreferences?.petFriendly));
-  const [parking, setParking] = useState(Boolean(savedPreferences?.parking));
-  const [furnished, setFurnished] = useState(Boolean(savedPreferences?.furnished));
-  const [sortBy, setSortBy] = useState<SortOption>(savedPreferences?.sortBy || "recommended");
+  const [bedrooms, setBedrooms] = useState(defaultTenantPreferences.minBedrooms || "any");
+  const [petFriendly, setPetFriendly] = useState(Boolean(defaultTenantPreferences.petFriendly));
+  const [parking, setParking] = useState(Boolean(defaultTenantPreferences.parking));
+  const [furnished, setFurnished] = useState(Boolean(defaultTenantPreferences.furnished));
+  const [sortBy, setSortBy] = useState<SortOption>(defaultTenantPreferences.sortBy || "recommended");
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
@@ -135,29 +133,32 @@ function TenantBrowse() {
     setBudgetFilterEnabled(enabled);
   };
 
+  const applyBrowsePreferences = (preferences: TenantPreferenceSettings, searchOverride = "") => {
+    setSearchQuery(searchOverride || preferences.preferredArea || "");
+    applyPriceRange(
+      [1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000],
+      preferences.saveBudgetPreferences === true,
+    );
+    setBedrooms(preferences.minBedrooms || "any");
+    setPetFriendly(Boolean(preferences.petFriendly));
+    setParking(Boolean(preferences.parking));
+    setFurnished(Boolean(preferences.furnished));
+    setSortBy(preferences.sortBy || "recommended");
+  };
+
   useEffect(() => {
     let mounted = true;
 
-    if (urlSearchQuery) {
-      setSearchQuery(urlSearchQuery);
-      return;
-    }
+    applyBrowsePreferences(defaultTenantPreferences, urlSearchQuery);
 
     if (!user?.id) return;
 
-    void fetchTenantPreferences(user.id)
+    const tenantId = user.id;
+
+    void fetchTenantPreferences(tenantId)
       .then((preferences) => {
         if (!mounted || !preferences) return;
-        setSearchQuery(preferences.preferredArea || "");
-        applyPriceRange(
-          [1000, preferences.saveBudgetPreferences ? Number(preferences.maxBudget) || 6000 : 6000],
-          preferences.saveBudgetPreferences === true,
-        );
-        setBedrooms(preferences.minBedrooms || "any");
-        setPetFriendly(Boolean(preferences.petFriendly));
-        setParking(Boolean(preferences.parking));
-        setFurnished(Boolean(preferences.furnished));
-        setSortBy(preferences.sortBy || "recommended");
+        applyBrowsePreferences(preferences, urlSearchQuery);
       })
       .catch(() => {
         if (!mounted) return;
@@ -819,6 +820,7 @@ function TenantBrowse() {
                       isVerified: isVerifiedListing(apt),
                       verificationStatus: getVerificationStatus(apt),
                       availabilityStatus: isApartmentAvailable(apt) ? "available" : "unavailable",
+                      markerStatus: "available",
                     }))}
                     emptyMessage="No apartments found on the map. Try adjusting your filters."
                   />

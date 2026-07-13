@@ -6,10 +6,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const markerColors = {
-  verified: "#2563eb",
-  unverified: "#64748b",
-  unavailable: "#dc2626",
-  pending: "#f97316",
+  available: "#2563eb",
+  pending: "#facc15",
+  hidden: "#94a3b8",
 };
 
 interface MapApartmentMarker {
@@ -27,6 +26,7 @@ interface MapApartmentMarker {
   isVerified?: boolean;
   verificationStatus?: string;
   availabilityStatus?: "available" | "unavailable";
+  markerStatus?: "available" | "pending" | "hidden";
 }
 
 interface MapViewProps {
@@ -38,7 +38,7 @@ interface MapViewProps {
   emptyMessage?: string;
 }
 
-const singleMarkerIcon = createMarkerIcon(markerColors.verified);
+const singleMarkerIcon = createMarkerIcon(markerColors.available);
 
 function createMarkerIcon(color: string, count = 1) {
   return L.divIcon({
@@ -105,6 +105,10 @@ function escapeHtml(value: string | number | undefined | null) {
 }
 
 function getMarkerColor(apartment: MapApartmentMarker) {
+  if (apartment.markerStatus === "available") return markerColors.available;
+  if (apartment.markerStatus === "pending") return markerColors.pending;
+  if (apartment.markerStatus === "hidden") return markerColors.hidden;
+
   const status = apartment.status?.toLowerCase();
   const verificationStatus = apartment.verificationStatus?.toLowerCase();
 
@@ -112,20 +116,24 @@ function getMarkerColor(apartment: MapApartmentMarker) {
     return markerColors.pending;
   }
 
-  if (apartment.availabilityStatus === "unavailable" || status === "occupied" || Number(apartment.availableRooms ?? 0) <= 0) {
-    return markerColors.unavailable;
+  if (
+    apartment.availabilityStatus === "unavailable" ||
+    ["archived", "hidden", "inactive", "rejected", "unpublished", "occupied", "reserved", "maintenance"].includes(status ?? "") ||
+    Number(apartment.availableRooms ?? 0) <= 0
+  ) {
+    return markerColors.hidden;
   }
 
-  if (apartment.isVerified) return markerColors.verified;
+  if (apartment.isVerified) return markerColors.available;
 
-  return markerColors.unverified;
+  return markerColors.hidden;
 }
 
 function getGroupColor(apartments: MapApartmentMarker[]) {
-  if (apartments.every((apartment) => getMarkerColor(apartment) === markerColors.unavailable)) return markerColors.unavailable;
+  if (apartments.every((apartment) => getMarkerColor(apartment) === markerColors.hidden)) return markerColors.hidden;
   if (apartments.some((apartment) => getMarkerColor(apartment) === markerColors.pending)) return markerColors.pending;
-  if (apartments.some((apartment) => apartment.isVerified)) return markerColors.verified;
-  return markerColors.unverified;
+  if (apartments.some((apartment) => getMarkerColor(apartment) === markerColors.available)) return markerColors.available;
+  return markerColors.hidden;
 }
 
 function groupByCoordinates(apartments: MapApartmentMarker[]) {

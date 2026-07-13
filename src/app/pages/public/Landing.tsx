@@ -147,19 +147,31 @@ export function Landing() {
   const dashboardPath = user?.role === "admin" ? "/admin" : "/dashboard";
 
   const handleProtectedAction = (e: React.MouseEvent) => {
-    if (!user) { e.preventDefault(); navigate("/login"); }
+    if (!user) {
+      e.preventDefault();
+      const destination = e.currentTarget.getAttribute("href") || "/browse";
+      navigate(`/login?redirect=${encodeURIComponent(destination)}`, {
+        state: { message: "Please sign in or create an account to view apartment details." },
+      });
+    }
   };
 
   const handleLandingSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user) { navigate("/login"); return; }
     const params = new URLSearchParams();
     if (landingSearch.trim()) params.set("search", landingSearch.trim());
     if (budget) params.set("budget", budget);
     if (roomType) params.set("type", roomType);
     if (rooms) params.set("rooms", rooms);
     if (availability) params.set("availability", availability);
-    navigate(params.toString() ? `/browse?${params}` : "/browse");
+    const destination = params.toString() ? `/browse?${params}` : "/browse";
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(destination)}`, {
+        state: { message: "Please sign in or create an account to view apartment details." },
+      });
+      return;
+    }
+    navigate(destination);
   };
 
   const activeFiltersCount = [budget, roomType, rooms, availability].filter(Boolean).length;

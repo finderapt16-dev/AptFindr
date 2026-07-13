@@ -1,4 +1,5 @@
 import { EditApartmentDialog } from "@/app/components/common/EditApartmentDialog";
+import { EvidenceUploader, type EvidenceFile } from "@/app/components/common/EvidenceUploader";
 import { LogoutConfirmation } from "@/app/components/common/LogoutConfirmation";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
@@ -17,14 +18,16 @@ import {
 } from "@/app/data/apartments";
 import { deleteUser as deleteUserAccount } from "@/app/services/authService";
 import {
-  createAppeal,
+  createAppealWithEvidence,
   createAuditLog,
   createSupportTicket,
   deleteNotification,
+  fetchAppealsByLandlord,
   fetchApartmentViews,
   fetchFavorites,
   fetchLandlordProfile,
   fetchNotifications,
+  fetchViolations,
   fetchUserById,
   fetchUserPreferenceSections,
   fetchUsers,
@@ -32,11 +35,14 @@ import {
   markNotificationRead,
   markNotificationUnread,
   saveUserPreferenceSection,
+  submitAppealFollowupWithEvidence,
   updateUserProfile,
   uploadUserAvatar,
+  type DashboardAppealRow,
   type DashboardApartmentViewRow,
   type DashboardFavoriteRow,
   type DashboardNotificationRow,
+  type DashboardViolationRow,
   type DashboardUserRow
 } from "@/app/services/dashboardSupabaseService";
 import { apartmentToFormValues } from "@/app/utils/apartmentMappers";
@@ -59,6 +65,7 @@ import {
   Eye,
   EyeOff,
   Eye as EyeOpen,
+  FileText,
   Flag,
   Heart,
   HelpCircle,
@@ -387,11 +394,71 @@ export function LandlordDashboard() {
 
   const [appealModal, setAppealModal] = useState<{
     open: boolean;
+    appealId: string | null;
+    notificationId: string | null;
+    apartmentId: string | null;
+    apartmentTitle: string;
+    reportId: string | null;
     violationId: string | null;
-    violationType: string;
-  }>({ open: false, violationId: null, violationType: "" });
+    relatedType: "report" | "violation" | "notice" | "admin_message";
+    relatedLabel: string;
+  }>({ open: false, appealId: null, notificationId: null, apartmentId: null, apartmentTitle: "", reportId: null, violationId: null, relatedType: "admin_message", relatedLabel: "" });
   const [appealMessage, setAppealMessage] = useState("");
-  const [appealStatus, setAppealStatus] = useState<"under_review" | "approved" | "rejected">("under_review");
+  const [appealContact, setAppealContact] = useState(user?.email || "");
+  const [appealEvidence, setAppealEvidence] = useState<EvidenceFile[]>([]);
+  const [isSubmittingAppeal, setIsSubmittingAppeal] = useState(false);
+  const [landlordAppeals, setLandlordAppeals] = useState<DashboardAppealRow[]>([]);
+  const [selectedNotificationDetail, setSelectedNotificationDetail] = useState<{
+    notification: DashboardNotificationRow;
+    violation: DashboardViolationRow | null;
+    appeal: DashboardAppealRow | null;
+  } | null>(null);
+
+  const closeAppealModal = () => {
+    setAppealModal({ open: false, appealId: null, notificationId: null, apartmentId: null, apartmentTitle: "", reportId: null, violationId: null, relatedType: "admin_message", relatedLabel: "" });
+    setAppealMessage("");
+    setAppealEvidence([]);
+    setIsSubmittingAppeal(false);
+  };
+
+  const getAppealMetadata = (appeal: DashboardAppealRow, kind: string) => {
+    const documents = Array.isArray(appeal.supporting_docs) ? appeal.supporting_docs : [];
+    return [...documents].reverse().find((entry) => entry && typeof entry === "object" && !Array.isArray(entry) && (entry as Record<string, unknown>).kind === kind) as Record<string, unknown> | undefined;
+  };
+
+  const openAppealForNotification = (detail: NonNullable<typeof selectedNotificationDetail>) => {
+    const payload = detail.notification.payload ?? {};
+    const violation = detail.violation;
+    const source = detail.appeal ? getAppealMetadata(detail.appeal, "source") : undefined;
+    const violationId = String(payload.violation_id ?? violation?.id ?? detail.appeal?.violation_id ?? "") || null;
+    const reportId = String(payload.report_id ?? payload.related_report_id ?? violation?.related_report_id ?? detail.appeal?.report_id ?? "") || null;
+    const apartmentId = String(payload.apartment_id ?? violation?.apartment_id ?? source?.apartment_id ?? "") || null;
+    const apartment = myApartments.find((item) => item.id === apartmentId);
+    const apartmentTitle = String(payload.apartment_title ?? source?.apartment_title ?? apartment?.title ?? "Apartment unavailable");
+    const relatedType = detail.notification.type === "notice_issued"
+      ? "notice"
+      : violationId ? "violation" : reportId ? "report" : "admin_message";
+    const relatedLabel = relatedType === "notice"
+      ? `Notice ${violationId ?? ""}`.trim()
+      : relatedType === "violation"
+        ? `Violation ${violationId ?? ""}`.trim()
+        : relatedType === "report"
+          ? `Report ${reportId ?? ""}`.trim()
+          : `Admin message ${detail.notification.id ?? ""}`.trim();
+
+    setAppealContact(user?.email || "");
+    setAppealModal({
+      open: true,
+      appealId: detail.appeal?.status === "needs_information" ? detail.appeal.id ?? null : null,
+      notificationId: detail.notification.id ?? null,
+      apartmentId,
+      apartmentTitle,
+      reportId,
+      violationId,
+      relatedType,
+      relatedLabel,
+    });
+  };
 
   const [modal, setModal] = useState<{
     open: boolean;
@@ -603,6 +670,28 @@ export function LandlordDashboard() {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) {
+      setLandlordAppeals([]);
+      return () => { active = false; };
+    }
+
+    const loadAppeals = async () => {
+      const rows = await fetchAppealsByLandlord(user.id);
+      if (active) setLandlordAppeals(rows);
+    };
+    void loadAppeals();
+    const channel = supabase
+      .channel(`landlord-appeals-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appeals", filter: `landlord_id=eq.${user.id}` }, () => void loadAppeals())
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   const handleNotificationClick = async (notification: DashboardNotificationRow) => {
     // Mark as read
     if (!(notification.read ?? notification.is_read) && notification.id) {
@@ -617,8 +706,24 @@ export function LandlordDashboard() {
       }
     }
 
-    // Handle navigation based on notification type
     const payload = notification.payload as Record<string, any>;
+    const appealableTypes = new Set(["admin_message", "property_reported", "violation_issued", "notice_issued", "appeal_status_updated"]);
+    if (appealableTypes.has(String(notification.type))) {
+      let violation: DashboardViolationRow | null = null;
+      if (payload?.violation_id) {
+        const rows = await fetchViolations();
+        violation = rows.find((row) => row.id === payload.violation_id) ?? null;
+      }
+      const appealId = String(payload?.appeal_id ?? "");
+      const appeal = appealId
+        ? landlordAppeals.find((row) => row.id === appealId) ?? (await fetchAppealsByLandlord(user?.id ?? "")).find((row) => row.id === appealId) ?? null
+        : null;
+      setSelectedNotificationDetail({ notification, violation, appeal });
+      setActiveSection("notifications");
+      return;
+    }
+
+    // Handle navigation based on notification type
     switch (notification.type) {
       case "property_reported":
         navigate(`/dashboard?section=notifications&report=${payload?.report_id || ""}`);
@@ -772,8 +877,6 @@ export function LandlordDashboard() {
     email: string;
     mobile: string;
     bio: string;
-    language: string;
-    timezone: string;
     avatar: string;
   };
 
@@ -784,8 +887,6 @@ export function LandlordDashboard() {
       email: user?.email || "",
       mobile: user?.mobileNumber || "",
       bio: "",
-      language: "en",
-      timezone: "Asia/Manila",
       avatar: "",
     };
   });
@@ -940,8 +1041,6 @@ export function LandlordDashboard() {
         email: userRow?.email || user.email || "",
         mobile: userRow?.mobile || userRow?.mobileNumber || user.mobileNumber || "",
         bio: userRow?.bio || "",
-        language: userRow?.language || "en",
-        timezone: userRow?.timezone || "Asia/Manila",
         avatar: userRow?.avatar_url || user.avatar || "",
       };
       const nextBusiness: LandlordBusiness = {
@@ -1088,8 +1187,6 @@ export function LandlordDashboard() {
           mobile: updatedUser.mobileNumber,
           avatar_url: profile.avatar,
           bio: profile.bio,
-          language: profile.language,
-          timezone: profile.timezone,
           permit_number: business.permitNumber,
           business_permit_number: business.permitNumber,
         });
@@ -1601,25 +1698,6 @@ export function LandlordDashboard() {
             <SettingsTextarea rows={3} value={profile.bio} onChange={(e: any) => updateProfile(p => ({ ...p, bio: e.target.value.slice(0, 300) }))} placeholder="Tell renters about yourself…" />
             <p className="text-[11px] text-slate-400 font-medium text-right">{profile.bio.length}/300</p>
           </Field>
-        </div>
-
-        {/* Preferences */}
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <SectionTitle icon="⚙️" title="Preferences" subtitle="Language, timezone, and display settings" />
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Language">
-              <SettingsSelect value={profile.language} onChange={(e: any) => updateProfile(p => ({ ...p, language: e.target.value }))}>
-                <option value="en">English</option>
-                <option value="fil">Filipino</option>
-                <option value="hil">Hiligaynon</option>
-              </SettingsSelect>
-            </Field>
-            <Field label="Timezone">
-              <SettingsSelect value={profile.timezone} onChange={(e: any) => updateProfile(p => ({ ...p, timezone: e.target.value }))}>
-                <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
-              </SettingsSelect>
-            </Field>
-          </div>
         </div>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end xl:col-span-2">
@@ -2348,7 +2426,7 @@ export function LandlordDashboard() {
         <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
           <motion.section variants={itemMotion} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-4 flex items-end justify-between gap-3"><div><div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-orange-600" /><h2 className="font-black text-slate-950">My Properties</h2></div><p className="mt-1 text-xs font-medium text-slate-500">Your newest database listings.</p></div>{myApartments.length > 0 && <button onClick={() => setActiveSection("properties")} className="text-xs font-black text-orange-600">View all</button>}</div>
-            {isLoadingApartments ? <div className="flex min-h-64 items-center justify-center"><Clock className="h-6 w-6 animate-pulse text-orange-500" /></div> : recentProperties.length > 0 ? <div className="divide-y divide-slate-100">{recentProperties.map((apartment) => { const roomCount = apartment.rooms?.length ?? 0; const roomAvailable = apartment.rooms?.filter((room: any) => getRoomStatus(room) === "available").length ?? 0; return <button key={apartment.id} onClick={() => navigate(`/apartment/${apartment.id}`)} className="group flex w-full items-center gap-3 py-3 text-left first:pt-0 last:pb-0"><span className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">{apartment.image ? <img src={apartment.image} alt={apartment.title || "Property"} className="h-full w-full object-cover" /> : <Building2 className="h-6 w-6 text-slate-300" />}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-900">{apartment.title || "Untitled property"}</strong><span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500"><MapPin className="h-3 w-3 shrink-0" />{apartment.address || apartment.city || "Address unavailable"}</span><span className="mt-2 flex flex-wrap gap-2"><Badge className="rounded-md bg-orange-50 text-orange-700">{roomCount} {roomCount === 1 ? "room" : "rooms"}</Badge><Badge className="rounded-md bg-emerald-50 text-emerald-700">{roomAvailable} available</Badge></span></span><ChevronRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500" /></button>; })}</div> : <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center"><Building2 className="mb-3 h-8 w-8 text-slate-300" /><h3 className="font-black text-slate-800">No properties yet</h3><p className="mt-1 text-sm font-medium text-slate-500">Add your first property to begin managing rooms and listings.</p><Link to="/add-apartment"><Button className="mt-4 rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600"><Plus className="mr-2 h-4 w-4" />Add Property</Button></Link></div>}
+            {isLoadingApartments ? <div className="flex min-h-64 items-center justify-center"><Clock className="h-6 w-6 animate-pulse text-orange-500" /></div> : recentProperties.length > 0 ? <div className="divide-y divide-slate-100">{recentProperties.map((apartment) => { const roomCount = apartment.rooms?.length ?? 0; const roomAvailable = apartment.rooms?.filter((room: any) => getRoomStatus(room) === "available").length ?? 0; return <button key={apartment.id} onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=overview", backLabel: "Back to Dashboard" } })} className="group flex w-full items-center gap-3 py-3 text-left first:pt-0 last:pb-0"><span className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">{apartment.image ? <img src={apartment.image} alt={apartment.title || "Property"} className="h-full w-full object-cover" /> : <Building2 className="h-6 w-6 text-slate-300" />}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-900">{apartment.title || "Untitled property"}</strong><span className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500"><MapPin className="h-3 w-3 shrink-0" />{apartment.address || apartment.city || "Address unavailable"}</span><span className="mt-2 flex flex-wrap gap-2"><Badge className="rounded-md bg-orange-50 text-orange-700">{roomCount} {roomCount === 1 ? "room" : "rooms"}</Badge><Badge className="rounded-md bg-emerald-50 text-emerald-700">{roomAvailable} available</Badge></span></span><ChevronRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500" /></button>; })}</div> : <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center"><Building2 className="mb-3 h-8 w-8 text-slate-300" /><h3 className="font-black text-slate-800">No properties yet</h3><p className="mt-1 text-sm font-medium text-slate-500">Add your first property to begin managing rooms and listings.</p><Link to="/add-apartment"><Button className="mt-4 rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600"><Plus className="mr-2 h-4 w-4" />Add Property</Button></Link></div>}
           </motion.section>
 
           <div className="space-y-5">
@@ -2445,7 +2523,7 @@ export function LandlordDashboard() {
                     <div className="flex items-start justify-between gap-4"><div className="min-w-0"><h2 className="truncate text-xl font-black text-slate-950">{apartment.title || "Untitled property"}</h2><p className="mt-1 flex items-center gap-1 truncate text-sm font-medium text-slate-500"><MapPin className="h-4 w-4 shrink-0 text-orange-500" />{location}</p></div><div className="shrink-0 text-right"><p className="text-sm font-black text-orange-600">Room pricing</p><p className="text-xs font-medium text-slate-500">Manage Rooms</p></div></div>
                     <div className="mt-4 grid grid-cols-3 gap-2">{[{ label: roomCount > 0 ? "Rooms" : "Beds", value: roomOrBedCount, icon: BedDouble }, { label: "Bathrooms", value: Number(apartment.bathrooms ?? 0), icon: Bath }, { label: "Floor Area", value: Number(apartment.sqft ?? 0) > 0 ? `${Number(apartment.sqft).toLocaleString("en-PH")} sqft` : "Unavailable", icon: Ruler }].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-lg border border-slate-100 bg-slate-50 p-3"><Icon className="mb-2 h-4 w-4 text-orange-500" /><strong className="block truncate text-sm text-slate-900">{value}</strong><span className="text-[10px] font-semibold text-slate-500">{label}</span></div>)}</div>
                     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2"><Badge className="rounded-md bg-emerald-100 text-emerald-700">{statusOption.label}</Badge><span className="text-xs font-bold text-slate-600">{availableRooms} available / {roomCount} total rooms</span></div>
-                    <div className="mt-4 grid grid-cols-2 gap-2"><Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/dashboard?section=properties" }}><Button variant="outline" className="h-10 w-full rounded-md border-orange-200 font-bold text-orange-700 hover:bg-orange-50"><Eye className="mr-2 h-4 w-4" />View Property</Button></Link><Link to={`/landlord/properties/${apartment.id}/rooms`}><Button className="h-10 w-full rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600">Manage Rooms</Button></Link></div>
+                    <div className="mt-4 grid grid-cols-2 gap-2"><Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/dashboard?section=properties", backLabel: "Back to My Properties" }}><Button variant="outline" className="h-10 w-full rounded-md border-orange-200 font-bold text-orange-700 hover:bg-orange-50"><Eye className="mr-2 h-4 w-4" />View Property</Button></Link><Link to={`/landlord/properties/${apartment.id}/rooms`}><Button className="h-10 w-full rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600">Manage Rooms</Button></Link></div>
                     <div className="mt-2 grid grid-cols-3 gap-2"><button onClick={() => openViewers(apartment.id, apartment.title, aptViews(apartment.id))} className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"><Eye className="h-4 w-4 text-orange-500" />{aptViews(apartment.id)} Views</button><button onClick={() => openFavoriters(apartment.id, apartment.title, aptFavs(apartment.id))} className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"><Heart className="h-4 w-4 text-rose-500" />{aptFavs(apartment.id)} Saved</button><button onClick={() => setEditingApartment(apartment as Apartment)} className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"><Edit2 className="h-4 w-4 text-blue-500" />Edit</button></div>
                     <div className="mt-2 grid grid-cols-2 gap-2">{apartment.isPublished ? <Button variant="outline" onClick={() => void handleTogglePublication(apartment.id, false)} className="h-10 rounded-md border-orange-200 font-bold text-orange-700 hover:bg-orange-50"><EyeOff className="mr-2 h-4 w-4" />Unpublish</Button> : <Button variant="outline" onClick={() => void handleTogglePublication(apartment.id, true)} className="h-10 rounded-md border-emerald-200 font-bold text-emerald-700 hover:bg-emerald-50"><EyeOpen className="mr-2 h-4 w-4" />Publish</Button>}<Button variant="outline" disabled={deletingApartmentId === apartment.id} onClick={() => void handleDeleteApartment(apartment.id)} className="h-10 rounded-md border-red-200 font-bold text-red-600 hover:bg-red-50"><Trash2 className="mr-2 h-4 w-4" />{deletingApartmentId === apartment.id ? "Deleting..." : "Delete"}</Button></div>
                   </div>
@@ -2522,7 +2600,7 @@ export function LandlordDashboard() {
                   const updatedAt = apartment.updatedAt ?? apartment.createdAt;
                   return <motion.article key={apartment.id} layout whileHover={{ y: -2 }} className={`overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md ${activityViewMode === "list" ? "md:grid md:grid-cols-[180px_minmax(0,1fr)]" : ""}`}>
                     <div className={`flex items-center justify-center overflow-hidden bg-slate-100 ${activityViewMode === "grid" ? "aspect-[16/8]" : "min-h-44"}`}>{apartment.image ? <img src={apartment.image} alt={apartment.title || "Property"} className="h-full w-full object-cover" /> : <Building2 className="h-9 w-9 text-slate-300" />}</div>
-                    <div className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><h3 className="truncate text-lg font-black text-slate-950">{apartment.title || "Untitled property"}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />{location}</p></div><Button variant="outline" onClick={() => navigate(`/apartment/${apartment.id}`)} className="h-9 shrink-0 rounded-md border-orange-200 text-xs font-bold text-orange-700 hover:bg-orange-50">View Details<ChevronRight className="ml-1 h-3.5 w-3.5" /></Button></div>
+                    <div className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><h3 className="truncate text-lg font-black text-slate-950">{apartment.title || "Untitled property"}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />{location}</p></div><Button variant="outline" onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=properties", backLabel: "Back to My Properties" } })} className="h-9 shrink-0 rounded-md border-orange-200 text-xs font-bold text-orange-700 hover:bg-orange-50">View Details<ChevronRight className="ml-1 h-3.5 w-3.5" /></Button></div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-lg bg-orange-50 p-3"><Eye className="mb-1 h-4 w-4 text-orange-600" /><strong className="block text-sm text-slate-900">{views}</strong><span className="text-[10px] font-semibold text-slate-500">Views</span></div><div className="rounded-lg bg-rose-50 p-3"><Heart className="mb-1 h-4 w-4 text-rose-600" /><strong className="block text-sm text-slate-900">{saves}</strong><span className="text-[10px] font-semibold text-slate-500">Saved</span></div><div className="rounded-lg bg-emerald-50 p-3"><span className="mb-1 block h-2 w-2 rounded-full bg-emerald-500" /><strong className="block text-xs text-emerald-700">{statusOption.label}</strong><span className="text-[10px] font-semibold text-slate-500">{availableRooms}/{roomCount} rooms</span></div><div className="rounded-lg bg-slate-50 p-3"><Calendar className="mb-1 h-4 w-4 text-slate-500" /><strong className="block text-[11px] text-slate-700">{updatedAt ? new Date(updatedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Unavailable"}</strong><span className="text-[10px] font-semibold text-slate-500">Last updated</span></div></div>
                     </div>
                   </motion.article>;
@@ -2548,7 +2626,7 @@ export function LandlordDashboard() {
       const targetType = String(notification.action_target_type ?? payload?.action_target_type ?? "").toLowerCase();
       if (["apartment", "property", "room", "listing"].includes(targetType)) return "apartments";
       const value = `${notification.type ?? ""} ${notification.title ?? ""} ${notification.message ?? ""} ${payload?.action ?? ""}`.toLowerCase();
-      if (value.includes("report") || value.includes("violation") || value.includes("appeal")) return "reports";
+      if (value.includes("report") || value.includes("violation") || value.includes("appeal") || value.includes("notice") || notification.type === "admin_message") return "reports";
       if (value.includes("verif") || value.includes("permit")) return "verification";
       if (["apartment", "property", "listing", "room", "favorite", "view", "application", "inquiry", "tenant"].some((keyword) => value.includes(keyword))) return "apartments";
       return "system";
@@ -2635,6 +2713,10 @@ export function LandlordDashboard() {
             {isLoadingNotifications ? <div className="flex min-h-96 items-center justify-center rounded-lg border border-slate-200 bg-white"><Clock className="h-7 w-7 animate-pulse text-orange-500" /></div> : <>
             {visibleNotifications.length > 0 ? <div className="space-y-3">{visibleNotifications.map((notification, index) => { const read = isNotificationRead(notification); const category = getNotificationCategory(notification); const meta = getCategoryMeta(category); const Icon = meta.icon; const highPriority = getNotificationPriority(notification); const notificationId = notification.id ?? `notification-${index}`; const dateKey = getDateKey(notification); const previousDateKey = index > 0 ? getDateKey(visibleNotifications[index - 1]) : null; const createdAt = notification.created_at ?? notification.createdAt; return <div key={notificationId}>{dateKey !== previousDateKey && <div className="mb-2 mt-4 flex items-center gap-2 first:mt-0"><span className="h-2.5 w-2.5 rounded-full bg-orange-500" /><h2 className="text-xs font-black text-slate-700">{dateKey}</h2></div>}<article className={`relative flex gap-3 rounded-lg border p-4 shadow-sm transition hover:shadow-md sm:p-5 ${read ? "border-slate-200 bg-white" : "border-orange-200 bg-orange-50/30"}`}><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}><Icon className="h-5 w-5" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-slate-900">{notification.title || notification.type || "Notification"}</h3>{!read && <Badge className="rounded-md bg-blue-50 text-blue-700">New</Badge>}{highPriority && <Badge className="rounded-md bg-rose-50 text-rose-700">High Priority</Badge>}</div><p className="mt-1 text-sm font-medium leading-6 text-slate-600">{notification.message || "No additional details were provided."}</p><div className="mt-3 flex flex-wrap items-center gap-2"><Badge className={`rounded-md ${meta.badge}`}>{meta.label}</Badge><time className="text-[11px] font-semibold text-slate-400">{createdAt ? new Date(createdAt).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Time unavailable"}</time><button onClick={() => void handleNotificationClick(notification)} className="ml-auto text-xs font-black text-orange-600 hover:text-orange-700">View details</button></div></div>{notification.id && <div className="relative"><button title="Notification actions" onClick={() => setOpenNotifMenuId(openNotifMenuId === notification.id ? null : notification.id!)} className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"><MoreVertical className="h-4 w-4" /></button>{openNotifMenuId === notification.id && <div className="absolute right-0 top-10 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"><button onClick={() => void handleNotificationClick(notification)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />View details</button><button onClick={() => void toggleNotifReadStatus(notification.id!, read)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50">{read ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}{read ? "Mark unread" : "Mark read"}</button><button disabled={deletingNotifId === notification.id} onClick={() => void deleteNotif(notification.id!)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />Delete</button></div>}</div>}</article></div>; })}</div> : notifications.length === 0 ? <div className="flex min-h-96 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-8 text-center"><Bell className="mb-3 h-10 w-10 text-slate-300" /><h2 className="text-lg font-black text-slate-800">No notifications yet</h2><p className="mt-1 text-sm font-medium text-slate-500">Updates about your properties and account will appear here.</p></div> : <div className="flex min-h-80 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-8 text-center"><Search className="mb-3 h-9 w-9 text-slate-300" /><h2 className="font-black text-slate-800">No matching notifications</h2><p className="mt-1 text-sm font-medium text-slate-500">Try changing the search, category, or status filter.</p></div>}
             </>}
+            <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between"><div><h2 className="font-black text-slate-900">Appeal History</h2><p className="text-xs font-medium text-slate-500">Your submitted appeals and administrator decisions.</p></div><Badge className="bg-orange-50 text-orange-700">{landlordAppeals.length}</Badge></div>
+              {landlordAppeals.length === 0 ? <p className="rounded-lg bg-slate-50 p-4 text-center text-xs font-medium text-slate-500">No appeals submitted yet.</p> : <div className="divide-y divide-slate-100">{landlordAppeals.map((appeal) => { const source = getAppealMetadata(appeal, "source"); return <div key={appeal.id} className="flex gap-3 py-3"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-800">{appeal.reason || "Appeal"}</span><span className="block truncate text-[10px] text-slate-500">{String(source?.apartment_title ?? source?.related_label ?? "Related issue")}</span>{appeal.admin_response && <span className="mt-1 block text-[10px] font-medium text-blue-700">Admin: {appeal.admin_response}</span>}</span><span className="h-fit rounded-md bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-700">{String(appeal.status ?? "pending").replace(/_/g, " ")}</span></div>; })}</div>}
+            </div>
           </section>
 
           <aside className="space-y-4">
@@ -2723,9 +2805,49 @@ export function LandlordDashboard() {
         />
       )}
 
+      {/* Landlord notification details */}
+      {selectedNotificationDetail && (() => {
+        const { notification, violation, appeal } = selectedNotificationDetail;
+        const payload = notification.payload ?? {};
+        const appealSource = appeal ? getAppealMetadata(appeal, "source") : undefined;
+        const apartmentId = String(payload.apartment_id ?? violation?.apartment_id ?? appealSource?.apartment_id ?? "");
+        const apartment = myApartments.find((item) => item.id === apartmentId);
+        const apartmentTitle = String(payload.apartment_title ?? appealSource?.apartment_title ?? apartment?.title ?? "Apartment unavailable");
+        const reportId = String(payload.report_id ?? payload.related_report_id ?? violation?.related_report_id ?? appeal?.report_id ?? "");
+        const violationId = String(payload.violation_id ?? violation?.id ?? appeal?.violation_id ?? "");
+        const existingAppeal = landlordAppeals.find((item) => {
+          const source = getAppealMetadata(item, "source");
+          return (reportId && item.report_id === reportId)
+            || (violationId && item.violation_id === violationId)
+            || (!reportId && !violationId && source?.notification_id === notification.id);
+        });
+        const canAppeal = notification.type !== "appeal_status_updated";
+        const appealForAction = appeal ?? existingAppeal;
+        const needsInformation = appealForAction?.status === "needs_information";
+        return (
+          <div className="fixed inset-0 z-[108] flex items-center justify-center overflow-y-auto p-4" onClick={() => setSelectedNotificationDetail(null)}>
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
+            <div role="dialog" aria-modal="true" className="relative z-10 my-8 w-full max-w-2xl overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-start justify-between border-b border-orange-100 bg-orange-50/50 px-6 py-5"><div><p className="text-xs font-black uppercase tracking-widest text-orange-600">Administrative notification</p><h2 className="mt-1 text-xl font-black text-slate-950">{notification.title || "Admin message"}</h2></div><button onClick={() => setSelectedNotificationDetail(null)} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+              <div className="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Apartment</p><p className="mt-1 text-sm font-bold text-slate-800">{apartmentTitle}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Date received</p><p className="mt-1 text-sm font-bold text-slate-800">{new Date(notification.created_at ?? notification.createdAt ?? Date.now()).toLocaleString("en-PH")}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Related record</p><p className="mt-1 break-all text-sm font-bold text-slate-800">{violationId ? `${violation?.mode === "notice" ? "Notice" : "Violation"}: ${violationId}` : reportId ? `Report: ${reportId}` : `Message: ${notification.id ?? "Unavailable"}`}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Status</p><p className="mt-1 text-sm font-bold capitalize text-slate-800">{String(appeal?.status ?? existingAppeal?.status ?? payload.status ?? "open").replace(/_/g, " ")}</p></div>
+                </div>
+                <div><p className="text-[10px] font-black uppercase text-slate-400">Admin message</p><p className="mt-2 whitespace-pre-wrap rounded-lg border border-slate-200 p-4 text-sm font-medium leading-6 text-slate-700">{String(appeal?.admin_response ?? payload.admin_response ?? notification.message ?? "No message provided.")}</p></div>
+                {(appeal || existingAppeal) && <div className="rounded-lg border border-blue-100 bg-blue-50 p-4"><p className="text-xs font-black text-blue-800">Appeal status: {String((appeal || existingAppeal)?.status ?? "pending").replace(/_/g, " ")}</p>{(appeal || existingAppeal)?.admin_response && <p className="mt-2 text-xs font-medium text-blue-700">{(appeal || existingAppeal)?.admin_response}</p>}</div>}
+              </div>
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-4 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => setSelectedNotificationDetail(null)} className="font-bold">Close</Button>{(canAppeal || needsInformation) && <Button disabled={Boolean(existingAppeal) && !needsInformation} onClick={() => openAppealForNotification({ ...selectedNotificationDetail, appeal: appealForAction ?? null })} className="bg-orange-500 font-bold text-white hover:bg-orange-600"><MessageSquare className="mr-2 h-4 w-4" />{needsInformation ? "Provide Information" : existingAppeal ? "Appeal Submitted" : "Submit Appeal"}</Button>}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Appeal modal */}
       {appealModal.open && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto" onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto" onClick={closeAppealModal}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative z-10 w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-amber-100 overflow-hidden my-8"
             onClick={(e) => e.stopPropagation()}>
@@ -2737,15 +2859,19 @@ export function LandlordDashboard() {
                 </div>
                 <div>
                   <p className="font-black text-slate-900">Submit Appeal</p>
-                  <p className="text-xs text-slate-400 font-medium">{appealModal.violationType}</p>
+                  <p className="text-xs text-slate-400 font-medium">{appealModal.relatedLabel}</p>
                 </div>
               </div>
-              <button onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <button onClick={closeAppealModal} disabled={isSubmittingAppeal} className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors disabled:opacity-50">
                 <X className="h-4 w-4 text-slate-500" />
               </button>
             </div>
             {/* Body */}
             <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Related apartment</p><p className="mt-1 text-sm font-bold text-slate-800">{appealModal.apartmentTitle}</p></div>
+                <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-slate-400">Related record</p><p className="mt-1 break-all text-xs font-bold text-slate-800">{appealModal.relatedLabel}</p></div>
+              </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Appeal Message (required)</label>
@@ -2760,18 +2886,9 @@ export function LandlordDashboard() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Appeal Status</label>
-                <select
-                  value={appealStatus}
-                  onChange={(e) => setAppealStatus(e.target.value as any)}
-                  className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
+              <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact information</label><input type="email" value={appealContact} onChange={(event) => setAppealContact(event.target.value)} placeholder="Email address" className="w-full rounded-xl border-2 border-amber-100 bg-amber-50/30 px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" /></div>
+
+              <div><p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Supporting evidence</p><EvidenceUploader evidenceFiles={appealEvidence} onEvidenceChange={setAppealEvidence} required={false} maxFiles={5} maxFileSize={10} /></div>
 
               <div className={`flex gap-3 p-3 rounded-xl border bg-amber-50 border-amber-100`}>
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
@@ -2782,36 +2899,51 @@ export function LandlordDashboard() {
             </div>
             {/* Footer */}
             <div className="px-6 py-4 border-t border-amber-50 flex gap-3">
-              <Button onClick={async () => {
+              <Button disabled={isSubmittingAppeal} onClick={async () => {
                 if (!appealMessage.trim()) {
                   toast.error("Please enter an appeal message");
                   return;
                 }
-                if (!user?.id || !appealModal.violationId) {
+                if (!validateEmail(appealContact.trim())) {
+                  toast.error("Please enter a valid contact email address");
+                  return;
+                }
+                if (!user?.id || !appealModal.notificationId) {
                   toast.error("Missing required information");
                   return;
                 }
 
+                setIsSubmittingAppeal(true);
                 try {
-                  await createAppeal({
-                    violation_id: appealModal.violationId,
-                    landlord_id: user.id,
-                    reason: appealModal.violationType || "Violation Appeal",
-                    description: appealMessage,
-                  });
-                  toast.success("Appeal submitted successfully");
-                  setAppealModal({ open: false, violationId: null, violationType: "" });
-                  setAppealMessage("");
-                  setAppealStatus("under_review");
-                } catch (err) {
-                  toast.error("Failed to submit appeal");
+                  const evidence = appealEvidence.map((item) => ({ file: item.file, fileName: item.fileName, mimeType: item.mimeType }));
+                  const created = appealModal.appealId
+                    ? await submitAppealFollowupWithEvidence(appealModal.appealId, user.id, appealMessage.trim(), appealContact.trim(), evidence)
+                    : await createAppealWithEvidence({
+                        landlord_id: user.id,
+                        report_id: appealModal.reportId,
+                        violation_id: appealModal.violationId,
+                        reason: `${appealModal.relatedType.replace(/_/g, " ")} appeal`,
+                        description: appealMessage.trim(),
+                        supporting_docs: [
+                          { kind: "contact", value: appealContact.trim() },
+                          { kind: "source", notification_id: appealModal.notificationId, apartment_id: appealModal.apartmentId, apartment_title: appealModal.apartmentTitle, related_type: appealModal.relatedType, related_label: appealModal.relatedLabel },
+                        ],
+                      }, evidence);
+                  setLandlordAppeals((previous) => [created, ...previous.filter((item) => item.id !== created.id)]);
+                  toast.success(appealModal.appealId ? "Additional information submitted" : "Appeal submitted successfully");
+                  closeAppealModal();
+                  setSelectedNotificationDetail(null);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to submit appeal");
+                } finally {
+                  setIsSubmittingAppeal(false);
                 }
               }}
                 className="flex-1 font-bold rounded-xl shadow-md text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
                 <MessageSquare className="h-4 w-4 mr-2 inline" />
-                Submit Appeal
+                {isSubmittingAppeal ? "Submitting..." : "Submit Appeal"}
               </Button>
-              <Button variant="outline" onClick={() => setAppealModal({ open: false, violationId: null, violationType: "" })} className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
+              <Button variant="outline" onClick={closeAppealModal} disabled={isSubmittingAppeal} className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
                 Cancel
               </Button>
             </div>

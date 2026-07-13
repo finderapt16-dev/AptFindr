@@ -260,7 +260,7 @@ export function Favorites() {
 
           <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row">
             <Button asChild variant="outline" className="h-12 flex-1 rounded-lg border-slate-200 font-black text-slate-700 hover:bg-slate-50">
-              <Link to={`/apartment/${apartment.id}`}>
+              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/favorites", backLabel: "Back to Favorites" }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </Link>
@@ -283,7 +283,8 @@ export function Favorites() {
   return (
     <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
       <div className="app-shell-frame flex h-full">
-        <aside className="app-shell-sidebar app-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
+        <aside className="app-shell-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
+          <div className="app-sidebar flex h-full w-full flex-col overflow-y-auto">
           <div className="app-sidebar-brand px-5 pb-5 pt-6">
             <Link to="/dashboard" className="flex items-center gap-2.5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-950/30">
@@ -337,6 +338,7 @@ export function Favorites() {
                 Log Out
               </button>
             </LogoutConfirmation>
+          </div>
           </div>
         </aside>
 

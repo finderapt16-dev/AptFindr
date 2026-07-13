@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 /* ─── Floating label input ─────────────────────────────────── */
 function FloatInput({
@@ -141,7 +141,13 @@ function AccordionSection({
 /* ════════════════════════════════════════════════════════════ */
 export function Signup() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signup } = useAuth();
+  const requestedRedirect = new URLSearchParams(location.search).get("redirect");
+  const redirectTo = requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+    ? requestedRedirect
+    : null;
+  const loginPath = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login";
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -218,7 +224,7 @@ export function Signup() {
         idDocument: idFile ?? undefined,
       });
       if (result.success) {
-        navigate("/login", { state: { message: "Account created successfully! Please login." } });
+        navigate(loginPath, { state: { message: "Account created successfully! Please login." } });
       } else {
         setError(result.error || "Signup failed");
       }
@@ -345,7 +351,7 @@ export function Signup() {
             <AppLogo className="h-8 w-8 rounded-lg" iconClassName="h-4 w-4" />
             <span className="font-black text-amber-600 text-base">AptFindr</span>
           </Link>
-          <Link to="/login" className="text-sm font-bold text-slate-500 hover:text-amber-600 transition-colors">
+          <Link to={loginPath} className="text-sm font-bold text-slate-500 hover:text-amber-600 transition-colors">
             Sign in
           </Link>
         </div>
@@ -358,7 +364,7 @@ export function Signup() {
               <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight">Create your account</h1>
               <p className="text-slate-500 text-sm mt-1.5">
                 Already registered?{" "}
-                <Link to="/login" className="text-amber-600 font-bold hover:text-amber-700 transition-colors">Sign in here</Link>
+                <Link to={loginPath} className="text-amber-600 font-bold hover:text-amber-700 transition-colors">Sign in here</Link>
               </p>
             </div>
 

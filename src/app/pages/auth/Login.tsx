@@ -77,6 +77,13 @@ export function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const requestedRedirect = new URLSearchParams(location.search).get("redirect");
+  const redirectTo = requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+    ? requestedRedirect
+    : "/dashboard";
+  const signupPath = requestedRedirect
+    ? `/signup?redirect=${encodeURIComponent(redirectTo)}`
+    : "/signup";
 
   useEffect(() => {
     if (location.state?.message) {
@@ -92,7 +99,7 @@ export function Login() {
     try {
       const result = await login({ email, password });
       if (result.success) {
-        navigate("/dashboard");
+        navigate(redirectTo, { replace: true });
       } else {
         setError(result.error || "Login failed");
       }
@@ -214,7 +221,7 @@ export function Login() {
             <AppLogo className="h-8 w-8 rounded-lg" iconClassName="h-4 w-4" />
             <span className="font-black text-amber-600 text-base">AptFindr</span>
           </Link>
-          <Link to="/signup" className="text-sm font-bold text-slate-500 hover:text-amber-600 transition-colors">
+          <Link to={signupPath} className="text-sm font-bold text-slate-500 hover:text-amber-600 transition-colors">
             Create account
           </Link>
         </div>
@@ -227,7 +234,7 @@ export function Login() {
               <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight">Sign in to your account</h1>
               <p className="text-slate-500 text-sm mt-1.5">
                 New to AptFindr?{" "}
-                <Link to="/signup" className="text-amber-600 font-bold hover:text-amber-700 transition-colors">
+                <Link to={signupPath} className="text-amber-600 font-bold hover:text-amber-700 transition-colors">
                   Create an account
                 </Link>
               </p>
