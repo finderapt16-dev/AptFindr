@@ -1840,12 +1840,38 @@ declare
   v_is_archived boolean;
   v_deleted_at timestamptz;
   v_status text;
+  v_landlord_role text;
+  v_landlord_is_verified boolean;
+  v_landlord_status text;
+  v_landlord_verification_status text;
+  v_landlord_account_status text;
 begin
-  select landlord_id, approval_status, is_archived, deleted_at, status
-  into v_landlord_id, v_approval_status, v_is_archived, v_deleted_at, v_status
-  from public.apartments
-  where id = p_apartment_id
-  for update;
+  select
+    apartment.landlord_id,
+    apartment.approval_status,
+    apartment.is_archived,
+    apartment.deleted_at,
+    apartment.status,
+    landlord.role,
+    landlord.is_verified,
+    landlord.status,
+    landlord.verification_status,
+    landlord.landlord_status
+  into
+    v_landlord_id,
+    v_approval_status,
+    v_is_archived,
+    v_deleted_at,
+    v_status,
+    v_landlord_role,
+    v_landlord_is_verified,
+    v_landlord_status,
+    v_landlord_verification_status,
+    v_landlord_account_status
+  from public.apartments apartment
+  left join public.app_users landlord on landlord.id = apartment.landlord_id
+  where apartment.id = p_apartment_id
+  for update of apartment;
 
   if not found then
     raise exception 'Apartment not found' using errcode = 'P0002';
@@ -1857,6 +1883,17 @@ begin
 
   if p_published and v_status <> 'available' then
     raise exception 'Only an active, available apartment can be published' using errcode = '23514';
+  end if;
+
+  if p_published and (
+    v_landlord_id is null
+    or v_landlord_role is distinct from 'landlord'
+    or v_landlord_is_verified is distinct from true
+    or lower(coalesce(v_landlord_status, '')) in ('pending', 'unverified', 'rejected', 'suspended', 'disabled')
+    or lower(coalesce(v_landlord_verification_status, '')) in ('pending', 'unverified', 'rejected', 'suspended', 'disabled')
+    or lower(coalesce(v_landlord_account_status, '')) in ('pending', 'unverified', 'rejected', 'suspended', 'disabled')
+  ) then
+    raise exception 'This apartment cannot be published because the landlord has not been verified.' using errcode = '42501';
   end if;
 
   if p_published and not v_is_admin and (

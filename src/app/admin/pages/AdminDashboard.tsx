@@ -201,6 +201,19 @@ function text(value: string | null | undefined, fallback = ""): string {
   return value && value.length > 0 ? value : fallback;
 }
 
+const getLandlordVerificationStatus = (landlord: DashboardUserRow | null): string => {
+  if (!landlord) return "Missing";
+  const explicitStatus = String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").trim();
+  if (landlord.isVerified === true || landlord.is_verified === true) return "Verified";
+  if (explicitStatus.length > 0) return explicitStatus.charAt(0).toUpperCase() + explicitStatus.slice(1).toLowerCase();
+  return "Pending";
+};
+
+const canPublishForLandlord = (landlord: DashboardUserRow | null): boolean =>
+  (landlord?.isVerified ?? landlord?.is_verified) === true && !["pending", "unverified", "rejected", "suspended", "disabled"].includes(
+    String(landlord?.landlord_status ?? landlord?.verification_status ?? landlord?.status ?? "").trim().toLowerCase(),
+  );
+
 function activityTimestamp(value: unknown): string {
   return typeof value === "string" && value.length > 0 ? value : "";
 }
@@ -716,6 +729,11 @@ export function AdminDashboard() {
 
   const handleApproveAndPublishApartment = async (apartment: ListingRecord) => {
     if (!apartment.id || !user?.id || publishingApartmentId) return;
+    const landlord = getLandlordForApt(apartment);
+    if (!canPublishForLandlord(landlord)) {
+      toast.error("This apartment cannot be published because the landlord has not been verified.");
+      return;
+    }
 
     setPublishingApartmentId(apartment.id);
     try {
@@ -1416,9 +1434,9 @@ export function AdminDashboard() {
 
     return (
       <motion.div
-        initial="hidden"
+        initial={false}
         animate="show"
-        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.055 } } }}
+        variants={{ show: { transition: { staggerChildren: 0.055 } } }}
         className="mx-auto max-w-[1500px] space-y-5 text-slate-900"
       >
         <motion.header variants={itemMotion} className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 xl:flex-row xl:items-center xl:justify-between">
@@ -2075,6 +2093,9 @@ export function AdminDashboard() {
       {/* Apartment detail modal */}
       {selectedApt && (() => {
         const landlord = getLandlordForApt(selectedApt);
+        const landlordVerificationStatus = getLandlordVerificationStatus(landlord);
+        const landlordCanPublish = canPublishForLandlord(landlord);
+        const publicationBlockedByLandlord = selectedApt.isPublished === false && !landlordCanPublish;
         const aptViolations = violations.filter((v) => v.apartment_id === selectedApt.id || (!v.apartment_id && v.apartmentTitle === selectedApt.title));
         const aptReports = reports.filter((r) => r.apartmentId === selectedApt.id && r.status === "pending");
         const isAvailable = new Date(selectedApt.availableDate) <= new Date();
@@ -2222,10 +2243,29 @@ export function AdminDashboard() {
                         <p className="font-black text-slate-900 text-sm">{landlord.name}</p>
                         <p className="text-xs text-slate-400 font-medium">{landlord.email}</p>
                       </div>
-                      {landlord.isVerified
+                      {landlordCanPublish
                         ? <Badge className="bg-green-100 text-green-800 border border-green-200 font-bold text-xs shrink-0"><CheckCircle2 className="h-3 w-3 mr-1" />Verified</Badge>
-                        : <Badge className="bg-orange-100 text-orange-700 border border-orange-200 font-bold text-xs shrink-0"><Clock className="h-3 w-3 mr-1" />Pending</Badge>}
+                        : <Badge className="bg-orange-100 text-orange-700 border border-orange-200 font-bold text-xs shrink-0"><Clock className="h-3 w-3 mr-1" />{landlordVerificationStatus}</Badge>}
                     </div>
+                    {publicationBlockedByLandlord && (
+                      <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-bold leading-5 text-amber-800">
+                          This apartment cannot be published because the landlord has not been verified.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedApt(null);
+                            setSelectedLandlord(landlord);
+                          }}
+                          className="mt-2 h-8 rounded-lg border-amber-200 text-xs font-black text-amber-700 hover:bg-amber-100"
+                        >
+                          <FileText className="mr-1.5 h-3.5 w-3.5" />
+                          Review Landlord Verification
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Reports from students/employees */}
@@ -2293,7 +2333,7 @@ export function AdminDashboard() {
                   {selectedApt.isPublished === false && (
                     <Button
                       onClick={() => void handleApproveAndPublishApartment(selectedApt)}
-                      disabled={publishingApartmentId === selectedApt.id}
+                      disabled={publishingApartmentId === selectedApt.id || publicationBlockedByLandlord}
                       className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold rounded-xl shadow-md"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />

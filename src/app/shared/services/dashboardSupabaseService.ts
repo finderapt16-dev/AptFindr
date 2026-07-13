@@ -146,6 +146,9 @@ export interface DashboardUserRow extends DashboardRow {
   email?: string | null;
   name?: string | null;
   role?: string | null;
+  status?: string | null;
+  verification_status?: string | null;
+  landlord_status?: string | null;
   is_verified?: boolean | null;
   isVerified?: boolean | null;
   mobile?: string | null;
@@ -490,6 +493,9 @@ function toUserRow(row: DashboardRow): DashboardUserRow {
     email: getStringValue(row.email),
     name: getStringValue(row.name),
     role: getStringValue(row.role),
+    status: getStringValue(row.status),
+    verification_status: getStringValue(row.verification_status),
+    landlord_status: getStringValue(row.landlord_status),
     is_verified: typeof row.is_verified === "boolean" ? row.is_verified : null,
     isVerified: typeof row.isVerified === "boolean" ? row.isVerified : null,
     mobile: getStringValue(row.mobile),

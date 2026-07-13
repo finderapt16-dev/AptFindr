@@ -2399,7 +2399,7 @@ export function LandlordDashboard() {
     const itemMotion = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
     return (
-      <motion.div initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.055 } } }} className="mx-auto max-w-[1500px] space-y-5">
+      <motion.div initial={false} animate="show" variants={{ show: { transition: { staggerChildren: 0.055 } } }} className="mx-auto max-w-[1500px] space-y-5">
         <motion.section variants={itemMotion} className={`flex flex-col gap-4 rounded-lg border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between ${landlordVerified ? "border-emerald-200" : "border-orange-200"}`}>
           <div className="flex items-start gap-4">
             <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${landlordVerified ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-600"}`}>{landlordVerified ? <ShieldCheck className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}</span>

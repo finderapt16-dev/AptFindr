@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { hasValidApartmentCoordinates } from "@/app/shared/utils/mapCoordinates";
 // @ts-ignore
 import L from "leaflet";
 // @ts-ignore
@@ -249,11 +250,7 @@ export function MapView({
     if (showSingleMarker) {
       L.marker([lat, lng], { icon: singleMarkerIcon }).addTo(map).bindPopup("Location");
     } else {
-      const validApartments = apartments.filter((apartment) => (
-        Number.isFinite(apartment.lat) &&
-        Number.isFinite(apartment.lng) &&
-        !(apartment.lat === 0 && apartment.lng === 0)
-      ));
+      const validApartments = apartments.filter((apartment) => hasValidApartmentCoordinates(apartment.lat, apartment.lng));
 
       if (validApartments.length === 0) {
         L.popup({ closeButton: false, closeOnClick: false, autoClose: false })

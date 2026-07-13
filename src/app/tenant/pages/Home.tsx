@@ -66,6 +66,10 @@ import {
   getLowestAvailableRoomPrice,
   isTenantVisibleApartment,
 } from "@/app/shared/utils/listingVisibility";
+import {
+  DEFAULT_LA_PAZ_MAP_CENTER,
+  hasValidApartmentCoordinates,
+} from "@/app/shared/utils/mapCoordinates";
 import { rankApartments, type TenantPreferences } from "@/app/shared/utils/rankingEngine";
 import { toast } from "sonner";
 import { LandlordBrowse } from "@/app/landlord/pages/LandlordBrowse";
@@ -296,7 +300,7 @@ function TenantBrowse() {
   const pageStart = (safePage - 1) * itemsPerPage;
   const paginatedApartments = filteredApartments.slice(pageStart, pageStart + itemsPerPage);
   const activeFilterCount = [petFriendly, parking, furnished, bedrooms !== "any", budgetFilterEnabled].filter(Boolean).length;
-  const mappedApartmentCount = filteredApartments.filter((apartment) => Number.isFinite(apartment.lat) && Number.isFinite(apartment.lng) && !(apartment.lat === 0 && apartment.lng === 0)).length;
+  const mappedApartmentCount = filteredApartments.filter((apartment) => hasValidApartmentCoordinates(apartment.lat, apartment.lng)).length;
   const realPriceValues = useMemo(
     () =>
       allApartments
@@ -328,7 +332,7 @@ function TenantBrowse() {
     });
   }, [realPriceValues]);
 
-  const mapCenter = { lat: 10.7202, lng: 122.5621 };
+  const mapCenter = DEFAULT_LA_PAZ_MAP_CENTER;
   const displayName = user?.name?.trim();
   const portalLabel = user?.role === "student" ? "Student Portal" : "Employee Portal";
 

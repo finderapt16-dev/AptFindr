@@ -19,6 +19,7 @@ interface LocationPickerProps {
   onLocationChange: (lat: number, lng: number) => void;
   addressQuery?: string;
   geocodeRequestKey?: number;
+  onGeocodeStatusChange?: (status: "idle" | "loading" | "found" | "not-found" | "error") => void;
 }
 
 type GeocodedLocation = {
@@ -36,11 +37,13 @@ export function LocationPicker({
   onLocationChange,
   addressQuery = "",
   geocodeRequestKey = 0,
+  onGeocodeStatusChange,
 }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const onLocationChangeRef = useRef(onLocationChange);
+  const onGeocodeStatusChangeRef = useRef(onGeocodeStatusChange);
   const [isClient, setIsClient] = useState(false);
   const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "loading" | "found" | "not-found" | "error">("idle");
   const [matchedAddress, setMatchedAddress] = useState("");
@@ -48,6 +51,15 @@ export function LocationPicker({
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
   }, [onLocationChange]);
+
+  useEffect(() => {
+    onGeocodeStatusChangeRef.current = onGeocodeStatusChange;
+  }, [onGeocodeStatusChange]);
+
+  const updateGeocodeStatus = (status: "idle" | "loading" | "found" | "not-found" | "error") => {
+    setGeocodeStatus(status);
+    onGeocodeStatusChangeRef.current?.(status);
+  };
 
   useEffect(() => {
     setIsClient(true);
@@ -73,12 +85,14 @@ export function LocationPicker({
     map.on("click", (e: L.LeafletMouseEvent) => {
       const { lat: newLat, lng: newLng } = e.latlng;
       marker.setLatLng([newLat, newLng]);
+      updateGeocodeStatus("found");
       onLocationChangeRef.current(newLat, newLng);
     });
 
     // Handle marker drag
     marker.on("dragend", () => {
       const position = marker.getLatLng();
+      updateGeocodeStatus("found");
       onLocationChangeRef.current(position.lat, position.lng);
     });
 
@@ -104,7 +118,7 @@ export function LocationPicker({
 
     const query = addressQuery.trim().replace(/\s+/g, " ");
     if (query.length < 3) {
-      setGeocodeStatus("not-found");
+      updateGeocodeStatus("not-found");
       setMatchedAddress("");
       return;
     }
@@ -122,14 +136,14 @@ export function LocationPicker({
 
     if (cached && Number.isFinite(cached.lat) && Number.isFinite(cached.lng)) {
       geocodeMemoryCache.set(cacheKey, cached);
-      setGeocodeStatus("found");
+      updateGeocodeStatus("found");
       setMatchedAddress(cached.label);
       onLocationChangeRef.current(cached.lat, cached.lng);
       return;
     }
 
     const controller = new AbortController();
-    setGeocodeStatus("loading");
+    updateGeocodeStatus("loading");
     setMatchedAddress("");
 
     // Delay each user-triggered lookup so rapid focus changes never flood the public service.
@@ -154,7 +168,7 @@ export function LocationPicker({
         const nextLat = Number(first?.lat);
         const nextLng = Number(first?.lon);
         if (!first || !Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
-          setGeocodeStatus("not-found");
+          updateGeocodeStatus("not-found");
           return;
         }
 
@@ -165,15 +179,15 @@ export function LocationPicker({
         } catch {
           // A successful lookup should still update the map if storage is unavailable.
         }
-        setGeocodeStatus("found");
+        updateGeocodeStatus("found");
         setMatchedAddress(location.label);
         onLocationChangeRef.current(location.lat, location.lng);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Unable to locate the entered address:", error);
-        setGeocodeStatus("error");
+        updateGeocodeStatus("error");
       }
-    }, 1100);
+    }, 500);
 
     return () => {
       window.clearTimeout(timer);
@@ -201,7 +215,7 @@ export function LocationPicker({
       </p>
       {geocodeStatus === "loading" && <p className="text-sm font-medium text-amber-700">Finding the entered address on the map...</p>}
       {geocodeStatus === "found" && <p className="text-sm font-medium text-emerald-700">Map pinned to: {matchedAddress}</p>}
-      {geocodeStatus === "not-found" && <p className="text-sm font-medium text-red-600">Address not found. Add a street or barangay name, then click or drag the map pin if needed.</p>}
+      {geocodeStatus === "not-found" && <p className="text-sm font-medium text-red-600">We could not find this address on the map. Please check the address or move the marker manually.</p>}
       {geocodeStatus === "error" && <p className="text-sm font-medium text-red-600">The address lookup is temporarily unavailable. You can still click or drag the map pin.</p>}
       <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded border border-slate-200">
         <div>

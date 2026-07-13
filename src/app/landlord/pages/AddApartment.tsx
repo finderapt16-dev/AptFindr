@@ -27,6 +27,10 @@ import {
   type PendingVerificationDocument,
   type VerificationDocumentType,
 } from "@/app/shared/services/verificationDocumentsService";
+import {
+  DEFAULT_LA_PAZ_MAP_CENTER,
+  hasValidApartmentCoordinates,
+} from "@/app/shared/utils/mapCoordinates";
 import { supabase } from "@/lib/supabaseclient";
 import {
   AlertCircle,
@@ -80,7 +84,6 @@ type PropertyDraft = {
   features: string[];
   featureInput: string;
   verificationData: {
-    propertyName: string;
     propertyAddress: string;
     businessPermit: string;
     tinNumber: string;
@@ -170,8 +173,6 @@ const INITIAL_FORM_DATA: Partial<Apartment> = {
   petFriendly: false,
   parking: false,
   furnished: false,
-  lat: 10.7202,
-  lng: 122.5621,
   image: "",
   images: [],
   amenities: [],
@@ -180,7 +181,6 @@ const INITIAL_FORM_DATA: Partial<Apartment> = {
 };
 
 const INITIAL_VERIFICATION_DATA = {
-  propertyName: "",
   propertyAddress: "",
   businessPermit: "",
   tinNumber: "",
@@ -209,6 +209,9 @@ export function AddApartment() {
 
   const [formData, setFormData] = useState<Partial<Apartment>>({ ...INITIAL_FORM_DATA });
   const [locationLookupRequest, setLocationLookupRequest] = useState(0);
+  const [locationPinned, setLocationPinned] = useState(false);
+  const [locationResolving, setLocationResolving] = useState(false);
+  const lastAutoGeocodedAddressRef = useRef("");
 
   // ── Rooms state ───────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<Room[]>([makeRoom()]);
@@ -343,6 +346,9 @@ export function AddApartment() {
     });
     setValidationErrors({});
     setImageReuploadRequired(false);
+    setLocationPinned(false);
+    setLocationResolving(false);
+    lastAutoGeocodedAddressRef.current = "";
   };
 
   const discardDraft = (resetForm = true) => {
@@ -357,7 +363,9 @@ export function AddApartment() {
     if (!pendingDraft) return;
     skipNextAutoSaveRef.current = true;
     setCurrentStep(Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1)));
-    setFormData({ ...INITIAL_FORM_DATA, ...pendingDraft.formData, image: "", images: [] });
+    const restoredFormData = { ...INITIAL_FORM_DATA, ...pendingDraft.formData, image: "", images: [] };
+    setFormData(restoredFormData);
+    setLocationPinned(hasValidApartmentCoordinates(restoredFormData.lat, restoredFormData.lng));
     setRooms(pendingDraft.rooms.length > 0 ? pendingDraft.rooms : [makeRoom()]);
     setUploadedImages(pendingDraft.uploadedImages ?? []);
     setAmenitiesInput(pendingDraft.amenitiesInput ?? "");
@@ -470,6 +478,27 @@ export function AddApartment() {
   const FieldError = ({ field }: { field: string }) =>
     validationErrors[field] ? <p className="text-xs font-bold text-red-600">{validationErrors[field]}</p> : null;
 
+  const locationAddressQuery = useMemo(
+    () => [formData.address, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", "),
+    [formData.address, formData.city, formData.state, formData.zip],
+  );
+
+  useEffect(() => {
+    if (currentStep !== 3) return;
+    if (!String(formData.address ?? "").trim()) return;
+
+    const normalizedQuery = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
+    if (!normalizedQuery || normalizedQuery === lastAutoGeocodedAddressRef.current) return;
+
+    setLocationResolving(true);
+    const timer = window.setTimeout(() => {
+      lastAutoGeocodedAddressRef.current = normalizedQuery;
+      setLocationLookupRequest((request) => request + 1);
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [currentStep, formData.address, locationAddressQuery]);
+
   const getSubmittedAmenities = () =>
     amenitiesInput.split(",").map((amenity) => amenity.trim()).filter(Boolean);
 
@@ -489,8 +518,10 @@ export function AddApartment() {
     if (uploadedImages.length === 0) errors.images = "Upload at least one property image.";
 
     if (!String(formData.address ?? "").trim()) errors.address = "Complete address is required.";
-    if (!Number.isFinite(Number(formData.lat)) || !Number.isFinite(Number(formData.lng))) {
-      errors.mapLocation = "Map location is required.";
+    if (locationResolving) {
+      errors.mapLocation = "Finding this address on the map. Please wait a moment.";
+    } else if (!locationPinned || !hasValidApartmentCoordinates(formData.lat, formData.lng)) {
+      errors.mapLocation = "Pin this apartment's real map location before submitting.";
     }
 
     if (!String(verificationData.businessPermit).trim()) errors.businessPermit = "Business permit number is required.";
@@ -634,8 +665,8 @@ export function AddApartment() {
       parking: featureLower.includes("parking"),
       furnished: featureLower.includes("furnished"),
       utilities: utilityItems,
-      lat: Number(formData.lat) || 10.7202,
-      lng: Number(formData.lng) || 122.5621,
+      lat: Number(formData.lat),
+      lng: Number(formData.lng),
       landlordId: user.id,
       isPublished: false,
       status: formData.status ?? "available",
@@ -648,7 +679,7 @@ export function AddApartment() {
         utilityItems,
         customFeatures: submittedFeatures,
         verification: {
-          propertyName: verificationData.propertyName || formData.title || "",
+          propertyName: formData.title || "",
           propertyAddress: verificationData.propertyAddress || formData.address || "",
           businessPermit: verificationData.businessPermit,
           tinNumber: verificationData.tinNumber,
@@ -1015,7 +1046,9 @@ export function AddApartment() {
                     <Input
                       value={formData.address}
                       onChange={(e) => {
-                        setFormData({ ...formData, address: e.target.value });
+                        setFormData({ ...formData, address: e.target.value, lat: undefined, lng: undefined });
+                        setLocationPinned(false);
+                        setLocationResolving(Boolean(e.target.value.trim()));
                         if (e.target.value.trim()) clearValidationError("address");
                       }}
                       onBlur={() => setLocationLookupRequest((request) => request + 1)}
@@ -1044,14 +1077,19 @@ export function AddApartment() {
 
                   <div className="space-y-3">
                     <Label className="text-slate-700 font-bold">Map Location</Label>
-                    <p className="text-xs text-slate-500">Drag the marker to set location</p>
+                    <p className="text-xs text-slate-500">Enter the address, then use the map result or drag the marker to the exact apartment location.</p>
                     <div className="rounded-2xl border-2 border-amber-200 overflow-hidden bg-white shadow-sm" style={{ height: "500px" }}>
                       <LocationPicker
-                        lat={formData.lat ?? 0}
-                        lng={formData.lng ?? 0}
-                        addressQuery={[formData.address, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", ")}
+                        lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat}
+                        lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng}
+                        addressQuery={locationAddressQuery}
                         geocodeRequestKey={locationLookupRequest}
-                        onLocationChange={(lat, lng) => setFormData((current) => ({ ...current, lat, lng }))}
+                        onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")}
+                        onLocationChange={(lat, lng) => {
+                          setFormData((current) => ({ ...current, lat, lng }));
+                          setLocationPinned(hasValidApartmentCoordinates(lat, lng));
+                          if (hasValidApartmentCoordinates(lat, lng)) clearValidationError("mapLocation");
+                        }}
                       />
                     </div>
                     <FieldError field="mapLocation" />
@@ -1400,16 +1438,12 @@ export function AddApartment() {
                       <Building2 className="h-3.5" /> Property / Apartment Name
                     </Label>
                     <Input
-                      value={verificationData.propertyName}
-                      onChange={(e) => {
-                        setVerificationData({ ...verificationData, propertyName: e.target.value });
-                        if (e.target.value.trim()) clearValidationError("verificationPropertyName");
-                      }}
-                      aria-invalid={Boolean(validationErrors.verificationPropertyName)}
+                      value={String(formData.title ?? "")}
+                      readOnly
                       placeholder="e.g., Sunset Heights"
-                      className={fieldClass("verificationPropertyName")}
+                      className="rounded-xl border-slate-200 bg-slate-50 font-semibold text-slate-700"
                     />
-                    <FieldError field="verificationPropertyName" />
+                    <p className="text-xs font-medium text-slate-500">Carried from Property Information. Go back to step 1 to edit this name.</p>
                   </div>
 
                   <div className="space-y-3">
@@ -1570,8 +1604,8 @@ export function AddApartment() {
                     Next <ArrowRight className="h-5 w-5" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl h-12 font-bold disabled:opacity-60 disabled:cursor-not-allowed">
-                    <Check className="h-5 w-5" /> {isSubmitting ? "Submitting..." : "List Property"}
+                  <Button type="submit" disabled={isSubmitting || locationResolving} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl h-12 font-bold disabled:opacity-60 disabled:cursor-not-allowed">
+                    <Check className="h-5 w-5" /> {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "List Property"}
                   </Button>
                 )}
               </div>

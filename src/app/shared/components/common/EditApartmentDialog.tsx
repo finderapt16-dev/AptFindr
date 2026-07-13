@@ -1,5 +1,6 @@
 import { Home, Images, Plus, Star, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Apartment } from "../../data/apartments";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -7,7 +8,9 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
+import { LocationPicker } from "./LocationPicker";
 import { MultiImageUploader, type UploadedImage } from "./MultiImageUploader";
+import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates } from "../../utils/mapCoordinates";
 
 interface EditApartmentDialogProps {
   apartment: Apartment;
@@ -35,6 +38,9 @@ const getEditableFeatures = (apartment: Apartment): string[] => {
 export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: EditApartmentDialogProps) {
   const [formData, setFormData] = useState<Apartment>(apartment);
   const [isSaving, setIsSaving] = useState(false);
+  const [locationLookupRequest, setLocationLookupRequest] = useState(0);
+  const [locationResolving, setLocationResolving] = useState(false);
+  const lastAutoGeocodedAddressRef = useRef("");
   const [amenitiesInput, setAmenitiesInput] = useState(apartment.amenities.join(", "));
   const [utilitiesInput, setUtilitiesInput] = useState(
     Array.isArray(apartment.utilities) ? apartment.utilities.join(", ") : "",
@@ -59,6 +65,14 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
     setAmenitiesInput(apartment.amenities.join(", "));
     setUtilitiesInput(Array.isArray(apartment.utilities) ? apartment.utilities.join(", ") : "");
     setFeaturesInput(getEditableFeatures(apartment).join(", "));
+    setLocationLookupRequest(0);
+    setLocationResolving(false);
+    lastAutoGeocodedAddressRef.current = [apartment.address, apartment.city, apartment.state, apartment.zip, "Philippines"]
+      .filter(Boolean)
+      .join(", ")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
     setExistingImages((apartment.images || []).map((url, index) => ({
       id: `existing-${index}`,
       url,
@@ -99,6 +113,26 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
   const availableRooms = rooms.filter((room) => !room.isOccupied).length;
   const occupiedRooms = rooms.filter((room) => room.isOccupied).length;
   const privateBathRooms = rooms.filter((room) => room.hasPrivateBath).length;
+  const locationAddressQuery = useMemo(
+    () => [formData.address, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", "),
+    [formData.address, formData.city, formData.state, formData.zip],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    if (!formData.address.trim()) return;
+
+    const normalizedQuery = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
+    if (!normalizedQuery || normalizedQuery === lastAutoGeocodedAddressRef.current) return;
+
+    setLocationResolving(true);
+    const timer = window.setTimeout(() => {
+      lastAutoGeocodedAddressRef.current = normalizedQuery;
+      setLocationLookupRequest((request) => request + 1);
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [formData.address, locationAddressQuery, open]);
 
   const updateRoom = (roomId: string | undefined, patch: Partial<NonNullable<Apartment["rooms"]>[number]>) => {
     setFormData((prev) => ({
@@ -126,6 +160,21 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;
+
+    if (!formData.address.trim()) {
+      toast.error("Address is required before saving.");
+      return;
+    }
+
+    if (locationResolving) {
+      toast.error("Please wait for the map location to finish resolving.");
+      return;
+    }
+
+    if (!hasValidApartmentCoordinates(formData.lat, formData.lng)) {
+      toast.error("We could not find this address on the map. Please check the address or move the marker manually.");
+      return;
+    }
 
     const normalizedRooms = (formData.rooms ?? []).map((room, index) => ({
       ...room,
@@ -351,7 +400,11 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
             <Input
               id="address"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, address: e.target.value, lat: Number.NaN, lng: Number.NaN });
+                setLocationResolving(Boolean(e.target.value.trim()));
+              }}
+              onBlur={() => setLocationLookupRequest((request) => request + 1)}
               required
             />
           </div>
@@ -362,7 +415,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="city"
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, city: e.target.value, lat: Number.NaN, lng: Number.NaN });
+                  setLocationResolving(Boolean(formData.address.trim()));
+                }}
                 required
               />
             </div>
@@ -372,7 +428,10 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="state"
                 value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, state: e.target.value, lat: Number.NaN, lng: Number.NaN });
+                  setLocationResolving(Boolean(formData.address.trim()));
+                }}
                 required
               />
             </div>
@@ -382,10 +441,28 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
               <Input
                 id="zip"
                 value={formData.zip}
-                onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, zip: e.target.value, lat: Number.NaN, lng: Number.NaN });
+                  setLocationResolving(Boolean(formData.address.trim()));
+                }}
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50/30 p-4">
+            <div>
+              <Label className="text-amber-700">Map Location</Label>
+              <p className="mt-1 text-xs text-slate-500">Use the address lookup or drag the pin to the exact apartment location.</p>
+            </div>
+            <LocationPicker
+              lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat}
+              lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng}
+              addressQuery={locationAddressQuery}
+              geocodeRequestKey={locationLookupRequest}
+              onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")}
+              onLocationChange={(lat, lng) => setFormData((current) => ({ ...current, lat, lng }))}
+            />
           </div>
 
           <div className="space-y-2">
@@ -599,8 +676,8 @@ export function EditApartmentDialog({ apartment, open, onOpenChange, onSave }: E
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Button type="submit" disabled={isSaving || locationResolving}>
+              {isSaving ? "Saving..." : locationResolving ? "Finding location..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>

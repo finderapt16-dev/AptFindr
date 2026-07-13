@@ -131,6 +131,19 @@ const getAdminPropertyStatusLabel = (status: string | undefined, isPublished: bo
   return STATUS_LABEL[normalizedStatus] ?? STATUS_LABEL.available;
 };
 
+const getLandlordVerificationStatus = (landlord: DashboardUserRow | null): string => {
+  if (!landlord) return "Missing";
+  const explicitStatus = String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").trim();
+  if (landlord.is_verified === true || landlord.isVerified === true) return "Verified";
+  if (explicitStatus.length > 0) return explicitStatus.charAt(0).toUpperCase() + explicitStatus.slice(1).toLowerCase();
+  return "Pending";
+};
+
+const canPublishForLandlord = (landlord: DashboardUserRow | null): boolean =>
+  (landlord?.is_verified ?? landlord?.isVerified) === true && !["pending", "unverified", "rejected", "suspended", "disabled"].includes(
+    String(landlord?.landlord_status ?? landlord?.verification_status ?? landlord?.status ?? "").trim().toLowerCase(),
+  );
+
 const getRoomStatus = (room: Record<string, unknown>): string => {
   const raw = typeof room.status === "string" ? room.status : room.isOccupied ? "occupied" : "available";
   return raw === "occupied" || raw === "reserved" || raw === "maintenance" ? raw : "available";
@@ -385,6 +398,11 @@ export function AdminApartmentDetail() {
   const handlePublicationReview = async () => {
     if (!apartment?.id || !user?.id || isUpdatingPublication) return;
     const nextPublished = apartment.isPublished === false;
+    if (nextPublished && !canPublishForLandlord(landlord)) {
+      toast.error("This apartment cannot be published because the landlord has not been verified.");
+      scrollToFirstVisibleSection(["admin-verification-rail", "admin-verification"]);
+      return;
+    }
     setIsUpdatingPublication(true);
     try {
       await updateApartmentPublication(apartment.id, nextPublished, user.id);
@@ -601,32 +619,59 @@ export function AdminApartmentDetail() {
     setCurrentImageIndex((index) => (index + 1) % imageCount);
   };
   const listingStatusLabel = getAdminPropertyStatusLabel(apartment.status, apartment.isPublished);
+  const landlordVerificationStatus = getLandlordVerificationStatus(landlord);
+  const landlordCanPublish = canPublishForLandlord(landlord);
+  const publicationBlockedByLandlord = apartment.isPublished === false && !landlordCanPublish;
   const formattedDatePosted = datePosted
     ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
     : "—";
   const formattedDatePostedTime = datePosted
     ? new Date(datePosted).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
     : "";
+  const sectionNavItems = [
+    { label: "Overview", target: "admin-property-details", icon: Building2 },
+    { label: "Images", target: "admin-images", icon: ImageIcon },
+    { label: "Rooms", target: "admin-rooms", icon: Home },
+    { label: "Location", target: "admin-location", icon: MapPin },
+    { label: "Documents", target: "admin-verification", icon: FileSearch },
+    { label: "Notes", target: "admin-notes", icon: Edit3 },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-28">
+    <div className="min-h-screen bg-[#f8fafc] pb-8">
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button variant="ghost" onClick={handleBack} className="w-fit rounded-lg px-2 font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600">
-            <ArrowLeft className="mr-2 h-4 w-4 text-orange-600" />
-            {backLabel}
-          </Button>
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <Button variant="ghost" onClick={handleBack} className="mb-3 w-fit rounded-lg px-2 font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600">
+              <ArrowLeft className="mr-2 h-4 w-4 text-orange-600" />
+              {backLabel}
+            </Button>
+            <div className="flex min-w-0 flex-col gap-2">
+              <h1 className="truncate text-2xl font-black text-slate-950 md:text-3xl">Apartment Inspection</h1>
+              <p className="max-w-3xl text-sm font-medium text-slate-500">Review the submitted apartment, landlord verification, map location, documents, rooms, reports, and publishing readiness.</p>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => void handlePublicationReview()}
-              disabled={isUpdatingPublication}
+              disabled={isUpdatingPublication || publicationBlockedByLandlord}
               variant="outline"
               className={apartment.isPublished === false ? "h-10 rounded-lg border-emerald-200 bg-emerald-600 px-4 font-black text-white hover:bg-emerald-700" : "h-10 rounded-lg border-red-200 px-4 font-black text-red-600 hover:bg-red-50"}
             >
               {apartment.isPublished === false ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
               {isUpdatingPublication ? "Updating..." : apartment.isPublished === false ? "Approve & Publish" : "Unpublish"}
             </Button>
+            {publicationBlockedByLandlord && (
+              <Button
+                onClick={() => scrollToFirstVisibleSection(["admin-verification-rail", "admin-verification"])}
+                variant="outline"
+                className="h-10 rounded-lg border-amber-200 px-4 font-black text-amber-700 hover:bg-amber-50"
+              >
+                <FileSearch className="mr-2 h-4 w-4" />
+                Review Landlord
+              </Button>
+            )}
             <Button
               onClick={handleRefreshData}
               disabled={isLoading}
@@ -649,11 +694,27 @@ export function AdminApartmentDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)_360px]">
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="flex gap-2 overflow-x-auto">
+            {sectionNavItems.map(({ label, target, icon: Icon }) => (
+              <button
+                key={target}
+                type="button"
+                onClick={() => target === "admin-verification" ? scrollToFirstVisibleSection(["admin-verification-rail", "admin-verification"]) : scrollToSection(target)}
+                className="flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-black text-slate-600 transition hover:bg-orange-50 hover:text-orange-700"
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
           {/* Main Content */}
-          <div className="grid gap-6 xl:col-span-2 xl:grid-cols-2 xl:items-start">
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             {/* Image Gallery */}
-            <Card id="admin-images" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-1">
+            <Card id="admin-images" className="order-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6">
               <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
                 {selectedImage ? (
                   <ImageWithFallback
@@ -748,7 +809,7 @@ export function AdminApartmentDetail() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-8 xl:col-span-2">
+            <Card id="admin-overview" className="order-3 rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
               <CardContent className="p-5 sm:p-6">
                 <div className="mb-5 flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
@@ -781,7 +842,7 @@ export function AdminApartmentDetail() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-9 xl:col-span-2">
+            <Card id="admin-notes" className="order-8 rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
               <CardContent className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <div>
                   <div className="mb-4 flex items-start gap-3">
@@ -819,11 +880,11 @@ export function AdminApartmentDetail() {
               </CardContent>
             </Card>
 
-            {relatedAppeals.length > 0 && <Card className="border border-blue-200"><CardContent className="pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-black text-slate-900">Related Appeals</h2><p className="text-xs font-medium text-slate-500">Landlord appeals connected to this apartment or its reports.</p></div><Badge className="bg-blue-100 text-blue-700">{relatedAppeals.length}</Badge></div><div className="divide-y divide-slate-100">{relatedAppeals.map((appeal) => <div key={appeal.id} className="flex items-center gap-3 py-3"><FileText className="h-4 w-4 shrink-0 text-blue-600" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{appeal.reason || "Appeal"}</p><p className="line-clamp-2 text-xs font-medium text-slate-500">{appeal.description || "No explanation provided."}</p></div><Badge className="shrink-0 bg-slate-100 text-slate-700">{String(appeal.status || "pending").replace(/_/g, " ")}</Badge></div>)}</div><Button variant="outline" onClick={() => navigate("/dashboard?section=appeals")} className="mt-3 w-full border-blue-200 font-bold text-blue-700">Open Appeal Management</Button></CardContent></Card>}
+            {relatedAppeals.length > 0 && <Card className="order-10 border border-blue-200 lg:col-span-2"><CardContent className="pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-black text-slate-900">Related Appeals</h2><p className="text-xs font-medium text-slate-500">Landlord appeals connected to this apartment or its reports.</p></div><Badge className="bg-blue-100 text-blue-700">{relatedAppeals.length}</Badge></div><div className="divide-y divide-slate-100">{relatedAppeals.map((appeal) => <div key={appeal.id} className="flex items-center gap-3 py-3"><FileText className="h-4 w-4 shrink-0 text-blue-600" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{appeal.reason || "Appeal"}</p><p className="line-clamp-2 text-xs font-medium text-slate-500">{appeal.description || "No explanation provided."}</p></div><Badge className="shrink-0 bg-slate-100 text-slate-700">{String(appeal.status || "pending").replace(/_/g, " ")}</Badge></div>)}</div><Button variant="outline" onClick={() => navigate("/dashboard?section=appeals")} className="mt-3 w-full border-blue-200 font-bold text-blue-700">Open Appeal Management</Button></CardContent></Card>}
 
 
             {/* Apartment Info */}
-            <Card id="admin-property-details" className="rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-2">
+            <Card id="admin-property-details" className="order-2 rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6">
               <CardContent className="p-5 sm:p-6">
                 <div className="mb-5 flex items-start gap-4">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
@@ -889,7 +950,7 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Amenities & Utilities */}
-            <div className="grid grid-cols-1 gap-6 xl:order-4">
+            <div className="order-5 grid grid-cols-1 gap-6">
               {apartment.amenities.length > 0 && (
                 <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
                   <CardContent className="p-5">
@@ -948,7 +1009,7 @@ export function AdminApartmentDetail() {
 
             {/* Room Details */}
             {roomsForDisplay.length > 0 && (
-              <Card id="admin-rooms" className="rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 xl:order-3">
+              <Card id="admin-rooms" className="order-4 rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
@@ -1032,7 +1093,7 @@ export function AdminApartmentDetail() {
             )}
 
             {/* Location Details */}
-            <Card className="rounded-xl border border-slate-200 bg-white shadow-sm xl:order-5">
+            <Card id="admin-location" className="order-6 rounded-xl border border-slate-200 bg-white shadow-sm scroll-mt-6 lg:col-span-2">
               <CardContent className="p-5">
                 <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-amber-600" />
@@ -1059,7 +1120,7 @@ export function AdminApartmentDetail() {
             </Card>
 
             {/* Verification Documents */}
-            <Card id="admin-verification" className="rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm scroll-mt-6 xl:order-6 xl:col-span-2 xl:hidden">
+            <Card id="admin-verification" className="order-7 rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm scroll-mt-6 lg:col-span-2 xl:hidden">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
@@ -1105,7 +1166,7 @@ export function AdminApartmentDetail() {
 
             {/* Reports Section */}
             {reports.length > 0 && (
-              <Card className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-slate-50">
+              <Card className="order-9 border-2 border-red-200 bg-gradient-to-br from-red-50 to-slate-50 lg:col-span-2">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
@@ -1171,7 +1232,7 @@ export function AdminApartmentDetail() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6 xl:col-span-1">
+          <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
             {/* Landlord Info */}
             {landlord && (
               <Card className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -1215,10 +1276,24 @@ export function AdminApartmentDetail() {
                       </div>
                     )}
 
-                    {landlord.is_verified && (
-                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <div className={`flex items-center gap-2 rounded-lg border p-3 ${
+                      landlordCanPublish
+                        ? "border-emerald-200 bg-emerald-50"
+                        : "border-amber-200 bg-amber-50"
+                    }`}>
+                      {landlordCanPublish ? (
                         <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                        <span className="text-xs font-bold text-emerald-800">Verified Landlord</span>
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      )}
+                      <span className={`text-xs font-bold ${landlordCanPublish ? "text-emerald-800" : "text-amber-800"}`}>
+                        Landlord Status: {landlordVerificationStatus}
+                      </span>
+                    </div>
+
+                    {publicationBlockedByLandlord && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-800">
+                        This apartment cannot be published because the landlord has not been verified.
                       </div>
                     )}
 

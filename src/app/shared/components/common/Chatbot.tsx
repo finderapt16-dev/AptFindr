@@ -1,29 +1,32 @@
-import { Bot, MessageCircle, Send, Sparkles, User, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useApartmentsContext } from '../../contexts/ApartmentsContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { useFavorites } from '../../hooks/useFavorites';
+import { Bot, MessageCircle, Send, Sparkles, User, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useApartmentsContext } from "../../contexts/ApartmentsContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { useFavorites } from "../../hooks/useFavorites";
 import {
   generateChatbotReply,
-  getTenantWelcome,
-  TENANT_QUICK_PROMPTS,
+  getChatbotWelcome,
+  getQuickPromptsForRole,
   type ChatbotReply,
-} from '../../utils/chatbotEngine';
-import { isTenantVisibleApartment } from '../../utils/listingVisibility';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+} from "../../utils/chatbotEngine";
+import { isTenantVisibleApartment } from "../../utils/listingVisibility";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'bot';
+  sender: "user" | "bot";
   timestamp: Date;
+  category?: ChatbotReply["category"];
+  intent?: string;
   actions?: { label: string; path: string }[];
 }
 
 interface ChatbotProps {
-  userRole?: 'student' | 'employee' | 'landlord' | 'admin' | null;
+  userRole?: "student" | "employee" | "landlord" | "admin" | null;
 }
 
 export function Chatbot({ userRole }: ChatbotProps) {
@@ -34,39 +37,65 @@ export function Chatbot({ userRole }: ChatbotProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
+
+  const resolvedRole = userRole ?? null;
+  const quickPrompts = useMemo(() => getQuickPromptsForRole(resolvedRole), [resolvedRole]);
+  const assistantTitle = resolvedRole === "admin"
+    ? "Admin Assistant"
+    : resolvedRole === "landlord"
+      ? "Landlord Assistant"
+      : "Tenant Assistant";
+
+  const liveListingCount = useMemo(
+    () => apartments.filter(isTenantVisibleApartment).length,
+    [apartments],
+  );
 
   const chatContext = useMemo(
     () => ({
       apartments,
       isLoading,
       error,
-      userRole: userRole ?? null,
+      userRole: resolvedRole,
+      userId: user?.id,
       userName: user?.name,
       favoriteCount: favorites.length,
+      history: messages.slice(-8).map((message) => ({
+        sender: message.sender,
+        text: message.text,
+      })),
     }),
-    [apartments, isLoading, error, userRole, user?.name, favorites.length],
+    [apartments, isLoading, error, resolvedRole, user?.id, user?.name, favorites.length, messages],
   );
 
-  const pushBotReply = useCallback((reply: ChatbotReply) => {
+  const pushBotReply = useCallback((reply: ChatbotReply, requestId: number, originalQuestion: string) => {
+    if (requestId !== requestIdRef.current) return;
+
     const botMessage: Message = {
       id: `${Date.now()}-bot`,
-      text: reply.text,
-      sender: 'bot',
+      text: reply.message,
+      sender: "bot",
       timestamp: new Date(),
+      category: reply.category,
+      intent: reply.intent,
       actions: reply.actions,
     };
+
     setMessages((prev) => [...prev, botMessage]);
+    setLastFailedQuestion(reply.category === "error" ? originalQuestion : null);
     setIsTyping(false);
   }, []);
 
   const respondToUser = useCallback(
-    (userText: string) => {
+    (userText: string, requestId: number) => {
       const reply = generateChatbotReply(userText, chatContext);
-      typingTimerRef.current = setTimeout(() => pushBotReply(reply), 650);
+      typingTimerRef.current = setTimeout(() => pushBotReply(reply, requestId, userText), 500);
     },
     [chatContext, pushBotReply],
   );
@@ -76,55 +105,83 @@ export function Chatbot({ userRole }: ChatbotProps) {
 
     setMessages([
       {
-        id: 'welcome',
-        text: getTenantWelcome(user?.name),
-        sender: 'bot',
+        id: "welcome",
+        text: getChatbotWelcome(user?.name, resolvedRole),
+        sender: "bot",
         timestamp: new Date(),
-        actions: [{ label: 'Browse apartments', path: '/browse' }],
+        category: "project_answer",
+        intent: "welcome",
+        actions: resolvedRole === "admin"
+          ? [{ label: "Open dashboard", path: "/dashboard" }]
+          : resolvedRole === "landlord"
+            ? [{ label: "My properties", path: "/dashboard?section=properties" }]
+            : [{ label: "Browse apartments", path: "/browse" }],
       },
     ]);
-  }, [isOpen, messages.length, user?.name]);
+  }, [isOpen, messages.length, resolvedRole, user?.name]);
 
   useEffect(() => {
     return () => {
-      if (typingTimerRef.current) {
-        clearTimeout(typingTimerRef.current);
-      }
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     };
   }, []);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  const appendBotMessage = (text: string, category: ChatbotReply["category"], intent: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-bot-${intent}`,
+        text,
+        sender: "bot",
+        timestamp: new Date(),
+        category,
+        intent,
+      },
+    ]);
+  };
+
   const handleSend = (text?: string) => {
+    if (isTyping) return;
+
     const trimmed = (text ?? inputValue).trim();
-    if (trimmed === '') return;
+    if (!trimmed) {
+      appendBotMessage("Please enter a question about the platform.", "clarification", "empty");
+      return;
+    }
+
+    if (trimmed.length > 800) {
+      appendBotMessage("Please keep your question shorter and focused on the platform.", "clarification", "message_too_long");
+      return;
+    }
 
     const userMessage: Message = {
       id: `${Date.now()}-user`,
       text: trimmed,
-      sender: 'user',
+      sender: "user",
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
+    setInputValue("");
     setIsTyping(true);
+    setLastFailedQuestion(null);
 
-    if (typingTimerRef.current) {
-      clearTimeout(typingTimerRef.current);
-    }
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 
-    respondToUser(trimmed);
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    respondToUser(trimmed, requestId);
   };
 
-  const handleQuickPrompt = (message: string) => {
-    handleSend(message);
+  const retryLastQuestion = () => {
+    if (!lastFailedQuestion || isTyping) return;
+    const question = lastFailedQuestion;
+    setLastFailedQuestion(null);
+    handleSend(question);
   };
 
   const handleAction = (path: string) => {
@@ -132,9 +189,9 @@ export function Chatbot({ userRole }: ChatbotProps) {
     setIsOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       handleSend();
     }
   };
@@ -142,7 +199,7 @@ export function Chatbot({ userRole }: ChatbotProps) {
   const renderMessageText = (text: string) => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (part.startsWith("**") && part.endsWith("**")) {
         return (
           <strong key={index} className="font-semibold">
             {part.slice(2, -2)}
@@ -153,34 +210,40 @@ export function Chatbot({ userRole }: ChatbotProps) {
     });
   };
 
+  const assistantStatus = isLoading
+    ? "Loading platform data..."
+    : error
+      ? "Workflow tips only"
+      : resolvedRole === "admin"
+        ? "Project-only admin help"
+        : resolvedRole === "landlord"
+          ? "Project-only landlord help"
+          : `${liveListingCount} live listings`;
+
   return (
     <>
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
           aria-label="Open apartment assistant chat"
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0"
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full border-0 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:from-amber-600 hover:to-orange-700"
         >
           <MessageCircle className="h-6 w-6" />
         </Button>
       )}
 
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-full sm:w-[400px] h-[min(640px,calc(100vh-3rem))] max-w-[calc(100vw-3rem)] bg-white rounded-2xl shadow-2xl z-50 flex flex-col border border-amber-100 mx-6 sm:mx-0 overflow-hidden">
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+        <div className="fixed bottom-6 right-6 z-50 mx-6 flex h-[min(640px,calc(100vh-3rem))] w-full max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-2xl sm:mx-0 sm:w-[400px]">
+          <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-orange-600 p-4 text-white">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
                 <Bot className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm">Tenant Assistant</h3>
-                <p className="text-xs opacity-90 flex items-center gap-1">
+                <h3 className="text-sm font-bold">{assistantTitle}</h3>
+                <p className="flex items-center gap-1 text-xs opacity-90">
                   <Sparkles className="h-3 w-3" />
-                  {isLoading
-                    ? 'Loading listings…'
-                    : error
-                      ? 'Offline tips only'
-                      : `${apartments.filter(isTenantVisibleApartment).length} live listings`}
+                  {assistantStatus}
                 </p>
               </div>
             </div>
@@ -188,54 +251,52 @@ export function Chatbot({ userRole }: ChatbotProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/20 rounded-full"
+              className="rounded-full text-white hover:bg-white/20"
               aria-label="Close chat"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-amber-50/50 to-white">
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-amber-50/50 to-white p-4">
             <div className="space-y-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {message.sender === 'bot' && (
-                    <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  {message.sender === "bot" && (
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
                       <Bot className="h-4 w-4 text-amber-700" />
                     </div>
                   )}
-                  <div className={`max-w-[85%] ${message.sender === 'user' ? 'order-first' : ''}`}>
+                  <div className={`max-w-[85%] ${message.sender === "user" ? "order-first" : ""}`}>
                     <div
                       className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                        message.sender === 'user'
-                          ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-br-md'
-                          : 'bg-white text-slate-800 border border-amber-100 shadow-sm rounded-bl-md'
+                        message.sender === "user"
+                          ? "rounded-br-md bg-gradient-to-r from-amber-500 to-orange-600 text-white"
+                          : message.category === "unrelated" || message.category === "unauthorized" || message.category === "error"
+                            ? "rounded-bl-md border border-red-100 bg-white text-slate-800 shadow-sm"
+                            : "rounded-bl-md border border-amber-100 bg-white text-slate-800 shadow-sm"
                       }`}
                     >
                       <p className="whitespace-pre-wrap">{renderMessageText(message.text)}</p>
-                      <p
-                        className={`text-[10px] mt-1.5 ${
-                          message.sender === 'user' ? 'text-amber-100' : 'text-slate-400'
-                        }`}
-                      >
+                      <p className={`mt-1.5 text-[10px] ${message.sender === "user" ? "text-amber-100" : "text-slate-400"}`}>
                         {message.timestamp.toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </p>
                     </div>
-                    {message.sender === 'bot' && message.actions && message.actions.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
+                    {message.sender === "bot" && message.actions && message.actions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {message.actions.map((action) => (
                           <Button
                             key={`${message.id}-${action.path}`}
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs rounded-full border-amber-200 text-amber-800 hover:bg-amber-50"
+                            className="h-7 rounded-full border-amber-200 text-xs text-amber-800 hover:bg-amber-50"
                             onClick={() => handleAction(action.path)}
                           >
                             {action.label}
@@ -244,8 +305,8 @@ export function Chatbot({ userRole }: ChatbotProps) {
                       </div>
                     )}
                   </div>
-                  {message.sender === 'user' && (
-                    <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                  {message.sender === "user" && (
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-200">
                       <User className="h-4 w-4 text-slate-600" />
                     </div>
                   )}
@@ -253,35 +314,50 @@ export function Chatbot({ userRole }: ChatbotProps) {
               ))}
 
               {isTyping && (
-                <div className="flex gap-2 justify-start">
-                  <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <div className="flex justify-start gap-2">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
                     <Bot className="h-4 w-4 text-amber-700" />
                   </div>
-                  <div className="rounded-2xl px-4 py-3 bg-white border border-amber-100 shadow-sm">
+                  <div className="rounded-2xl border border-amber-100 bg-white px-4 py-3 shadow-sm">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:0ms]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:150ms]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:300ms]" />
                     </div>
                   </div>
                 </div>
               )}
+
+              {lastFailedQuestion && !isTyping && (
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={retryLastQuestion}
+                    className="h-8 rounded-full border-red-200 text-xs font-bold text-red-700 hover:bg-red-50"
+                  >
+                    Retry last question
+                  </Button>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
           </div>
 
-          <div className="px-3 pt-2 pb-1 border-t border-amber-100 bg-white">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 px-1">
+          <div className="border-t border-amber-100 bg-white px-3 pb-1 pt-2">
+            <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
               Quick questions
             </p>
             <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
-              {TENANT_QUICK_PROMPTS.map((prompt) => (
+              {quickPrompts.map((prompt) => (
                 <button
                   key={prompt.id}
                   type="button"
                   disabled={isTyping}
-                  onClick={() => handleQuickPrompt(prompt.message)}
-                  className="flex-shrink-0 text-xs px-3 py-1.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                  onClick={() => handleSend(prompt.message)}
+                  className="flex-shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-50"
                 >
                   {prompt.label}
                 </button>
@@ -289,20 +365,22 @@ export function Chatbot({ userRole }: ChatbotProps) {
             </div>
           </div>
 
-          <div className="p-3 border-t border-amber-100 bg-white">
+          <div className="border-t border-amber-100 bg-white p-3">
             <div className="flex gap-2">
               <Input
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(event) => setInputValue(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about listings, price, map, favorites…"
+                placeholder="Ask about platform features..."
                 className="flex-1 rounded-xl border-amber-200 focus-visible:ring-amber-400"
                 disabled={isTyping}
+                maxLength={800}
+                aria-label="Ask the platform assistant"
               />
               <Button
                 onClick={() => handleSend()}
-                disabled={inputValue.trim() === '' || isTyping}
-                className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shrink-0"
+                disabled={inputValue.trim() === "" || isTyping}
+                className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" />

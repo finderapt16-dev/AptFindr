@@ -7,7 +7,8 @@ import { useAuth } from "../contexts/AuthContext";
 function RootContent() {
   const location = useLocation();
   const { user } = useAuth();
-  const hideChatbot = location.pathname === "/" || location.pathname === "/login" || location.pathname === "/signup" || location.pathname === "/forgot-password" || (user?.role !== "student" && user?.role !== "employee");
+  const supportedRole = user?.role === "student" || user?.role === "employee" || user?.role === "landlord" || user?.role === "admin";
+  const hideChatbot = location.pathname === "/" || location.pathname === "/login" || location.pathname === "/signup" || location.pathname === "/forgot-password" || !supportedRole;
 
   return (
     <div className="min-h-screen bg-slate-50">

@@ -196,7 +196,13 @@ export const getCurrentUserId = (): string | null => getStoredValue()?.id ?? nul
 
 const normalizeApartmentRows = (rows: ApartmentRow[]): Apartment[] => rows.map((row) => apartmentRowToApartment(row));
 
-type PublicLandlordVerificationRow = { id?: string | null; is_verified?: boolean | null };
+type PublicLandlordVerificationRow = {
+  id?: string | null;
+  is_verified?: boolean | null;
+  status?: string | null;
+  verification_status?: string | null;
+  landlord_status?: string | null;
+};
 
 const attachLandlordVerification = (
   apartments: Apartment[],
@@ -513,9 +519,42 @@ export const deleteApartment = async (id: string): Promise<void> => {
 export const updateApartmentPublication = async (id: string, isPublished: boolean, actorUserId?: string): Promise<void> => {
   const { data: before } = await supabase
     .from('apartments')
-    .select('is_published, approval_status, is_archived, deleted_at')
+    .select('landlord_id, is_published, approval_status, is_archived, deleted_at')
     .eq('id', id)
     .maybeSingle();
+
+  if (!before) {
+    throw new Error('Apartment not found.');
+  }
+
+  const landlordId = isRecord(before) && typeof before.landlord_id === 'string' ? before.landlord_id : '';
+  if (isPublished) {
+    const { data: landlord, error: landlordError } = await supabase
+      .from('public_landlords')
+      .select('id, is_verified, status, verification_status, landlord_status')
+      .eq('id', landlordId)
+      .maybeSingle();
+
+    if (landlordError) {
+      throw new Error(unwrapErrorMessage(landlordError, 'Unable to verify the landlord before publishing.'));
+    }
+
+    const landlordRecord = isRecord(landlord) ? landlord : null;
+    const normalizedStatuses = [
+      landlordRecord?.status,
+      landlordRecord?.verification_status,
+      landlordRecord?.landlord_status,
+    ]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    const blockedStatus = normalizedStatuses.some((status) => ['pending', 'unverified', 'rejected', 'suspended', 'disabled'].includes(status));
+
+    if (!landlordRecord || landlordRecord.is_verified !== true || blockedStatus) {
+      throw new Error('This apartment cannot be published because the landlord has not been verified.');
+    }
+  }
+
   const { error } = await supabase.rpc('fn_set_apartment_publication', {
     p_apartment_id: id,
     p_published: isPublished,
