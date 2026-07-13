@@ -37,6 +37,9 @@ export interface DashboardReportRow extends DashboardRow {
   reviewed_by?: string | null;
   reviewed_at?: string | null;
   landlord_id?: string | null;
+  is_archived?: boolean | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
   apartment_title?: string | null;
   reporter_name?: string | null;
   apartment?: string | null;
@@ -386,6 +389,9 @@ function toReportRow(row: DashboardRow): DashboardReportRow {
     reviewed_by: getStringValue(row.reviewed_by),
     reviewed_at: getStringValue(row.reviewed_at),
     landlord_id: getStringValue(row.landlord_id),
+    is_archived: typeof row.is_archived === "boolean" ? row.is_archived : null,
+    archived_at: getStringValue(row.archived_at),
+    archived_by: getStringValue(row.archived_by),
     apartment_title: getStringValue(row.apartment_title),
     reporter_name: getStringValue(row.reporter_name),
     apartment: getStringValue(row.apartment),
@@ -514,14 +520,37 @@ function toUserRow(row: DashboardRow): DashboardUserRow {
 }
 
 export async function fetchAdminReports(): Promise<DashboardReportRow[]> {
-  const reports = await fetchRows<DashboardReportRow>("reports");
-  const normalized = reports.map((row) => toReportRow(row));
-  if (normalized.length > 0) {
-    writeCachedValue("reports", JSON.stringify(normalized));
-    return normalized;
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("is_archived", false)
+    .order("submitted_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching active reports:", error);
+    return safeJsonParse<DashboardReportRow[]>(readCachedValue("reports"), []).filter((report) => report.is_archived !== true);
   }
 
-  return safeJsonParse<DashboardReportRow[]>(readCachedValue("reports"), []);
+  const reports = (data ?? []) as DashboardReportRow[];
+  const normalized = reports.map((row) => toReportRow(row));
+  const active = normalized.filter((report) => report.is_archived !== true);
+  writeCachedValue("reports", JSON.stringify(active));
+  return active;
+}
+
+export async function fetchArchivedReports(): Promise<DashboardReportRow[]> {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("is_archived", true)
+    .order("archived_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching archived reports:", error);
+    return [];
+  }
+
+  return ((data ?? []) as DashboardReportRow[]).map((row) => toReportRow(row));
 }
 
 export async function fetchViolations(): Promise<DashboardViolationRow[]> {
@@ -1065,6 +1094,9 @@ export interface DashboardAppealRow extends DashboardRow {
   admin_id?: string | null;
   submitted_at?: string;
   reviewed_at?: string | null;
+  is_archived?: boolean | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -1228,6 +1260,7 @@ export async function fetchPendingAppeals(): Promise<DashboardAppealRow[]> {
     const { data, error } = await supabase
       .from("appeals")
       .select("*")
+      .eq("is_archived", false)
       .order("submitted_at", { ascending: false });
 
     if (error) {
@@ -1238,6 +1271,26 @@ export async function fetchPendingAppeals(): Promise<DashboardAppealRow[]> {
     return Promise.all(((data ?? []) as DashboardAppealRow[]).map(hydrateAppealDocuments));
   } catch (error) {
     console.error("Unexpected error in fetchPendingAppeals:", error);
+    return [];
+  }
+}
+
+export async function fetchArchivedAppeals(): Promise<DashboardAppealRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("appeals")
+      .select("*")
+      .eq("is_archived", true)
+      .order("archived_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching archived appeals:", error);
+      return [];
+    }
+
+    return Promise.all(((data ?? []) as DashboardAppealRow[]).map(hydrateAppealDocuments));
+  } catch (error) {
+    console.error("Unexpected error in fetchArchivedAppeals:", error);
     return [];
   }
 }
@@ -1271,6 +1324,189 @@ export async function updateAppealStatus(
     console.error("Unexpected error in updateAppealStatus:", error);
     return null;
   }
+}
+
+const PROCESSED_REPORT_STATUSES = new Set(["resolved", "closed", "approved", "rejected", "completed", "violation_issued", "notice_issued", "dismissed"]);
+const PROCESSED_APPEAL_STATUSES = new Set(["resolved", "closed", "approved", "rejected", "completed", "violation_issued", "notice_issued", "dismissed"]);
+
+export const canArchiveReportStatus = (status: string | null | undefined): boolean =>
+  PROCESSED_REPORT_STATUSES.has(String(status ?? "").trim().toLowerCase());
+
+export const canArchiveAppealStatus = (status: string | null | undefined): boolean =>
+  PROCESSED_APPEAL_STATUSES.has(String(status ?? "").trim().toLowerCase());
+
+export async function archiveReport(reportId: string, adminId: string): Promise<DashboardReportRow> {
+  const { data: current, error: currentError } = await supabase.from("reports").select("*").eq("id", reportId).maybeSingle();
+  if (currentError || !current) throw new Error(currentError?.message || "Report not found.");
+  const currentReport = toReportRow(current as DashboardRow);
+  if (!canArchiveReportStatus(currentReport.status)) {
+    throw new Error("Only processed reports can be moved to History.");
+  }
+
+  const archivedAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("reports")
+    .update({ is_archived: true, archived_at: archivedAt, archived_by: adminId, last_action_at: archivedAt })
+    .eq("id", reportId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message || "Unable to archive report.");
+
+  const archived = toReportRow(data as DashboardRow);
+  await createAuditLog({
+    admin_id: adminId,
+    action: "archived_report",
+    target_type: "report",
+    target_id: reportId,
+    details: {
+      report_id: reportId,
+      apartment_id: archived.apartment_id ?? archived.apartmentId ?? null,
+      landlord_id: archived.landlord_id ?? null,
+      tenant_id: archived.reporter_id ?? archived.user_id ?? null,
+      status: archived.status ?? null,
+      archived_at: archived.archived_at ?? archivedAt,
+    },
+  });
+  writeCachedValue("reports", JSON.stringify((await fetchAdminReports())));
+  return archived;
+}
+
+export async function restoreReport(reportId: string, adminId: string): Promise<DashboardReportRow> {
+  const { data, error } = await supabase
+    .from("reports")
+    .update({ is_archived: false, archived_at: null, archived_by: null, last_action_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message || "Unable to restore report.");
+
+  const restored = toReportRow(data as DashboardRow);
+  await createAuditLog({
+    admin_id: adminId,
+    action: "restored_report",
+    target_type: "report",
+    target_id: reportId,
+    details: {
+      report_id: reportId,
+      apartment_id: restored.apartment_id ?? restored.apartmentId ?? null,
+      landlord_id: restored.landlord_id ?? null,
+      tenant_id: restored.reporter_id ?? restored.user_id ?? null,
+      status: restored.status ?? null,
+    },
+  });
+  return restored;
+}
+
+export async function permanentlyDeleteReport(reportId: string, adminId: string): Promise<boolean> {
+  const { data: current, error: currentError } = await supabase.from("reports").select("*").eq("id", reportId).maybeSingle();
+  if (currentError || !current) throw new Error(currentError?.message || "Report not found.");
+  const report = toReportRow(current as DashboardRow);
+  if (report.is_archived !== true) throw new Error("Only archived reports can be permanently deleted.");
+
+  const { error } = await supabase.from("reports").delete().eq("id", reportId).eq("is_archived", true);
+  if (error) throw new Error(error.message || "Unable to permanently delete report.");
+
+  await createAuditLog({
+    admin_id: adminId,
+    action: "permanently_deleted_report",
+    target_type: "report",
+    target_id: reportId,
+    details: {
+      report_id: reportId,
+      apartment_id: report.apartment_id ?? report.apartmentId ?? null,
+      landlord_id: report.landlord_id ?? null,
+      tenant_id: report.reporter_id ?? report.user_id ?? null,
+      status: report.status ?? null,
+    },
+  });
+  return true;
+}
+
+export async function archiveAppeal(appealId: string, adminId: string): Promise<DashboardAppealRow> {
+  const { data: current, error: currentError } = await supabase.from("appeals").select("*").eq("id", appealId).maybeSingle();
+  if (currentError || !current) throw new Error(currentError?.message || "Appeal not found.");
+  const currentAppeal = await hydrateAppealDocuments(current as DashboardAppealRow);
+  if (!canArchiveAppealStatus(currentAppeal.status)) {
+    throw new Error("Only processed appeals can be moved to History.");
+  }
+
+  const archivedAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("appeals")
+    .update({ is_archived: true, archived_at: archivedAt, archived_by: adminId })
+    .eq("id", appealId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message || "Unable to archive appeal.");
+
+  const archived = await hydrateAppealDocuments(data as DashboardAppealRow);
+  await createAuditLog({
+    admin_id: adminId,
+    action: "archived_appeal",
+    target_type: "appeal",
+    target_id: appealId,
+    details: {
+      appeal_id: appealId,
+      report_id: archived.report_id ?? null,
+      landlord_id: archived.landlord_id ?? null,
+      status: archived.status ?? null,
+      archived_at: archived.archived_at ?? archivedAt,
+    },
+  });
+  return archived;
+}
+
+export async function restoreAppeal(appealId: string, adminId: string): Promise<DashboardAppealRow> {
+  const { data, error } = await supabase
+    .from("appeals")
+    .update({ is_archived: false, archived_at: null, archived_by: null })
+    .eq("id", appealId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message || "Unable to restore appeal.");
+
+  const restored = await hydrateAppealDocuments(data as DashboardAppealRow);
+  await createAuditLog({
+    admin_id: adminId,
+    action: "restored_appeal",
+    target_type: "appeal",
+    target_id: appealId,
+    details: {
+      appeal_id: appealId,
+      report_id: restored.report_id ?? null,
+      landlord_id: restored.landlord_id ?? null,
+      status: restored.status ?? null,
+    },
+  });
+  return restored;
+}
+
+export async function permanentlyDeleteAppeal(appealId: string, adminId: string): Promise<boolean> {
+  const { data: current, error: currentError } = await supabase.from("appeals").select("*").eq("id", appealId).maybeSingle();
+  if (currentError || !current) throw new Error(currentError?.message || "Appeal not found.");
+  const appeal = current as DashboardAppealRow;
+  if (appeal.is_archived !== true) throw new Error("Only archived appeals can be permanently deleted.");
+
+  const { error } = await supabase.from("appeals").delete().eq("id", appealId).eq("is_archived", true);
+  if (error) throw new Error(error.message || "Unable to permanently delete appeal.");
+
+  await createAuditLog({
+    admin_id: adminId,
+    action: "permanently_deleted_appeal",
+    target_type: "appeal",
+    target_id: appealId,
+    details: {
+      appeal_id: appealId,
+      report_id: appeal.report_id ?? null,
+      landlord_id: appeal.landlord_id ?? null,
+      status: appeal.status ?? null,
+    },
+  });
+  return true;
 }
 
 export async function deleteAppeal(appealId: string): Promise<boolean> {

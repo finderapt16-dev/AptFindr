@@ -517,9 +517,13 @@ export const deleteApartment = async (id: string): Promise<void> => {
 };
 
 export const updateApartmentPublication = async (id: string, isPublished: boolean, actorUserId?: string): Promise<void> => {
+  if (!id) {
+    throw new Error('Missing property ID. Please refresh and try again.');
+  }
+
   const { data: before } = await supabase
     .from('apartments')
-    .select('landlord_id, is_published, approval_status, is_archived, deleted_at')
+    .select('landlord_id, is_published, approval_status, is_archived, deleted_at, status')
     .eq('id', id)
     .maybeSingle();
 
@@ -531,7 +535,7 @@ export const updateApartmentPublication = async (id: string, isPublished: boolea
   if (isPublished) {
     const { data: landlord, error: landlordError } = await supabase
       .from('public_landlords')
-      .select('id, is_verified, status, verification_status, landlord_status')
+      .select('id, is_verified, status, verification_status')
       .eq('id', landlordId)
       .maybeSingle();
 
@@ -543,7 +547,6 @@ export const updateApartmentPublication = async (id: string, isPublished: boolea
     const normalizedStatuses = [
       landlordRecord?.status,
       landlordRecord?.verification_status,
-      landlordRecord?.landlord_status,
     ]
       .filter((value): value is string => typeof value === 'string')
       .map((value) => value.trim().toLowerCase())
@@ -561,11 +564,11 @@ export const updateApartmentPublication = async (id: string, isPublished: boolea
   });
 
   if (error) {
-    throw new Error(unwrapErrorMessage(error, 'Unable to update listing visibility.'));
+    throw new Error(unwrapErrorMessage(error, 'Unable to update this property publication. Please check landlord verification, inspection status, and database permissions.'));
   }
   const { data: after } = await supabase
     .from('apartments')
-    .select('is_published, approval_status, is_archived, deleted_at')
+    .select('is_published, approval_status, is_archived, deleted_at, status, published_at, published_by')
     .eq('id', id)
     .maybeSingle();
   await writeApartmentAudit(
@@ -575,7 +578,7 @@ export const updateApartmentPublication = async (id: string, isPublished: boolea
     buildAuditChanges(
       before as Record<string, unknown> | null,
       after as Record<string, unknown> | null,
-      ['is_published', 'approval_status', 'is_archived', 'deleted_at'],
+      ['is_published', 'approval_status', 'is_archived', 'deleted_at', 'status', 'published_at', 'published_by'],
     ),
   );
 };

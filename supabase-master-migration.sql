@@ -238,6 +238,8 @@ create table if not exists public.apartments (
   features jsonb not null default '{}'::jsonb,
   is_published boolean not null default false,
   approval_status text not null default 'pending',
+  published_at timestamptz,
+  published_by uuid references public.app_users (id) on delete set null,
   is_archived boolean not null default false,
   deleted_at timestamptz,
   status text not null default 'available',
@@ -248,6 +250,8 @@ create table if not exists public.apartments (
 alter table public.apartments add column if not exists legacy_id text;
 alter table public.apartments add column if not exists status text not null default 'available';
 alter table public.apartments add column if not exists approval_status text not null default 'pending';
+alter table public.apartments add column if not exists published_at timestamptz;
+alter table public.apartments add column if not exists published_by uuid references public.app_users (id) on delete set null;
 alter table public.apartments add column if not exists is_archived boolean not null default false;
 alter table public.apartments add column if not exists deleted_at timestamptz;
 alter table public.apartments alter column is_published set default false;
@@ -270,6 +274,7 @@ create index if not exists idx_apartments_city on public.apartments (city);
 create index if not exists idx_apartments_published on public.apartments (is_published);
 create index if not exists idx_apartments_status on public.apartments (status);
 create index if not exists idx_apartments_approval on public.apartments (approval_status);
+create index if not exists idx_apartments_published_by on public.apartments (published_by);
 create index if not exists idx_apartments_legacy on public.apartments (legacy_id);
 drop index if exists public.idx_apartments_browse;
 create index idx_apartments_browse on public.apartments (is_published, approval_status, is_archived, status, city, price);
@@ -456,6 +461,9 @@ create table if not exists public.reports (
   last_action_at timestamptz default now(),
   reviewed_by uuid references public.app_users (id) on delete set null,
   reviewed_at timestamptz,
+  is_archived boolean not null default false,
+  archived_at timestamptz,
+  archived_by uuid references public.app_users (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -474,6 +482,9 @@ alter table public.reports add column if not exists evidence_count integer defau
 alter table public.reports add column if not exists last_action_at timestamptz default now();
 alter table public.reports add column if not exists reviewed_by uuid references public.app_users (id) on delete set null;
 alter table public.reports add column if not exists reviewed_at timestamptz;
+alter table public.reports add column if not exists is_archived boolean not null default false;
+alter table public.reports add column if not exists archived_at timestamptz;
+alter table public.reports add column if not exists archived_by uuid references public.app_users (id) on delete set null;
 
 do $$
 begin
@@ -497,6 +508,7 @@ create index if not exists idx_reports_landlord on public.reports (landlord_id);
 create index if not exists idx_reports_has_evidence on public.reports (has_evidence);
 create index if not exists idx_reports_last_action_at on public.reports (last_action_at);
 create index if not exists idx_reports_reviewed_by on public.reports (reviewed_by);
+create index if not exists idx_reports_archived on public.reports (is_archived, archived_at desc);
 create index if not exists idx_reports_status_submitted on public.reports (status, submitted_at desc);
 
 -- Violations
@@ -566,6 +578,41 @@ create index if not exists idx_notifications_read on public.notifications (read)
 create index if not exists idx_notifications_deleted on public.notifications (is_deleted);
 create index if not exists idx_notifications_user_deleted on public.notifications (user_id, is_deleted);
 create index if not exists idx_notifications_user_unread on public.notifications (user_id, read, is_deleted);
+create index if not exists idx_notifications_action_target on public.notifications (action_target_type, action_target_id);
+
+-- Older local databases may have created a landlord-level unique notification
+-- index such as (user_id, type). That makes the first property publish work,
+-- then rejects the second property for the same landlord because both events
+-- share the same user and notification type. Publication notifications are
+-- property-specific, so any uniqueness rule must include action_target_id.
+do $$
+declare
+  unique_index record;
+  index_columns text[];
+begin
+  for unique_index in
+    select idx.indexrelid, cls.relname as index_name, con.conname as constraint_name
+    from pg_index idx
+    join pg_class cls on cls.oid = idx.indexrelid
+    left join pg_constraint con on con.conindid = idx.indexrelid
+    where idx.indrelid = 'public.notifications'::regclass
+      and idx.indisunique
+  loop
+    select array_agg(att.attname order by keys.ordinality)
+    into index_columns
+    from unnest((select indkey from pg_index where indexrelid = unique_index.indexrelid)) with ordinality as keys(attnum, ordinality)
+    join pg_attribute att on att.attrelid = 'public.notifications'::regclass and att.attnum = keys.attnum;
+
+    if index_columns @> array['user_id', 'type']::text[]
+       and not index_columns @> array['action_target_id']::text[] then
+      if unique_index.constraint_name is not null then
+        execute format('alter table public.notifications drop constraint if exists %I', unique_index.constraint_name);
+      else
+        execute format('drop index if exists public.%I', unique_index.index_name);
+      end if;
+    end if;
+  end loop;
+end $$;
 
 -- Property-specific verification files. Files remain private in Storage; this
 -- table stores only the owning property, document category, and storage path.
@@ -742,14 +789,22 @@ create table if not exists public.appeals (
   admin_id uuid references public.app_users (id) on delete set null,
   submitted_at timestamptz not null default now(),
   reviewed_at timestamptz,
+  is_archived boolean not null default false,
+  archived_at timestamptz,
+  archived_by uuid references public.app_users (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.appeals add column if not exists is_archived boolean not null default false;
+alter table public.appeals add column if not exists archived_at timestamptz;
+alter table public.appeals add column if not exists archived_by uuid references public.app_users (id) on delete set null;
 
 create index if not exists idx_appeals_landlord on public.appeals (landlord_id);
 create index if not exists idx_appeals_report on public.appeals (report_id);
 create index if not exists idx_appeals_violation on public.appeals (violation_id);
 create index if not exists idx_appeals_status on public.appeals (status);
+create index if not exists idx_appeals_archived on public.appeals (is_archived, archived_at desc);
 
 -- Audit logs
 create table if not exists public.audit_logs (
@@ -1908,6 +1963,14 @@ begin
         when v_is_admin and p_published then 'approved'
         when v_is_admin and not p_published then 'pending'
         else approval_status
+      end,
+      published_at = case
+        when p_published then now()
+        else null
+      end,
+      published_by = case
+        when p_published then v_actor_id
+        else null
       end,
       is_archived = case when v_is_admin and p_published then false else is_archived end,
       deleted_at = case when v_is_admin and p_published then null else deleted_at end,

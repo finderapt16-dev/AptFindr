@@ -20,8 +20,14 @@ import { updateApartmentPublication } from "@/app/shared/services/apartmentsServ
 import {
   createAuditLog,
   createViolation,
+  archiveAppeal,
+  archiveReport,
+  canArchiveAppealStatus,
+  canArchiveReportStatus,
   deleteNotification,
   deleteViolation as deleteViolationRecord,
+  fetchArchivedAppeals,
+  fetchArchivedReports,
   fetchAdminActivityLogs,
   fetchAdminReports,
   fetchApartments,
@@ -40,6 +46,10 @@ import {
   notifyReportDismissed,
   notifyReportResolved,
   permanentlyDeleteNotification,
+  permanentlyDeleteAppeal,
+  permanentlyDeleteReport,
+  restoreAppeal,
+  restoreReport,
   unarchiveNotification,
   updateAppealStatus,
   updateReportStatus,
@@ -114,6 +124,7 @@ const NAV_MAIN = [
   { icon: Building2,       label: "Apartments",     section: "apartments" },
   { icon: Flag,            label: "Reports",        section: "reports" },
   { icon: AlertTriangle,   label: "Appeals",        section: "appeals" },
+  { icon: History,         label: "History",        section: "history" },
 ];
 const NAV_ACCOUNT = [
   { icon: Shield, label: "Settings", section: "admininfo" },
@@ -145,7 +156,7 @@ const NOTICE_TYPES = [
   "Account suspended pending review",
   "Permit re-verification required",
 ];
-const ADMIN_DASHBOARD_SECTIONS = new Set(["overview", "notifications", "landlords", "apartments", "reports", "appeals", "admininfo"]);
+const ADMIN_DASHBOARD_SECTIONS = new Set(["overview", "notifications", "landlords", "apartments", "reports", "appeals", "history", "admininfo"]);
 
 type AdminProfileState = {
   firstName: string;
@@ -339,9 +350,16 @@ export function AdminDashboard() {
   const [isMarkingAllNotifs, setIsMarkingAllNotifs] = useState(false);
   const [isResolvingReportId, setIsResolvingReportId] = useState<string | null>(null);
   const [isDismissingReportId, setIsDismissingReportId] = useState<string | null>(null);
+  const [caseAction, setCaseAction] = useState<{
+    type: "archive-report" | "archive-appeal" | "restore-report" | "restore-appeal" | "delete-report" | "delete-appeal";
+    id: string;
+    label: string;
+  } | null>(null);
+  const [processingCaseAction, setProcessingCaseAction] = useState(false);
 
   // reports
   const [reports, setReports] = useState<DashboardReportRow[]>([]);
+  const [archivedReports, setArchivedReports] = useState<DashboardReportRow[]>([]);
   const [selectedReport, setSelectedReport] = useState<DashboardReportRow | null>(null);
   const [selectedReportDetails, setSelectedReportDetails] = useState<{
     report: DashboardReportRow | null;
@@ -362,12 +380,16 @@ export function AdminDashboard() {
 
   // appeals
   const [appeals, setAppeals] = useState<DashboardAppealRow[]>([]);
+  const [archivedAppeals, setArchivedAppeals] = useState<DashboardAppealRow[]>([]);
   const [selectedAppeal, setSelectedAppeal] = useState<DashboardAppealRow | null>(null);
   const [appealResponse, setAppealResponse] = useState("");
   const [appealStatus, setAppealStatus] = useState<"under_review" | "needs_information" | "approved" | "rejected" | "dismissed">("under_review");
   const [appealSearch, setAppealSearch] = useState("");
   const [appealTypeFilter, setAppealTypeFilter] = useState<"all" | "report" | "violation" | "general">("all");
   const [appealSort, setAppealSort] = useState<"newest" | "oldest">("newest");
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyKindFilter, setHistoryKindFilter] = useState<"all" | "reports" | "appeals" | "notifications">("all");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
 
   useEffect(() => {
     if (!selectedAppeal) return;
@@ -489,16 +511,24 @@ export function AdminDashboard() {
     }
     if (!user?.id || !notificationId) return;
 
+    const notification = adminNotifs.find((item) => item.id === notificationId);
     setDeletingNotifId(notificationId);
-    setAdminNotifs((prev) => prev.filter((n) => n.id !== notificationId));
+    if (notification?.is_deleted === true) {
+      setAdminNotifs((prev) => prev.filter((n) => n.id !== notificationId));
+      const deleted = await permanentlyDeleteNotification(notificationId, user.id);
+      await loadAdminNotifications();
+      setDeletingNotifId(null);
+      if (!deleted) toast.error("Could not permanently delete the archived notification. Please try again.");
+      return;
+    }
 
-    const deleted = await permanentlyDeleteNotification(notificationId, user.id);
+    setAdminNotifs((previous) => previous.map((item) => item.id === notificationId
+      ? { ...item, is_deleted: true, deleted_at: new Date().toISOString() }
+      : item));
+    const archived = await deleteNotification(notificationId, user.id);
     await loadAdminNotifications();
     setDeletingNotifId(null);
-
-    if (!deleted) {
-      toast.error("Could not delete the notification. Please try again.");
-    }
+    if (!archived) toast.error("Could not move the notification to History. Please try again.");
   };
 
   const archiveNotif = async (notificationId: string) => {
@@ -752,7 +782,6 @@ export function AdminDashboard() {
       setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
       setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
       toast.success("Property approved and published");
-      void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[]));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
     } finally {
@@ -820,12 +849,14 @@ export function AdminDashboard() {
 
   useEffect(() => {
     const loadData = async () => {
-      const [loadedReports, loadedViolations, loadedNotifications, loadedApartments, loadedAppeals, loadedActivityLogs] = await Promise.all([
+      const [loadedReports, loadedViolations, loadedNotifications, loadedApartments, loadedAppeals, loadedArchivedReports, loadedArchivedAppeals, loadedActivityLogs] = await Promise.all([
         fetchAdminReports(),
         fetchViolations(),
         user?.id ? fetchNotifications(user.id, true) : Promise.resolve([]),
         fetchApartments(),
         fetchPendingAppeals(),
+        fetchArchivedReports(),
+        fetchArchivedAppeals(),
         fetchRecentActivityLogs(),
       ]);
 
@@ -834,6 +865,8 @@ export function AdminDashboard() {
       setAdminNotifs(loadedNotifications);
       setAllApartments(loadedApartments as unknown as ListingRecord[]);
       setAppeals(loadedAppeals);
+      setArchivedReports(loadedArchivedReports);
+      setArchivedAppeals(loadedArchivedAppeals);
       setRecentActivityLogs(loadedActivityLogs);
       await loadLandlords();
     };
@@ -856,16 +889,26 @@ export function AdminDashboard() {
     if (activeSection === "appeals") {
       void fetchPendingAppeals().then(setAppeals);
     }
+    if (activeSection === "history") {
+      void fetchArchivedReports().then(setArchivedReports);
+      void fetchArchivedAppeals().then(setArchivedAppeals);
+    }
   }, [activeSection, loadAdminNotifications]);
 
   useEffect(() => {
     if (user?.role !== "admin") return;
     const channel = supabase
       .channel(`admin-dashboard-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => { void fetchAdminReports().then(setReports); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => {
+        void fetchAdminReports().then(setReports);
+        void fetchArchivedReports().then(setArchivedReports);
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "violations" }, () => { void fetchViolations().then(setViolations); })
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => { void loadAdminNotifications(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, () => { void fetchPendingAppeals().then(setAppeals); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, () => {
+        void fetchPendingAppeals().then(setAppeals);
+        void fetchArchivedAppeals().then(setArchivedAppeals);
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "apartments" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
       .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
       .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images" }, () => { void fetchApartments().then((items) => setAllApartments(items as unknown as ListingRecord[])); })
@@ -1031,6 +1074,49 @@ export function AdminDashboard() {
     }).finally(() => {
       setIsDismissingReportId(null);
     });
+  };
+
+  const executeCaseAction = async () => {
+    if (!caseAction || !user?.id || processingCaseAction) return;
+    setProcessingCaseAction(true);
+    try {
+      if (caseAction.type === "archive-report") {
+        const archived = await archiveReport(caseAction.id, user.id);
+        setReports((current) => current.filter((report) => report.id !== caseAction.id));
+        setArchivedReports((current) => [archived, ...current.filter((report) => report.id !== caseAction.id)]);
+        setSelectedReport(null);
+        toast.success("Report moved to History.");
+      } else if (caseAction.type === "archive-appeal") {
+        const archived = await archiveAppeal(caseAction.id, user.id);
+        setAppeals((current) => current.filter((appeal) => appeal.id !== caseAction.id));
+        setArchivedAppeals((current) => [archived, ...current.filter((appeal) => appeal.id !== caseAction.id)]);
+        setSelectedAppeal(null);
+        toast.success("Appeal moved to History.");
+      } else if (caseAction.type === "restore-report") {
+        const restored = await restoreReport(caseAction.id, user.id);
+        setArchivedReports((current) => current.filter((report) => report.id !== caseAction.id));
+        setReports((current) => [restored, ...current.filter((report) => report.id !== caseAction.id)]);
+        toast.success("Report restored to the active list.");
+      } else if (caseAction.type === "restore-appeal") {
+        const restored = await restoreAppeal(caseAction.id, user.id);
+        setArchivedAppeals((current) => current.filter((appeal) => appeal.id !== caseAction.id));
+        setAppeals((current) => [restored, ...current.filter((appeal) => appeal.id !== caseAction.id)]);
+        toast.success("Appeal restored to the active list.");
+      } else if (caseAction.type === "delete-report") {
+        await permanentlyDeleteReport(caseAction.id, user.id);
+        setArchivedReports((current) => current.filter((report) => report.id !== caseAction.id));
+        toast.success("Archived report permanently deleted.");
+      } else if (caseAction.type === "delete-appeal") {
+        await permanentlyDeleteAppeal(caseAction.id, user.id);
+        setArchivedAppeals((current) => current.filter((appeal) => appeal.id !== caseAction.id));
+        toast.success("Archived appeal permanently deleted.");
+      }
+      setCaseAction(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to complete this action.");
+    } finally {
+      setProcessingCaseAction(false);
+    }
   };
 
   const issueViolation = async () => {
@@ -1705,7 +1791,7 @@ export function AdminDashboard() {
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark unread" : "Mark read"} className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100">{read ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}</button>}
                       {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"><Archive className="h-3.5 w-3.5" /></button>}
                       {archived && <Button size="sm" variant="outline" disabled={deletingNotifId === notification.id} onClick={() => void unarchiveNotif(notification.id || "")} className="h-8 rounded-md border-blue-200 px-2.5 text-[10px] font-black text-blue-700 hover:bg-blue-50"><RotateCcw className="mr-1 h-3 w-3" />Unarchive</Button>}
-                      <button onClick={() => void deleteNotif(notification.id || "")} title="Delete notification" className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => void deleteNotif(notification.id || "")} title={archived ? "Permanently delete notification" : "Move notification to History"} className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </motion.article>
                 );
@@ -2499,7 +2585,7 @@ export function AdminDashboard() {
                       </div>
                       <div className="min-w-0"><p className="text-[9px] font-black uppercase text-slate-400">Reported by</p><p className="mt-1 truncate text-xs font-bold text-slate-700">{getReporterLabel(report)}</p><p className="mt-1 text-[10px] font-medium capitalize text-slate-400">{report.reporter_role ?? report.role ?? "Role unavailable"}</p></div>
                       <div className="flex flex-wrap gap-1.5 xl:block"><span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase ${statusClass}`}>{report.status || "Pending"}</span><span className={`ml-1.5 inline-flex rounded-md border px-2 py-1 text-[9px] font-black ${severity.class}`}>{severity.label}</span><p className="mt-2 text-[10px] font-semibold text-slate-400">{formatOptionalDate(report.submittedAt ?? report.submitted_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
-                      <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()}><Button size="sm" variant="outline" onClick={() => setSelectedReport(report)} className="h-8 rounded-md border-slate-200 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />Details</Button><Button size="sm" variant="outline" disabled={!apartment?.id} onClick={() => apartment?.id && navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=reports", backLabel: "Back to Reports" } })} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Building2 className="mr-1 h-3 w-3" />Apartment</Button></div>
+                      <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()}><Button size="sm" variant="outline" onClick={() => setSelectedReport(report)} className="h-8 rounded-md border-slate-200 text-[10px] font-black text-slate-600"><Eye className="mr-1 h-3 w-3" />Details</Button><Button size="sm" variant="outline" disabled={!apartment?.id} onClick={() => apartment?.id && navigate(`/admin/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=reports", backLabel: "Back to Reports" } })} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Building2 className="mr-1 h-3 w-3" />Apartment</Button>{canArchiveReportStatus(report.status) && <Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "archive-report", id: text(report.id), label: getReportApartmentTitle(report) })} className="col-span-2 h-8 rounded-md border-rose-200 text-[10px] font-black text-rose-700 hover:bg-rose-50"><Trash2 className="mr-1 h-3 w-3" />Delete to History</Button>}</div>
                     </motion.article>
                   );
                 })}
@@ -2743,6 +2829,15 @@ export function AdminDashboard() {
                   <p className="text-sm text-slate-500 font-medium">
                     This report has been <span className="font-black capitalize">{selectedReport.status}</span> on {formatOptionalDate(selectedReport.resolved_at, { month: "short", day: "numeric" })}.
                   </p>
+                  {canArchiveReportStatus(selectedReport.status) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: selectedReport.apartment || text(selectedReport.id) })}
+                      className="mt-3 border-rose-200 text-rose-700 hover:bg-rose-50 font-bold rounded-xl text-sm"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />Delete to History
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -3135,6 +3230,15 @@ export function AdminDashboard() {
                       Cancel
                     </Button>
                   </div>
+                  {canArchiveAppealStatus(selectedAppeal.status) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setCaseAction({ type: "archive-appeal", id: text(selectedAppeal.id), label: selectedAppeal.reason || text(selectedAppeal.id) })}
+                      className="w-full border-rose-200 text-rose-700 hover:bg-rose-50 font-bold text-xs"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />Delete to History
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -3173,7 +3277,10 @@ export function AdminDashboard() {
                     <div className="flex min-w-0 items-center gap-3">{landlord?.avatar_url ? <img src={landlord.avatar_url} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" /> : <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-sm font-black text-amber-700">{landlord?.name?.[0]?.toUpperCase() ?? "L"}</span>}<div className="min-w-0"><h3 className="truncate text-sm font-black text-slate-900">{landlord?.name || "Landlord unavailable"}</h3><p className="truncate text-xs font-medium text-slate-500">{landlord?.email || "Contact unavailable"}</p></div></div>
                     <div className="min-w-0"><span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase ${typeClass}`}>{type}</span><p className="mt-2 truncate text-xs font-black text-slate-800">{context.apartment?.title || String(context.source?.apartment_title ?? "Apartment unavailable")}</p><p className="mt-1 line-clamp-2 text-xs font-medium text-slate-600">{appeal.description || appeal.reason || "No appeal message provided."}</p></div>
                     <div><span className="inline-flex rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-[9px] font-black uppercase text-orange-700">{appeal.status || "Pending"}</span><p className="mt-2 text-[10px] font-semibold text-slate-400">{formatOptionalDate(appeal.submitted_at ?? appeal.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
-                    <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setSelectedAppeal(appeal); }} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Eye className="mr-1 h-3 w-3" />Review</Button>
+                    <div className="grid gap-2" onClick={(event) => event.stopPropagation()}>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedAppeal(appeal)} className="h-8 rounded-md border-orange-200 text-[10px] font-black text-orange-700 hover:bg-orange-50"><Eye className="mr-1 h-3 w-3" />Review</Button>
+                      {canArchiveAppealStatus(appeal.status) && <Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "archive-appeal", id: text(appeal.id), label: appeal.reason || text(appeal.id) })} className="h-8 rounded-md border-rose-200 text-[10px] font-black text-rose-700 hover:bg-rose-50"><Trash2 className="mr-1 h-3 w-3" />Delete</Button>}
+                    </div>
                   </motion.article>;
                 })}</div>
               </section>
@@ -3334,6 +3441,131 @@ export function AdminDashboard() {
     );
   };
 
+  const renderHistory = () => {
+    const landlordMap = new Map(landlords.filter((landlord) => landlord.id).map((landlord) => [landlord.id as string, landlord]));
+    const apartmentMap = new Map(allApartments.filter((apartment) => apartment.id).map((apartment) => [apartment.id as string, apartment]));
+    const historyItems = [
+      ...archivedReports.map((report) => {
+        const apartmentId = text(report.apartment_id ?? report.apartmentId);
+        const tenantId = text(report.reporter_id ?? report.user_id);
+        const landlordId = text(report.landlord_id);
+        return {
+          kind: "report" as const,
+          id: text(report.id),
+          label: report.issueType ?? report.issue_type ?? report.category ?? "Report",
+          apartment: report.apartment_title ?? report.apartment ?? apartmentMap.get(apartmentId)?.title ?? "Apartment unavailable",
+          landlord: landlordMap.get(landlordId)?.name ?? landlordId,
+          tenant: report.reporter_name ?? report.reporter ?? tenantId,
+          status: report.status ?? "resolved",
+          decision: report.status ?? "Processed",
+          notes: report.details ?? "No resolution notes recorded.",
+          createdAt: report.submitted_at ?? report.submittedAt ?? report.created_at,
+          resolvedAt: report.resolved_at ?? report.reviewed_at,
+          archivedAt: report.archived_at,
+          archivedBy: report.archived_by === user?.id ? user?.name ?? "Admin" : "Admin",
+        };
+      }),
+      ...archivedAppeals.map((appeal) => {
+        const report = reports.find((item) => item.id === appeal.report_id) ?? archivedReports.find((item) => item.id === appeal.report_id);
+        const apartmentId = text(report?.apartment_id ?? report?.apartmentId);
+        const landlordId = text(appeal.landlord_id);
+        return {
+          kind: "appeal" as const,
+          id: text(appeal.id),
+          label: appeal.report_id ? "Report Appeal" : appeal.violation_id ? "Violation Appeal" : "General Appeal",
+          apartment: report?.apartment_title ?? report?.apartment ?? apartmentMap.get(apartmentId)?.title ?? "Apartment unavailable",
+          landlord: landlordMap.get(landlordId)?.name ?? landlordId,
+          tenant: text(report?.reporter_name ?? report?.reporter ?? report?.reporter_id ?? report?.user_id, "—"),
+          status: appeal.status ?? "reviewed",
+          decision: appeal.admin_response ?? appeal.status ?? "Reviewed",
+          notes: appeal.description ?? appeal.reason ?? "No appeal notes recorded.",
+          createdAt: appeal.submitted_at ?? appeal.created_at,
+          resolvedAt: appeal.reviewed_at,
+          archivedAt: appeal.archived_at,
+          archivedBy: appeal.archived_by === user?.id ? user?.name ?? "Admin" : "Admin",
+        };
+      }),
+      ...adminNotifs.filter((notification) => notification.is_deleted === true).map((notification) => {
+        const payload = notification.payload ?? {};
+        return {
+          kind: "notification" as const,
+          id: text(notification.id),
+          label: safeNotificationText(notification.title, "Notification"),
+          apartment: text(String(payload.property_name ?? payload.apartment_title ?? payload.topic ?? notification.action_target_type ?? "Notification")),
+          landlord: text(String(payload.landlord_name ?? "—")),
+          tenant: text(String(payload.reporter_name ?? payload.tenant_name ?? "—")),
+          status: isNotificationRead(notification) ? "read" : "unread",
+          decision: formatNotificationType(notification.type),
+          notes: safeNotificationText(notification.message, "No notification message recorded."),
+          createdAt: notification.createdAt ?? notification.created_at,
+          resolvedAt: notification.read_at,
+          archivedAt: notification.deleted_at,
+          archivedBy: user?.name ?? "Admin",
+        };
+      }),
+    ];
+    const statusOptions = Array.from(new Set(historyItems.map((item) => item.status).filter(Boolean))).sort();
+    const query = historySearch.trim().toLowerCase();
+    const visibleHistory = historyItems
+      .filter((item) => historyKindFilter === "all" || (historyKindFilter === "reports" ? item.kind === "report" : historyKindFilter === "appeals" ? item.kind === "appeal" : item.kind === "notification"))
+      .filter((item) => historyStatusFilter === "all" || item.status === historyStatusFilter)
+      .filter((item) => !query || [item.id, item.label, item.apartment, item.landlord, item.tenant, item.status, item.decision, item.notes].some((value) => String(value ?? "").toLowerCase().includes(query)))
+      .sort((left, right) => new Date(right.archivedAt ?? 0).getTime() - new Date(left.archivedAt ?? 0).getTime());
+
+    return (
+      <motion.div initial={false} animate="show" className="mx-auto max-w-[1500px] space-y-5">
+        <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-700 to-slate-950 text-white shadow-lg"><History className="h-5 w-5" /></span>
+            <div><h1 className="text-2xl font-black text-slate-950 md:text-3xl">History</h1><p className="text-sm font-medium text-slate-500">Archived reports, appeals, and notifications remain available for audit and restoration.</p></div>
+          </div>
+          <Button variant="outline" onClick={() => { void fetchArchivedReports().then(setArchivedReports); void fetchArchivedAppeals().then(setArchivedAppeals); void loadAdminNotifications(); }} className="h-10 rounded-lg border-slate-200 font-bold text-slate-700"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+        </header>
+
+        <section className="grid gap-3 md:grid-cols-4">
+          {[{ label: "Archived Reports", value: archivedReports.length, icon: Flag, tone: "bg-blue-50 text-blue-600" }, { label: "Archived Appeals", value: archivedAppeals.length, icon: AlertTriangle, tone: "bg-orange-50 text-orange-600" }, { label: "Archived Notifications", value: adminNotifs.filter((notification) => notification.is_deleted === true).length, icon: Bell, tone: "bg-violet-50 text-violet-600" }, { label: "Total History", value: historyItems.length, icon: Archive, tone: "bg-slate-100 text-slate-700" }].map(({ label, value, icon: Icon, tone }) => (
+            <Card key={label} className="rounded-lg border-slate-200 bg-white shadow-sm"><CardContent className="flex items-center gap-4 p-5"><span className={`flex h-12 w-12 items-center justify-center rounded-lg ${tone}`}><Icon className="h-5 w-5" /></span><span><strong className="block text-2xl text-slate-950">{value}</strong><span className="text-xs font-bold text-slate-600">{label}</span></span></CardContent></Card>
+          ))}
+        </section>
+
+        <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(240px,1fr)_160px_170px]">
+          <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Search history by apartment, landlord, tenant, status, or ID" className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100" /></label>
+          <select value={historyKindFilter} onChange={(event) => setHistoryKindFilter(event.target.value as typeof historyKindFilter)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none"><option value="all">Type: All</option><option value="reports">Reports</option><option value="appeals">Appeals</option><option value="notifications">Notifications</option></select>
+          <select value={historyStatusFilter} onChange={(event) => setHistoryStatusFilter(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none"><option value="all">Status: All</option>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+        </section>
+
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          {visibleHistory.length === 0 ? (
+            <div className="flex min-h-[360px] flex-col items-center justify-center p-6 text-center"><Archive className="mb-4 h-10 w-10 text-slate-300" /><h3 className="text-lg font-black text-slate-900">No archived items found.</h3><p className="mt-1 max-w-md text-sm font-medium text-slate-500">Processed reports, appeals, and deleted notifications moved from active queues will appear here.</p></div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {visibleHistory.map((item) => (
+                <article key={`${item.kind}-${item.id}`} className="grid gap-4 p-4 md:p-5 xl:grid-cols-[120px_minmax(220px,1fr)_minmax(180px,0.8fr)_190px] xl:items-center">
+                  <div><Badge className={item.kind === "report" ? "bg-blue-100 text-blue-700" : item.kind === "appeal" ? "bg-orange-100 text-orange-700" : "bg-violet-100 text-violet-700"}>{item.kind === "report" ? "Report" : item.kind === "appeal" ? "Appeal" : "Notification"}</Badge><p className="mt-2 break-all text-[10px] font-bold text-slate-400">{item.id}</p></div>
+                  <div className="min-w-0"><h3 className="truncate text-sm font-black text-slate-900">{String(item.apartment ?? "Apartment unavailable")}</h3><p className="mt-1 text-xs font-bold text-slate-600">{String(item.label ?? "Archived item")}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{String(item.notes ?? "No notes recorded.")}</p></div>
+                  <div className="grid gap-1 text-xs"><span><strong>Landlord:</strong> {String(item.landlord || "—")}</span><span><strong>Tenant:</strong> {String(item.tenant || "—")}</span><span><strong>Status:</strong> <span className="capitalize">{String(item.status ?? "")}</span></span><span><strong>Archived:</strong> {formatOptionalDate(item.archivedAt, { month: "short", day: "numeric", year: "numeric" })}</span></div>
+                  <div className="grid gap-2">
+                    {item.kind === "notification" ? (
+                      <>
+                        <Button size="sm" variant="outline" disabled={deletingNotifId === item.id} onClick={() => void unarchiveNotif(item.id)} className="h-8 rounded-md border-emerald-200 text-[10px] font-black text-emerald-700 hover:bg-emerald-50"><RotateCcw className="mr-1 h-3 w-3" />Restore</Button>
+                        <Button size="sm" variant="outline" disabled={deletingNotifId === item.id} onClick={() => void deleteNotif(item.id)} className="h-8 rounded-md border-rose-200 text-[10px] font-black text-rose-700 hover:bg-rose-50"><Trash2 className="mr-1 h-3 w-3" />Permanent Delete</Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => setCaseAction({ type: item.kind === "report" ? "restore-report" : "restore-appeal", id: item.id, label: item.apartment })} className="h-8 rounded-md border-emerald-200 text-[10px] font-black text-emerald-700 hover:bg-emerald-50"><RotateCcw className="mr-1 h-3 w-3" />Restore</Button>
+                        <Button size="sm" variant="outline" onClick={() => setCaseAction({ type: item.kind === "report" ? "delete-report" : "delete-appeal", id: item.id, label: item.apartment })} className="h-8 rounded-md border-rose-200 text-[10px] font-black text-rose-700 hover:bg-rose-50"><Trash2 className="mr-1 h-3 w-3" />Permanent Delete</Button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </motion.div>
+    );
+  };
+
   const sectionMap: Record<string, () => ReactElement> = {
     overview:      renderOverview,
     notifications: renderNotifications,
@@ -3341,6 +3573,7 @@ export function AdminDashboard() {
     apartments:    renderApartments,
     reports:       renderReports,
     appeals:       renderAppeals,
+    history:       renderHistory,
     admininfo:     renderAdminInfo,
   };
 
@@ -4017,6 +4250,37 @@ export function AdminDashboard() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={Boolean(caseAction)} onOpenChange={(open) => !open && !processingCaseAction && setCaseAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {caseAction?.type.startsWith("archive") ? "Remove from active list?" : caseAction?.type.startsWith("restore") ? "Restore this item?" : "Permanently delete this item?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {caseAction?.type.startsWith("archive")
+                ? "Are you sure you want to remove this item from the active list? It will remain available in History."
+                : caseAction?.type.startsWith("restore")
+                  ? "This item will return to the active admin list with its existing resolution status preserved."
+                  : "This permanently removes the archived database record after confirmation. Related notifications, notices, and violations are not removed by this action."}
+              {caseAction?.label ? <span className="mt-2 block font-semibold text-slate-700">{caseAction.label}</span> : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processingCaseAction}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={processingCaseAction}
+              onClick={(event) => {
+                event.preventDefault();
+                void executeCaseAction();
+              }}
+              className={caseAction?.type.startsWith("delete") ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-orange-600 text-white hover:bg-orange-700"}
+            >
+              {processingCaseAction ? "Working..." : caseAction?.type.startsWith("archive") ? "Move to History" : caseAction?.type.startsWith("restore") ? "Restore" : "Permanent Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

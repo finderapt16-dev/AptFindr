@@ -148,6 +148,8 @@ export interface ApartmentRow {
   landlord_id: string | null;
   is_published: boolean | null;
   approval_status?: string | null;
+  published_at?: string | null;
+  published_by?: string | null;
   is_archived?: boolean | null;
   deleted_at?: string | null;
   status?: string | null;
