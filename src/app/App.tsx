@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./shared/contexts/AuthContext";
 import { router } from "./routes";
 
 function App() {

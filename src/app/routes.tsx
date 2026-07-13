@@ -1,21 +1,21 @@
 import { createBrowserRouter } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { Root } from "./layouts/Root";
-import { AdminApartmentDetail } from "./pages/admin/AdminApartmentDetail";
-import { AddApartment } from "./pages/apartments/AddApartment";
-import { ApartmentDetail } from "./pages/apartments/ApartmentDetail";
-import { Favorites } from "./pages/apartments/Favorites";
-import { Home } from "./pages/apartments/Home";
-import { ManageRooms } from "./pages/apartments/ManageRooms";
-import { ForgotPassword } from "./pages/auth/ForgotPassword";
-import { Login } from "./pages/auth/Login";
-import { Signup } from "./pages/auth/Signup";
-import { Dashboard } from "./pages/dashboards/Dashboard";
-import { Landing } from "./pages/public/Landing";
-import { NotFound } from "./pages/public/NotFound";
-import { Settings } from "./pages/settings/Settings";
-import { DesignGuide } from "./pages/tools/DesignGuide";
-import { Flowchart } from "./pages/tools/Flowchart";
+import ProtectedRoute from "./shared/components/ProtectedRoute";
+import { Root } from "./shared/layouts/Root";
+import { AdminApartmentDetail } from "./admin/pages/AdminApartmentDetail";
+import { AddApartment } from "./landlord/pages/AddApartment";
+import { ManageRooms } from "./landlord/pages/ManageRooms";
+import { ForgotPassword } from "./public/forgot-password/ForgotPassword";
+import { Landing } from "./public/landing/Landing";
+import { Login } from "./public/login/Login";
+import { NotFound } from "./public/not-found/NotFound";
+import { Signup } from "./public/signup/Signup";
+import { Dashboard } from "./shared/pages/Dashboard";
+import { Settings } from "./shared/pages/settings/Settings";
+import { DesignGuide } from "./shared/pages/tools/DesignGuide";
+import { Flowchart } from "./shared/pages/tools/Flowchart";
+import { ApartmentDetail } from "./tenant/pages/ApartmentDetail";
+import { Favorites } from "./tenant/pages/Favorites";
+import { Home } from "./tenant/pages/Home";
 
 const APARTMENT_LOGIN_MESSAGE = "Please sign in or create an account to view apartment details.";
 
