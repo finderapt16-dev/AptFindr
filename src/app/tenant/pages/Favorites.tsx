@@ -34,6 +34,7 @@ import { useAuth } from "@/app/shared/contexts/AuthContext";
 import { listFavoriteApartments, type Apartment } from "@/app/shared/data/apartments";
 import { useFavorites } from "@/app/shared/hooks/useFavorites";
 import { getImageUrl } from "@/app/shared/utils/images";
+import { TenantMobileNavigation } from "@/app/tenant/components/TenantMobileNavigation";
 import {
   getAvailableRoomCount,
   getLowestAvailableRoomPrice,
@@ -282,6 +283,7 @@ export function Favorites() {
 
   return (
     <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
+      <TenantMobileNavigation active="favorites" />
       <div className="app-shell-frame flex h-full">
         <aside className="app-shell-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
           <div className="app-sidebar flex h-full w-full flex-col overflow-y-auto">
@@ -342,8 +344,8 @@ export function Favorites() {
           </div>
         </aside>
 
-        <main className="app-shell-main min-w-0 flex-1 overflow-y-auto">
-          <div className="app-shell-content mx-auto max-w-7xl px-4 py-6 md:px-8 lg:px-10 lg:py-8">
+        <main className="app-shell-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="app-shell-content app-shell-content-mobile-nav mx-auto max-w-7xl px-4 py-6 md:px-8 lg:px-10 lg:py-8">
             <section className="relative overflow-hidden rounded-lg border border-orange-100 bg-white px-6 py-8 shadow-[0_22px_60px_rgba(15,23,42,0.08)] md:px-9">
               <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-500 shadow-sm">

@@ -1707,6 +1707,29 @@ as $$
   );
 $$;
 
+-- Database-backed aggregate view counts for listing cards and dashboards.
+-- Raw view rows stay protected by RLS; this function only exposes totals for
+-- listings the caller can otherwise see, plus owner/admin management views.
+create or replace function public.get_apartment_view_counts()
+returns table (
+  apartment_id uuid,
+  view_count bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select views.apartment_id,
+         coalesce(sum(greatest(coalesce(views.view_count, 1), 1)), 0)::bigint as view_count
+  from public.apartment_views views
+  join public.apartments apartment on apartment.id = views.apartment_id
+  where public.current_user_is_admin()
+     or apartment.landlord_id = public.current_app_user_id()
+     or public.apartment_is_tenant_visible(apartment.id)
+  group by views.apartment_id
+$$;
+
 create or replace function public.sync_landlord_verification_state()
 returns trigger
 language plpgsql
@@ -2430,6 +2453,7 @@ revoke execute on function public.fn_set_apartment_publication(uuid, boolean) fr
 grant execute on function public.fn_set_apartment_publication(uuid, boolean) to authenticated, service_role;
 grant execute on function public.apartment_is_tenant_visible(uuid) to anon, authenticated, service_role;
 grant execute on function public.get_public_landlords() to anon, authenticated, service_role;
+grant execute on function public.get_apartment_view_counts() to authenticated, service_role;
 grant execute on function public.fn_delete_my_account() to authenticated;
 revoke execute on function public.handle_new_auth_user() from public, anon, authenticated;
 

@@ -1,13 +1,23 @@
 import * as React from "react";
+import { motion, useReducedMotion } from "motion/react";
 
+import { cardVariants, reducedCardVariants, standardTransition } from "@/app/shared/utils/motionPresets";
 import { cn } from "./utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, ...props }: React.ComponentProps<typeof motion.div>) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <div
+    <motion.div
       data-slot="card"
+      variants={prefersReducedMotion ? reducedCardVariants : cardVariants}
+      initial="initial"
+      whileInView="animate"
+      viewport={{ once: true, amount: 0.12 }}
+      whileHover={prefersReducedMotion ? undefined : { y: -2 }}
+      transition={standardTransition}
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border transition-[border-color,box-shadow,background-color] duration-300 hover:shadow-lg",
         className,
       )}
       {...props}

@@ -1331,8 +1331,9 @@ export function AdminDashboard() {
 
       {/* Main Navigation Segment */}
       <nav className="px-3 pt-5 pb-3 space-y-1.5 relative z-10">
-        <p className="text-white/30 text-[10px] font-black uppercase tracking-widest px-4 mb-2">
-          Main
+        <p className="flex items-center gap-2 px-4 mb-2 text-[10px] font-black uppercase tracking-widest text-amber-300">
+          <span>Main</span>
+          <span className="h-px w-8 rounded-full bg-amber-400/80" />
         </p>
         <div className="space-y-1">
           {NAV_MAIN.map(({ icon: Icon, label, section }) => (
@@ -1383,8 +1384,9 @@ export function AdminDashboard() {
 
       {/* Account Settings Segment */}
       <nav className="px-3 pt-4 pb-3 border-t border-white/[0.06] mt-2 space-y-1.5 relative z-10">
-        <p className="text-white/30 text-[10px] font-black uppercase tracking-widest px-4 mb-2">
-          Account
+        <p className="flex items-center gap-2 px-4 mb-2 text-[10px] font-black uppercase tracking-widest text-blue-300">
+          <span>Account</span>
+          <span className="h-px w-8 rounded-full bg-blue-400/80" />
         </p>
         <div className="space-y-1">
           {NAV_ACCOUNT.map(({ icon: Icon, label, section }) => (
@@ -3288,72 +3290,6 @@ export function AdminDashboard() {
 
             <section className="grid gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 md:grid-cols-3">{[{ icon: Shield, title: "Fair decisions", text: "Each appeal is reviewed from its stored evidence and context." }, { icon: Clock, title: "Timely review", text: "Pending appeals remain visible until an admin decision is saved." }, { icon: FileText, title: "Transparent process", text: "Admin responses and final outcomes stay attached to each appeal." }].map(({ icon: Icon, title, text: description }) => <div key={title} className="flex gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 shadow-sm"><Icon className="h-4 w-4" /></span><div><p className="text-xs font-black text-slate-800">{title}</p><p className="mt-0.5 text-[11px] font-medium leading-relaxed text-slate-500">{description}</p></div></div>)}</section>
 
-            {false && (appeals.length > 0 ? (
-              appeals.map((appeal) => {
-                const landlord = landlordMap.get(appeal.landlord_id ?? "");
-                return (
-                  <Card
-                    key={appeal.id}
-                    onClick={() => setSelectedAppeal(appeal)}
-                    className="border-2 border-amber-100 hover:border-amber-300 bg-white/90 cursor-pointer transition-all shadow-md hover:shadow-lg"
-                  >
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-sm text-slate-900">
-                            {landlord?.name || "Unknown Landlord"}
-                          </h3>
-                          <p className="text-xs text-slate-500 font-medium">{landlord?.email || "—"}</p>
-                        </div>
-                        <Badge
-                          className={`shrink-0 font-bold text-[10px] ${
-                            appeal.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : appeal.status === "under_review"
-                                ? "bg-blue-100 text-blue-800"
-                                : appeal.status === "approved"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {appeal.status?.toUpperCase() || "PENDING"}
-                        </Badge>
-                      </div>
-
-                      <div className="mb-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
-                        <p className="text-xs text-slate-600 font-medium line-clamp-2">
-                          {appeal.reason || "No reason provided"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex gap-2 items-center">
-                          {appeal.report_id && (
-                            <Badge className="bg-blue-100 text-blue-700 text-[10px]">Report</Badge>
-                          )}
-                          {appeal.violation_id && (
-                            <Badge className="bg-red-100 text-red-700 text-[10px]">Violation</Badge>
-                          )}
-                        </div>
-                        <span className="text-slate-400 font-medium">
-                          {appeal.submitted_at
-                            ? new Date(appeal.submitted_at).toLocaleDateString("en-PH")
-                            : "—"}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            ) : (
-              <Card className="border-2 border-amber-100 bg-white/90">
-                <CardContent className="pt-6 text-center py-10">
-                  <AlertTriangle className="h-8 w-8 text-amber-200 mx-auto mb-3" />
-                  <p className="text-slate-500 font-medium text-sm">No pending appeals</p>
-                  <p className="text-slate-400 text-xs font-medium mt-1">All appeals have been reviewed!</p>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         )}
       </div>

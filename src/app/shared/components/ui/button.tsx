@@ -1,8 +1,16 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 
+import { quickTransition } from "@/app/shared/utils/motionPresets";
 import { cn } from "./utils";
+
+const MotionButton = motion.button as React.ComponentType<React.ComponentProps<"button"> & {
+  whileHover?: unknown;
+  whileTap?: unknown;
+  transition?: unknown;
+}>;
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -41,13 +49,27 @@ const Button = React.forwardRef<
       asChild?: boolean;
     }
 >(({ className, variant, size, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button";
+  const prefersReducedMotion = useReducedMotion();
+
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
 
   return (
-    <Comp
+    <MotionButton
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
+      whileHover={prefersReducedMotion || props.disabled ? undefined : { y: -1, scale: 1.01 }}
+      whileTap={prefersReducedMotion || props.disabled ? undefined : { y: 0, scale: 0.98 }}
+      transition={quickTransition}
       {...props}
     />
   );

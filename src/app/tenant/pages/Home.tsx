@@ -63,7 +63,6 @@ import {
 import { getImageUrl } from "@/app/shared/utils/images";
 import {
   getAvailableRoomCount,
-  getLowestAvailableRoomPrice,
   isTenantVisibleApartment,
 } from "@/app/shared/utils/listingVisibility";
 import {
@@ -73,6 +72,7 @@ import {
 import { rankApartments, type TenantPreferences } from "@/app/shared/utils/rankingEngine";
 import { toast } from "sonner";
 import { LandlordBrowse } from "@/app/landlord/pages/LandlordBrowse";
+import { TenantMobileNavigation } from "@/app/tenant/components/TenantMobileNavigation";
 
 type SortOption = TenantPreferenceSortOption;
 
@@ -88,6 +88,53 @@ const STATUS_CLASS: Record<string, string> = {
   occupied: "bg-rose-600 text-white",
   reserved: "bg-amber-500 text-white",
   maintenance: "bg-slate-600 text-white",
+};
+
+const parseMoneyValue = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+};
+
+const getAvailableApartmentPrice = (apartment: Apartment): number | null => {
+  const roomPrices = (apartment.rooms ?? [])
+    .filter((room) => {
+      const status = room.status ?? (room.isOccupied ? "occupied" : "available");
+      return status === "available" && room.isOccupied !== true;
+    })
+    .map((room) => parseMoneyValue(room.price))
+    .filter((price): price is number => price !== null);
+
+  if (roomPrices.length > 0) return Math.min(...roomPrices);
+
+  return parseMoneyValue(apartment.price);
+};
+
+const getApartmentPublishedTime = (apartment: Apartment): number => {
+  const candidates = [apartment.publishedAt, apartment.updatedAt, apartment.createdAt, apartment.availableDate];
+
+  for (const value of candidates) {
+    if (!value) continue;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isNaN(timestamp)) return timestamp;
+  }
+
+  return Number.NEGATIVE_INFINITY;
+};
+
+const compareOptionalNumber = (left: number | null, right: number | null, direction: "asc" | "desc"): number => {
+  if (left === null && right === null) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  return direction === "asc" ? left - right : right - left;
 };
 
 function BrowseContent() {
@@ -204,10 +251,12 @@ function TenantBrowse() {
   const getViewCount = (apartmentId: string) =>
     viewRows
       .filter((view) => (view.apartment_id ?? view.apartmentId) === apartmentId)
-      .reduce((total, view) => total + (Number(view.view_count) || 1), 0);
+      .reduce((total, view) => total + Math.max(0, Number(view.view_count) || 0), 0);
 
   const getFavoriteCount = (apartmentId: string) =>
     favoriteRows.filter((favorite) => (favorite.apartment_id ?? favorite.apartmentId) === apartmentId).length;
+
+  const viewLabel = (count: number) => `${count.toLocaleString()} ${count === 1 ? "view" : "views"}`;
 
   const landlordById = useMemo(() => new globalThis.Map(users.filter((row) => row.id).map((row) => [row.id!, row])), [users]);
 
@@ -239,7 +288,7 @@ function TenantBrowse() {
         if (!matchesSearch) return false;
       }
 
-      const roomPrice = getLowestAvailableRoomPrice(apt);
+      const roomPrice = getAvailableApartmentPrice(apt);
       if (budgetFilterEnabled && roomPrice !== null && (roomPrice < priceRange[0] || roomPrice > priceRange[1])) return false;
 
       if (bedrooms !== "any") {
@@ -280,18 +329,20 @@ function TenantBrowse() {
         return rankApartments(filtered, preferences, userFavorites, { apartmentViewCounts, apartmentFavoriteCounts });
       }
 
-      return filtered.sort((a, b) => new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime());
+      return [...filtered].sort((a, b) => getApartmentPublishedTime(b) - getApartmentPublishedTime(a));
     }
 
-    return filtered.sort((a, b) => {
-      if (sortBy === "price_high") return (getLowestAvailableRoomPrice(b) ?? -1) - (getLowestAvailableRoomPrice(a) ?? -1);
-      if (sortBy === "newest") return new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime();
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "price_high") return compareOptionalNumber(getAvailableApartmentPrice(a), getAvailableApartmentPrice(b), "desc");
+      if (sortBy === "newest") return getApartmentPublishedTime(b) - getApartmentPublishedTime(a);
       if (sortBy === "popular") {
-        const leftEngagement = getViewCount(a.id) + getFavoriteCount(a.id) * 2;
-        const rightEngagement = getViewCount(b.id) + getFavoriteCount(b.id) * 2;
-        return rightEngagement - leftEngagement || new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime();
+        const leftViews = getViewCount(a.id);
+        const rightViews = getViewCount(b.id);
+        const leftFavorites = getFavoriteCount(a.id);
+        const rightFavorites = getFavoriteCount(b.id);
+        return rightViews - leftViews || rightFavorites - leftFavorites || getApartmentPublishedTime(b) - getApartmentPublishedTime(a);
       }
-      return (getLowestAvailableRoomPrice(a) ?? Number.MAX_SAFE_INTEGER) - (getLowestAvailableRoomPrice(b) ?? Number.MAX_SAFE_INTEGER);
+      return compareOptionalNumber(getAvailableApartmentPrice(a), getAvailableApartmentPrice(b), "asc");
     });
   }, [allApartments, searchQuery, priceRange, budgetFilterEnabled, bedrooms, petFriendly, parking, furnished, sortBy, user?.role, landlordById, userFavorites, viewRows, favoriteRows]);
 
@@ -305,8 +356,8 @@ function TenantBrowse() {
     () =>
       allApartments
         .filter(isTenantVisibleApartment)
-        .flatMap((apt) => (apt.rooms ?? []).map((room) => Number(room.price)))
-        .filter((price) => Number.isFinite(price) && price > 0),
+        .flatMap((apt) => (apt.rooms ?? []).map((room) => parseMoneyValue(room.price)))
+        .filter((price): price is number => price !== null),
     [allApartments],
   );
   const quickBudgetChips = useMemo(() => {
@@ -618,6 +669,7 @@ function TenantBrowse() {
     const locationText = [apartment.city, apartment.state].filter(Boolean).join(", ") || apartment.address;
     const favorite = isFavorite(apartment.id);
     const imageUrl = apartment.image || apartment.images?.[0];
+    const viewCount = getViewCount(apartment.id);
 
     return (
       <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)]">
@@ -651,6 +703,7 @@ function TenantBrowse() {
             </div>
             <div className="shrink-0 text-right">
               <p className="text-sm font-black text-orange-600">View room prices</p>
+              <p className="mt-1 flex items-center justify-end gap-1 text-xs font-bold text-slate-500"><Eye className="h-3.5 w-3.5 text-orange-500" />{viewLabel(viewCount)}</p>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2 border-t border-slate-100 pt-4 text-sm">
@@ -673,6 +726,7 @@ function TenantBrowse() {
   return (
     <Dialog open={preferencesOpen} onOpenChange={setPreferencesOpen}>
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
+      <TenantMobileNavigation active="browse" />
       <div className="flex h-full">
         <aside className="app-sidebar hidden h-full w-64 shrink-0 flex-col bg-[#07142f] shadow-2xl shadow-slate-900/40 lg:flex">
           <div className="app-sidebar-brand px-5 pb-5 pt-6">
@@ -731,8 +785,8 @@ function TenantBrowse() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8 lg:px-10">
+        <main className="app-shell-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="app-shell-content app-shell-content-mobile-nav mx-auto max-w-[1500px] px-4 py-6 md:px-8 lg:px-10">
             <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
                 <div className="relative">
@@ -812,7 +866,7 @@ function TenantBrowse() {
                     apartments={filteredApartments.map((apt) => ({
                       id: apt.id,
                       title: apt.title,
-                      price: getLowestAvailableRoomPrice(apt) ?? 0,
+                      price: getAvailableApartmentPrice(apt) ?? 0,
                       lat: apt.lat,
                       lng: apt.lng,
                       bedrooms: apt.bedrooms,

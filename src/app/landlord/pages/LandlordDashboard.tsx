@@ -774,7 +774,7 @@ export function LandlordDashboard() {
   const landlordAccount = favoriteUsers.find((entry) => entry.id === user?.id);
   const landlordVerified = user?.isVerified ?? landlordAccount?.isVerified ?? landlordAccount?.is_verified ?? false;
   const landlordPermit = landlordAccount?.permit_number ?? landlordAccount?.permitNumber ?? user?.permitNumber ?? "";
-  const getViewWeight = (view: DashboardApartmentViewRow) => Number(view.view_count) || 1;
+  const getViewWeight = (view: DashboardApartmentViewRow) => Math.max(0, Number(view.view_count) || 0);
   const totalViews     = landlordViewRows.reduce((total, view) => total + getViewWeight(view), 0);
   const totalInquiries = landlordFavoriteRows.length;
   const occupancyRate  = myApartments.length > 0
@@ -2562,7 +2562,11 @@ export function LandlordDashboard() {
         return { apartment, views, saves, roomCount, availableRooms };
       })
       .filter((item) => item.views > 0 || item.saves > 0)
-      .sort((left, right) => (right.views + right.saves) - (left.views + left.saves));
+      .sort((left, right) =>
+        right.views - left.views ||
+        right.saves - left.saves ||
+        new Date(right.apartment.updatedAt ?? right.apartment.createdAt ?? 0).getTime() - new Date(left.apartment.updatedAt ?? left.apartment.createdAt ?? 0).getTime()
+      );
     const hasActivity = rangedViews.length > 0 || rangedFavorites.length > 0;
     const summaryCards = [
       { label: "Total Views", value: rangedViews.reduce((total, view) => total + getViewWeight(view), 0), suffix: "", icon: Eye, tone: "bg-orange-50 text-orange-600" },
@@ -2601,7 +2605,7 @@ export function LandlordDashboard() {
                   return <motion.article key={apartment.id} layout whileHover={{ y: -2 }} className={`overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md ${activityViewMode === "list" ? "md:grid md:grid-cols-[180px_minmax(0,1fr)]" : ""}`}>
                     <div className={`flex items-center justify-center overflow-hidden bg-slate-100 ${activityViewMode === "grid" ? "aspect-[16/8]" : "min-h-44"}`}>{apartment.image ? <img src={apartment.image} alt={apartment.title || "Property"} className="h-full w-full object-cover" /> : <Building2 className="h-9 w-9 text-slate-300" />}</div>
                     <div className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><h3 className="truncate text-lg font-black text-slate-950">{apartment.title || "Untitled property"}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />{location}</p></div><Button variant="outline" onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/dashboard?section=properties", backLabel: "Back to My Properties" } })} className="h-9 shrink-0 rounded-md border-orange-200 text-xs font-bold text-orange-700 hover:bg-orange-50">View Details<ChevronRight className="ml-1 h-3.5 w-3.5" /></Button></div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-lg bg-orange-50 p-3"><Eye className="mb-1 h-4 w-4 text-orange-600" /><strong className="block text-sm text-slate-900">{views}</strong><span className="text-[10px] font-semibold text-slate-500">Views</span></div><div className="rounded-lg bg-rose-50 p-3"><Heart className="mb-1 h-4 w-4 text-rose-600" /><strong className="block text-sm text-slate-900">{saves}</strong><span className="text-[10px] font-semibold text-slate-500">Saved</span></div><div className="rounded-lg bg-emerald-50 p-3"><span className="mb-1 block h-2 w-2 rounded-full bg-emerald-500" /><strong className="block text-xs text-emerald-700">{statusOption.label}</strong><span className="text-[10px] font-semibold text-slate-500">{availableRooms}/{roomCount} rooms</span></div><div className="rounded-lg bg-slate-50 p-3"><Calendar className="mb-1 h-4 w-4 text-slate-500" /><strong className="block text-[11px] text-slate-700">{updatedAt ? new Date(updatedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Unavailable"}</strong><span className="text-[10px] font-semibold text-slate-500">Last updated</span></div></div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-lg bg-orange-50 p-3"><Eye className="mb-1 h-4 w-4 text-orange-600" /><strong className="block text-sm text-slate-900">{views}</strong><span className="text-[10px] font-semibold text-slate-500">{views === 1 ? "View" : "Views"}</span></div><div className="rounded-lg bg-rose-50 p-3"><Heart className="mb-1 h-4 w-4 text-rose-600" /><strong className="block text-sm text-slate-900">{saves}</strong><span className="text-[10px] font-semibold text-slate-500">Saved</span></div><div className="rounded-lg bg-emerald-50 p-3"><span className="mb-1 block h-2 w-2 rounded-full bg-emerald-500" /><strong className="block text-xs text-emerald-700">{statusOption.label}</strong><span className="text-[10px] font-semibold text-slate-500">{availableRooms}/{roomCount} rooms</span></div><div className="rounded-lg bg-slate-50 p-3"><Calendar className="mb-1 h-4 w-4 text-slate-500" /><strong className="block text-[11px] text-slate-700">{updatedAt ? new Date(updatedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Unavailable"}</strong><span className="text-[10px] font-semibold text-slate-500">Last updated</span></div></div>
                     </div>
                   </motion.article>;
                 })}

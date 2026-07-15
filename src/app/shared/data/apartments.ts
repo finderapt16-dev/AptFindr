@@ -46,6 +46,7 @@ export interface Apartment {
   landlordVerified?: boolean;
   isPublished?: boolean;
   approvalStatus?: 'pending' | 'approved' | 'rejected';
+  publishedAt?: string;
   isArchived?: boolean;
   deletedAt?: string;
   status?: ApartmentStatus;
@@ -323,6 +324,7 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     landlordId: row.landlord_id ?? undefined,
     isPublished: row.is_published ?? undefined,
     approvalStatus: row.approval_status === 'approved' || row.approval_status === 'rejected' ? row.approval_status : 'pending',
+    publishedAt: row.published_at ?? undefined,
     isArchived: row.is_archived === true,
     deletedAt: row.deleted_at ?? undefined,
     status: toApartmentStatus(row.status),

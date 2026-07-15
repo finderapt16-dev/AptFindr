@@ -1509,22 +1509,6 @@ export async function permanentlyDeleteAppeal(appealId: string, adminId: string)
   return true;
 }
 
-export async function deleteAppeal(appealId: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("appeals").delete().eq("id", appealId);
-
-    if (error) {
-      console.error("Error deleting appeal:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Unexpected error in deleteAppeal:", error);
-    return false;
-  }
-}
-
 export async function createAuditLog(auditLog: {
   admin_id?: string | null;
   action: string;
@@ -1948,6 +1932,14 @@ export async function fetchApartmentFavorites(apartmentId: string): Promise<Dash
 }
 
 export async function fetchApartmentViews(): Promise<DashboardApartmentViewRow[]> {
+  const { data: countData, error: countError } = await supabase.rpc("get_apartment_view_counts");
+
+  if (!countError && Array.isArray(countData)) {
+    const normalized = countData.map((row) => toApartmentViewRow(row as DashboardRow));
+    writeCachedValue("apartment_views", JSON.stringify(normalized));
+    return normalized;
+  }
+
   const { data, error } = await supabase.from("apartment_views").select("*");
 
   if (error || !Array.isArray(data)) {

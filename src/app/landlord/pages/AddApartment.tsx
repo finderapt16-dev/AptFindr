@@ -5,7 +5,6 @@ import { Button } from "@/app/shared/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/shared/components/ui/card";
 import { Input } from "@/app/shared/components/ui/input";
 import { Label } from "@/app/shared/components/ui/label";
-import { Switch } from "@/app/shared/components/ui/switch";
 import { Textarea } from "@/app/shared/components/ui/textarea";
 import { useApartmentsContext } from "@/app/shared/contexts/ApartmentsContext";
 import { useAuth } from "@/app/shared/contexts/AuthContext";
@@ -97,12 +96,6 @@ type PropertyDraft = {
 type DraftStatus = "idle" | "saving" | "saved" | "restored" | "error";
 
 const getDraftStorageKey = (userId: string) => `rentiloilo:add-property-draft:${userId}`;
-
-const ROOM_TYPES = ["Bedroom", "Studio", "Shared room", "Suite", "Loft", "Other"];
-const STATUS_OPTIONS: { value: ApartmentStatus; label: string }[] = [
-  { value: "available", label: "Available" },
-  { value: "maintenance", label: "Under Maintenance" },
-];
 
 const makeRoom = (): Room => ({
   id: Date.now().toString() + Math.random(),
@@ -216,11 +209,6 @@ export function AddApartment() {
   // ── Rooms state ───────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<Room[]>([makeRoom()]);
 
-  const updateRoom = (id: string, patch: Partial<Room>) =>
-    setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-
-  const removeRoom = (id: string) =>
-    setRooms((prev) => prev.filter((r) => r.id !== id));
   // ─────────────────────────────────────────────────────────────────────
 
   // ── Multiple Images State ──────────────────────────────────────────────
@@ -811,11 +799,6 @@ export function AddApartment() {
   };
 
   // ── Derived room stats ────────────────────────────────────────────────────
-  const totalRooms     = rooms.length;
-  const availableRooms = rooms.filter((r) => r.status === "available").length;
-  const maintenanceRooms = rooms.filter((r) => r.status === "maintenance").length;
-  const withBathRooms  = rooms.filter((r) => r.hasPrivateBath).length;
-
   if (user?.role !== "landlord") {
     return <Navigate to="/dashboard" replace />;
   }
@@ -1093,229 +1076,6 @@ export function AddApartment() {
                       />
                     </div>
                     <FieldError field="mapLocation" />
-                  </div>
-                </div>
-              )}
-
-              {/* Legacy room editor disabled; rooms are managed through Manage Rooms. */}
-              {false && (
-                <div className="space-y-5">
-                  <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
-                    <Home className="h-5 w-5 text-amber-600" />
-                    <h3 className="text-sm font-bold text-amber-600 uppercase">Room Details</h3>
-                  </div>
-
-                  {rooms.map((room, index) => (
-                    <div key={room.id} className="border border-amber-100 rounded-2xl p-5 bg-amber-50/30 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold bg-amber-100 rounded-full px-3 py-1">Room {index + 1}</span>
-                        {rooms.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeRoom(room.id)}
-                            className="text-red-500"
-                          >
-                            <Trash2 className="h-3.5" /> Remove
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Room Number/Name *</Label>
-                          <Input
-                            value={room.roomName}
-                            onChange={(e) => {
-                              updateRoom(room.id, { roomName: e.target.value });
-                              if (e.target.value.trim()) clearValidationError(`rooms.${index}.roomName`);
-                            }}
-                            placeholder="e.g., Room 101"
-                            required
-                            aria-invalid={Boolean(validationErrors[`rooms.${index}.roomName`])}
-                            className={fieldClass(`rooms.${index}.roomName`)}
-                          />
-                          <FieldError field={`rooms.${index}.roomName`} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Room Type</Label>
-                          <select
-                            value={room.type}
-                            onChange={(e) => updateRoom(room.id, { type: e.target.value })}
-                            className="w-full h-10 rounded-xl border border-amber-100 bg-white px-3 text-sm"
-                          >
-                            {ROOM_TYPES.map((t) => (
-                              <option key={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-bold">Size (sqft)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={room.sqft || ""}
-                          onChange={(e) => updateRoom(room.id, { sqft: Number(e.target.value) })}
-                          className="hide-number-spinners rounded-xl border-amber-100"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Max Occupants *</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={room.maxOccupants || ""}
-                            onChange={(e) => {
-                              updateRoom(room.id, { maxOccupants: e.target.value === "" ? undefined : Number(e.target.value) });
-                              if (Number(e.target.value) > 0) clearValidationError(`rooms.${index}.maxOccupants`);
-                            }}
-                            aria-invalid={Boolean(validationErrors[`rooms.${index}.maxOccupants`])}
-                            className={`${fieldClass(`rooms.${index}.maxOccupants`)} hide-number-spinners`}
-                          />
-                          <FieldError field={`rooms.${index}.maxOccupants`} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase font-bold">Monthly Rent (₱) *</Label>
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step="any"
-                            value={room.rent || ""}
-                            onChange={(e) => {
-                              updateRoom(room.id, { rent: e.target.value === "" ? undefined : Number(e.target.value) });
-                              if (Number(e.target.value) > 0) clearValidationError(`rooms.${index}.rent`);
-                            }}
-                            aria-invalid={Boolean(validationErrors[`rooms.${index}.rent`])}
-                            className={`${fieldClass(`rooms.${index}.rent`)} hide-number-spinners`}
-                          />
-                          <FieldError field={`rooms.${index}.rent`} />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white">
-                        <div>
-                          <p className="font-bold text-sm">Has private bathroom</p>
-                          <p className="text-xs text-slate-400">En-suite or separate</p>
-                        </div>
-                        <Switch
-                          checked={room.hasPrivateBath}
-                          onCheckedChange={(v) =>
-                            updateRoom(room.id, {
-                              hasPrivateBath: v,
-                              bathroomType: v ? "en-suite" : "",
-                              sharedBathLocation: "",
-                            })
-                          }
-                        />
-                      </div>
-
-                      {room.hasPrivateBath ? (
-                        <div className="space-y-2 pl-3 border-l-2 border-amber-300">
-                          <Label className="text-xs uppercase font-bold">Bathroom Type</Label>
-                          <select
-                            value={room.bathroomType}
-                            onChange={(e) => updateRoom(room.id, { bathroomType: e.target.value })}
-                            className="w-full h-10 rounded-xl border border-amber-100 bg-white px-3 text-sm"
-                          >
-                            <option value="en-suite">Private (en-suite)</option>
-                            <option value="separate">Private (separate)</option>
-                          </select>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 pl-3 border-l-2 border-slate-200">
-                          <p className="text-xs text-slate-400">Shares bathroom with other rooms</p>
-                          <div className="space-y-2">
-                            <Label className="text-xs uppercase font-bold">Bathroom Location (optional)</Label>
-                            <Input
-                              placeholder="e.g 2nd floor hallway"
-                              value={room.sharedBathLocation}
-                              onChange={(e) => updateRoom(room.id, { sharedBathLocation: e.target.value })}
-                              className="rounded-xl border-amber-100"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-bold">Room Status</Label>
-                        <select
-                          value={room.status}
-                          onChange={(e) =>
-                            updateRoom(room.id, {
-                              status: e.target.value as ApartmentStatus,
-                              isOccupied: e.target.value === "maintenance" ? false : room.isOccupied,
-                            })
-                          }
-                          className={`w-full h-10 rounded-xl border bg-white px-3 text-sm ${
-                            validationErrors[`rooms.${index}.status`] ? "border-red-300 focus:ring-red-400" : "border-amber-100"
-                          }`}
-                        >
-                          {STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <FieldError field={`rooms.${index}.status`} />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-bold">Description (optional)</Label>
-                        <Textarea
-                          value={room.description}
-                          onChange={(e) => updateRoom(room.id, { description: e.target.value })}
-                          placeholder="Describe features..."
-                          rows={3}
-                          className="rounded-xl border-amber-100 resize-none"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white">
-                        <span className="text-sm font-bold">Air conditioned</span>
-                        <Switch checked={room.hasAC} onCheckedChange={(v) => updateRoom(room.id, { hasAC: v })} />
-                      </div>
-
-                      <div className="space-y-3 border-t border-amber-100 pt-4">
-                        <div><Label className="text-xs font-bold uppercase">Room Images</Label><p className="mt-1 text-xs text-slate-500">Upload, take photos, reorder thumbnails, and select the room cover image.</p></div>
-                        <MultiImageUploader
-                          images={room.images.map((url, imageIndex) => ({ id: `${room.id}-image-${imageIndex}`, url, isPrimary: imageIndex === 0, sortOrder: imageIndex }))}
-                          onImagesChange={(nextImages) => {
-                            const ordered = [...nextImages].sort((left, right) => left.isPrimary === right.isPrimary ? left.sortOrder - right.sortOrder : left.isPrimary ? -1 : 1);
-                            updateRoom(room.id, { images: ordered.map((image) => image.url) });
-                          }}
-                          maxImages={10}
-                          maxFileSize={8}
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => setRooms((prev) => [...prev, makeRoom()])}
-                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-amber-300 rounded-2xl text-amber-700 font-bold text-sm hover:bg-amber-50"
-                  >
-                    <Plus className="h-4 w-4" /> Add Another Room
-                  </button>
-
-                  <div className="grid grid-cols-4 gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
-                    {[
-                      { label: "Total rooms", val: totalRooms },
-                      { label: "Available", val: availableRooms },
-                      { label: "Maintenance", val: maintenanceRooms },
-                      { label: "With bath", val: withBathRooms },
-                    ].map(({ label, val }) => (
-                      <div key={label}>
-                        <p className="text-2xl font-black text-amber-700">{val}</p>
-                        <p className="text-xs text-slate-400">{label}</p>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}

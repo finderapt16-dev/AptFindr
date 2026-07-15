@@ -118,10 +118,12 @@ export function LandlordBrowse() {
   const getViewCount = (apartmentId: string) =>
     viewRows
       .filter((view) => (view.apartment_id ?? view.apartmentId) === apartmentId)
-      .reduce((total, view) => total + (Number(view.view_count) || 1), 0);
+      .reduce((total, view) => total + Math.max(0, Number(view.view_count) || 0), 0);
 
   const getFavoriteCount = (apartmentId: string) =>
     favoriteRows.filter((favorite) => (favorite.apartment_id ?? favorite.apartmentId) === apartmentId).length;
+
+  const viewLabel = (count: number) => `${count.toLocaleString()} ${count === 1 ? "view" : "views"}`;
 
   const marketInsights = useMemo(() => {
     const totalListings = publishedApartments.length;
@@ -141,9 +143,13 @@ export function LandlordBrowse() {
     ).length;
     const laPazCoverage = totalListings > 0 ? Math.round((laPazListings / totalListings) * 100) : 0;
     const topPerformers = [...publishedApartments]
-      .map((apartment) => ({ apartment, engagement: getViewCount(apartment.id) + getFavoriteCount(apartment.id) }))
-      .filter((item) => item.engagement > 0)
-      .sort((left, right) => right.engagement - left.engagement)
+      .map((apartment) => ({ apartment, views: getViewCount(apartment.id), saves: getFavoriteCount(apartment.id) }))
+      .filter((item) => item.views > 0 || item.saves > 0)
+      .sort((left, right) =>
+        right.views - left.views ||
+        right.saves - left.saves ||
+        new Date(right.apartment.updatedAt ?? right.apartment.createdAt ?? 0).getTime() - new Date(left.apartment.updatedAt ?? left.apartment.createdAt ?? 0).getTime()
+      )
       .slice(0, 3)
       .map((item) => item.apartment);
 
@@ -156,12 +162,15 @@ export function LandlordBrowse() {
   );
 
   const filteredApartments = useMemo(() => {
+    const hasPriceFilter = priceRange[0] > 0 || priceRange[1] < Number.MAX_SAFE_INTEGER;
+
     const filtered = publishedApartments.filter((apartment) => {
       const query = searchQuery.toLowerCase();
       const matchesSearch = !query || `${apartment.title} ${apartment.address} ${apartment.city} ${apartment.description}`.toLowerCase().includes(query);
       const matchesLocation = locationFilter === "all" || apartment.city === locationFilter;
       const price = getLowestAvailableRoomPrice(apartment);
-      return matchesSearch && matchesLocation && price !== null && price >= priceRange[0] && price <= priceRange[1];
+      const matchesPrice = !hasPriceFilter || (price !== null && price >= priceRange[0] && price <= priceRange[1]);
+      return matchesSearch && matchesLocation && matchesPrice;
     });
 
     return [...filtered].sort((left, right) => {
@@ -225,8 +234,8 @@ export function LandlordBrowse() {
 
     return (
       <motion.article whileHover={{ y: -3 }} onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/browse", backLabel: "Back to Market Overview" } })} className="group cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg">
-        <div className={`relative flex items-center justify-center overflow-hidden bg-slate-100 ${compact ? "aspect-[16/8]" : "aspect-[4/3]"}`}>{imageUrl ? <img src={imageUrl} alt={apartment.title || "Property"} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <Building2 className="h-10 w-10 text-slate-300" />}<Badge className="absolute left-3 top-3 rounded-md bg-orange-500 text-white"><Eye className="mr-1 h-3 w-3" />{viewCount} views</Badge>{canFavorite && <button title={isFavorite(apartment.id) ? "Remove from favorites" : "Add to favorites"} onClick={(event) => handleFavorite(event, apartment)} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md transition hover:scale-105 ${isFavorite(apartment.id) ? "text-rose-500" : "text-slate-500"}`}><Heart className="h-5 w-5" fill={isFavorite(apartment.id) ? "currentColor" : "none"} /></button>}</div>
-        <div className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-lg font-black text-slate-950">{apartment.title || "Untitled property"}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />{location}</p></div><p className="shrink-0 text-xs font-black text-orange-600">View room prices</p></div>{(apartment.landlordVerified ?? landlord?.isVerified) === true && <VerifiedBadge label="Verified Landlord" className="mt-3" />}<div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-lg bg-emerald-50 p-2.5"><strong className="block text-sm text-emerald-700">{availableRooms}</strong><span className="text-[10px] font-semibold text-slate-500">Available rooms</span></div><div className="rounded-lg bg-blue-50 p-2.5"><strong className="block text-sm text-blue-700">{viewCount}</strong><span className="text-[10px] font-semibold text-slate-500">Views</span></div><div className="rounded-lg bg-rose-50 p-2.5"><strong className="block text-sm text-rose-700">{favoriteCount}</strong><span className="text-[10px] font-semibold text-slate-500">Saved</span></div></div><Button onClick={(event) => { event.stopPropagation(); navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/browse", backLabel: "Back to Market Overview" } }); }} className="mt-4 h-10 w-full rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600">View Details<ChevronRight className="ml-2 h-4 w-4" /></Button></div>
+        <div className={`relative flex items-center justify-center overflow-hidden bg-slate-100 ${compact ? "aspect-[16/8]" : "aspect-[4/3]"}`}>{imageUrl ? <img src={imageUrl} alt={apartment.title || "Property"} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <Building2 className="h-10 w-10 text-slate-300" />}<Badge className="absolute left-3 top-3 rounded-md bg-orange-500 text-white"><Eye className="mr-1 h-3 w-3" />{viewLabel(viewCount)}</Badge>{canFavorite && <button title={isFavorite(apartment.id) ? "Remove from favorites" : "Add to favorites"} onClick={(event) => handleFavorite(event, apartment)} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md transition hover:scale-105 ${isFavorite(apartment.id) ? "text-rose-500" : "text-slate-500"}`}><Heart className="h-5 w-5" fill={isFavorite(apartment.id) ? "currentColor" : "none"} /></button>}</div>
+        <div className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-lg font-black text-slate-950">{apartment.title || "Untitled property"}</h3><p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />{location}</p></div><p className="shrink-0 text-xs font-black text-orange-600">View room prices</p></div>{(apartment.landlordVerified ?? landlord?.isVerified) === true && <VerifiedBadge label="Verified Landlord" className="mt-3" />}<div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-lg bg-emerald-50 p-2.5"><strong className="block text-sm text-emerald-700">{availableRooms}</strong><span className="text-[10px] font-semibold text-slate-500">Available rooms</span></div><div className="rounded-lg bg-blue-50 p-2.5"><strong className="block text-sm text-blue-700">{viewCount}</strong><span className="text-[10px] font-semibold text-slate-500">{viewCount === 1 ? "View" : "Views"}</span></div><div className="rounded-lg bg-rose-50 p-2.5"><strong className="block text-sm text-rose-700">{favoriteCount}</strong><span className="text-[10px] font-semibold text-slate-500">Saved</span></div></div><Button onClick={(event) => { event.stopPropagation(); navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/browse", backLabel: "Back to Market Overview" } }); }} className="mt-4 h-10 w-full rounded-md bg-orange-500 font-bold text-white hover:bg-orange-600">View Details<ChevronRight className="ml-2 h-4 w-4" /></Button></div>
       </motion.article>
     );
   };

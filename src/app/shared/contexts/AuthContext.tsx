@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
@@ -73,32 +74,38 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [users, setUsers] = useState<User[]>([]);
   const [pendingLandlordCount, setPendingLandlordCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const authRequestIdRef = useRef(0);
 
   const refreshUsers = useCallback(async () => {
     const [allUsers, pendingCount] = await Promise.all([fetchAppUsers(), getPendingLandlordCount()]);
     setUsers(allUsers);
     setPendingLandlordCount(pendingCount);
 
-    if (currentUser !== null) {
-      const refreshedCurrentUser = allUsers.find((user) => user.id === currentUser.id);
-      if (refreshedCurrentUser) {
-        setCurrentUser(refreshedCurrentUser);
-        persistCurrentUser(refreshedCurrentUser);
-      } else {
-        setCurrentUser(null);
-        persistCurrentUser(null);
+    setCurrentUser((previousUser) => {
+      if (previousUser === null) {
+        return null;
       }
-    }
-  }, [currentUser]);
+
+      const refreshedCurrentUser = allUsers.find((user) => user.id === previousUser.id);
+      if (refreshedCurrentUser) {
+        persistCurrentUser(refreshedCurrentUser);
+        return refreshedCurrentUser;
+      } else {
+        persistCurrentUser(null);
+        return null;
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let isActive = true;
 
     const initializeAuth = async (): Promise<void> => {
+      const requestId = ++authRequestIdRef.current;
       try {
         const [allUsers, pendingCount] = await Promise.all([fetchAppUsers(), getPendingLandlordCount()]);
 
-        if (!isActive) {
+        if (!isActive || requestId !== authRequestIdRef.current) {
           return;
         }
 
@@ -106,11 +113,11 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         setPendingLandlordCount(pendingCount);
 
         const authenticatedUser = await getCurrentAuthenticatedUser();
-        if (!isActive) return;
+        if (!isActive || requestId !== authRequestIdRef.current) return;
 
         setCurrentUser(authenticatedUser);
       } catch (error) {
-        if (!isActive) {
+        if (!isActive || requestId !== authRequestIdRef.current) {
           return;
         }
 
@@ -120,7 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         setCurrentUser(null);
         persistCurrentUser(null);
       } finally {
-        if (isActive) {
+        if (isActive && requestId === authRequestIdRef.current) {
           setIsLoading(false);
         }
       }
@@ -171,8 +178,16 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   }, [refreshUsers]);
 
   const login = useCallback(async (credentials: AuthCredentials): Promise<AuthActionResult> => {
+    const requestId = ++authRequestIdRef.current;
+    setIsLoading(true);
+    setCurrentUser(null);
+    persistCurrentUser(null);
+
     try {
       const user = await loginUser(credentials);
+      if (requestId !== authRequestIdRef.current) {
+        return { success: false, error: 'A newer sign-in request is already in progress.' };
+      }
       setCurrentUser(user);
       persistCurrentUser(user);
       void refreshUsers().catch((refreshError) => {
@@ -181,6 +196,10 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       return { success: true, user };
     } catch (error) {
       return { success: false, error: getErrorMessage(error, 'Invalid email or password.') };
+    } finally {
+      if (requestId === authRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [refreshUsers]);
 
@@ -240,10 +259,14 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   }, [currentUser?.id]);
 
   const logout = useCallback(() => {
+    authRequestIdRef.current += 1;
+    setIsLoading(true);
     setCurrentUser(null);
     persistCurrentUser(null);
     void logoutUser().catch((logoutError) => {
       console.warn('Failed to sign out from Supabase Auth:', logoutError);
+    }).finally(() => {
+      setIsLoading(false);
     });
   }, []);
 

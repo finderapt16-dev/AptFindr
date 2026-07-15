@@ -50,6 +50,7 @@ import {
   MapPin,
   Menu,
   MessageCircle,
+  Loader2,
   RotateCcw,
   Search,
   Send,
@@ -126,7 +127,12 @@ export function StudentEmployeeDashboard() {
   const [dashboardFavoriteRows, setDashboardFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
   const [dashboardViewRows, setDashboardViewRows] = useState<DashboardApartmentViewRow[]>([]);
 
-  const { apartments: allApartments } = useApartmentsContext();
+  const {
+    apartments: allApartments,
+    isLoading: apartmentsLoading,
+    error: apartmentsError,
+    refreshApartments,
+  } = useApartmentsContext();
 
   const applyTenantPreferences = (preferences: TenantPreferenceSettings) => {
     setPreferredArea(preferences.preferredArea);
@@ -1301,6 +1307,77 @@ export function StudentEmployeeDashboard() {
     help:      renderHelp,
   };
 
+  const renderDashboardLoading = () => (
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="overflow-hidden rounded-lg border border-orange-100 bg-white px-6 py-8 shadow-[0_22px_60px_rgba(15,23,42,0.08)] md:px-9">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-orange-100 bg-orange-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading Dashboard
+            </div>
+            <div className="h-12 w-72 max-w-full animate-pulse rounded-lg bg-slate-100" />
+            <div className="h-5 w-96 max-w-full animate-pulse rounded-lg bg-slate-100" />
+          </div>
+          <div className="grid w-full gap-3 md:w-80">
+            <div className="h-20 animate-pulse rounded-lg bg-orange-50" />
+            <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {[0, 1].map((item) => (
+          <div key={item} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 animate-pulse rounded-lg bg-orange-50" />
+              <div className="flex-1 space-y-3">
+                <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
+                <div className="h-8 w-20 animate-pulse rounded bg-slate-100" />
+                <div className="h-3 w-44 animate-pulse rounded bg-slate-100" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="min-h-64 rounded-lg border border-slate-200 bg-white p-7 shadow-sm">
+            <div className="h-14 w-14 animate-pulse rounded-lg bg-slate-100" />
+            <div className="mt-6 h-6 w-40 animate-pulse rounded bg-slate-100" />
+            <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
+            <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-slate-100" />
+            <div className="mt-8 h-10 w-32 animate-pulse rounded-lg bg-orange-50" />
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+
+  const renderDashboardError = () => (
+    <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center justify-center px-4">
+      <section className="w-full rounded-lg border border-rose-100 bg-white p-8 text-center shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+          <AlertTriangle className="h-8 w-8" />
+        </span>
+        <h1 className="mt-5 text-2xl font-black text-slate-950">Dashboard data could not load</h1>
+        <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-6 text-slate-500">
+          {apartmentsError || "We could not load the latest apartment records. Please try again."}
+        </p>
+        <Button onClick={() => void refreshApartments()} className="mt-6 rounded-lg bg-orange-500 px-6 font-black text-white hover:bg-orange-600">
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Try Again
+        </Button>
+      </section>
+    </div>
+  );
+
+  const activeContent = apartmentsError && allApartments.length === 0
+    ? renderDashboardError()
+    : apartmentsLoading && allApartments.length === 0
+      ? renderDashboardLoading()
+      : (sectionMap[activeSection] ?? renderOverview)();
   return (
     <div className="app-shell fixed inset-0 z-50 overflow-hidden bg-[#f8fafc]">
       <div className="app-shell-frame relative z-10 flex h-full">
@@ -1337,7 +1414,7 @@ export function StudentEmployeeDashboard() {
 
         <div className="app-shell-main flex-1 min-w-0 h-full overflow-y-auto">
           <main className="app-shell-content app-shell-content-mobile-nav px-4 py-6 pt-16 md:px-8 lg:px-10 lg:pt-8">
-            {(sectionMap[activeSection] ?? renderOverview)()}
+            {activeContent}
           </main>
         </div>
       </div>
