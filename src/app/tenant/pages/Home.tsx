@@ -21,6 +21,7 @@ import {
   Map,
   MapPin,
   PawPrint,
+  RefreshCw,
   RotateCcw,
   Search,
   Settings,
@@ -35,6 +36,7 @@ import {
   TriangleAlert
 } from "lucide-react";
 import { LogoutConfirmation } from "@/app/shared/components/common/LogoutConfirmation";
+import { ImageWithFallback } from "@/app/shared/components/figma/ImageWithFallback";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -151,8 +153,14 @@ function TenantBrowse() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, users, logout } = useAuth();
-  const { apartments: allApartments, isLoading: apartmentsLoading, error: apartmentsError } = useApartmentsContext();
-  const { favorites: userFavorites, isFavorite, toggleFavorite } = useFavorites();
+  const {
+    apartments: allApartments,
+    isLoading: apartmentsLoading,
+    isRefreshing: apartmentsRefreshing,
+    error: apartmentsError,
+    refreshApartments,
+  } = useApartmentsContext();
+  const { favorites: userFavorites, isFavorite, toggleFavorite, updatingFavoriteIds } = useFavorites();
 
   const urlSearchQuery = searchParams.get("search")?.trim() || "";
   const initialPriceRange: [number, number] = [
@@ -668,6 +676,7 @@ function TenantBrowse() {
     const availableRooms = getAvailableRooms(apartment);
     const locationText = [apartment.city, apartment.state].filter(Boolean).join(", ") || apartment.address;
     const favorite = isFavorite(apartment.id);
+    const favoriteUpdating = updatingFavoriteIds.includes(apartment.id);
     const imageUrl = apartment.image || apartment.images?.[0];
     const viewCount = getViewCount(apartment.id);
 
@@ -675,7 +684,7 @@ function TenantBrowse() {
       <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)]">
         <div className="relative aspect-[4/3] bg-slate-100">
           {imageUrl ? (
-            <img src={getImageUrl(imageUrl)} alt={apartment.title} className="h-full w-full object-cover" />
+            <ImageWithFallback src={getImageUrl(imageUrl)} alt={apartment.title} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <Building2 className="h-12 w-12 text-slate-300" />
@@ -689,10 +698,11 @@ function TenantBrowse() {
           <button
             type="button"
             title={favorite ? "Remove from favorites" : "Add to favorites"}
+            disabled={favoriteUpdating}
             onClick={() => void toggleFavorite(apartment.id)}
-            className={`absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg transition hover:scale-105 ${favorite ? "text-rose-500" : "text-slate-500"}`}
+            className={`absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 ${favorite ? "text-rose-500" : "text-slate-500"}`}
           >
-            <Heart className="h-6 w-6" fill={favorite ? "currentColor" : "none"} />
+            {favoriteUpdating ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Heart className="h-6 w-6" fill={favorite ? "currentColor" : "none"} />}
           </button>
         </div>
         <div className="p-5">
@@ -825,10 +835,33 @@ function TenantBrowse() {
             </section>
 
             <section className="mt-6">
-              {apartmentsLoading ? (
-                <div className="flex min-h-72 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-500 shadow-sm">Loading apartments from database...</div>
-              ) : apartmentsError ? (
-                <div className="flex min-h-72 items-center justify-center rounded-lg border border-red-100 bg-white text-sm font-bold text-red-600 shadow-sm">{apartmentsError}</div>
+              {apartmentsRefreshing && allApartments.length > 0 && (
+                <div className="mb-3 flex items-center gap-2 rounded-lg border border-orange-100 bg-orange-50 px-4 py-2 text-xs font-black text-orange-700">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  Refreshing latest apartment data...
+                </div>
+              )}
+              {apartmentsLoading && allApartments.length === 0 ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" aria-label="Loading apartments">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                      <div className="aspect-[4/3] animate-pulse bg-slate-100" />
+                      <div className="space-y-3 p-5">
+                        <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
+                        <div className="h-4 w-1/2 animate-pulse rounded bg-slate-100" />
+                        <div className="h-9 w-full animate-pulse rounded bg-slate-100" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : apartmentsError && allApartments.length === 0 ? (
+                <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-red-100 bg-white p-6 text-center text-sm font-bold text-red-600 shadow-sm">
+                  <TriangleAlert className="mb-3 h-8 w-8 text-red-300" />
+                  <p>{apartmentsError}</p>
+                  <Button variant="outline" onClick={() => void refreshApartments()} className="mt-4 rounded-md font-bold">
+                    Try Again
+                  </Button>
+                </div>
               ) : filteredApartments.length === 0 ? (
                 <div className="flex min-h-96 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm">
                   <LocateFixed className="mb-4 h-12 w-12 text-slate-300" />

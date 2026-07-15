@@ -18,7 +18,9 @@ import { useAuth } from './AuthContext';
 interface ApartmentsContextType {
   apartments: Apartment[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
+  lastUpdatedAt: string | null;
   refreshApartments: () => Promise<void>;
 }
 
@@ -28,31 +30,70 @@ export function ApartmentsProvider({ children }: { children: ReactNode }): React
   const { user, isLoading: authIsLoading } = useAuth();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const activeRefreshRef = useRef(false);
+  const apartmentsRef = useRef<Apartment[]>([]);
 
   const refreshApartments = useCallback(async () => {
+    if (activeRefreshRef.current) {
+      return;
+    }
+
+    activeRefreshRef.current = true;
     const requestId = ++requestIdRef.current;
-    setIsLoading(true);
-    setError(null);
+    const hasExistingApartments = apartmentsRef.current.length > 0;
+
+    if (hasExistingApartments) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       const rows = await fetchApartments();
-      if (requestId === requestIdRef.current) setApartments(rows);
+      if (isMountedRef.current && requestId === requestIdRef.current) {
+        setApartments(rows);
+        setError(null);
+        setLastUpdatedAt(new Date().toISOString());
+      }
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : 'Unable to load apartments.';
-      if (requestId === requestIdRef.current) {
+      if (isMountedRef.current && requestId === requestIdRef.current) {
         setError(message);
-        setApartments([]);
+        if (!hasExistingApartments) {
+          setApartments([]);
+        }
       }
     } finally {
-      if (requestId === requestIdRef.current) setIsLoading(false);
+      if (isMountedRef.current && requestId === requestIdRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+      activeRefreshRef.current = false;
     }
+  }, []);
+
+  useEffect(() => {
+    apartmentsRef.current = apartments;
+  }, [apartments]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
     if (authIsLoading) return;
     setApartments([]);
+    apartmentsRef.current = [];
+    setError(null);
+    setIsLoading(true);
+    setIsRefreshing(false);
     void refreshApartments();
   }, [authIsLoading, refreshApartments, user?.id, user?.role]);
 
@@ -86,10 +127,12 @@ export function ApartmentsProvider({ children }: { children: ReactNode }): React
     () => ({
       apartments,
       isLoading,
+      isRefreshing,
       error,
+      lastUpdatedAt,
       refreshApartments,
     }),
-    [apartments, isLoading, error, refreshApartments],
+    [apartments, isLoading, isRefreshing, error, lastUpdatedAt, refreshApartments],
   );
 
   return <ApartmentsContext.Provider value={value}>{children}</ApartmentsContext.Provider>;

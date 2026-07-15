@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -12,23 +12,42 @@ export function useFavorites() {
   const { user, isAuthenticated } = useAuth();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingFavoriteIds, setUpdatingFavoriteIds] = useState<string[]>([]);
+  const favoritesRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
 
   const loadFavorites = useCallback(async () => {
     if (!user?.id) {
       setFavorites([]);
+      setError(null);
       return;
     }
 
-    setIsLoading(true);
+    const hasExistingFavorites = favoritesRef.current.length > 0;
+    if (hasExistingFavorites) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       const ids = await getFavoriteApartmentIds(user.id);
       setFavorites(ids);
+      setError(null);
     } catch (error) {
       console.error('Failed to load favorites:', error);
-      setFavorites([]);
+      setError('Unable to load favorites. Please try again.');
+      if (!hasExistingFavorites) {
+        setFavorites([]);
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [user?.id]);
 
@@ -48,7 +67,12 @@ export function useFavorites() {
         return;
       }
 
+      if (updatingFavoriteIds.includes(apartmentId)) {
+        return;
+      }
+
       const wasFavorite = favorites.includes(apartmentId);
+      setUpdatingFavoriteIds((previous) => [...previous, apartmentId]);
 
       try {
         const isNowFavorite = await toggleFavoriteInDb(apartmentId, user.id);
@@ -76,9 +100,11 @@ export function useFavorites() {
 
           return previous.filter((id) => id !== apartmentId);
         });
+      } finally {
+        setUpdatingFavoriteIds((previous) => previous.filter((id) => id !== apartmentId));
       }
     },
-    [favorites, isAuthenticated, user?.id, user?.role],
+    [favorites, isAuthenticated, updatingFavoriteIds, user?.id, user?.role],
   );
 
   const isFavorite = useCallback(
@@ -89,6 +115,9 @@ export function useFavorites() {
   return {
     favorites,
     isLoading,
+    isRefreshing,
+    error,
+    updatingFavoriteIds,
     toggleFavorite,
     isFavorite,
     refreshFavorites: loadFavorites,
