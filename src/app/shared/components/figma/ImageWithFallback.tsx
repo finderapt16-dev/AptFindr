@@ -41,7 +41,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
       </div>
     </div>
   ) : (
-    <span className={`relative inline-block overflow-hidden ${className ?? ''}`} style={style}>
+    <span className={`relative block h-full w-full overflow-hidden ${className ?? ''}`} style={style}>
       {!isLoaded && (
         <span
           className="absolute inset-0 animate-pulse bg-slate-100"
@@ -52,7 +52,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
       <img
         src={src}
         alt={alt}
-        className={`${className ?? 'h-full w-full object-cover'} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
+        className={`h-full w-full object-cover ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
         {...rest}
         onError={(event) => {
           onError?.(event);

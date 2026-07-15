@@ -297,7 +297,26 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
         .filter(Boolean)
     : [];
 
-  const primaryImage = getPrimaryImage(images);
+  const rooms = row.apartment_rooms?.map((room) => ({
+    id: room.id ?? undefined,
+    name: toString(room.room_name ?? room.name ?? room.room_type),
+    type: toString(room.type ?? room.room_type),
+    price: toNumber(room.rent),
+    sqft: toNumber(room.sqft),
+    maxOccupants: toNumber(room.max_occupants, 1),
+    status: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')),
+    isOccupied: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')) === 'occupied',
+    hasPrivateBath: toBoolean(room.has_private_bath),
+    bathroomType: toString(room.bathroom_type),
+    sharedBathLocation: toString(room.shared_bath_location),
+    hasAC: toBoolean(room.has_ac),
+    description: toString(room.description),
+    images: parseStringList(room.images ?? room.image_url),
+    createdAt: room.created_at ?? undefined,
+  }));
+  const roomImages = rooms?.flatMap((room) => room.images ?? []) ?? [];
+  const displayImages = images.length > 0 ? images : roomImages;
+  const primaryImage = getPrimaryImage(displayImages);
 
   return {
     id: row.id ?? '',
@@ -311,7 +330,7 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     state: toString(row.state),
     zip: toString(row.zip),
     image: primaryImage,
-    images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
+    images: displayImages.length > 0 ? displayImages : primaryImage ? [primaryImage] : [],
     description: toString(row.description),
     amenities: parseStringList(row.amenities),
     availableDate: getAvailableDate(row),
@@ -332,23 +351,7 @@ export const apartmentRowToApartment = (row: ApartmentRow): Apartment => {
     updatedAt: row.updated_at ?? undefined,
     propertyType: row.features && typeof row.features.propertyType === 'string' ? row.features.propertyType : undefined,
     features: row.features ?? undefined,
-    rooms: row.apartment_rooms?.map((room) => ({
-      id: room.id ?? undefined,
-      name: toString(room.room_name ?? room.name ?? room.room_type),
-      type: toString(room.type ?? room.room_type),
-      price: toNumber(room.rent),
-      sqft: toNumber(room.sqft),
-      maxOccupants: toNumber(room.max_occupants, 1),
-      status: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')),
-      isOccupied: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')) === 'occupied',
-      hasPrivateBath: toBoolean(room.has_private_bath),
-      bathroomType: toString(room.bathroom_type),
-      sharedBathLocation: toString(room.shared_bath_location),
-      hasAC: toBoolean(room.has_ac),
-      description: toString(room.description),
-      images: parseStringList(room.images ?? room.image_url),
-      createdAt: room.created_at ?? undefined,
-    })),
+    rooms,
   };
 };
 
