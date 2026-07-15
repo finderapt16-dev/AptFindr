@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./shared/components/ProtectedRoute";
+import { ApartmentsProvider } from "./shared/contexts/ApartmentsContext";
 import { Root } from "./shared/layouts/Root";
 import { AdminApartmentDetail } from "./admin/pages/AdminApartmentDetail";
 import { AddApartment } from "./landlord/pages/AddApartment";
@@ -19,17 +20,25 @@ import { Home } from "./tenant/pages/Home";
 
 const APARTMENT_LOGIN_MESSAGE = "Please sign in or create an account to view apartment details.";
 
+function PublicLandingRoute() {
+  return (
+    <ApartmentsProvider>
+      <Landing />
+    </ApartmentsProvider>
+  );
+}
+
 export const router = createBrowserRouter([
   // Standalone pages — no Root wrapper (no app Header / Chatbot)
   { path: "/flowchart", element: <Flowchart /> },
   { path: "/design-guide", element: <DesignGuide /> },
+  { path: "/", element: <PublicLandingRoute /> },
 
   // Main app wrapped in Root layout
   {
     path: "/",
     element: <Root />,
     children: [
-      { index: true, element: <Landing /> },
       { path: "browse", element: <ProtectedRoute preserveReturnDestination loginMessage={APARTMENT_LOGIN_MESSAGE}><Home /></ProtectedRoute> },
       { path: "apartment/:id", element: <ProtectedRoute preserveReturnDestination loginMessage={APARTMENT_LOGIN_MESSAGE}><ApartmentDetail /></ProtectedRoute> },
       { path: "admin/apartment/:id", element: <ProtectedRoute allowedRoles={["admin"]}><AdminApartmentDetail /></ProtectedRoute> },
