@@ -126,10 +126,10 @@ const UNSAFE_TERMS = [
 
 const INTENT_PATTERNS: Array<{ intent: string; terms: string[] }> = [
   { intent: "security_sensitive", terms: UNSAFE_TERMS },
-  { intent: "search_apartments", terms: ["browse", "search", "find", "filter", "looking for", "recommend", "suggest"] },
+  { intent: "popular", terms: ["best apartment", "best apartments", "best listing", "best room", "recommended apartment", "recommended apartments", "recommendation", "popular", "most viewed", "most favorited", "top performing", "trending"] },
+  { intent: "search_apartments", terms: ["browse", "search", "find", "filter", "looking for", "recommend", "suggest", "show apartment", "show apartments"] },
   { intent: "apartment_availability", terms: ["available", "availability", "how many", "vacant", "open room", "available room"] },
   { intent: "pricing", terms: ["price", "rent", "cheapest", "affordable", "budget", "under", "below", "cost"] },
-  { intent: "popular", terms: ["popular", "most viewed", "most favorited", "top performing", "trending"] },
   { intent: "recent", terms: ["recent", "recently added", "newest", "latest", "new listing"] },
   { intent: "amenities", terms: ["wifi", "wi-fi", "parking", "pet", "pet-friendly", "furnished", "amenity", "amenities"] },
   { intent: "visibility_reason", terms: ["why is my property not visible", "not visible", "missing from browse", "can't see", "cant see"] },
@@ -429,6 +429,31 @@ function tenantDataAnswer(intent: string, text: string, ctx: ChatbotContext): Ch
           [{ label: "Open Browse", path: `/browse?search=${encodeURIComponent(locationQuery)}` }],
         );
       }
+    }
+
+    if (intent === "search_apartments") {
+      if (listings.length === 0) {
+        return reply(
+          "No tenant-visible apartments are available right now. Listings must be verified, approved, published, active, and have available rooms before I can recommend them.",
+          "not_found",
+          intent,
+          [{ label: "Open Browse", path: "/browse" }],
+        );
+      }
+
+      const ranked = [...listings].sort(
+        (left, right) =>
+          apartmentViewCount(ctx, right.id) + apartmentFavoriteCount(ctx, right.id) -
+          (apartmentViewCount(ctx, left.id) + apartmentFavoriteCount(ctx, left.id)) ||
+          lowestRoomPrice(left) - lowestRoomPrice(right),
+      );
+
+      return reply(
+        `Here are tenant-visible apartments I can recommend from the current data:\n\n${ranked.slice(0, 5).map((apartment, index) => listingLineWithSignals(apartment, ctx, index)).join("\n")}`,
+        "project_answer",
+        intent,
+        [{ label: "Browse apartments", path: "/browse" }],
+      );
     }
   }
 
