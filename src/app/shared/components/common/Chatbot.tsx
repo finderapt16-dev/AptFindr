@@ -6,6 +6,14 @@ import { useApartmentsContext } from "../../contexts/ApartmentsContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../hooks/useFavorites";
 import {
+  fetchApartmentViews,
+  fetchFavorites as fetchDashboardFavorites,
+  fetchNotifications,
+  type DashboardApartmentViewRow,
+  type DashboardFavoriteRow,
+  type DashboardNotificationRow,
+} from "../../services/dashboardSupabaseService";
+import {
   generateChatbotReply,
   getChatbotWelcome,
   getQuickPromptsForRole,
@@ -25,14 +33,45 @@ interface Message {
   actions?: { label: string; path: string }[];
 }
 
+const CHAT_HISTORY_LIMIT = 30;
+
+function chatStorageKey(userId?: string, role?: string | null) {
+  return userId && role ? `rentiloilo_chat_history:${role}:${userId}` : null;
+}
+
+function serializeMessages(messages: Message[]) {
+  return messages.slice(-CHAT_HISTORY_LIMIT).map((message) => ({
+    ...message,
+    timestamp: message.timestamp.toISOString(),
+  }));
+}
+
+function restoreMessages(rawValue: string | null): Message[] {
+  if (!rawValue) return [];
+
+  try {
+    const parsed = JSON.parse(rawValue) as Array<Omit<Message, "timestamp"> & { timestamp: string }>;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((message) => message.sender === "user" || message.sender === "bot")
+      .slice(-CHAT_HISTORY_LIMIT)
+      .map((message) => ({
+        ...message,
+        timestamp: Number.isNaN(Date.parse(message.timestamp)) ? new Date() : new Date(message.timestamp),
+      }));
+  } catch {
+    return [];
+  }
+}
+
 interface ChatbotProps {
   userRole?: "student" | "employee" | "landlord" | "admin" | null;
 }
 
 export function Chatbot({ userRole }: ChatbotProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { apartments, isLoading, error } = useApartmentsContext();
+  const { user, users } = useAuth();
+  const { apartments, isLoading, isRefreshing, error } = useApartmentsContext();
   const { favorites } = useFavorites();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -40,6 +79,11 @@ export function Chatbot({ userRole }: ChatbotProps) {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
+  const [viewRows, setViewRows] = useState<DashboardApartmentViewRow[]>([]);
+  const [favoriteRows, setFavoriteRows] = useState<DashboardFavoriteRow[]>([]);
+  const [notifications, setNotifications] = useState<DashboardNotificationRow[]>([]);
+  const [runtimeLoading, setRuntimeLoading] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
@@ -60,18 +104,40 @@ export function Chatbot({ userRole }: ChatbotProps) {
   const chatContext = useMemo(
     () => ({
       apartments,
-      isLoading,
+      isLoading: isLoading || runtimeLoading,
+      isRefreshing,
       error,
+      assistantWarning: runtimeError,
       userRole: resolvedRole,
       userId: user?.id,
       userName: user?.name,
       favoriteCount: favorites.length,
+      users,
+      viewRows,
+      favoriteRows,
+      notifications,
       history: messages.slice(-8).map((message) => ({
         sender: message.sender,
         text: message.text,
       })),
     }),
-    [apartments, isLoading, error, resolvedRole, user?.id, user?.name, favorites.length, messages],
+    [
+      apartments,
+      isLoading,
+      isRefreshing,
+      runtimeLoading,
+      error,
+      runtimeError,
+      resolvedRole,
+      user?.id,
+      user?.name,
+      favorites.length,
+      users,
+      viewRows,
+      favoriteRows,
+      notifications,
+      messages,
+    ],
   );
 
   const pushBotReply = useCallback((reply: ChatbotReply, requestId: number, originalQuestion: string) => {
@@ -101,6 +167,25 @@ export function Chatbot({ userRole }: ChatbotProps) {
   );
 
   useEffect(() => {
+    const key = chatStorageKey(user?.id, resolvedRole);
+    setLastFailedQuestion(null);
+    setInputValue("");
+
+    if (!key) {
+      setMessages([]);
+      return;
+    }
+
+    setMessages(restoreMessages(localStorage.getItem(key)));
+  }, [resolvedRole, user?.id]);
+
+  useEffect(() => {
+    const key = chatStorageKey(user?.id, resolvedRole);
+    if (!key || messages.length === 0) return;
+    localStorage.setItem(key, JSON.stringify(serializeMessages(messages)));
+  }, [messages, resolvedRole, user?.id]);
+
+  useEffect(() => {
     if (!isOpen || messages.length > 0) return;
 
     setMessages([
@@ -119,6 +204,40 @@ export function Chatbot({ userRole }: ChatbotProps) {
       },
     ]);
   }, [isOpen, messages.length, resolvedRole, user?.name]);
+
+  useEffect(() => {
+    if (!isOpen || !user?.id || !resolvedRole) return;
+
+    let active = true;
+    setRuntimeLoading(true);
+    setRuntimeError(null);
+
+    const notificationRequest = fetchNotifications(user.id);
+    const sharedRequests: Promise<[DashboardApartmentViewRow[], DashboardFavoriteRow[]]> = Promise.all([
+      fetchApartmentViews(),
+      fetchDashboardFavorites(),
+    ]);
+
+    void Promise.all([notificationRequest, sharedRequests])
+      .then(([loadedNotifications, [loadedViews, loadedFavorites]]) => {
+        if (!active) return;
+        setNotifications(loadedNotifications);
+        setViewRows(loadedViews);
+        setFavoriteRows(loadedFavorites);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        console.warn("Failed to load chatbot runtime data:", loadError);
+        setRuntimeError("Some assistant data could not be loaded.");
+      })
+      .finally(() => {
+        if (active) setRuntimeLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, resolvedRole, user?.id]);
 
   useEffect(() => {
     return () => {
@@ -212,8 +331,12 @@ export function Chatbot({ userRole }: ChatbotProps) {
 
   const assistantStatus = isLoading
     ? "Loading platform data..."
+    : isRefreshing || runtimeLoading
+      ? "Refreshing live data..."
     : error
       ? "Workflow tips only"
+      : runtimeError
+        ? "Live listings, limited analytics"
       : resolvedRole === "admin"
         ? "Project-only admin help"
         : resolvedRole === "landlord"

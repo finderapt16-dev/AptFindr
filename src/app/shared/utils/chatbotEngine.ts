@@ -23,11 +23,41 @@ export interface ChatHistoryTurn {
 export interface ChatbotContext {
   apartments: Apartment[];
   isLoading: boolean;
+  isRefreshing?: boolean;
   error: string | null;
+  assistantWarning?: string | null;
   userRole: UserRole;
   userId?: string;
   userName?: string;
   favoriteCount?: number;
+  users?: Array<{
+    id: string;
+    name?: string;
+    email?: string;
+    role?: string;
+    status?: string;
+    isVerified?: boolean;
+    is_verified?: boolean | null;
+  }>;
+  viewRows?: Array<{
+    apartment_id?: string | null;
+    apartmentId?: string | null;
+    view_count?: string | number | null;
+  }>;
+  favoriteRows?: Array<{
+    apartment_id?: string | null;
+    apartmentId?: string | null;
+    user_id?: string | null;
+    userId?: string | null;
+  }>;
+  notifications?: Array<{
+    title?: string | null;
+    message?: string | null;
+    read?: boolean | null;
+    is_read?: boolean | null;
+    created_at?: string | null;
+    createdAt?: string | null;
+  }>;
   history?: ChatHistoryTurn[];
 }
 
@@ -90,7 +120,7 @@ const UNRELATED_TERMS = [
 ];
 
 const UNSAFE_TERMS = [
-  "password", "token", "secret key", "service role", "api key", "env", "environment variable",
+  "show password", "dump password", "steal password", "token", "secret key", "service role", "api key",
   "bypass", "hack", "exploit", "sql injection", "disable rls", "admin password",
 ];
 
@@ -99,6 +129,11 @@ const INTENT_PATTERNS: Array<{ intent: string; terms: string[] }> = [
   { intent: "search_apartments", terms: ["browse", "search", "find", "filter", "looking for", "recommend", "suggest"] },
   { intent: "apartment_availability", terms: ["available", "availability", "how many", "vacant", "open room", "available room"] },
   { intent: "pricing", terms: ["price", "rent", "cheapest", "affordable", "budget", "under", "below", "cost"] },
+  { intent: "popular", terms: ["popular", "most viewed", "most favorited", "top performing", "trending"] },
+  { intent: "recent", terms: ["recent", "recently added", "newest", "latest", "new listing"] },
+  { intent: "amenities", terms: ["wifi", "wi-fi", "parking", "pet", "pet-friendly", "furnished", "amenity", "amenities"] },
+  { intent: "visibility_reason", terms: ["why is my property not visible", "not visible", "missing from browse", "can't see", "cant see"] },
+  { intent: "admin_summary", terms: ["platform summary", "today's activity", "todays activity", "pending landlord", "pending verification", "support request", "unresolved"] },
   { intent: "map_browsing", terms: ["map", "gis", "pin", "location", "coordinates", "address"] },
   { intent: "favorites", terms: ["favorite", "favourites", "heart", "saved", "wishlist"] },
   { intent: "applications", terms: ["application", "apply", "booking", "book", "reservation"] },
@@ -143,6 +178,47 @@ function lowestRoomPrice(apartment: Apartment): number {
   return getLowestAvailableRoomPrice(apartment) ?? apartment.price ?? 0;
 }
 
+function apartmentViewCount(ctx: ChatbotContext, apartmentId: string): number {
+  return (ctx.viewRows ?? [])
+    .filter((row) => (row.apartment_id || row.apartmentId) === apartmentId)
+    .reduce((total, row) => total + (Number(row.view_count) || 1), 0);
+}
+
+function apartmentFavoriteCount(ctx: ChatbotContext, apartmentId: string): number {
+  return (ctx.favoriteRows ?? []).filter((row) => (row.apartment_id || row.apartmentId) === apartmentId).length;
+}
+
+function ownedListings(ctx: ChatbotContext): Apartment[] {
+  return landlordListings(ctx.apartments, ctx.userId);
+}
+
+function landlordVerified(ctx: ChatbotContext): boolean {
+  const user = ctx.users?.find((entry) => entry.id === ctx.userId);
+  return user?.isVerified === true || user?.is_verified === true;
+}
+
+function notificationUnread(notification: NonNullable<ChatbotContext["notifications"]>[number]): boolean {
+  if (typeof notification.read === "boolean") return !notification.read;
+  if (typeof notification.is_read === "boolean") return !notification.is_read;
+  return true;
+}
+
+function hasTerm(text: string, term: string): boolean {
+  return text.includes(term);
+}
+
+function getLocationQuery(text: string): string | null {
+  const patterns = [
+    /(?:near|in|at|around)\s+([a-z0-9\s.-]{2,40})/i,
+    /barangay\s+([a-z0-9\s.-]{2,40})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].trim().replace(/[?.!]+$/, "");
+  }
+  return null;
+}
+
 function listingLine(apartment: Apartment, index?: number): string {
   const prefix = index === undefined ? "- " : `${index + 1}. `;
   const rooms = getAvailableRoomCount(apartment);
@@ -152,6 +228,24 @@ function listingLine(apartment: Apartment, index?: number): string {
 
 function topListings(apartments: Apartment[], limit = 3): string {
   return apartments.slice(0, limit).map((apartment, index) => listingLine(apartment, index)).join("\n");
+}
+
+function listingLineWithSignals(apartment: Apartment, ctx: ChatbotContext, index: number): string {
+  const base = listingLine(apartment, index);
+  const views = apartmentViewCount(ctx, apartment.id);
+  const saves = apartmentFavoriteCount(ctx, apartment.id);
+  return `${base} - ${views} ${views === 1 ? "view" : "views"} - ${saves} ${saves === 1 ? "save" : "saves"}`;
+}
+
+function featureTerms(apartment: Apartment): string {
+  const featureList = Array.isArray(apartment.features)
+    ? apartment.features
+    : Array.isArray(apartment.features?.customFeatures)
+      ? apartment.features.customFeatures
+      : [];
+  return [...apartment.amenities, ...featureList.filter((item): item is string => typeof item === "string")]
+    .join(" ")
+    .toLowerCase();
 }
 
 function extractMaxBudget(message: string): number | null {
@@ -255,6 +349,87 @@ function tenantDataAnswer(intent: string, text: string, ctx: ChatbotContext): Ch
       intent,
       [{ label: "Browse apartments", path: "/browse" }],
     );
+  }
+
+  if (intent === "popular") {
+    const ranked = [...listings]
+      .map((apartment) => ({
+        apartment,
+        score: apartmentViewCount(ctx, apartment.id) * 2 + apartmentFavoriteCount(ctx, apartment.id) * 3,
+      }))
+      .sort((left, right) => right.score - left.score || lowestRoomPrice(left.apartment) - lowestRoomPrice(right.apartment))
+      .map((entry) => entry.apartment);
+
+    if (ranked.length === 0) {
+      return reply("No tenant-visible apartments are available to rank right now.", "not_found", intent, [{ label: "Open Browse", path: "/browse" }]);
+    }
+
+    return reply(
+      `Most popular tenant-visible apartments based on real views and saves:\n\n${ranked.slice(0, 5).map((apartment, index) => listingLineWithSignals(apartment, ctx, index)).join("\n")}`,
+      "project_answer",
+      intent,
+      [{ label: "Browse apartments", path: "/browse" }],
+    );
+  }
+
+  if (intent === "recent") {
+    const recent = [...listings].sort((left, right) => new Date(right.createdAt ?? right.availableDate).getTime() - new Date(left.createdAt ?? left.availableDate).getTime());
+    if (recent.length === 0) {
+      return reply("No recently added tenant-visible apartments are available right now.", "not_found", intent, [{ label: "Open Browse", path: "/browse" }]);
+    }
+
+    return reply(
+      `Recently added tenant-visible apartments:\n\n${topListings(recent, 5)}`,
+      "project_answer",
+      intent,
+      [{ label: "Open Browse", path: "/browse?sort=newest" }],
+    );
+  }
+
+  if (intent === "amenities") {
+    const amenityMatches = listings.filter((apartment) => {
+      const terms = featureTerms(apartment);
+      return (
+        (hasTerm(text, "wifi") || hasTerm(text, "wi-fi")) && terms.includes("wifi")
+      ) || (hasTerm(text, "parking") && apartment.parking)
+        || ((hasTerm(text, "pet") || hasTerm(text, "pet-friendly")) && apartment.petFriendly)
+        || (hasTerm(text, "furnished") && apartment.furnished)
+        || terms.split(/\s+/).some((term) => term.length > 2 && text.includes(term));
+    });
+
+    if (amenityMatches.length === 0) {
+      return reply("No matching tenant-visible apartments were found for those amenities.", "not_found", intent, [{ label: "Adjust filters", path: "/browse" }]);
+    }
+
+    return reply(
+      `I found these tenant-visible apartment matches:\n\n${topListings(amenityMatches, 5)}`,
+      "project_answer",
+      intent,
+      [{ label: "Open Browse", path: "/browse" }],
+    );
+  }
+
+  if (intent === "map_browsing" || intent === "search_apartments") {
+    const locationQuery = getLocationQuery(text);
+    if (locationQuery) {
+      const query = locationQuery.toLowerCase();
+      const matches = listings.filter((apartment) =>
+        [apartment.title, apartment.address, apartment.city, apartment.state, apartment.zip]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(query),
+      );
+
+      if (matches.length > 0) {
+        return reply(
+          `Tenant-visible apartments matching **${locationQuery}**:\n\n${topListings(matches, 5)}`,
+          "project_answer",
+          intent,
+          [{ label: "Open Browse", path: `/browse?search=${encodeURIComponent(locationQuery)}` }],
+        );
+      }
+    }
   }
 
   if (intent === "pricing") {
@@ -430,6 +605,135 @@ function workflowAnswer(intent: string, ctx: ChatbotContext): ChatbotReply | nul
   return null;
 }
 
+function landlordDataAnswer(intent: string, ctx: ChatbotContext): ChatbotReply | null {
+  if (ctx.userRole !== "landlord") return null;
+
+  const owned = ownedListings(ctx);
+  const ownedIds = new Set(owned.map((apartment) => apartment.id));
+  const notifications = (ctx.notifications ?? []).filter(notificationUnread);
+
+  if (intent === "apartment_availability" || intent === "manage_rooms") {
+    const totalRooms = owned.reduce((total, apartment) => total + (apartment.rooms?.length ?? 0), 0);
+    const totalAvailable = owned.reduce((total, apartment) => total + getAvailableRoomCount(apartment), 0);
+    const maintenance = owned.reduce(
+      (total, apartment) => total + (apartment.rooms?.filter((room) => room.status === "maintenance").length ?? 0),
+      0,
+    );
+
+    return reply(
+      `Your landlord account has **${owned.length}** loaded ${owned.length === 1 ? "property" : "properties"}, **${totalRooms}** total ${totalRooms === 1 ? "room" : "rooms"}, and **${totalAvailable}** available ${totalAvailable === 1 ? "room" : "rooms"}${maintenance ? `, with **${maintenance}** under maintenance` : ""}.`,
+      "project_answer",
+      intent,
+      [{ label: "My Properties", path: "/dashboard?section=properties" }],
+    );
+  }
+
+  if (intent === "popular") {
+    const ranked = [...owned].sort(
+      (left, right) =>
+        apartmentViewCount(ctx, right.id) + apartmentFavoriteCount(ctx, right.id) -
+        (apartmentViewCount(ctx, left.id) + apartmentFavoriteCount(ctx, left.id)),
+    );
+
+    if (ranked.length === 0) {
+      return reply("I could not find any properties owned by your landlord account in the loaded data.", "not_found", intent);
+    }
+
+    return reply(
+      `Your top properties based on real views and saves:\n\n${ranked.slice(0, 5).map((apartment, index) => listingLineWithSignals(apartment, ctx, index)).join("\n")}`,
+      "project_answer",
+      intent,
+      [{ label: "Market Overview", path: "/browse" }],
+    );
+  }
+
+  if (intent === "visibility_reason" || intent === "publishing") {
+    if (owned.length === 0) {
+      return reply("I could not find loaded properties for your landlord account.", "not_found", intent, [{ label: "Add Property", path: "/add-apartment" }]);
+    }
+
+    const hiddenReasons = owned.map((apartment) => {
+      const reasons = [];
+      if (!landlordVerified(ctx)) reasons.push("landlord account is not verified");
+      if (apartment.approvalStatus !== "approved") reasons.push(`approval status is ${apartment.approvalStatus ?? "pending"}`);
+      if (apartment.isPublished !== true) reasons.push("listing is not published");
+      if (apartment.status !== "available") reasons.push(`status is ${apartment.status ?? "not active"}`);
+      if (apartment.isArchived) reasons.push("listing is archived");
+      if (apartment.deletedAt) reasons.push("listing is deleted");
+      if (getAvailableRoomCount(apartment) === 0) reasons.push("no available rooms");
+      return `${apartment.title || "Untitled property"}: ${reasons.length ? reasons.join(", ") : "visible to tenants"}`;
+    });
+
+    return reply(
+      `Tenant visibility check for your properties:\n\n${hiddenReasons.slice(0, 6).map((line) => `- ${line}`).join("\n")}`,
+      "project_answer",
+      intent,
+      [{ label: "My Properties", path: "/dashboard?section=properties" }],
+    );
+  }
+
+  if (intent === "notifications" || intent === "violations" || intent === "appeals") {
+    const relatedSaves = (ctx.favoriteRows ?? []).filter((row) => ownedIds.has(row.apartment_id || row.apartmentId || "")).length;
+    return reply(
+      `Your account has **${notifications.length}** unread ${notifications.length === 1 ? "notification" : "notifications"} loaded for the assistant. Your properties currently have **${relatedSaves}** total saves in the loaded data.\n\nFor notices, violations, reports, and appeals, open the dashboard so the existing project workflow can enforce the correct actions.`,
+      "project_answer",
+      intent,
+      [{ label: "Notifications", path: "/dashboard?section=notifications" }],
+    );
+  }
+
+  return null;
+}
+
+function adminDataAnswer(intent: string, ctx: ChatbotContext): ChatbotReply | null {
+  if (ctx.userRole !== "admin") return null;
+
+  const users = ctx.users ?? [];
+  const landlords = users.filter((user) => user.role === "landlord");
+  const pendingLandlords = landlords.filter((user) => user.isVerified !== true && user.is_verified !== true);
+  const listings = ctx.apartments;
+  const tenantVisible = visibleListings(ctx.apartments);
+  const noAvailableRooms = listings.filter((apartment) => getAvailableRoomCount(apartment) === 0);
+  const unreadNotifications = (ctx.notifications ?? []).filter(notificationUnread);
+
+  if (intent === "admin_summary" || intent === "apartment_availability") {
+    return reply(
+      `Current loaded platform summary:\n\n- **${tenantVisible.length}** tenant-visible apartments\n- **${listings.length}** total apartment records visible to Admin\n- **${pendingLandlords.length}** pending or unverified landlords\n- **${noAvailableRooms.length}** apartments with no available rooms\n- **${unreadNotifications.length}** unread admin notifications`,
+      "project_answer",
+      intent,
+      [{ label: "Admin Dashboard", path: "/dashboard" }],
+    );
+  }
+
+  if (intent === "popular") {
+    const ranked = [...listings].sort(
+      (left, right) =>
+        apartmentViewCount(ctx, right.id) + apartmentFavoriteCount(ctx, right.id) -
+        (apartmentViewCount(ctx, left.id) + apartmentFavoriteCount(ctx, left.id)),
+    );
+
+    if (ranked.length === 0) return reply("No apartment records are loaded for ranking.", "not_found", intent);
+
+    return reply(
+      `Top platform properties by loaded views and saves:\n\n${ranked.slice(0, 5).map((apartment, index) => listingLineWithSignals(apartment, ctx, index)).join("\n")}`,
+      "project_answer",
+      intent,
+      [{ label: "Apartments", path: "/dashboard?section=apartments" }],
+    );
+  }
+
+  if (intent === "visibility_reason") {
+    return reply(
+      `Common reasons an apartment is not visible to tenants:\n\n- Landlord is not verified\n- Listing is not approved or not published\n- Listing is archived, deleted, or inactive\n- No room is currently available\n- Tenant visibility rules exclude the record\n\nLoaded records with no available rooms: **${noAvailableRooms.length}**.`,
+      "project_answer",
+      intent,
+      [{ label: "Apartments", path: "/dashboard?section=apartments" }],
+    );
+  }
+
+  return null;
+}
+
 function roleSummary(ctx: ChatbotContext): ChatbotReply {
   const role = ctx.userRole;
   const listings = visibleListings(ctx.apartments);
@@ -520,8 +824,16 @@ export function generateChatbotReply(userMessage: string, ctx: ChatbotContext): 
     return reply("You do not have permission to access that information.", "unauthorized", intent, undefined, false);
   }
 
-  const tenantAnswer = tenantDataAnswer(intent, text, ctx);
-  if (tenantAnswer) return tenantAnswer;
+  const adminAnswer = adminDataAnswer(intent, ctx);
+  if (adminAnswer) return adminAnswer;
+
+  const landlordAnswer = landlordDataAnswer(intent, ctx);
+  if (landlordAnswer) return landlordAnswer;
+
+  if (ctx.userRole === "student" || ctx.userRole === "employee") {
+    const tenantAnswer = tenantDataAnswer(intent, text, ctx);
+    if (tenantAnswer) return tenantAnswer;
+  }
 
   const workflow = workflowAnswer(intent, ctx);
   if (workflow) return workflow;
