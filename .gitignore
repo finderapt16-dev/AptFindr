@@ -34,3 +34,6 @@ yarn-debug.log*
 .cache
 .eslintcache
 .parcel-cache
+
+# Local Supabase migration export
+supabase-master-migration.sql
