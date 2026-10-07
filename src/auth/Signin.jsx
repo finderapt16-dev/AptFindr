@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 
 import { useAuth } from "@/contexts/AuthContext";
 
-import { usePolicyDialog } from "@/legal/usePolicyDialog";
-
 import {
     isTenantRole,
     loginWithGoogle,
@@ -24,8 +22,6 @@ import {
     CheckCircle2,
     Eye,
     EyeOff,
-    Info,
-    UserPlus,
 } from "lucide-react";
 
 import {
@@ -69,36 +65,6 @@ export function Login({
         useLocation();
 
     const { login } = useAuth();
-
-
-    /* =====================================================
-       GOOGLE IDENTITY THAT STILL NEEDS AN ACCOUNT
-
-       Set by the auth callback when Google signed somebody in but no
-       AptFindr account exists for that Google user yet. The Google session is
-       still live, so the account can be created from here without a second
-       trip through the provider.
-    ===================================================== */
-
-    const [
-        googleSetup,
-        setGoogleSetup,
-    ] = useState(null);
-
-    const [
-        setupTermsAccepted,
-        setSetupTermsAccepted,
-    ] = useState(false);
-
-    const [
-        setupBusy,
-        setSetupBusy,
-    ] = useState(false);
-
-    const {
-        policyLinkProps,
-        policyDialog,
-    } = usePolicyDialog("tenant");
 
 
     /* =====================================================
@@ -211,20 +177,6 @@ export function Login({
             );
         }
 
-        const googleSetupState =
-            location.state?.googleSetup;
-
-        if (
-            googleSetupState &&
-            typeof googleSetupState === "object"
-        ) {
-            setGoogleSetup({
-                email: typeof googleSetupState.email === "string" ? googleSetupState.email : "",
-                name: typeof googleSetupState.name === "string" ? googleSetupState.name : "",
-            });
-            setSetupTermsAccepted(false);
-            setPassword("");
-        }
     }, [location.state]);
 
 
@@ -321,7 +273,7 @@ export function Login({
         async (event) => {
             event.preventDefault();
 
-            if (loading || setupBusy) {
+            if (loading) {
                 return;
             }
 
@@ -348,9 +300,6 @@ export function Login({
                 }
 
                 setPassword("");
-                setGoogleSetup(null);
-
-
                 /*
                  * When used inside Landing.jsx,
                  * Landing handles navigation.
@@ -454,12 +403,14 @@ export function Login({
                     await loginWithGoogle();
 
                 /*
-                 * Google is already authorized for somebody AptFindr does not
-                 * know yet. Show the create-account notice instead of bouncing
-                 * them through the provider again.
+                 * A provider session without an AptFindr profile is never a
+                 * login. End it locally and require an explicit signup flow.
                  */
                 if (result?.needsAccount) {
-                    navigate("/signup?google=setup", { replace: true });
+                    const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                    if (signOutError) throw signOutError;
+                    clearPendingGoogleOAuthFlow();
+                    setError("No AptFindr account was found for this Google account. Create an account first, then sign in with Google.");
                     setLoading(false);
                     return;
                 }
@@ -474,46 +425,6 @@ export function Login({
                 setLoading(false);
             }
         };
-
-
-    /* =====================================================
-       CREATE THE MISSING ACCOUNT FOR A SIGNED-IN GOOGLE USER
-    ===================================================== */
-
-    const completeGoogleAccount = () => navigate("/signup?google=setup");
-
-    /*
-     * Somebody signed in with the wrong Google account: drop the session and go
-     * back to Google's chooser so they can pick the account that has an
-     * AptFindr registration.
-     */
-    const restartGoogleSignIn =
-        async () => {
-            if (setupBusy) {
-                return;
-            }
-
-            setError("");
-            setSetupBusy(true);
-
-            try {
-                await signOutAuthSession();
-                setGoogleSetup(null);
-                setSetupTermsAccepted(false);
-                await loginWithGoogle();
-            } catch (switchError) {
-                clearPendingGoogleOAuthFlow();
-                console.error("[AUTH] Google account switch failed", switchError);
-                setError(
-                    switchError instanceof Error
-                        ? switchError.message
-                        : "We could not open Google again. Please try once more."
-                );
-            } finally {
-                setSetupBusy(false);
-            }
-        };
-
 
     /* =====================================================
        CREATE ACCOUNT
@@ -645,141 +556,6 @@ export function Login({
 
             )}
 
-
-            {/* GOOGLE ACCOUNT THAT STILL NEEDS REGISTRATION */}
-
-            {googleSetup && (
-
-                <div
-                    className="login-google-setup"
-                    role="status"
-                >
-
-                    <div className="login-google-setup-head">
-
-                        <Info className="login-google-setup-icon" aria-hidden="true" />
-
-                        <div className="login-google-setup-copy">
-
-                            <h3 className="login-google-setup-title">
-                                You need to create an account
-                            </h3>
-
-                            <p className="login-google-setup-text">
-                                {googleSetup.email
-                                    ? (
-                                        <>
-                                            Google signed you in
-                                            {googleSetup.name ? ` as ${googleSetup.name}` : ""} (
-                                            <strong className="login-google-setup-email">
-                                                {googleSetup.email}
-                                            </strong>
-                                            ), but that Google account does not have an AptFindr account yet.
-                                        </>
-                                    )
-                                    : "Google signed you in, but that Google account does not have an AptFindr account yet."}
-                            </p>
-
-                            <p className="login-google-setup-hint">
-                                Continue to choose Tenant or Landlord and complete your account details.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <label className="login-google-setup-agreement">
-
-                        <input
-                            type="checkbox"
-                            className="login-google-setup-checkbox"
-                            checked={
-                                setupTermsAccepted
-                            }
-                            disabled={
-                                setupBusy
-                            }
-                            onChange={(
-                                event
-                            ) => {
-                                setSetupTermsAccepted(
-                                    event.target.checked
-                                );
-
-                                setError("");
-                            }}
-                        />
-
-                        <span>
-                            I agree to the{" "}
-                            <button
-                                type="button"
-                                className="login-google-setup-policy"
-                                disabled={
-                                    setupBusy
-                                }
-                                {...policyLinkProps("tenant-terms")}
-                            >
-                                Terms of Service
-                            </button>
-                            {" "}and{" "}
-                            <button
-                                type="button"
-                                className="login-google-setup-policy"
-                                disabled={
-                                    setupBusy
-                                }
-                                {...policyLinkProps("tenant-privacy")}
-                            >
-                                Privacy Policy
-                            </button>
-                            .
-                        </span>
-
-                    </label>
-
-
-                    <button
-                        type="button"
-                        className="login-google-setup-create"
-                        disabled={
-                            setupBusy
-                        }
-                        onClick={() =>
-                            void completeGoogleAccount()
-                        }
-                    >
-                        {setupBusy
-                            ? <div className="login-spinner" aria-hidden="true" />
-                            : <UserPlus className="login-google-setup-create-icon" aria-hidden="true" />}
-                        {setupBusy
-                            ? "Creating your account..."
-                            : "Create Account with Google"}
-                    </button>
-
-                    <div className="login-google-setup-actions">
-
-                        <button
-                            type="button"
-                            className="login-google-setup-switch"
-                            disabled={
-                                setupBusy
-                            }
-                            onClick={() =>
-                                void restartGoogleSignIn()
-                            }
-                        >
-                            Use a different Google account
-                        </button>
-
-                    </div>
-
-                </div>
-
-            )}
-
-
             {/* FORM */}
 
             <form
@@ -878,7 +654,7 @@ export function Login({
                 <Button
                     type="submit"
                     disabled={
-                        loading || setupBusy
+                        loading
                     }
                     className="login-submit-button"
                 >
@@ -909,7 +685,7 @@ export function Login({
                         handleGoogleLogin
                     }
                     disabled={
-                        loading || setupBusy
+                        loading
                     }
                 >
                     <GoogleIcon />
@@ -936,9 +712,6 @@ export function Login({
                 </p>
 
             </form>
-
-            {policyDialog}
-
         </div>
     );
 }

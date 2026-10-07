@@ -220,9 +220,9 @@
 .signup-home-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; color: #64748b; font-size: 13px; text-decoration: none; }
 .signup-home-link svg { width: 16px; height: 16px; }
 
-/* Landlord: Account Details -> Personal Information -> Review. */
+/* Landlord: Account Details -> Personal Information. */
 .signup-landlord-wizard { min-width: 0; }
-.signup-landlord-stepper { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 24px; padding: 0; list-style: none; }
+.signup-landlord-stepper { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 0 24px; padding: 0; list-style: none; }
 .signup-landlord-step-item { position: relative; min-width: 0; }
 .signup-landlord-step-item:not(:last-child)::after { position: absolute; top: 15px; left: calc(50% + 16px); z-index: 0; width: calc(100% - 32px); height: 2px; background: #eef2f7; content: ""; }
 .signup-landlord-step-button { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 0; color: #8a8a8a; background: transparent; border: 0; cursor: pointer; }

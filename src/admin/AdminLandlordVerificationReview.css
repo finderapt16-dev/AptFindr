@@ -23,6 +23,9 @@
 .admin-landlord-review-document-preview svg { width: 54px; height: 54px; margin: 0 auto 5px; color: #0ea5e9; }
 .admin-landlord-review-document-preview strong { color: #344054; font-size: 17px; }
 .admin-landlord-review-document-preview span { font-size: 13px; }
+.admin-landlord-review-document-image { position: relative; overflow: hidden; padding: 0; text-decoration: none; }
+.admin-landlord-review-document-image img { display: block; width: 100%; height: 300px; object-fit: contain; background: #f8fafc; }
+.admin-landlord-review-document-image span { position: absolute; right: 10px; bottom: 10px; padding: 6px 9px; border-radius: 6px; background: rgba(16, 24, 40, .78); color: #fff; }
 .admin-landlord-review-document-details { display: grid; gap: 23px; margin: 0; }
 .admin-landlord-review-document-details div { grid-template-columns: 175px minmax(0, 1fr); }
 .admin-landlord-review-document-details dt { gap: 0; }

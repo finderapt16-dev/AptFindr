@@ -16,6 +16,7 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
   const status = verified ? "Verified" : rejected ? "Rejected" : "Pending Review";
   const permitNumber = profile.business_permit_number ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber;
   const permitDocumentUrl = profile.verification_document_url;
+  const isPermitPdf = /\.pdf(?:[?#]|$)/i.test(String(permitDocumentUrl ?? ""));
   const property = details?.properties?.[0] ?? null;
   const address = landlord.address ?? landlord.business_address ?? profile.address ?? profile.business_address ?? [landlord.barangay, landlord.city].filter(Boolean).join(", ");
   const phone = landlord.mobile ?? landlord.phone ?? landlord.contact ?? landlord.mobileNumber;
@@ -51,15 +52,22 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
             <h2>Permit Document Review</h2>
             <p className="admin-landlord-review-intro">Review the landlord’s business permit and supporting documents.</p>
             <div className="admin-landlord-review-document">
-              <div className="admin-landlord-review-document-preview">
-                <FileText aria-hidden="true" />
-                <strong>Business Permit</strong>
-                <span>{permitDocumentUrl ? "Document submitted" : "No document submitted"}</span>
-              </div>
+              {permitDocumentUrl && !isPermitPdf ? (
+                <a className="admin-landlord-review-document-preview admin-landlord-review-document-image" href={permitDocumentUrl} target="_blank" rel="noreferrer" aria-label="Open the submitted business permit image">
+                  <img src={permitDocumentUrl} alt="Submitted business permit" />
+                  <span>Open full-size image</span>
+                </a>
+              ) : (
+                <div className="admin-landlord-review-document-preview">
+                  <FileText aria-hidden="true" />
+                  <strong>Business Permit</strong>
+                  <span>{permitDocumentUrl ? "PDF document submitted" : "No document submitted"}</span>
+                </div>
+              )}
               <dl className="admin-landlord-review-document-details">
                 <div><dt>Document Type</dt><dd>Business Permit</dd></div>
                 <div><dt>Permit Number</dt><dd>{text(permitNumber)}</dd></div>
-                <div><dt>Date Issued</dt><dd>{formatDate(profile.permit_issued_at ?? profile.issued_at)}</dd></div>
+                <div><dt>Date Issued</dt><dd>{formatDate(profile.permit_issued_at ?? profile.issued_at ?? profile.created_at)}</dd></div>
                 <div><dt>Expiry Date</dt><dd>{formatDate(profile.permit_expiry ?? profile.permit_expiry_date ?? profile.expiry_date)}</dd></div>
                 <div><dt>Issued By</dt><dd>{text(profile.permit_issued_by ?? profile.issued_by, "City licensing authority")}</dd></div>
               </dl>

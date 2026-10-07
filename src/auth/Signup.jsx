@@ -1,12 +1,11 @@
 import "./signup.css";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AlertCircle, ArrowLeft, ArrowRight, Building2, ChevronRight, Home, Info, Pencil, Users } from "lucide-react";
+import { AlertCircle, ArrowRight, Building2, ChevronRight, Home, Info, Users } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, isGoogleAuthUser, isTenantRole, resendSignupVerification, signupWithGoogle } from "@/services/authService";
+import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, isGoogleAuthUser, resendSignupVerification, signOutAuthSession, signupWithGoogle } from "@/services/authService";
 import { SignupAccountFields, SignupPersonalFields } from "./SignupFields";
-import { SignupReviewDialog } from "./SignupReviewDialog";
 import { SignupAgreement, SignupPolicyDialog } from "./SignupPolicyDialog";
 import { getSignupFullName, normalizeSignupValues, validateAccountDetails, validatePersonalInformation } from "./signupValidation";
 import { useSignupViewport } from "./useSignupViewport";
@@ -15,10 +14,7 @@ const INITIAL_VALUES = {
   role: "", username: "", email: "", password: "", confirmPassword: "",
   firstName: "", lastName: "", middleInitial: "", mobileNumber: "",
 };
-const LANDLORD_STEPS = ["Account Details", "Personal Information", "Review"];
-
-const dashboardPathForRole = (role) =>
-  role === "admin" ? "/admin" : "/browse";
+const LANDLORD_STEPS = ["Account Details", "Personal Information"];
 
 function GoogleIcon() {
   return (
@@ -48,24 +44,10 @@ function getGoogleNameFields(authUser) {
   };
 }
 
-function ReviewCard({ title, rows, onEdit, disabled }) {
-  return (
-    <section className="signup-landlord-review-card">
-      <div className="signup-landlord-review-heading">
-        <h3>{title}</h3>
-        <button type="button" onClick={onEdit} disabled={disabled} aria-label={`Edit ${title.toLowerCase()}`}><Pencil aria-hidden="true" /> Edit</button>
-      </div>
-      <dl>{rows.map(([label, value]) => (
-        <div className="signup-landlord-review-row" key={label}><dt>{label}</dt><dd>{value || "Not provided"}</dd></div>
-      ))}</dl>
-    </section>
-  );
-}
-
 export function Signup({ embedded = false, redirect = null, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signup, hydrateSession, user } = useAuth();
+  const { signup } = useAuth();
   useSignupViewport();
 
   const query = new URLSearchParams(location.search);
@@ -73,7 +55,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
   const redirectTo = requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//") ? requestedRedirect : null;
   const loginPath = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login";
   const googleSetup = query.get("google") === "setup";
-  const googleSetupRole = query.get("role") === "landlord" ? "landlord" : "";
+  const googleSetupRole = googleSetup ? "tenant" : "";
 
   const [googleIdentity, setGoogleIdentity] = useState(null);
   const [values, setValues] = useState(() => ({ ...INITIAL_VALUES, role: googleSetupRole }));
@@ -86,24 +68,14 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [tenantTermsAccepted, setTenantTermsAccepted] = useState(false);
   const [landlordTermsAccepted, setLandlordTermsAccepted] = useState(false);
-  const [reviewEditor, setReviewEditor] = useState(null);
   const [policy, setPolicy] = useState(null);
   const formRef = useRef(null);
   const stepHeadingRef = useRef(null);
   const submissionInFlightRef = useRef(false);
-  const reviewTriggerRef = useRef(null);
   const policyTriggerRef = useRef(null);
   const loading = busy !== null;
   const isLandlord = values.role === "landlord";
   const termsAccepted = isLandlord ? landlordTermsAccepted : tenantTermsAccepted;
-
-  // AuthContext receives Supabase session changes from the confirmation tab.
-  // Only advance this signup when the confirmed profile matches its email.
-  useEffect(() => {
-    if (!pendingEmail || !user?.email || user.email.trim().toLowerCase() !== pendingEmail.trim().toLowerCase()) return;
-    if (!isTenantRole(user.role) && user.role !== "landlord") return;
-    navigate(dashboardPathForRole(user.role), { replace: true });
-  }, [pendingEmail, user, navigate]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -167,17 +139,13 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     setValues(normalized);
     setError("");
     setFieldErrors({});
-    setLandlordStep((step) => Math.min(step + 1, 3));
+    setLandlordStep((step) => Math.min(step + 1, 2));
   };
   const goBack = (step = landlordStep - 1) => {
     if (loading) return;
     setError("");
     setFieldErrors({});
     setLandlordStep(Math.max(1, step));
-  };
-  const openReviewEditor = (section, trigger) => {
-    reviewTriggerRef.current = trigger;
-    setReviewEditor(section);
   };
   const openPolicy = (nextPolicy, trigger) => {
     policyTriggerRef.current = trigger;
@@ -190,7 +158,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
   };
 
   const createAccount = async () => {
-    if (submissionInFlightRef.current || (isLandlord && landlordStep !== 3)) return;
+    if (submissionInFlightRef.current || (isLandlord && landlordStep !== 2)) return;
     if (googleSetup && !googleIdentity) {
       setError("Sign in with Google again to verify your email before continuing.");
       return;
@@ -234,10 +202,13 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       };
       if (googleSetup) {
         await finalizeGoogleSignup(googleIdentity, input);
-        const profile = await hydrateSession();
-        if (!profile) throw new Error("Your account was saved. Please sign in again to continue.");
         clearPendingGoogleOAuthFlow();
-        navigate(dashboardPathForRole(profile.role), { replace: true });
+        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+        if (signOutError) throw signOutError;
+        navigate(loginPath, {
+          replace: true,
+          state: { message: "Account created successfully. Please sign in to continue." },
+        });
         return;
       }
       const result = await signup(input);
@@ -246,17 +217,15 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       } else if (result.signup?.existingAccount) {
         setError("An account may already exist for this email. Sign in, resend verification, or reset your password instead of registering again.");
       } else {
-        if (!result.signup?.profileSetupError && !result.signup?.requiresEmailVerification) {
-          const profile = await hydrateSession();
-          if (!profile) {
-            throw new Error("The account was created, but its session is not available.");
-          }
-
-          navigate(dashboardPathForRole(profile.role), { replace: true });
+        if (!result.signup?.requiresEmailVerification) {
+          // Manual AptFindr registration requires Supabase Confirm Email. Do
+          // not turn a misconfigured provider into an automatic sign-in.
+          await signOutAuthSession({ scope: "local" });
+          setError("Email confirmation is disabled in Supabase. Enable Confirm Email in Authentication > Sign In / Providers > Email, then try signing in.");
           return;
         }
 
-        const message = result.signup?.profileSetupError || `Account created! Check ${normalized.email} for your confirmation link (including your spam folder). Open it to confirm your email and go directly to the Apartments page.`;
+        const message = result.signup?.profileSetupError || `Account created! Check ${normalized.email} for your confirmation link (including your spam folder). After confirming your email, sign in with the username and password you created.`;
         setPendingEmail(normalized.email);
         setVerificationMessage(message);
         setResendCooldown(60);
@@ -275,8 +244,8 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     if (loading) return;
     if (!values.role) {
       setError("Please select an account type.");
-    } else if (isLandlord && landlordStep < 3) {
-      // Enter advances the wizard; only the Review step can create an account.
+    } else if (isLandlord && landlordStep < 2) {
+      // Enter advances the landlord registration form; account creation is on step two.
       nextStep();
     } else {
       void createAccount();
@@ -289,20 +258,12 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     submissionInFlightRef.current = true;
     setBusy("google");
     try {
-      const googleSignup = await signupWithGoogle({ role: isLandlord ? "landlord" : undefined });
+      const googleSignup = await signupWithGoogle({ role: "tenant" });
       if (googleSignup?.needsAccount) {
-        navigate(`/signup?google=setup${isLandlord ? "&role=landlord" : ""}`);
+        navigate("/signup?google=setup&role=tenant");
         submissionInFlightRef.current = false;
         setBusy(null);
         return;
-      }
-      if (googleSignup?.profile) {
-        // The account and its profile already exist at this point. Hydrating the
-        // shared context can lose a race with another auth request, and that must
-        // never throw a finished Google signup back to the sign-in screen.
-        const profile = (await hydrateSession()) ?? googleSignup.profile;
-        clearPendingGoogleOAuthFlow();
-        navigate(dashboardPathForRole(profile.role), { replace: true });
       }
       // Otherwise Supabase is redirecting the browser to Google; keep actions locked.
     } catch (googleError) {
@@ -334,7 +295,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       <div className="auth-status-card">
         <h1 id="verification-title" className="auth-status-title">Check your email</h1>
         <p className="auth-status-description" role="status">{verificationMessage}</p>
-        <p className="auth-status-description">Click the confirmation link to verify your email and open the Apartments page.</p>
+        <p className="auth-status-description">After confirming your email, sign in with the username and password you created.</p>
         {error && <p role="alert" className="signup-message">{error}</p>}
         <button type="button" className="signup-primary-button" disabled={loading || resendCooldown > 0} onClick={resendPendingEmail}>
           {busy === "resend" ? "Requesting email..." : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend confirmation email"}
@@ -367,7 +328,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               <div className="signup-google-setup-notice" role="status">
                 <Info aria-hidden="true" />
                 <p>
-                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Choose Tenant or Landlord, complete the form, and press <strong>Create Account</strong>. Your password also lets you sign in with your username.
+                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Complete your tenant account and press <strong>Create Account</strong>. Your password also lets you sign in with your username.
                 </p>
               </div>
             )}
@@ -398,7 +359,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               )}
               {values.role === "tenant" && (
                 <>
-                  <div className="signup-tenant-simple-form"><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} /></div>
+                  <div className="signup-tenant-simple-form"><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} hideEmail={googleSetup} /></div>
                   {agreement}
                   {createButton}
                   {!googleSetup && <><div className="signup-social-divider" aria-hidden="true"><span /><b>or</b><span /></div>
@@ -432,16 +393,6 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
                     {landlordStep === 2 && (
                       <>
                         <SignupPersonalFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} />
-                        <div className="signup-landlord-actions">
-                          <button type="button" className="signup-secondary-button" onClick={() => goBack()} disabled={loading}><ArrowLeft aria-hidden="true" /> Back</button>
-                          <button type="submit" className="signup-primary-button" disabled={loading}>Continue <ArrowRight aria-hidden="true" /></button>
-                        </div>
-                      </>
-                    )}
-                    {landlordStep === 3 && (
-                      <>
-                        <ReviewCard title="Account Details" rows={[["Username", values.username], ["Recovery Email", values.email]]} onEdit={(event) => openReviewEditor("account", event.currentTarget)} disabled={loading} />
-                        <ReviewCard title="Personal Information" rows={[["Name", getSignupFullName(values)], ["Mobile Number", values.mobileNumber]]} onEdit={(event) => openReviewEditor("personal", event.currentTarget)} disabled={loading} />
                         {agreement}
                         {createButton}
                       </>
@@ -450,11 +401,10 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
                 </div>
               )}
             </form>
-            {values.role && <button type="button" className="signup-change-role" disabled={loading} onClick={() => selectRole("")}>Change account type</button>}
+            {values.role && !googleSetup && <button type="button" className="signup-change-role" disabled={loading} onClick={() => selectRole("")}>Change account type</button>}
           </section>
         </div>
       </div>
-      {reviewEditor && <SignupReviewDialog emailReadOnly={googleSetup} key={reviewEditor} section={reviewEditor} values={values} onSave={(draft) => setValues((current) => ({ ...current, ...draft }))} onClose={() => setReviewEditor(null)} returnFocusRef={reviewTriggerRef} />}
       {policy && <SignupPolicyDialog policy={policy} role={isLandlord ? "landlord" : "tenant"} onClose={() => setPolicy(null)} returnFocusRef={policyTriggerRef} />}
     </div>
   );

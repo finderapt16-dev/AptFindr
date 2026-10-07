@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, getExistingProfileForAuthUser, isGoogleAuthUser, signOutAuthSession } from "@/services/authService";
+import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, getExistingProfileForAuthUser, getPendingGoogleOAuthFlow, isGoogleAuthUser, signOutAuthSession } from "@/services/authService";
 
 const dashboardPathForRole = (role) => role === "admin" ? "/admin" : role === "landlord" ? "/landlord/dashboard" : "/browse";
 
@@ -63,11 +63,45 @@ export function AuthCallback() {
             }
             try {
                 if (isGoogleAuthUser(data.user)) {
+                    const oauthFlow = getPendingGoogleOAuthFlow();
                     const existingProfile = await getExistingProfileForAuthUser(data.user);
-                    if (!existingProfile) {
+                    if (oauthFlow === "signup" && !existingProfile) {
                         clearPendingGoogleOAuthFlow();
                         const requestedRole = params.get("signup_role") === "landlord" ? "&role=landlord" : "";
                         if (active) navigate(`/signup?google=setup${requestedRole}`, { replace: true });
+                        return;
+                    }
+
+                    if (oauthFlow === "signup" && existingProfile) {
+                        clearPendingGoogleOAuthFlow();
+                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                        if (signOutError) throw signOutError;
+                        if (active) navigate("/login", {
+                            replace: true,
+                            state: { message: "An AptFindr account already exists for this Google account. Please sign in to continue." },
+                        });
+                        return;
+                    }
+
+                    if (oauthFlow === "login" && !existingProfile) {
+                        clearPendingGoogleOAuthFlow();
+                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                        if (signOutError) throw signOutError;
+                        if (active) navigate("/login", {
+                            replace: true,
+                            state: { error: "No AptFindr account was found for this Google account. Create an account first, then sign in with Google." },
+                        });
+                        return;
+                    }
+
+                    if (!oauthFlow) {
+                        clearPendingGoogleOAuthFlow();
+                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                        if (signOutError) throw signOutError;
+                        if (active) navigate("/login", {
+                            replace: true,
+                            state: { error: "Your Google sign-in request expired. Please try again from Sign In or Create Account." },
+                        });
                         return;
                     }
                     const profile = await hydrateSession();
@@ -78,13 +112,19 @@ export function AuthCallback() {
                             navigate(dashboardPathForRole(profile.role), { replace: true });
                     return;
                 }
-                // Supabase creates a session when the email is confirmed. Load
-                // the saved profile before opening its protected dashboard.
-                const profile = await hydrateSession();
-                if (!profile)
-                    throw new Error("The confirmed account profile is not available.");
+                // Email confirmation can create a temporary browser session.
+                // Confirmation proves ownership of the address; it must not act
+                // as a normal sign-in. End only this browser session, preserving
+                // the confirmed address in Supabase, then require credentials.
+                const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                if (signOutError)
+                    throw signOutError;
                 if (active)
-                    navigate("/browse", { replace: true });
+                    navigate("/login", {
+                        replace: true,
+                        state: { message: "Email confirmed successfully. You can now sign in to your AptFindr account." },
+                    });
+                return;
             }
             catch (profileError) {
                 console.error("Authentication succeeded but profile recovery failed:", profileError);

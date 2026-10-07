@@ -3,7 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { AuthField } from "./AuthField";
 import { PASSWORD_REQUIREMENTS } from "./signupValidation";
 
-export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, emailReadOnly = false, emailLabel = "Email Address" }) {
+export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, emailReadOnly = false, emailLabel = "Email Address", hideEmail = false }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fieldProps = (name) => ({
@@ -23,7 +23,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
   return (
     <>
       <AuthField {...fieldProps("username")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={30} />
-      <AuthField {...fieldProps("email")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />
+      {!hideEmail && <AuthField {...fieldProps("email")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>
           <AuthField {...fieldProps("password")} label="Password" type={showPassword ? "text" : "password"} required placeholder="Enter your password" autoComplete="new-password" suffix={passwordToggle(showPassword, setShowPassword, "password")} />

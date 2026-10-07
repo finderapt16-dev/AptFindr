@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apartmentFormValuesFromApartment, createApartment, deleteApartment, fetchApartmentWithImages, resolveAppUserId, uploadApartmentImage, } from "@/data/apartments";
-import { VERIFICATION_DOCUMENT_TYPES, uploadVerificationDocuments, validateVerificationFile, } from "@/services/verificationDocumentsService";
+import { BUSINESS_PERMIT_DOCUMENT_TYPE, VERIFICATION_DOCUMENT_TYPES, uploadVerificationDocuments, validateVerificationFile, } from "@/services/verificationDocumentsService";
+import { notifyAdminsOfPropertySubmission, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { deletePropertyDraft, fetchPropertyDraft, savePropertyDraft, } from "@/services/propertyDraftService";
 import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates, } from "@/utils/mapCoordinates";
 import { supabase } from "@/services/supabaseClient";
@@ -89,10 +90,10 @@ export function AddApartment() {
     const [validationErrors, setValidationErrors] = useState({});
     const totalSteps = 4;
     const stepConfig = [
-        { number: 1, title: "Property Information", description: "Let's start with the basic details about your property." },
-        { number: 2, title: "Location Details", description: "Where is your property located?" },
-        { number: 3, title: "Amenities & House Rules", description: "Select the amenities, utilities, and policies for your property." },
-        { number: 4, title: "Property Verification", description: "Submit details and verification documents." },
+        { number: 1, title: "Apartment Information", description: "Let's start with the basic details about your apartment." },
+        { number: 2, title: "Location Details", description: "Where is your apartment located?" },
+        { number: 3, title: "Amenities & House Rules", description: "Select the amenities, utilities, and policies for your apartment." },
+        { number: 4, title: "Apartment Verification", description: "Submit details and verification documents." },
     ];
     const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
     const [locationLookupRequest, setLocationLookupRequest] = useState(0);
@@ -255,7 +256,7 @@ export function AddApartment() {
         setPendingDraft(null);
         setDraftReady(true);
         setDraftStatus("restored");
-        toast.success("Property draft restored");
+        toast.success("Apartment draft restored");
     };
     useEffect(() => {
         if (!user?.id)
@@ -381,13 +382,13 @@ export function AddApartment() {
     const validateAllFields = () => {
         const errors = {};
         if (!String(formData.title ?? "").trim())
-            errors.title = "Property name is required.";
+            errors.title = "Apartment name is required.";
         if (!Number(formData.sqft))
-            errors.sqft = "Total property area is required.";
+            errors.sqft = "Total apartment area is required.";
         if (!String(formData.description ?? "").trim())
-            errors.description = "Property description is required.";
+            errors.description = "Apartment description is required.";
         if (uploadedImages.length === 0)
-            errors.images = "Upload at least one property image.";
+            errors.images = "Upload at least one apartment image.";
         if (!String(formData.address ?? "").trim())
             errors.address = "Complete address is required.";
         if (!String(formData.barangay ?? "").trim())
@@ -396,7 +397,7 @@ export function AddApartment() {
             errors.mapLocation = "Finding this address on the map. Please wait a moment.";
         }
         else if (!locationPinned || !hasValidApartmentCoordinates(formData.lat, formData.lng)) {
-            errors.mapLocation = "Select the property's real map location before submitting.";
+            errors.mapLocation = "Select the apartment's real map location before submitting.";
         }
         if (!String(verificationData.businessPermit).trim())
             errors.businessPermit = "Business permit number is required.";
@@ -454,7 +455,7 @@ export function AddApartment() {
         }
         else {
             if (currentStep === 1 && uploadedImages.length === 0) {
-                toast.error("Please upload at least one property image");
+                toast.error("Please upload at least one apartment image");
             }
             else {
                 toast.error("Please fill in all required fields for this step");
@@ -483,7 +484,7 @@ export function AddApartment() {
             return;
         }
         if (uploadedImages.length === 0) {
-            toast.error("Please upload at least one property image");
+            toast.error("Please upload at least one apartment image");
             return;
         }
         const validation = validateAllFields();
@@ -601,20 +602,45 @@ export function AddApartment() {
                 if (imageMetadataError)
                     throw new Error(imageMetadataError.message || "Unable to save apartment images.");
             }
-            await uploadVerificationDocuments(created.id, resolvedLandlordId, verificationDocuments);
+            const uploadedVerificationDocuments = await uploadVerificationDocuments(created.id, resolvedLandlordId, verificationDocuments);
+            const businessPermitDocument = uploadedVerificationDocuments.find((document) => document.documentType === BUSINESS_PERMIT_DOCUMENT_TYPE);
+            await updateUserProfile({
+                id: resolvedLandlordId,
+                role: "landlord",
+                email: user.email,
+                name: user.name,
+                permit_number: verificationData.businessPermit.trim(),
+                business_permit_number: verificationData.businessPermit.trim(),
+                permit_expiry: verificationData.permitExpiry || null,
+                // Keep the storage path, not a short-lived signed URL. Settings and
+                // the admin review page each create their own signed viewing link.
+                verification_document_url: businessPermitDocument?.storagePath,
+            });
             const persistedApartment = await fetchApartmentWithImages(created.id);
             if (!persistedApartment || persistedApartment.images.length !== uploadedImageUrls.length) {
-                throw new Error("The property was created, but its permanent images could not be verified.");
+                throw new Error("The apartment was created, but its permanent images could not be verified.");
             }
             requiredSetupComplete = true;
+            try {
+                const notifiedAdminCount = await notifyAdminsOfPropertySubmission(created.id);
+                if (notifiedAdminCount === 0) {
+                    console.warn("No administrator accounts were available for the property-submission notification.");
+                }
+            }
+            catch (notificationError) {
+                // The property itself is complete. Do not roll it back merely
+                // because a notification delivery needs to be retried.
+                console.error("Unable to notify administrators about the submitted property:", notificationError);
+                toast.warning("Your apartment was submitted, but the admin notification could not be delivered yet.");
+            }
             await refreshApartments();
             submissionCompleteRef.current = true;
             if (autoSaveTimerRef.current)
                 clearTimeout(autoSaveTimerRef.current);
             await deletePropertyDraft(user.id);
             setDraftStatus("idle");
-            toast.success("Property submitted successfully and is awaiting admin review.");
-            navigate("/landlord/dashboard");
+            toast.success("Apartment submitted successfully and is awaiting admin review.");
+            navigate("/landlord/dashboard?section=settings");
         }
         catch (error) {
             console.error("Failed to submit apartment:", error);
@@ -630,7 +656,7 @@ export function AddApartment() {
                 }
             }
             toast.error(rollbackFailed
-                ? `${message} The incomplete property may still appear in My Properties; please remove it before trying again.`
+                ? `${message} The incomplete apartment may still appear in My Apartments; please remove it before trying again.`
                 : message);
         }
         finally {
@@ -663,8 +689,8 @@ export function AddApartment() {
           <div className="landlord-add-property add-apartment-page">
             <div className="app-shell-content add-apartment-page-content add-apartment-flow-container">
         <div className="add-apartment-panel-4">
-          <h1 className="add-apartment-add-property">Add Property</h1>
-          <p className="add-apartment-text-4">Submit property information for review, then manage individual rooms separately.</p>
+          <h1 className="add-apartment-add-property">Add Apartment</h1>
+          <p className="add-apartment-text-4">Submit apartment information for review, then manage individual rooms separately.</p>
           <p className="add-apartment-step">Step {currentStep} of {totalSteps}</p>
           <div className="add-apartment-row-3">
             {draftStatus !== "idle" && (<span className={`add-apartment-card-3 ${draftStatus === "error" ? "add-apartment-span" : "add-apartment-span-2"}`}>
@@ -675,7 +701,7 @@ export function AddApartment() {
                 {draftStatus === "error" && "Draft could not be saved"}
               </span>)}
             {hasDraftContent && draftReady && (<button type="button" onClick={() => {
-                if (window.confirm("Discard this property draft and clear all entered details?"))
+                if (window.confirm("Discard this apartment draft and clear all entered details?"))
                     discardDraft(true);
             }} className="add-apartment-discard-draft">
                 <RotateCcw className="add-apartment-rotate-ccw-icon"/>Discard Draft
@@ -687,7 +713,7 @@ export function AddApartment() {
             <AlertCircle className="add-apartment-alert-circle-icon"/>
             <AlertTitle className="add-apartment-verification-pending">Verification Pending</AlertTitle>
             <AlertDescription className="add-apartment-alert-description">
-              You can submit and manage the property while verification is pending. It will only become visible to tenants after the required admin verification and publication approval.
+              You can submit and manage the apartment while verification is pending. It will only become visible to tenants after the required admin verification and publication approval.
             </AlertDescription>
           </Alert>)}
 
@@ -718,11 +744,11 @@ export function AddApartment() {
             <button
               type="button"
               className="add-apartment-close-wizard"
-              aria-label="Close Add Property"
-              title="Close Add Property"
+              aria-label="Close Add Apartment"
+              title="Close Add Apartment"
               disabled={isSubmitting}
               onClick={() => {
-                if (hasDraftContent && !window.confirm("Leave Add Property? Your entered details will remain saved as a draft."))
+                if (hasDraftContent && !window.confirm("Leave Add Apartment? Your entered details will remain saved as a draft."))
                   return;
                 navigate("/landlord/dashboard");
               }}
@@ -752,7 +778,7 @@ export function AddApartment() {
                     return next;
                 });
             }} maxImages={10} maxFileSize={5}/>
-                    <p className="add-apartment-text-5">Upload clear photos of the property exterior, common areas, and facilities. Individual room photos can be managed separately in Manage Rooms.</p>
+                    <p className="add-apartment-text-5">Upload clear photos of the apartment exterior, common areas, and facilities. Individual room photos can be managed separately in Manage Rooms.</p>
                     {imageReuploadRequired && (<Alert className="add-apartment-card-6">
                         <Upload className="add-apartment-upload-icon-2"/>
                         <AlertDescription className="add-apartment-alert-description-2">Please re-upload images before submitting.</AlertDescription>
@@ -763,11 +789,11 @@ export function AddApartment() {
                   <div className="add-apartment-panel-8">
                     <div className="add-apartment-row-6">
                       <Building2 className="add-apartment-building2-icon"/>
-                    <h3 className="add-apartment-basic-information">Property Info</h3>
+                    <h3 className="add-apartment-basic-information">Apartment Information</h3>
                     </div>
 
                     <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-property-name">Property Name *</Label>
+                      <Label className="add-apartment-property-name">Apartment Name *</Label>
                       <Input value={formData.title} onChange={(e) => {
                 setFormData({ ...formData, title: e.target.value });
                 if (e.target.value.trim())
@@ -777,7 +803,7 @@ export function AddApartment() {
                     </div>
 
                     <div className="add-apartment-panel-9 add-apartment-property-basics-grid">
-                      <Label className="add-apartment-total-property-area-sq-ft">Total Property Floor Area *</Label>
+                      <Label className="add-apartment-total-property-area-sq-ft">Total Apartment Floor Area *</Label>
                       <Input type="number" value={formData.sqft || ""} onChange={(e) => {
                 setFormData({ ...formData, sqft: Number(e.target.value) });
                 if (Number(e.target.value) > 0)
@@ -792,7 +818,7 @@ export function AddApartment() {
                 setFormData({ ...formData, description: e.target.value });
                 if (e.target.value.trim())
                     clearValidationError("description");
-            }} rows={4} required aria-invalid={Boolean(validationErrors.description)} placeholder="Describe the property, surrounding area, accessibility, and other important details." className={`${fieldClass("description")} add-apartment-textarea`}/>
+            }} rows={4} required aria-invalid={Boolean(validationErrors.description)} placeholder="Describe the apartment, surrounding area, accessibility, and other important details." className={`${fieldClass("description")} add-apartment-textarea`}/>
                       <FieldError field="description"/>
                     </div>
 
@@ -852,7 +878,7 @@ export function AddApartment() {
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-map-location">Map Location</Label>
-                    <p className="add-apartment-text-6">Enter the property address to locate it automatically, or click/drag the map pin to select the exact location. The detected location updates from the selected point.</p>
+                    <p className="add-apartment-text-6">Enter the apartment address to locate it automatically, or click/drag the map pin to select the exact location. The detected location updates from the selected point.</p>
                     <div className="add-apartment-card-7">
                       <PropertyLocationPicker lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {
                 setFormData((current) => ({
@@ -877,7 +903,7 @@ export function AddApartment() {
               {currentStep === 3 && (<>
                   <section className="add-apartment-panel-8 add-apartment-choice-section">
                     <div className="add-apartment-row-6"><h3>Amenities</h3></div>
-                    <p className="add-apartment-text-5">Select the available amenities for the property listing.</p>
+                    <p className="add-apartment-text-5">Select the available amenities for the apartment listing.</p>
                     <div className="add-apartment-choice-grid add-apartment-amenity-grid">
                       {SUGGESTED_AMENITIES.map((amenity) => {
                 const selected = getSubmittedAmenities().some((item) => item.toLowerCase() === amenity.toLowerCase());
@@ -927,21 +953,21 @@ export function AddApartment() {
               {currentStep === 4 && (<div className="add-apartment-panel-8">
                   <div className="add-apartment-row-6">
                     <ShieldCheck className="add-apartment-shield-check-icon"/>
-                    <h3 className="add-apartment-property-verification">Property Information</h3>
+                    <h3 className="add-apartment-property-verification">Apartment Information</h3>
                   </div>
-                  <p className="add-apartment-verification-intro">Provide the property details used for verification.</p>
+                  <p className="add-apartment-verification-intro">Provide the apartment details used for verification.</p>
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-property-name-2">
-                      <Building2 className="add-apartment-building2-icon-2"/> Property Name
+                      <Building2 className="add-apartment-building2-icon-2"/> Apartment Name
                     </Label>
                     <Input value={String(formData.title ?? "")} readOnly placeholder="e.g., Sunset Heights" className="add-apartment-input-3"/>
-                    <p className="add-apartment-text-5">Carried from Property Information. Go back to step 1 to edit this name.</p>
+                    <p className="add-apartment-text-5">Carried from Apartment Information. Go back to step 1 to edit this name.</p>
                   </div>
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-property-address">
-                      <MapPin className="add-apartment-map-pin-icon-2"/> Property Address
+                      <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address
                     </Label>
                     <Input value={[persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", ")} readOnly className="add-apartment-input-3"/>
                     <p className="add-apartment-text-5">Carried from Location. Go back to step 2 to change this address.</p>
@@ -973,7 +999,7 @@ export function AddApartment() {
                       <p className="add-apartment-text-8">JPG, JPEG, PNG, WebP, or PDF · maximum 10 MB each</p>
                     </div>
                     <div className="add-apartment-grid-5">
-                      {VERIFICATION_DOCUMENT_TYPES.slice(0, 1).map((documentType) => {
+                      {VERIFICATION_DOCUMENT_TYPES.filter((documentType) => documentType.key === BUSINESS_PERMIT_DOCUMENT_TYPE).map((documentType) => {
                 const document = verificationDocuments.find((item) => item.type === documentType.key);
                 const uploadId = `verification-upload-${documentType.key}`;
                 const cameraId = `verification-camera-${documentType.key}`;
@@ -1008,7 +1034,7 @@ export function AddApartment() {
                 {currentStep < totalSteps ? (<Button type="button" onClick={handleNextStep} className="add-apartment-next">
                     Next <ArrowRight className="add-apartment-arrow-right-icon"/>
                   </Button>) : (<Button type="submit" disabled={isSubmitting || locationResolving} className="add-apartment-button-14">
-                    <Check className="add-apartment-check-icon"/> {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "Submit Property"}
+                    <Check className="add-apartment-check-icon"/> {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "Submit Apartment"}
                   </Button>)}
               </div>
             </form>
@@ -1023,7 +1049,7 @@ export function AddApartment() {
                 <CloudUpload className="add-apartment-cloud-upload-icon-2"/>
               </span>
               <div className="add-apartment-panel-12">
-                <h2 id="draft-dialog-title" className="add-apartment-draft-dialog-title">Continue your property draft?</h2>
+                <h2 id="draft-dialog-title" className="add-apartment-draft-dialog-title">Continue your apartment draft?</h2>
                 <p className="add-apartment-saved">
                   Saved {new Date(pendingDraft.savedAt).toLocaleString("en-PH")}. You can return to step {Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1))} or start over.
                 </p>

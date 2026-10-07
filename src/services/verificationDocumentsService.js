@@ -14,6 +14,7 @@ export const VERIFICATION_DOCUMENT_TYPES = [
     { key: "safety_requirements", label: "Safety Requirements" },
     { key: "additional_supporting_documents", label: "Additional Supporting Documents" },
 ];
+export const BUSINESS_PERMIT_DOCUMENT_TYPE = "mayors_business_permit";
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export function validateVerificationFile(file) {
@@ -30,6 +31,7 @@ const safeExtension = (file) => {
     return file.type === "application/pdf" ? "pdf" : "jpg";
 };
 export async function uploadVerificationDocuments(apartmentId, landlordId, documents) {
+    const uploadedDocuments = [];
     for (const document of documents) {
         const validationError = validateVerificationFile(document.file);
         if (validationError)
@@ -65,7 +67,16 @@ export async function uploadVerificationDocuments(apartmentId, landlordId, docum
         if (previousPath && previousPath !== path) {
             await supabase.storage.from("verification-documents").remove([previousPath]);
         }
+        uploadedDocuments.push({
+            apartmentId: String(apartmentId),
+            landlordId: String(landlordId),
+            documentType: document.type,
+            fileName: document.file.name,
+            mimeType: document.file.type,
+            storagePath: path,
+        });
     }
+    return uploadedDocuments;
 }
 export async function fetchApartmentVerificationDocuments(apartmentId) {
     const { data, error } = await supabase

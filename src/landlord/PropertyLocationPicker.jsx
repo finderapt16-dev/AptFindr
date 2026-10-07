@@ -142,7 +142,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
       <Label>Location on Map *</Label>
       <div ref={mapRef} className="location-picker-card"/>
       <p className="location-picker-text">
-        Click the map or drag the pin to select the property's exact location.
+        Click the map or drag the pin to select the apartment's exact location.
       </p>
       {geocodeStatus === "loading" && <p className="location-picker-text-2">Finding the entered address on the map...</p>}
       {geocodeStatus === "found" && matchedAddress && <p className="location-picker-map-pinned-to">Map pinned to: {matchedAddress}</p>}

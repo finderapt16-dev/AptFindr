@@ -979,3 +979,197 @@
   .market-demand-badge { font-size: 10px; }
   .market-property-metric span { font-size: 10px; }
 }
+
+/* =========================================
+   TENANT PREFERENCE INSIGHTS
+========================================= */
+
+.market-preference-insights {
+  margin-top: 20px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.market-preference-insights-header {
+  margin-bottom: 18px;
+}
+
+.market-preference-insights-header h2 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.market-preference-insights-header p,
+.market-trend-bar-chart > p,
+.market-trend-donut-chart > p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.market-preference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.market-trend-bar-chart,
+.market-trend-donut-chart {
+  min-width: 0;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.market-trend-bar-chart h3,
+.market-trend-donut-chart h3 {
+  margin: 0 0 16px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.market-trend-bar-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) minmax(72px, 1.45fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.market-trend-bar-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-trend-bar-row strong {
+  min-width: 18px;
+  color: #0f172a;
+  font-size: 12px;
+  text-align: right;
+}
+
+.market-trend-bar-track {
+  height: 7px;
+  overflow: hidden;
+  background: #dbeafe;
+  border-radius: 999px;
+}
+
+.market-trend-bar-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.market-trend-chart-empty,
+.market-preference-unavailable {
+  margin: 0;
+  padding: 14px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.market-preference-unavailable {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.market-trend-donut-chart {
+  position: relative;
+}
+
+.market-trend-donut-content {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 14px;
+}
+
+.market-trend-donut-content svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.market-trend-donut-content circle {
+  stroke: #e2e8f0;
+  stroke-width: 5;
+}
+
+.market-trend-donut-segment {
+  fill: none;
+  stroke-linecap: butt;
+}
+
+.market-trend-donut-total {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.market-trend-donut-total strong {
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.market-trend-donut-chart ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.market-trend-donut-chart li {
+  display: grid;
+  grid-template-columns: 9px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.market-trend-donut-chart li strong {
+  color: #0f172a;
+}
+
+.market-trend-donut-key {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.market-trend-donut-segment-0 { stroke: #0ea5e9; background: #0ea5e9; }
+.market-trend-donut-segment-1 { stroke: #8b5cf6; background: #8b5cf6; }
+.market-trend-donut-segment-2 { stroke: #10b981; background: #10b981; }
+.market-trend-donut-segment-3 { stroke: #f59e0b; background: #f59e0b; }
+.market-trend-donut-segment-4 { stroke: #f43f5e; background: #f43f5e; }
+.market-trend-donut-segment-5 { stroke: #6366f1; background: #6366f1; }
+
+@media (max-width: 780px) {
+  .market-preference-insights { padding: 16px; }
+  .market-preference-grid { grid-template-columns: 1fr; }
+}

@@ -80,8 +80,7 @@ function readGoogleOAuthFlowMarker() {
             ?? window.sessionStorage.getItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY);
         if (!stored)
             return null;
-        // Builds before the marker moved to localStorage stored the bare name.
-        let flow = stored;
+        let flow = null;
         let startedAt = null;
         try {
             const parsed = JSON.parse(stored);
@@ -91,10 +90,10 @@ function readGoogleOAuthFlowMarker() {
             }
         }
         catch {
-            flow = stored;
+            // Old or malformed markers have no timestamp and are rejected below.
         }
         const valid = GOOGLE_OAUTH_FLOW_STATES.includes(flow);
-        const expired = startedAt !== null && Date.now() - startedAt > GOOGLE_OAUTH_FLOW_TTL_MS;
+        const expired = startedAt === null || Date.now() - startedAt > GOOGLE_OAUTH_FLOW_TTL_MS;
         if (!valid || expired) {
             clearPendingGoogleOAuthFlow();
             return null;
@@ -109,10 +108,9 @@ export function setPendingGoogleOAuthFlow(flow) {
     if (typeof window === 'undefined' || !GOOGLE_OAUTH_FLOW_STATES.includes(flow))
         return;
     try {
-        window.localStorage.setItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY, JSON.stringify({ flow, at: Date.now() }));
-        // Keep the legacy key in step so an in-flight tab from an older build
-        // never reads a stale value out of sessionStorage.
-        window.sessionStorage.setItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY, flow);
+        const marker = JSON.stringify({ flow, at: Date.now() });
+        window.localStorage.setItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY, marker);
+        window.sessionStorage.setItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY, marker);
     }
     catch {
         // Storage can be unavailable in private mode; the flow still works, it
@@ -707,7 +705,7 @@ export async function finalizeGoogleSignup(_authUser, input = {}) {
     return profile;
 }
 export async function signupWithGoogle(options = {}) {
-    return loginWithGoogle({ signupRole: options.role });
+    return loginWithGoogle({ signupRole: options.role, flow: 'signup' });
 }
 let pendingGoogleReset = null;
 export function resetUnfinishedGoogleSignIn() {
@@ -724,9 +722,11 @@ export function resetUnfinishedGoogleSignIn() {
     })().finally(() => { pendingGoogleReset = null; });
     return pendingGoogleReset;
 }
-export async function loginWithGoogle({ signupRole } = {}) {
+export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
     // Closing and immediately reopening the popup must finish the reset first.
     if (pendingGoogleReset) await pendingGoogleReset;
+    const requestedFlow = flow === 'signup' ? 'signup' : 'login';
+    setPendingGoogleOAuthFlow(requestedFlow);
     // A Google session can already be live without an AptFindr account: that is
     // the state the sign-in notice exists for. Sending it back to the provider
     // would loop the visitor between Google and the same screen, so hand the
@@ -746,7 +746,6 @@ export async function loginWithGoogle({ signupRole } = {}) {
             console.warn('[AUTH] Google session profile lookup failed before sign-in', profileError);
         }
     }
-    setPendingGoogleOAuthFlow('login');
     const signupRoleParam = signupRole === 'landlord' ? '?signup_role=landlord' : '';
     const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',

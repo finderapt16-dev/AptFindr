@@ -80,7 +80,7 @@ import {
 
 import { rankApartmentsByDemand } from "@/utils/demand";
 import { toast } from "sonner";
-import { MarketOverview } from "@/landlord/MarketOverview";
+import { MarketTrends } from "@/landlord/MarketTrends";
 import { MobileNavigation } from "@/tenant/MobileNavigation";
 import { Sidebar } from "@/tenant/Sidebar";
 import { useTenantNotifications } from "@/tenant/useTenantNotifications";
@@ -206,7 +206,7 @@ function BrowseContent() {
     const { user } = useAuth();
 
     if (user?.role === "landlord") {
-        return <MarketOverview />;
+        return <MarketTrends />;
     }
 
     return <TenantBrowse />;

@@ -312,6 +312,20 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
     }
     const landlordId = isRecord(before) && typeof before.landlord_id === 'string' ? before.landlord_id : '';
     if (isPublished) {
+        const { data: roomRows, error: roomError } = await supabase
+            .from('apartment_rooms')
+            .select('id, status, is_occupied')
+            .eq('apartment_id', id);
+        if (roomError) {
+            throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available rooms before publishing.'));
+        }
+        const hasAvailableRoom = (roomRows ?? []).some((room) => {
+            const roomStatus = room.status ?? (room.is_occupied ? 'occupied' : 'available');
+            return roomStatus === 'available' && room.is_occupied !== true;
+        });
+        if (!hasAvailableRoom) {
+            throw new Error('Add at least one available room before publishing this property. Tenants can only browse properties with an available room.');
+        }
         const { data: landlord, error: landlordError } = await supabase
             .from('public_landlords')
             .select('id, is_verified, status, verification_status')

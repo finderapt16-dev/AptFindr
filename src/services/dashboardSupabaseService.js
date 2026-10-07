@@ -684,6 +684,20 @@ export async function createNotification(notification) {
     }
     return toNotificationRow(data);
 }
+/**
+ * Delivers one review notification to every administrator. The database
+ * function verifies that the caller owns the submitted apartment, so a
+ * landlord cannot create arbitrary notifications for administrators.
+ */
+export async function notifyAdminsOfPropertySubmission(apartmentId) {
+    const { data, error } = await supabase.rpc("fn_notify_admins_of_property_submission", {
+        p_apartment_id: apartmentId,
+    });
+    if (error) {
+        throw new Error(error.message || "Unable to notify administrators about this property submission.");
+    }
+    return Number(data ?? 0);
+}
 export async function createSupportTicket(input) {
     const { data, error } = await supabase
         .from("support_tickets")
@@ -1349,6 +1363,7 @@ async function syncRoleProfile(userId, role, payload) {
         const profilePayload = { user_id: userId };
         assignIfProvided(profilePayload, "permit_number", payload.permit_number);
         assignIfProvided(profilePayload, "business_permit_number", payload.business_permit_number ?? payload.permit_number);
+        assignIfProvided(profilePayload, "verification_document_url", payload.verification_document_url);
         assignIfProvided(profilePayload, "is_verified", payload.is_verified);
         assignIfProvided(profilePayload, "business_name", payload.business_name);
         assignIfProvided(profilePayload, "tin_number", payload.tin_number);
@@ -1366,7 +1381,10 @@ async function syncRoleProfile(userId, role, payload) {
         assignIfProvided(profilePayload, "smoking_policy", payload.smoking_policy);
         assignIfProvided(profilePayload, "maintenance_response_hours", toNullableInteger(payload.maintenance_response_hours));
         assignIfProvided(profilePayload, "listing_visibility", payload.listing_visibility);
-        await supabase.from("landlord_profiles").upsert(profilePayload, { onConflict: "user_id" });
+        const { error } = await supabase.from("landlord_profiles").upsert(profilePayload, { onConflict: "user_id" });
+        if (error) {
+            throw new Error(error.message || "Unable to save the landlord verification profile.");
+        }
     }
     if (role === "admin") {
         const profilePayload = { user_id: userId };
@@ -1746,11 +1764,48 @@ export async function fetchLandlordProfile(landlordId) {
             .from("landlord_profiles")
             .select("*")
             .eq("user_id", landlordId)
-            .single();
-        if (error || !data) {
+            .maybeSingle();
+        if (error) {
             return null;
         }
-        const profile = data;
+        const profile = data ?? { user_id: landlordId };
+        // Listings created before the profile-sync flow stored the submitted
+        // permit only with the property. Read that legacy location as a
+        // fallback so the landlord and admin see the same verification record.
+        const needsPropertyFallback = !profile.permit_number
+            || !profile.business_permit_number
+            || !profile.permit_expiry
+            || !profile.verification_document_url;
+        let propertyVerification = null;
+        let documentPath = null;
+        if (needsPropertyFallback) {
+            const [propertiesResult, documentsResult] = await Promise.all([
+                supabase
+                    .from("apartments")
+                    .select("features, created_at")
+                    .eq("landlord_id", landlordId)
+                    .order("created_at", { ascending: false })
+                    .limit(1),
+                supabase
+                    .from("apartment_verification_documents")
+                    .select("storage_path, document_type, updated_at, created_at")
+                    .eq("landlord_id", landlordId)
+                    .order("updated_at", { ascending: false }),
+            ]);
+            const features = propertiesResult.data?.[0]?.features;
+            if (features && typeof features === "object" && !Array.isArray(features)
+                && features.verification && typeof features.verification === "object" && !Array.isArray(features.verification)) {
+                propertyVerification = features.verification;
+            }
+            const documents = documentsResult.data ?? [];
+            // `proof_of_ownership` was used by the old one-file uploader even
+            // though its UI described the upload as a business permit.
+            const permitDocument = documents.find((document) => document.document_type === "mayors_business_permit")
+                ?? documents.find((document) => document.document_type === "proof_of_ownership");
+            documentPath = getStringValue(permitDocument?.storage_path) ?? null;
+        }
+        const permitNumber = getStringValue(propertyVerification?.businessPermit);
+        const permitExpiry = getStringValue(propertyVerification?.permitExpiry);
         const signDocument = async (value) => {
             if (typeof value !== "string" || !value)
                 return null;
@@ -1760,10 +1815,17 @@ export async function fetchLandlordProfile(landlordId) {
             return signed?.signedUrl ?? null;
         };
         const [verificationUrl, idUrl] = await Promise.all([
-            signDocument(profile.verification_document_url),
+            signDocument(profile.verification_document_url || documentPath),
             signDocument(profile.id_document_url),
         ]);
-        return { ...profile, verification_document_url: verificationUrl, id_document_url: idUrl };
+        return {
+            ...profile,
+            permit_number: profile.permit_number || permitNumber || null,
+            business_permit_number: profile.business_permit_number || profile.permit_number || permitNumber || null,
+            permit_expiry: profile.permit_expiry || permitExpiry || null,
+            verification_document_url: verificationUrl,
+            id_document_url: idUrl,
+        };
     }
     catch (err) {
         console.error("Error fetching landlord profile:", err);
