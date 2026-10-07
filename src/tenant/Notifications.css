@@ -1,0 +1,733 @@
+/* Notifications page styles. Loaded once by src/styles/index.css to keep navigation order stable. */
+.tenant-notifications-container {
+  max-width: var(--container-7xl, 80rem);
+  margin-inline: auto;
+}
+
+:where(.tenant-notifications-container > :not(:last-child)) {
+  margin-block-start: calc(calc(var(--spacing, .25rem) * 5) * 0);
+  margin-block-end: calc(calc(var(--spacing, .25rem) * 5) * calc(1 - 0));
+}
+
+.tenant-notifications-section {
+  min-height: calc(var(--spacing, .25rem) * 44);
+  border-radius: var(--radius-xl, .75rem);
+  padding: calc(var(--spacing, .25rem) * 7);
+  background-color: #ffffff;
+  border: 1px solid #d9d9d9;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (min-width: 48rem) {
+  .tenant-notifications-section {
+    padding: calc(var(--spacing, .25rem) * 9);
+  }
+}
+
+.tenant-notifications-panel {
+  z-index: 10;
+  max-width: var(--container-2xl, 42rem);
+  position: relative;
+}
+
+.tenant-notifications-notifications {
+  font-size: var(--text-4xl, 2.25rem);
+  line-height: var(--text-4xl--line-height, calc(2.5 / 2.25));
+  font-weight: var(--font-weight-black, 900);
+  letter-spacing: var(--tracking-tight, -.025em);
+  color: #111111;
+}
+
+.tenant-notifications-text {
+  margin-top: calc(var(--spacing, .25rem) * 3);
+  font-size: var(--text-base, 1rem);
+  line-height: var(--text-base--line-height, calc(1.5 / 1));
+  font-weight: var(--font-weight-medium, 500);
+  color: #666666;
+}
+
+.tenant-notifications-section-2 {
+  border-radius: var(--radius-xl, .75rem);
+  background-color: var(--color-white, #fff);
+  border: 1px solid #d9d9d9;
+  overflow: visible;
+  box-shadow: 0 16px 45px #11111112;
+}
+
+.tenant-notifications-row {
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(var(--spacing, .25rem) * 3);
+  padding: calc(var(--spacing, .25rem) * 3);
+  border-color: #e8eef3;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  flex-wrap: wrap;
+  display: flex;
+}
+
+@media (min-width: 48rem) {
+  .tenant-notifications-row {
+    padding-inline: calc(var(--spacing, .25rem) * 5);
+  }
+}
+
+.tenant-notifications-notification-filter {
+  gap: calc(var(--spacing, .25rem) * 2);
+  display: flex;
+}
+
+.tenant-notifications-button {
+  min-width: calc(var(--spacing, .25rem) * 24);
+  border-radius: var(--radius-lg, .5rem);
+  padding-inline: calc(var(--spacing, .25rem) * 5);
+  padding-block: calc(var(--spacing, .25rem) * 2.5);
+  font-size: var(--text-sm, .875rem);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  font-weight: var(--font-weight-bold, 700);
+  text-transform: capitalize;
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+  transition-timing-function: var(--default-transition-timing-function, cubic-bezier(.4, 0, .2, 1));
+  transition-duration: var(--default-transition-duration, .15s);
+  border-style: solid;
+  border-width: 1px;
+}
+
+.tenant-notifications-button-2 {
+  color: var(--color-white, #fff);
+  background-color: #16a5e1;
+  border-color: #16a5e1;
+}
+
+.tenant-notifications-button-3 {
+  background-color: var(--color-white, #fff);
+  color: #666666;
+  border-color: #d9d9d9;
+}
+
+@media (hover: hover) {
+  .tenant-notifications-button-3:hover {
+    background-color: #f2f6fa;
+  }
+}
+
+.tenant-notifications-mark-all-as-read {
+  border-radius: var(--radius-lg, .5rem);
+  font-weight: var(--font-weight-bold, 700);
+  color: #111111;
+  border-color: #d9d9d9;
+}
+
+.tenant-notifications-check-icon {
+  margin-right: calc(var(--spacing, .25rem) * 2);
+  height: calc(var(--spacing, .25rem) * 4);
+  width: calc(var(--spacing, .25rem) * 4);
+}
+
+:where(.tenant-notifications-panel-2 > :not(:last-child)) {
+  margin-block-start: calc(calc(var(--spacing, .25rem) * 2) * 0);
+  margin-block-end: calc(calc(var(--spacing, .25rem) * 2) * calc(1 - 0));
+}
+
+.tenant-notifications-panel-2 {
+  padding: calc(var(--spacing, .25rem) * 4);
+}
+
+.tenant-notifications-panel-3 {
+  height: calc(var(--spacing, .25rem) * 24);
+  animation: var(--animate-pulse, pulse 2s cubic-bezier(.4, 0, .6, 1) infinite);
+  border-radius: var(--radius-lg, .5rem);
+  background-color: #f2f6fa;
+}
+
+.tenant-notifications-content {
+  min-height: calc(var(--spacing, .25rem) * 72);
+  padding: calc(var(--spacing, .25rem) * 8);
+  text-align: center;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.tenant-notifications-row-2 {
+  height: calc(var(--spacing, .25rem) * 20);
+  width: calc(var(--spacing, .25rem) * 20);
+  color: #16a5e1;
+  background-color: #f2f6fa;
+  border-radius: 3.40282e38px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.tenant-notifications-bell-icon-2 {
+  height: calc(var(--spacing, .25rem) * 10);
+  width: calc(var(--spacing, .25rem) * 10);
+  stroke-width: 1.5px;
+}
+
+.tenant-notifications-you-re-all-caught-up {
+  margin-top: calc(var(--spacing, .25rem) * 5);
+  font-size: var(--text-xl, 1.25rem);
+  line-height: var(--text-xl--line-height, calc(1.75 / 1.25));
+  font-weight: var(--font-weight-black, 900);
+  color: #111111;
+}
+
+.tenant-notifications-text-2 {
+  margin-top: calc(var(--spacing, .25rem) * 2);
+  max-width: var(--container-md, 28rem);
+  font-size: var(--text-sm, .875rem);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  font-weight: var(--font-weight-medium, 500);
+  color: #666666;
+}
+
+:where(.tenant-notifications-panel-4 > :not(:last-child)) {
+  border-color: #e8eef3;
+  border-top-style: solid;
+  border-top-width: 0;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+}
+
+.tenant-notifications-article {
+  gap: calc(var(--spacing, .25rem) * 4);
+  padding: calc(var(--spacing, .25rem) * 5);
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+  transition-timing-function: var(--default-transition-timing-function, cubic-bezier(.4, 0, .2, 1));
+  transition-duration: var(--default-transition-duration, .15s);
+  display: flex;
+  position: relative;
+}
+
+@media (min-width: 48rem) {
+  .tenant-notifications-article {
+    align-items: center;
+  }
+
+  .tenant-notifications-article {
+    padding-inline: calc(var(--spacing, .25rem) * 6);
+  }
+}
+
+.tenant-notifications-article-2 {
+  background-color: #f2f6fa;
+}
+
+.tenant-notifications-article-3 {
+  background-color: var(--color-white, #fff);
+}
+
+.tenant-notifications-row-3 {
+  height: calc(var(--spacing, .25rem) * 14);
+  width: calc(var(--spacing, .25rem) * 14);
+  border-radius: 3.40282e38px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.tenant-notifications-span {
+  background-color: var(--color-blue-50, #f2f6fa);
+  color: var(--color-blue-600, #16a5e1);
+}
+
+@supports (color: lab(0% 0 0)) {
+  .tenant-notifications-span {
+    background-color: var(--color-blue-50, lab(96.492% -1.14647 -5.11479));
+    color: var(--color-blue-600, lab(44.0605% 29.0279 -86.0352));
+  }
+}
+
+.tenant-notifications-span-2 {
+  background-color: var(--color-amber-50, #f2f6fa);
+  color: var(--color-amber-600, #0e93ca);
+}
+
+@supports (color: lab(0% 0 0)) {
+  .tenant-notifications-span-2 {
+    background-color: var(--color-amber-50, lab(98.6252% -.635982 8.42309));
+    color: var(--color-amber-600, lab(60.3514% 40.5624 87.1228));
+  }
+}
+
+.tenant-notifications-span-3 {
+  background-color: var(--color-emerald-50, #ecfdf5);
+  color: var(--color-emerald-600, #009767);
+}
+
+@supports (color: lab(0% 0 0)) {
+  .tenant-notifications-span-3 {
+    background-color: var(--color-emerald-50, lab(97.8462% -6.94963 1.85487));
+    color: var(--color-emerald-600, lab(55.0481% -49.9246 15.93));
+  }
+}
+
+.tenant-notifications-icon-icon {
+  height: calc(var(--spacing, .25rem) * 7);
+  width: calc(var(--spacing, .25rem) * 7);
+}
+
+.tenant-notifications-button-4 {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.tenant-notifications-row-4 {
+  align-items: center;
+  gap: calc(var(--spacing, .25rem) * 2);
+  display: flex;
+}
+
+.tenant-notifications-strong {
+  font-size: var(--text-base, 1rem);
+  line-height: var(--text-base--line-height, calc(1.5 / 1));
+  color: #111111;
+}
+
+.tenant-notifications-unread {
+  height: calc(var(--spacing, .25rem) * 2);
+  width: calc(var(--spacing, .25rem) * 2);
+  background-color: #16a5e1;
+  border-radius: 3.40282e38px;
+}
+
+.tenant-notifications-span-4 {
+  margin-top: var(--spacing, .25rem);
+  font-size: var(--text-sm, .875rem);
+  line-height: calc(var(--spacing, .25rem) * 6);
+  color: #666666;
+  display: block;
+}
+
+.tenant-notifications-time {
+  margin-top: var(--spacing, .25rem);
+  font-size: var(--text-xs, .75rem);
+  line-height: var(--text-xs--line-height, calc(1 / .75));
+  font-weight: var(--font-weight-medium, 500);
+  color: #8a8a8a;
+  display: block;
+}
+
+.tenant-notifications-button-5 {
+  border-radius: var(--radius-lg, .5rem);
+  color: #0e93ca;
+  border-color: #d9d9d9;
+  flex-shrink: 0;
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .tenant-notifications-button-5 {
+    display: inline-flex;
+  }
+}
+
+.tenant-notifications-panel-5 {
+  position: relative;
+  z-index: 50;
+}
+
+.tenant-notifications-notification-options {
+  border-radius: var(--radius-lg, .5rem);
+  padding: calc(var(--spacing, .25rem) * 2);
+  color: #666666;
+}
+
+@media (hover: hover) {
+  .tenant-notifications-notification-options:hover {
+    background-color: #f2f6fa;
+  }
+}
+
+.tenant-notifications-more-vertical-icon {
+  height: calc(var(--spacing, .25rem) * 5);
+  width: calc(var(--spacing, .25rem) * 5);
+}
+
+.tenant-notifications-card {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  width: calc(var(--spacing, .25rem) * 44);
+  border-radius: var(--radius-lg, .5rem);
+  background-color: var(--color-white, #fff);
+  padding: var(--spacing, .25rem);
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 20px 25px -5px #0000001a, 0 8px 10px -6px #0000001a;
+}
+
+.tenant-notifications-mark-as {
+  align-items: center;
+  gap: calc(var(--spacing, .25rem) * 2);
+  border-radius: var(--radius-md, .375rem);
+  width: 100%;
+  padding-inline: calc(var(--spacing, .25rem) * 3);
+  padding-block: calc(var(--spacing, .25rem) * 2);
+  text-align: left;
+  font-size: var(--text-sm, .875rem);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  font-weight: var(--font-weight-semibold, 600);
+  color: #111111;
+  display: flex;
+}
+
+@media (hover: hover) {
+  .tenant-notifications-mark-as:hover {
+    background-color: #f2f6fa;
+  }
+}
+
+.tenant-notifications-check-icon-2 {
+  height: calc(var(--spacing, .25rem) * 4);
+  width: calc(var(--spacing, .25rem) * 4);
+}
+
+.tenant-notifications-remove {
+  align-items: center;
+  gap: calc(var(--spacing, .25rem) * 2);
+  border-radius: var(--radius-md, .375rem);
+  width: 100%;
+  padding-inline: calc(var(--spacing, .25rem) * 3);
+  padding-block: calc(var(--spacing, .25rem) * 2);
+  text-align: left;
+  font-size: var(--text-sm, .875rem);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-red-600, #e40014);
+  display: flex;
+}
+
+@supports (color: lab(0% 0 0)) {
+  .tenant-notifications-remove {
+    color: var(--color-red-600, lab(48.4493% 77.4328 61.5452));
+  }
+}
+
+@media (hover: hover) {
+  .tenant-notifications-remove:hover {
+    background-color: var(--color-red-50, #fef2f2);
+  }
+}
+
+.tenant-notifications-trash2-icon {
+  height: calc(var(--spacing, .25rem) * 4);
+  width: calc(var(--spacing, .25rem) * 4);
+}
+
+.tenant-notifications-section-3 {
+  border-radius: var(--radius-xl, .75rem);
+  padding: calc(var(--spacing, .25rem) * 6);
+  background-color: #f2f6fa;
+  border: 1px solid #d9d9d9;
+}
+
+.tenant-notifications-row-5 {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: calc(var(--spacing, .25rem) * 4);
+  display: flex;
+}
+
+.tenant-notifications-my-report-status {
+  font-size: var(--text-xs, .75rem);
+  line-height: var(--text-xs--line-height, calc(1 / .75));
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: var(--tracking-wider, .05em);
+  color: #16a5e1;
+  text-transform: uppercase;
+}
+
+.tenant-notifications-heading {
+  margin-top: calc(var(--spacing, .25rem) * 2);
+  font-size: var(--text-xl, 1.25rem);
+  line-height: var(--text-xl--line-height, calc(1.75 / 1.25));
+  font-weight: var(--font-weight-black, 900);
+  color: #111111;
+}
+
+.tenant-notifications-text-3 {
+  margin-top: calc(var(--spacing, .25rem) * 2);
+  max-width: var(--container-3xl, 48rem);
+  font-size: var(--text-sm, .875rem);
+  line-height: calc(var(--spacing, .25rem) * 6);
+  color: #666666;
+}
+
+.tenant-notifications-updated {
+  margin-top: calc(var(--spacing, .25rem) * 3);
+  font-size: var(--text-xs, .75rem);
+  line-height: var(--text-xs--line-height, calc(1 / .75));
+  font-weight: var(--font-weight-semibold, 600);
+  color: #8a8a8a;
+}
+
+.tenant-notifications-close {
+  border-radius: var(--radius-lg, .5rem);
+  background-color: var(--color-white, #fff);
+  padding-inline: calc(var(--spacing, .25rem) * 3);
+  padding-block: calc(var(--spacing, .25rem) * 2);
+  font-size: var(--text-sm, .875rem);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  font-weight: var(--font-weight-bold, 700);
+  color: #666666;
+  border: 1px solid #d9d9d9;
+}
+
+/* Compact inbox layout, shared visually with landlord notifications. */
+.tenant-notifications-container {
+  max-width: 1200px;
+}
+
+.tenant-notifications-section {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 160px !important;
+  margin-bottom: 16px;
+  padding: 24px;
+  border-color: #e1e7ec;
+  border-radius: 12px;
+  background-image: linear-gradient(to right, #f2f6fa 0%, #ffffff 100%);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.025);
+}
+
+.tenant-notifications-notifications {
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.tenant-notifications-text {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #9aa3ad;
+}
+
+.tenant-notifications-section-2 {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tenant-notifications-row {
+  min-height: 52px;
+  padding: 0 0 12px;
+  border-bottom: 0;
+}
+
+.tenant-notifications-button {
+  min-height: 32px;
+  min-width: 72px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tenant-notifications-mark-all-as-read {
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  color: #75808c;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tenant-notifications-check-icon { display: none; }
+
+.tenant-notifications-panel-4 {
+  overflow: hidden;
+  border: 1px solid #e1e7ec;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.tenant-notifications-article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22px;
+  /* Keep each update easy to scan, with the same generous row height used
+     throughout the notification centres. */
+  min-height: 76px;
+  padding: 14px 12px;
+  gap: 10px;
+  /* A visible divider keeps adjacent updates easy to distinguish. */
+  border-bottom: 1px solid #d9e3ea;
+}
+
+.tenant-notifications-article:last-child { border-bottom: 0; }
+
+.tenant-notifications-article-2 { background: #eaf7fe; }
+
+.tenant-notifications-row-3 { display: none; }
+
+.tenant-notifications-button-4 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  column-gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.tenant-notifications-row-4 { grid-column: 1; grid-row: 1; }
+
+.tenant-notifications-strong {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #334155;
+}
+
+.tenant-notifications-span-4 {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8d97a1;
+}
+
+.tenant-notifications-time {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0;
+  font-size: 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tenant-notifications-panel-5 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.tenant-notifications-notification-options {
+  padding: 2px;
+  color: #a5adb5;
+}
+
+@media (max-width: 640px) {
+  .tenant-notifications-section {
+    min-height: 160px !important;
+    padding: 24px;
+  }
+  .tenant-notifications-row { flex-wrap: nowrap; gap: 8px; }
+  .tenant-notifications-mark-all-as-read { white-space: nowrap; }
+  .tenant-notifications-button-4 { grid-template-columns: minmax(0, 1fr) 70px; }
+}
+
+@media (min-width: 768px) {
+  .tenant-notifications-section { padding-inline: 28px; }
+  .tenant-notifications-notifications { font-size: 34px; }
+}
+
+/* Keep the Notifications header consistent with the tenant Settings header. */
+.tenant-notifications-container {
+  max-width: 1400px;
+  margin: 15px auto 40px;
+}
+
+.tenant-notifications-section {
+  min-height: 130px !important;
+  margin-bottom: 24px;
+  padding: 40px 64px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #ffffff;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.tenant-notifications-panel {
+  max-width: none;
+}
+
+.tenant-notifications-notifications {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.tenant-notifications-text {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .tenant-notifications-section {
+    min-height: 120px !important;
+    padding: 24px;
+  }
+}
+
+/* Keep the tenant inbox as spacious and legible as the Admin and Landlord inboxes. */
+.tenant-notifications-row { min-height: 64px; padding-bottom: 14px; }
+.tenant-notifications-button,
+.tenant-notifications-mark-all-as-read { min-height: 38px; padding: 8px 16px; font-size: 12px; }
+.tenant-notifications-article { min-height: 102px; padding: 19px 18px; }
+.tenant-notifications-button-4 { grid-template-columns: minmax(0, 1fr) 86px; column-gap: 14px; }
+.tenant-notifications-strong { font-size: 13px; line-height: 1.35; }
+.tenant-notifications-span-4 { margin-top: 5px; font-size: 10px; line-height: 1.45; }
+.tenant-notifications-time { font-size: 9px; }
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .tenant-notifications-span-4
+  { font-size: 11px; }
+}
+@media (max-width: 640px) {
+  .tenant-notifications-time
+  { font-size: 12px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .tenant-notifications-time
+  { font-size: 11px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .tenant-notifications-span-4
+  { font-size: 11px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .tenant-notifications-time { font-size: 10px; }
+}

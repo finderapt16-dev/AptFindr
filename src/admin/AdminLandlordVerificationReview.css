@@ -1,0 +1,50 @@
+.admin-landlord-review { width: min(100%, 1400px); margin: 0 auto; color: #101828; }
+.admin-landlord-review-back { display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: transparent; color: #078be0; font: inherit; font-size: 14px; cursor: pointer; }
+.admin-landlord-review-back svg { width: 18px; height: 18px; }
+.admin-landlord-review-heading { margin: 15px 0 20px; }
+.admin-landlord-review-heading h1,.admin-landlord-review-card h2 { margin: 0; color: #101828; font-size: 25px; line-height: 1.15; font-weight: 750; letter-spacing: -.02em; }
+.admin-landlord-review-heading p,.admin-landlord-review-card > p,.admin-landlord-review-intro { margin: 4px 0 0; color: #61728f; font-size: 15px; line-height: 1.35; }
+.admin-landlord-review-loading { margin: 0 0 14px; color: #078be0; font-size: 14px; }
+.admin-landlord-review-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, .85fr); gap: 24px; align-items: start; }
+.admin-landlord-review-main,.admin-landlord-review-side { display: grid; gap: 16px; }
+.admin-landlord-review-card { padding: 28px 32px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; }
+.admin-landlord-review-card h2 { font-size: 24px; }
+.admin-landlord-review-profile { display: flex; align-items: center; gap: 20px; margin-top: 24px; padding: 20px 38px; border: 1px solid #d0d5dd; border-radius: 10px; }
+.admin-landlord-review-avatar { display: grid; width: 62px; height: 62px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #e0f2fe; color: #0ea5e9; font-size: 22px; font-weight: 700; }
+.admin-landlord-review-profile div { display: grid; gap: 2px; color: #526581; font-size: 16px; }
+.admin-landlord-review-profile strong { color: #101828; font-size: 21px; }
+.admin-landlord-review-details { display: grid; gap: 25px; margin: 25px 0 0; }
+.admin-landlord-review-details div,.admin-landlord-review-document-details div { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 16px; }
+.admin-landlord-review-details dt,.admin-landlord-review-document-details dt { display: flex; align-items: center; gap: 20px; color: #526581; font-size: 16px; }
+.admin-landlord-review-details dt svg { width: 20px; height: 20px; }
+.admin-landlord-review-details dd,.admin-landlord-review-document-details dd { margin: 0; color: #101828; font-size: 16px; }
+.admin-landlord-review-document { display: grid; grid-template-columns: minmax(230px, .9fr) minmax(260px, 1fr); gap: 40px; align-items: center; margin-top: 18px; }
+.admin-landlord-review-document-preview { display: grid; min-height: 300px; place-content: center; gap: 10px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fbfdff; color: #526581; text-align: center; }
+.admin-landlord-review-document-preview svg { width: 54px; height: 54px; margin: 0 auto 5px; color: #0ea5e9; }
+.admin-landlord-review-document-preview strong { color: #344054; font-size: 17px; }
+.admin-landlord-review-document-preview span { font-size: 13px; }
+.admin-landlord-review-document-details { display: grid; gap: 23px; margin: 0; }
+.admin-landlord-review-document-details div { grid-template-columns: 175px minmax(0, 1fr); }
+.admin-landlord-review-document-details dt { gap: 0; }
+.admin-landlord-review-document-link,.admin-landlord-review-secondary-action,.admin-landlord-review-approve,.admin-landlord-review-reject { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; box-sizing: border-box; border-radius: 9px; font: inherit; font-size: 16px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.admin-landlord-review-document-link { width: min(390px, 100%); margin-top: 18px; border: 1px solid #0b94f5; background: #fff; color: #078be0; }
+.admin-landlord-review-document-link svg,.admin-landlord-review-secondary-action svg,.admin-landlord-review-approve svg,.admin-landlord-review-reject svg { width: 20px; height: 20px; }
+.admin-landlord-review-missing-document { margin: 18px 0 0; color: #b54708; font-size: 14px; }
+.admin-landlord-review-status-card > p { margin-bottom: 22px; }
+.admin-landlord-review-status { display: inline-flex; width: 100%; min-height: 54px; box-sizing: border-box; align-items: center; justify-content: center; gap: 10px; border: 1px solid; border-radius: 999px; font-size: 16px; font-weight: 650; }
+.admin-landlord-review-status svg { width: 20px; height: 20px; }
+.admin-landlord-review-status.pending { border-color: #f79009; background: #fffaeb; color: #dc6803; }
+.admin-landlord-review-status.verified { border-color: #86efac; background: #ecfdf3; color: #15803d; }
+.admin-landlord-review-status.rejected { border-color: #fda29b; background: #fff1f0; color: #d92d20; }
+.admin-landlord-review-side .admin-landlord-review-card { padding: 26px 38px; }
+.admin-landlord-review-side .admin-landlord-review-card > p { margin-bottom: 22px; }
+.admin-landlord-review-secondary-action { width: 100%; padding: 0 18px; border: 1px solid #0b94f5; background: #fff; color: #078be0; }
+.admin-landlord-review-secondary-action:disabled { border-color: #d0d5dd; color: #98a2b3; cursor: not-allowed; }
+.admin-landlord-review-actions { display: grid; gap: 10px; }
+.admin-landlord-review-approve { width: 100%; border: 1px solid #0b94f5; background: #0b8ff0; color: #fff; }
+.admin-landlord-review-reject { width: 100%; border: 1px solid #f04438; background: #fff5f4; color: #d92d20; }
+.admin-landlord-review-approve:hover:not(:disabled) { background: #087fd3; }.admin-landlord-review-secondary-action:hover:not(:disabled) { background: #f0f9ff; }.admin-landlord-review-reject:hover:not(:disabled) { background: #ffe9e7; }
+.admin-landlord-review-approve:disabled,.admin-landlord-review-reject:disabled { opacity: .55; cursor: not-allowed; }
+.admin-landlord-review-approve:focus-visible,.admin-landlord-review-secondary-action:focus-visible,.admin-landlord-review-reject:focus-visible,.admin-landlord-review-back:focus-visible { outline: 3px solid rgba(14, 165, 233, .3); outline-offset: 3px; }
+@media (max-width: 900px) { .admin-landlord-review-layout { grid-template-columns: 1fr; }.admin-landlord-review-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }.admin-landlord-review-side .admin-landlord-review-card:last-child { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .admin-landlord-review-heading h1,.admin-landlord-review-card h2 { font-size: 21px; }.admin-landlord-review-card,.admin-landlord-review-side .admin-landlord-review-card { padding: 20px; }.admin-landlord-review-profile { padding: 16px; }.admin-landlord-review-details div,.admin-landlord-review-document-details div { grid-template-columns: 1fr; gap: 5px; }.admin-landlord-review-details { gap: 18px; }.admin-landlord-review-document { grid-template-columns: 1fr; gap: 20px; }.admin-landlord-review-document-preview { min-height: 200px; }.admin-landlord-review-side { grid-template-columns: 1fr; }.admin-landlord-review-side .admin-landlord-review-card:last-child { grid-column: auto; } }

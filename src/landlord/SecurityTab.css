@@ -1,0 +1,1183 @@
+/* ==========================================================================
+   APTFINDR - SECURITY TAB
+   Figma-matched structure
+   ========================================================================== */
+
+:root {
+    --security-blue: #0ea5e9;
+    --security-blue-hover: #0284c7;
+
+    --security-text: #1f1f1f;
+    --security-muted: #64748b;
+    --security-placeholder: #94a3b8;
+
+    --security-border: rgba(0, 0, 0, 0.2);
+    --security-soft-border: #dbe3ea;
+
+    --security-card: #ffffff;
+    --security-soft: #f8fafc;
+
+    --security-danger: #dc2626;
+    --security-danger-border: #ea7b7f;
+    --security-danger-bg: #fcf3f4;
+
+    --security-radius: 10px;
+}
+
+
+/* ==========================================================================
+   MAIN CONTAINER
+   ========================================================================== */
+
+.security-tab-panel > .security-tab-card:not(.security-tab-password-card),
+.security-tab-panel > .security-tab-save-row {
+    display: none;
+}
+
+.security-tab-panel {
+    width: 100%;
+    max-width: 1400px;
+
+    margin: 15px auto 40px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 24px;
+
+    box-sizing: border-box;
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    color: var(--security-text);
+}
+
+
+/* ==========================================================================
+   MAIN CARDS
+   ========================================================================== */
+
+.security-tab-card {
+    width: 100%;
+
+    padding: 24px;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--security-border);
+    border-radius: var(--security-radius);
+
+    background: var(--security-card);
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 18px;
+}
+
+
+/* ==========================================================================
+   SECTION HEADINGS
+   ========================================================================== */
+
+.security-tab-heading {
+    width: 100%;
+}
+
+.security-tab-heading h2 {
+    margin: 0;
+
+    color: var(--security-text);
+
+    font-size: 24px;
+    line-height: 30px;
+
+    font-weight: 700;
+}
+
+.security-tab-heading p {
+    margin: 4px 0 0;
+
+    color: var(--security-muted);
+
+    font-size: 14px;
+    line-height: 20px;
+
+    font-weight: 400;
+}
+
+
+/* ==========================================================================
+   SHARED SETTINGS FORM COMPONENT OVERRIDES
+   ========================================================================== */
+
+.security-tab-panel input,
+.security-tab-panel select {
+    width: 100%;
+
+    min-height: 44px;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--security-border);
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    color: var(--security-text);
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+
+    outline: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.security-tab-panel input:focus,
+.security-tab-panel select:focus {
+    border-color: var(--security-blue);
+
+    box-shadow:
+        0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+.security-tab-panel input::placeholder {
+    color: var(--security-placeholder);
+}
+
+
+/* ==========================================================================
+   PASSWORD
+   ========================================================================== */
+
+.security-tab-password-card {
+    min-height: 457px;
+}
+
+.security-tab-password-fields {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+}
+
+.security-tab-panel-2 {
+    position: relative;
+
+    width: 100%;
+}
+
+.security-tab-panel-2 input {
+    padding-right: 48px;
+}
+
+.security-tab-button {
+    position: absolute;
+
+    top: 50%;
+    right: 10px;
+
+    width: 30px;
+    height: 30px;
+
+    padding: 0;
+
+    transform: translateY(-50%);
+
+    border: 0;
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: #718096;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    transition:
+        color 0.15s ease,
+        background 0.15s ease;
+}
+
+.security-tab-button:hover {
+    color: var(--security-blue);
+
+    background: #f0f9ff;
+}
+
+
+/* ==========================================================================
+   PASSWORD BUTTON ROW
+   ========================================================================== */
+
+.security-tab-password-actions {
+    margin-top: auto;
+
+    padding-top: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 12px;
+}
+
+.security-tab-cancel-password {
+    width: 140px;
+    height: 48px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    color: #1f1f1f;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.security-tab-cancel-password:hover:not(:disabled) {
+    border-color: var(--security-blue);
+
+    color: var(--security-blue);
+}
+
+.security-tab-button-2 {
+    width: 160px;
+    height: 48px;
+
+    padding: 0 18px;
+
+    border: 1px solid var(--security-blue);
+    border-radius: 10px;
+
+    background: var(--security-blue);
+
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.security-tab-button-2:hover:not(:disabled) {
+    background: var(--security-blue-hover);
+
+    border-color: var(--security-blue-hover);
+}
+
+.security-tab-button-2:disabled,
+.security-tab-cancel-password:disabled {
+    cursor: not-allowed;
+
+    opacity: 0.5;
+}
+
+
+/* ==========================================================================
+   TWO FACTOR AUTHENTICATION
+   ========================================================================== */
+
+.security-tab-2fa-content,
+.security-tab-setup-container {
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+}
+
+.security-tab-card-2,
+.security-tab-card-3 {
+    width: 100%;
+
+    min-height: 78px;
+
+    padding: 16px 18px;
+
+    box-sizing: border-box;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+.security-tab-card-2 {
+    border: 1px solid #d9d9d9;
+
+    background: #f8fafc;
+}
+
+.security-tab-card-3 {
+    border: 1px solid #86efac;
+
+    background: #f0fdf4;
+}
+
+.security-tab-two-factor-authentication,
+.security-tab-setup-2-fa {
+    margin: 0;
+
+    color: var(--security-text);
+
+    font-size: 14px;
+    line-height: 20px;
+
+    font-weight: 700;
+}
+
+.security-tab-text,
+.security-tab-text-2,
+.security-tab-text-3 {
+    margin: 3px 0 0;
+
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.security-tab-text,
+.security-tab-text-3 {
+    color: var(--security-muted);
+}
+
+.security-tab-text-2 {
+    color: #16a34a;
+}
+
+
+/* ==========================================================================
+   2FA STATUS
+   ========================================================================== */
+
+.security-tab-status {
+    min-width: 74px;
+
+    padding: 5px 10px;
+
+    box-sizing: border-box;
+
+    border-radius: 999px;
+
+    text-align: center;
+
+    font-size: 12px;
+    line-height: 16px;
+
+    font-weight: 600;
+}
+
+.security-tab-status-disabled {
+    background: #f1f5f9;
+
+    color: #64748b;
+}
+
+.security-tab-status-enabled {
+    background: #dcfce7;
+
+    color: #15803d;
+}
+
+
+/* ==========================================================================
+   2FA BUTTONS
+   ========================================================================== */
+
+.security-tab-section-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.security-tab-enable-2-fa,
+.security-tab-2-fa-enabled {
+    width: 160px;
+    height: 48px;
+
+    padding: 0 18px;
+
+    box-sizing: border-box;
+
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.security-tab-enable-2-fa {
+    border: 1px solid var(--security-blue);
+
+    background: var(--security-blue);
+
+    color: #ffffff;
+}
+
+.security-tab-enable-2-fa:hover {
+    background: var(--security-blue-hover);
+
+    border-color: var(--security-blue-hover);
+}
+
+.security-tab-2-fa-enabled {
+    border: 1px solid #cbd5e1;
+
+    background: #ffffff;
+
+    color: #475569;
+}
+
+
+/* ==========================================================================
+   2FA SETUP
+   ========================================================================== */
+
+.security-tab-card-4 {
+    width: 100%;
+
+    padding: 16px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #f8fafc;
+}
+
+.security-tab-step-1-open-your-authenticator-app,
+.security-tab-step-2-scan-the-qr-code {
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 14px;
+    line-height: 20px;
+
+    font-weight: 700;
+}
+
+.security-tab-text-4 {
+    margin: 4px 0 0;
+
+    color: var(--security-muted);
+
+    font-size: 13px;
+    line-height: 19px;
+}
+
+.security-tab-card-5 {
+    min-height: 160px;
+
+    margin-top: 12px;
+
+    padding: 16px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.security-tab-panel-3 {
+    text-align: center;
+
+    color: var(--security-muted);
+}
+
+.security-tab-text-5 {
+    margin: 0;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    font-size: 13px;
+
+    word-break: break-all;
+}
+
+.security-tab-or-enter-this-code-manually {
+    margin: 8px 0 0;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+}
+
+
+/* ==========================================================================
+   VERIFY 2FA ACTIONS
+   ========================================================================== */
+
+.security-tab-row {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 12px;
+}
+
+.security-tab-cancel,
+.security-tab-button-3 {
+    width: 160px;
+    height: 48px;
+
+    padding: 0 16px;
+
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.security-tab-cancel {
+    border: 1px solid #cbd5e1;
+
+    background: #ffffff;
+
+    color: #475569;
+}
+
+.security-tab-button-3 {
+    border: 1px solid var(--security-blue);
+
+    background: var(--security-blue);
+
+    color: #ffffff;
+}
+
+.security-tab-button-3:hover:not(:disabled) {
+    background: var(--security-blue-hover);
+
+    border-color: var(--security-blue-hover);
+}
+
+.security-tab-button-3:disabled {
+    cursor: not-allowed;
+
+    opacity: 0.5;
+}
+
+
+/* ==========================================================================
+   LOGIN & SESSIONS
+   ========================================================================== */
+
+.security-tab-panel-4,
+.security-tab-privacy-options {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.security-tab-card-6 {
+    width: 100%;
+
+    min-height: 72px;
+
+    padding: 14px 16px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #f8fafc;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 24px;
+}
+
+.security-tab-option-copy {
+    min-width: 0;
+}
+
+.security-tab-text-6 {
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 14px;
+    line-height: 20px;
+
+    font-weight: 600;
+}
+
+.security-tab-text-7 {
+    margin: 3px 0 0;
+
+    color: var(--security-muted);
+
+    font-size: 12px;
+    line-height: 18px;
+
+    font-weight: 400;
+}
+
+
+/* ==========================================================================
+   ACTIVE SESSIONS
+   ========================================================================== */
+
+.security-tab-sessions {
+    margin-top: 4px;
+}
+
+.security-tab-active-sessions {
+    margin: 0 0 10px;
+
+    color: #64748b;
+
+    font-size: 12px;
+    line-height: 18px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.06em;
+
+    text-transform: uppercase;
+}
+
+.security-tab-panel-5 {
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.security-tab-no-active-session-data-is-available {
+    padding: 22px;
+
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+
+    background: #f8fafc;
+
+    color: var(--security-muted);
+
+    text-align: center;
+
+    font-size: 14px;
+}
+
+.security-tab-card-7 {
+    min-height: 70px;
+
+    padding: 12px 16px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+.security-tab-panel-6 {
+    border-color: #bbf7d0;
+
+    background: #f0fdf4;
+}
+
+.security-tab-panel-7 {
+    background: #f8fafc;
+}
+
+.security-tab-row-2 {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+}
+
+.security-tab-device-icon {
+    width: 40px;
+    height: 40px;
+
+    flex: 0 0 40px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    color: #64748b;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.security-tab-text-8 {
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 13px;
+    line-height: 18px;
+
+    font-weight: 700;
+}
+
+.security-tab-this-device {
+    margin-left: 8px;
+
+    padding: 3px 6px;
+
+    border-radius: 999px;
+
+    background: #dcfce7;
+
+    color: #15803d;
+
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.security-tab-text-9 {
+    margin: 2px 0 0;
+
+    color: var(--security-muted);
+
+    font-size: 12px;
+    line-height: 17px;
+}
+
+.security-tab-revoke {
+    min-width: 90px;
+    height: 38px;
+
+    padding: 0 14px;
+
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #dc2626;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.security-tab-revoke:hover {
+    border-color: #dc2626;
+
+    background: #fef2f2;
+}
+
+
+/* ==========================================================================
+   ACCOUNT RECOVERY
+   ========================================================================== */
+
+.security-tab-recovery-grid {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    gap: 80px;
+}
+
+
+/* ==========================================================================
+   SAVE SECURITY SETTINGS
+   ========================================================================== */
+
+.security-tab-save-row {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.security-tab-save-security-settings {
+    width: 210px !important;
+    height: 48px !important;
+
+    padding: 0 20px !important;
+
+    border: 1px solid var(--security-blue) !important;
+    border-radius: 10px !important;
+
+    background: var(--security-blue) !important;
+
+    color: #ffffff !important;
+
+    font-size: 14px !important;
+    font-weight: 600 !important;
+
+    box-shadow: none !important;
+}
+
+.security-tab-save-security-settings:hover {
+    background: var(--security-blue-hover) !important;
+
+    border-color: var(--security-blue-hover) !important;
+}
+
+
+/* ==========================================================================
+   DANGER ZONE
+   ========================================================================== */
+
+.security-tab-card-8 {
+    width: 100%;
+
+    min-height: 151px;
+
+    padding: 24px 48px;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--security-danger-border);
+    border-radius: 10px;
+
+    background: var(--security-danger-bg);
+}
+
+.security-tab-danger-content {
+    width: 100%;
+    min-height: 101px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 32px;
+}
+
+.security-tab-danger-content h2 {
+    margin: 0 0 2px;
+
+    color: var(--security-danger);
+
+    font-size: 24px;
+    line-height: 30px;
+
+    font-weight: 700;
+}
+
+.security-tab-danger-content h3 {
+    margin: 0 0 2px;
+
+    color: var(--security-text);
+
+    font-size: 18px;
+    line-height: 24px;
+
+    font-weight: 600;
+}
+
+.security-tab-text-10 {
+    margin: 0;
+
+    color: var(--security-muted);
+
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.security-tab-delete-my-account {
+    width: 160px !important;
+    height: 48px !important;
+
+    flex: 0 0 160px;
+
+    padding: 0 16px !important;
+
+    border: 1px solid #de071b !important;
+    border-radius: 10px !important;
+
+    background: var(--security-danger-bg) !important;
+
+    color: #d70507 !important;
+
+    font-size: 14px !important;
+    font-weight: 600 !important;
+
+    box-shadow: none !important;
+}
+
+.security-tab-delete-my-account:hover {
+    background: #de071b !important;
+
+    color: #ffffff !important;
+}
+
+
+/* ==========================================================================
+   NORMALIZE TEXT / FIELD SPACING
+   ========================================================================== */
+
+.security-tab-panel p {
+    box-sizing: border-box;
+}
+
+.security-tab-panel label {
+    color: #64748b;
+
+    font-family: inherit;
+
+    font-size: 14px;
+    line-height: 18px;
+
+    font-weight: 500;
+}
+
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 1500px) {
+    .security-tab-panel {
+        width: calc(100% - 32px);
+    }
+}
+
+
+@media (max-width: 1000px) {
+    .security-tab-card {
+        padding: 22px;
+    }
+
+    .security-tab-recovery-grid {
+        gap: 32px;
+    }
+
+    .security-tab-card-8 {
+        padding: 24px 32px;
+    }
+}
+
+
+@media (max-width: 760px) {
+    .security-tab-panel {
+        width: calc(100% - 20px);
+
+        margin-top: 10px;
+        margin-bottom: 24px;
+
+        gap: 16px;
+    }
+
+    .security-tab-card {
+        padding: 20px;
+
+        gap: 16px;
+    }
+
+    .security-tab-password-card {
+        min-height: auto;
+    }
+
+    .security-tab-heading h2 {
+        font-size: 20px;
+        line-height: 26px;
+    }
+
+    .security-tab-recovery-grid {
+        grid-template-columns: 1fr;
+
+        gap: 16px;
+    }
+
+    .security-tab-card-6,
+    .security-tab-card-7 {
+        align-items: flex-start;
+    }
+
+    .security-tab-password-actions,
+    .security-tab-row {
+        margin-top: 8px;
+    }
+
+    .security-tab-card-8 {
+        min-height: auto;
+
+        padding: 24px;
+    }
+
+    .security-tab-danger-content {
+        min-height: auto;
+
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .security-tab-delete-my-account {
+        width: 100% !important;
+
+        flex-basis: 48px;
+    }
+}
+
+
+@media (max-width: 520px) {
+    .security-tab-panel {
+        width: calc(100% - 12px);
+    }
+
+    .security-tab-card {
+        padding: 18px;
+    }
+
+    .security-tab-password-actions,
+    .security-tab-row {
+        display: grid;
+
+        grid-template-columns: 1fr 1fr;
+
+        width: 100%;
+    }
+
+    .security-tab-cancel-password,
+    .security-tab-button-2,
+    .security-tab-cancel,
+    .security-tab-button-3 {
+        width: 100%;
+    }
+
+    .security-tab-card-2,
+    .security-tab-card-3,
+    .security-tab-card-6,
+    .security-tab-card-7 {
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .security-tab-section-actions {
+        display: block;
+    }
+
+    .security-tab-enable-2-fa,
+    .security-tab-2-fa-enabled {
+        width: 100%;
+    }
+
+    .security-tab-revoke {
+        width: 100%;
+    }
+
+    .security-tab-save-row {
+        display: block;
+    }
+
+    .security-tab-save-security-settings {
+        width: 100% !important;
+    }
+
+    .security-tab-card-8 {
+        padding: 20px;
+    }
+
+    .security-tab-danger-content h2 {
+        font-size: 22px;
+    }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .security-tab-this-device
+  { font-size: 12px; }
+}
+@media (max-width: 640px) {
+  .security-tab-panel input, .security-tab-panel select
+  { font-size: 16px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .security-tab-this-device
+  { font-size: 11px; }
+}
+@media (max-width: 1023px) {
+  .security-tab-panel input, .security-tab-panel select
+  { font-size: 16px; }
+}
+
+/* Touch devices: the session/device action buttons need finger-sized targets. */
+@media (hover: none) {
+  .security-tab-button { min-height: 38px; }
+  .security-tab-button-2 { min-height: 38px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .security-tab-this-device { font-size: 10px; }
+}

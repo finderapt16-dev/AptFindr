@@ -1,0 +1,428 @@
+/* Compact, inbox-style notification page matching the landlord dashboard shell. */
+.landlord-notifications {
+  width: min(100%, 1200px);
+  margin-inline: auto;
+  color: #27313d;
+}
+
+.landlord-notifications__header { margin: 8px 0 20px; }
+.landlord-notifications__header h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #2d343d;
+}
+.landlord-notifications__header p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9aa3ad;
+}
+
+.landlord-notifications__panel {
+  overflow: visible;
+  border: 1px solid #e8edf1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(30, 41, 59, 0.045);
+}
+.landlord-notifications__toolbar {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #edf1f4;
+}
+.landlord-notifications__tabs { display: flex; align-items: center; gap: 4px; }
+.landlord-notifications__tabs button,
+.landlord-notifications__mark-read,
+.landlord-notification__open,
+.landlord-notification__more { border: 0; font: inherit; cursor: pointer; }
+.landlord-notifications__tabs button {
+  min-width: 72px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 3px;
+  background: transparent;
+  color: #89939e;
+  font-size: 11px;
+  font-weight: 600;
+}
+.landlord-notifications__tabs button:hover,
+.landlord-notifications__tabs button.is-active { background: #18a8e5; color: #fff; }
+.landlord-notifications__mark-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 1px solid #e0e6ea;
+  border-radius: 3px;
+  background: #fff;
+  color: #75808c;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.landlord-notifications__mark-read svg { width: 12px; height: 12px; }
+.landlord-notifications__mark-read:hover:not(:disabled) { border-color: #9adbf4; color: #1098d2; }
+.landlord-notifications__mark-read:disabled { cursor: default; opacity: .5; }
+.landlord-notifications__list { background: #fff; }
+
+.landlord-notification {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  column-gap: 12px;
+  min-height: 76px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #edf1f4;
+  transition: background-color 150ms ease;
+}
+.landlord-notification:last-child { border-bottom: 0; }
+.landlord-notification.is-menu-open { z-index: 2; }
+.landlord-notification:hover { background: #f9fcfe; }
+.landlord-notification.is-unread { background: #eaf7fe; }
+.landlord-notification.is-unread:hover { background: #e1f4fd; }
+.landlord-notification__open {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr) 64px;
+  align-items: center;
+  column-gap: 12px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+.landlord-notification__open:focus-visible {
+  outline: 2px solid #18a8e5;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+.landlord-notification__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #e4e8eb;
+  color: #b4bdc4;
+  font-size: 10px;
+  font-weight: 700;
+}
+.landlord-notification__body { min-width: 0; }
+.landlord-notification__body > span:first-child {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  color: #46515d;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.landlord-notification.is-unread .landlord-notification__body > span:first-child { color: #ef7268; }
+.landlord-notification__body > span:last-child {
+  display: block;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #8d97a1;
+  font-size: 9px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.landlord-notification time { color: #9ca5ad; font-size: 8px; text-align: right; white-space: nowrap; }
+.landlord-notification__actions { position: relative; display: grid; place-items: center; }
+.landlord-notification__more { display: grid; place-items: center; padding: 2px; color: #a5adb5; background: transparent; }
+.landlord-notification__more svg { width: 15px; height: 15px; }
+.landlord-notification__more:hover { color: #178fc5; }
+.landlord-notification__menu {
+  position: absolute;
+  z-index: 10;
+  top: 22px;
+  right: -5px;
+  width: 142px;
+  padding: 7px;
+  border: 1px solid #dfe6eb;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(30, 41, 59, 0.22);
+}
+.landlord-notification__menu button {
+  display: block;
+  width: 100%;
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid #d9e2e8;
+  border-radius: 7px;
+  background: #fff;
+  color: #677481;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.landlord-notification__menu button + button { margin-top: 3px; }
+.landlord-notification__menu button:hover:not(:disabled) { border-color: #9bdcf6; background: #f4fbfe; color: #1699d4; }
+.landlord-notification__menu button.is-delete { border-color: #ff5c64; color: #ff5360; }
+.landlord-notification__menu button.is-delete:hover:not(:disabled) { background: #fff6f6; border-color: #ff3946; color: #ef3442; }
+.landlord-notification__menu button:disabled { cursor: wait; opacity: .6; }
+
+.landlord-notifications__empty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  color: #9aa4ad;
+  font-size: 11px;
+  text-align: center;
+}
+.landlord-notifications__empty svg { width: 20px; height: 20px; color: #16a5e1; }
+.landlord-notifications__empty strong { color: #4c5965; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .landlord-notifications__toolbar { align-items: flex-start; flex-direction: column; }
+  .landlord-notifications__mark-read { align-self: flex-end; }
+  .landlord-notification { grid-template-columns: minmax(0, 1fr) 16px; row-gap: 7px; }
+  .landlord-notification__open { grid-template-columns: 32px minmax(0, 1fr); row-gap: 7px; }
+  .landlord-notification time { grid-column: 2; text-align: left; }
+  .landlord-notification__more { grid-column: 2; grid-row: 1; }
+  .landlord-notification__actions { grid-column: 2; grid-row: 1; }
+  .landlord-notification__menu { right: -3px; }
+}
+
+/* Shared compact notification treatment. */
+.landlord-notifications__header {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 160px;
+  margin: 0 0 16px;
+  padding: 24px;
+  border: 1px solid #e1e7ec;
+  border-radius: 12px;
+  background-image: linear-gradient(to right, #f2f6fa 0%, #ffffff 100%);
+  background: #ffffff;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.025);
+}
+
+.landlord-notifications__header h1 {
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.landlord-notifications__header p {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.landlord-notifications__panel {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.landlord-notifications__toolbar {
+  min-height: 52px;
+  padding: 0 0 12px;
+  border-bottom: 0;
+}
+
+.landlord-notifications__tabs button {
+  min-width: 72px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 1px solid #e0e6ea;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #52606d;
+}
+
+.landlord-notifications__tabs button:hover,
+.landlord-notifications__tabs button.is-active {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.landlord-notifications__list {
+  overflow: hidden;
+  border: 1px solid #e1e7ec;
+  border-radius: 6px;
+}
+
+.landlord-notification {
+  min-height: 76px;
+  padding: 14px 12px;
+  border-bottom-color: #d9e3ea;
+}
+
+.landlord-notification:last-child { border-bottom: 0; }
+
+.landlord-notification__open {
+  grid-template-columns: minmax(0, 1fr) 78px;
+  column-gap: 12px;
+}
+
+.landlord-notification__avatar {
+  display: none;
+}
+
+.landlord-notification__body > span:first-child {
+  font-size: 11px;
+  color: #334155;
+}
+
+.landlord-notification.is-unread .landlord-notification__body > span:first-child {
+  color: #334155;
+}
+
+.landlord-notification__body > span:last-child {
+  font-size: 9px;
+}
+
+@media (max-width: 640px) {
+  .landlord-notifications__header {
+    min-height: 160px;
+    padding: 24px;
+  }
+  .landlord-notifications__toolbar { flex-direction: row; align-items: center; gap: 8px; }
+  .landlord-notifications__mark-read { align-self: auto; }
+  .landlord-notification__open { grid-template-columns: minmax(0, 1fr) 70px; }
+}
+
+@media (min-width: 768px) {
+  .landlord-notifications__header { padding-inline: 28px; }
+  .landlord-notifications__header h1 { font-size: 34px; }
+}
+
+/* Match the landlord dashboard header on desktop. */
+@media (min-width: 681px) {
+  .landlord-notifications__header {
+    min-height: 130px;
+    margin: 15px 0 24px;
+    padding: 40px 64px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .landlord-notifications__header h1 {
+    margin: 0;
+    color: #1f1f1f;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .landlord-notifications__header p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+/* Mobile header matches the landlord dashboard header. */
+@media (max-width: 680px) {
+  .landlord-notifications__header {
+    min-height: 0;
+    margin: 0 0 16px;
+    padding: 18px 20px;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .landlord-notifications__header h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 20px;
+    line-height: 1.18;
+    font-weight: 700;
+  }
+
+  .landlord-notifications__header p {
+    max-width: 285px;
+    margin: 7px 0 0;
+    color: #52657a;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
+
+/* Match the taller, easier-to-scan notification rhythm used by the Admin inbox. */
+.landlord-notifications__toolbar { min-height: 64px; padding: 13px 16px; }
+.landlord-notifications__tabs button,
+.landlord-notifications__mark-read { min-height: 38px; padding: 8px 16px; font-size: 12px; }
+.landlord-notification { min-height: 102px; padding: 19px 18px; }
+.landlord-notification__body > span:first-child { font-size: 13px; line-height: 1.35; }
+.landlord-notification__body > span:last-child { margin-top: 5px; font-size: 10px; line-height: 1.45; }
+.landlord-notification time { font-size: 9px; }
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .landlord-notification__avatar, .landlord-notification__body > span:last-child,
+  .landlord-notification__menu button
+  { font-size: 11px; }
+}
+@media (max-width: 640px) {
+  .landlord-notification time
+  { font-size: 12px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .landlord-notification time
+  { font-size: 11px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .landlord-notification__avatar, .landlord-notification__body > span:last-child,
+  .landlord-notification__menu button
+  { font-size: 11px; }
+}
+
+/* Touch devices: notification menu rows need finger-sized targets. */
+@media (hover: none) {
+  .landlord-notification__menu button { min-height: 40px; }
+  .landlord-notifications__tabs button { min-height: 40px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .landlord-notification time { font-size: 10px; }
+}

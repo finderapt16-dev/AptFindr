@@ -1,0 +1,251 @@
+.landlord-settings {
+  display: grid;
+  gap: 14px;
+  min-height: 100%;
+}
+
+.landlord-settings-page-header,
+.landlord-settings-card {
+  border: 1px solid #dfe5ec;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.landlord-settings-page-header { padding: 16px 18px; }
+
+.landlord-settings-page-header h1,
+.landlord-settings-card h2 {
+  margin: 0;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.landlord-settings-page-header h1 { font-size: 22px; }
+.landlord-settings-page-header p,
+.landlord-settings-card-header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+
+.landlord-settings-card { padding: 16px 18px; }
+.landlord-settings-card-header { margin-bottom: 15px; }
+.landlord-settings-card h2 { font-size: 14px; }
+
+.landlord-settings-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 84px;
+  row-gap: 12px;
+}
+
+.landlord-settings-photo-card .profile-tab-grid { display: block; }
+.landlord-settings-photo-card .profile-tab-card-2,
+.landlord-settings-photo-card .profile-tab-content { display: none; }
+.landlord-settings-photo-card .profile-tab-card {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 268px;
+  align-items: center;
+  gap: 20px;
+  min-height: 182px;
+  padding: 24px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+.landlord-settings-photo-card .profile-tab-row { width: 80px; height: 80px; border-radius: 50%; font-size: 30px; box-shadow: none; }
+.landlord-settings-photo-card .profile-tab-text { margin: 0; font-size: 16px; line-height: 1.4; }
+.landlord-settings-photo-card .profile-tab-text-2 { margin: 4px 0 0; font-size: 14px; }
+.landlord-settings-photo-card .profile-tab-row-2 { display: grid; gap: 8px; }
+.landlord-settings-photo-card .profile-tab-button,
+.landlord-settings-photo-card .profile-tab-remove-photo { justify-content: center; width: 100%; height: 48px; padding: 8px; border-radius: 6px; font-size: 14px; }
+.landlord-settings-photo-card .profile-tab-button { border: 1px solid #16a5e1; }
+.landlord-settings-photo-card .profile-tab-remove-photo { cursor: pointer; }
+.landlord-settings-photo-card .profile-tab-remove-photo:disabled { cursor: not-allowed; }
+.landlord-settings-photo-card .profile-tab-upload-hint { color: #94a3b8; font-size: 12px; text-align: center; }
+
+.landlord-settings-field { display: grid; gap: 5px; min-width: 0; }
+.landlord-settings-field-label { color: #64748b; font-size: 10px; font-weight: 600; }
+.landlord-settings-field-label b { color: #ef4444; }
+.landlord-settings-input-wrap { position: relative; display: block; }
+
+.landlord-settings-input-wrap input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 31px;
+  padding: 6px 30px 6px 9px;
+  border: 1px solid #d9e0e8;
+  border-radius: 5px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+  font-size: 11px;
+}
+
+.landlord-settings-input-wrap input:focus { border-color: #18a8e5; box-shadow: 0 0 0 2px rgba(24, 168, 229, .12); }
+.landlord-settings-input-wrap input[readonly] { color: #64748b; background: #f8fafc; }
+.landlord-settings-edit-icon { position: absolute; right: 9px; top: 50%; width: 13px; height: 13px; color: #94a3b8; pointer-events: none; transform: translateY(-50%); }
+.landlord-settings-field small { color: #94a3b8; font-size: 9px; line-height: 1.2; }
+
+.landlord-settings-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 17px; }
+.landlord-settings-actions button { min-width: 92px; height: 32px; border-radius: 5px; padding: 0 14px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.landlord-settings-actions button:disabled { cursor: not-allowed; opacity: .6; }
+.landlord-settings-cancel { border: 1px solid #d9e0e8; background: #fff; color: #475569; }
+.landlord-settings-save { border: 1px solid #08a1df; background: #18a8e5; color: #fff; }
+
+.landlord-settings-business-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.landlord-settings-read-only { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 10px; font-weight: 600; }
+.landlord-settings-read-only svg { width: 13px; height: 13px; }
+
+.landlord-settings-permit-file { display: flex; align-items: center; gap: 12px; min-height: 88px; padding: 14px 18px; border: 1px solid #dfe5ec; border-radius: 6px; }
+.landlord-settings-file-icon { display: grid; width: 54px; height: 54px; flex: 0 0 auto; place-items: center; border: 1px solid #d1d9e2; border-radius: 6px; color: #5d7692; background: #eff4f8; }
+.landlord-settings-file-icon svg { width: 26px; height: 26px; }
+.landlord-settings-permit-file div { display: grid; gap: 3px; min-width: 0; }
+.landlord-settings-permit-file strong,
+.landlord-settings-permit-file a { overflow: hidden; color: #475569; font-size: 11px; font-weight: 700; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.landlord-settings-permit-file a:hover { color: #0b9ed8; text-decoration: underline; }
+.landlord-settings-permit-file small { color: #94a3b8; font-size: 10px; }
+
+.landlord-settings-permit-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 14px 0 0; }
+.landlord-settings-permit-details div { min-width: 0; }
+.landlord-settings-permit-details .landlord-settings-permit-number { grid-column: 1 / -1; }
+.landlord-settings-permit-details dt { margin-bottom: 5px; color: #64748b; font-size: 10px; font-weight: 600; }
+.landlord-settings-permit-details dd { margin: 0; color: #475569; font-size: 11px; font-weight: 700; }
+
+@media (max-width: 700px) {
+  .landlord-settings-photo-card .profile-tab-card { grid-template-columns: 80px minmax(0, 1fr); }
+  .landlord-settings-photo-card .profile-tab-row-2 { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+  .landlord-settings-photo-card .profile-tab-upload-hint { grid-column: 1 / -1; }
+  .landlord-settings-profile-grid,
+  .landlord-settings-permit-details { grid-template-columns: 1fr; gap: 12px; }
+  .landlord-settings-permit-details .landlord-settings-permit-number { grid-column: auto; }
+  .landlord-settings-page-header,
+  .landlord-settings-card { padding: 14px; }
+}
+
+/* Match the landlord dashboard header on desktop. */
+@media (min-width: 681px) {
+  .landlord-settings-page-header {
+    min-height: 130px;
+    padding: 40px 64px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    background: #ffffff;
+  }
+
+  .landlord-settings-page-header h1 {
+    color: #1f1f1f;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .landlord-settings-page-header p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+/* Use the same centered content width as the landlord dashboard cards. */
+@media (min-width: 681px) {
+  .landlord-settings {
+    width: 100%;
+    max-width: 1400px;
+    margin: 15px auto 40px;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1100px) {
+  .landlord-settings {
+    max-width: calc(100% - 32px);
+  }
+}
+
+@media (max-width: 680px) {
+  .landlord-settings {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  /* Match the compact landlord dashboard header without touching profile content. */
+  .landlord-settings-page-header {
+    min-height: 0;
+    margin: 0 0 16px;
+    padding: 18px 20px;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .landlord-settings-page-header h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 20px;
+    line-height: 1.18;
+    font-weight: 700;
+  }
+
+  .landlord-settings-page-header p {
+    max-width: 285px;
+    margin: 7px 0 0;
+    color: #52657a;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .landlord-settings-field-label, .landlord-settings-permit-details dt,
+  .landlord-settings-permit-file small, .landlord-settings-read-only
+  { font-size: 11px; }
+}
+@media (max-width: 640px) {
+  .landlord-settings-field small
+  { font-size: 12px; }
+}
+@media (max-width: 640px) {
+  .landlord-settings-input-wrap input
+  { font-size: 16px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .landlord-settings-field small
+  { font-size: 11px; }
+}
+@media (max-width: 1023px) {
+  .landlord-settings-input-wrap input
+  { font-size: 16px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .landlord-settings-field-label, .landlord-settings-permit-details dt,
+  .landlord-settings-permit-file small, .landlord-settings-read-only
+  { font-size: 11px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .landlord-settings-field small { font-size: 10px; }
+}

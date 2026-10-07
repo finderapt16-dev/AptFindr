@@ -1,0 +1,1218 @@
+/* ==========================================================================
+   APTFINDR SETTINGS
+   ========================================================================== */
+
+:root {
+    --settings-bg: #f8fafc;
+    --settings-card: #ffffff;
+
+    --settings-border: #d9d9d9;
+    --settings-border-soft: #dbe5ec;
+
+    --settings-text: #1f1f1f;
+    --settings-heading: #1f1f1f;
+    --settings-muted: #64748b;
+    --settings-placeholder: #94a3b8;
+
+    --settings-primary: #0ea5e9;
+    --settings-primary-dark: #0284c7;
+
+    --settings-danger: #d70507;
+    --settings-danger-title: #dc2626;
+    --settings-danger-border: #ea7b7f;
+    --settings-danger-bg: #fcf3f4;
+
+    --settings-radius: 6px;
+}
+
+
+/* ==========================================================================
+   MAIN PAGE
+   ========================================================================== */
+
+.tenant-profile-settings {
+    width: 100%;
+    max-width: 1400px;
+
+    margin: 15px auto 40px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 24px;
+
+    color: var(--settings-text);
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================================
+   COMMON CARD
+   ========================================================================== */
+
+.tenant-profile-settings > section,
+.tenant-profile-settings > form,
+.tenant-profile-heading {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    background: var(--settings-card);
+
+    border: 1px solid var(--settings-border);
+
+    border-radius: var(--settings-radius);
+}
+
+
+/* ==========================================================================
+   SETTINGS HEADER
+   ========================================================================== */
+
+.tenant-profile-heading {
+    min-height: 130px;
+
+    padding: 40px 64px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 32px;
+
+    background-color: #ffffff;
+    background-image: none;
+}
+
+.tenant-profile-heading h1 {
+    margin: 0;
+
+    color: var(--settings-heading);
+
+    font-size: 24px;
+
+    line-height: 1.2;
+
+    font-weight: 700;
+}
+
+.tenant-profile-heading p {
+    margin: 5px 0 0;
+
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 20px;
+
+    font-weight: 400;
+}
+
+.tenant-profile-edit-profile {
+    width: 268px;
+
+    height: 48px;
+
+    flex: 0 0 268px;
+
+    border: 1px solid var(--settings-primary);
+
+    border-radius: 6px;
+
+    background: var(--settings-primary);
+
+    color: #ffffff;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.tenant-profile-edit-profile:hover {
+    background: var(--settings-primary-dark);
+
+    border-color: var(--settings-primary-dark);
+}
+
+.tenant-profile-edit-profile:active {
+    transform: translateY(1px);
+}
+
+
+/* ==========================================================================
+   PROFILE
+   ========================================================================== */
+
+.tenant-profile-settings > .tenant-profile-summary {
+    min-height: 182px;
+    padding: 24px;
+
+    background: #ffffff !important;
+    border: 1px solid #d9d9d9 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+}
+.tenant-profile-identity {
+    min-width: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+}
+
+.tenant-profile-avatar {
+    box-sizing: border-box;
+
+    width: 80px;
+
+    height: 80px;
+
+    flex: 0 0 80px;
+
+    border-radius: 50%;
+
+    background: var(--settings-primary);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    overflow: hidden;
+
+    color: #ffffff;
+
+    font-size: 30px;
+
+    font-weight: 600;
+}
+
+.tenant-profile-avatar img {
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
+
+    display: block;
+}
+
+.tenant-profile-name {
+    min-width: 0;
+}
+
+.tenant-profile-name h2 {
+    margin: 0;
+
+    color: var(--settings-heading);
+
+    font-size: 16px;
+
+    line-height: 22px;
+
+    font-weight: 600;
+}
+
+.tenant-profile-name p {
+    margin: 4px 0 0;
+
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 20px;
+}
+
+.tenant-profile-photo-actions {
+    width: 268px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.tenant-profile-upload,
+.tenant-profile-remove-photo {
+    width: 268px;
+
+    height: 48px;
+
+    box-sizing: border-box;
+
+    border-radius: 6px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.tenant-profile-upload {
+    position: relative;
+
+    border: 1px solid var(--settings-primary);
+
+    background: var(--settings-primary);
+
+    color: #ffffff;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.tenant-profile-upload:hover {
+    background: var(--settings-primary-dark);
+
+    border-color: var(--settings-primary-dark);
+}
+
+.tenant-profile-upload input {
+    position: absolute;
+
+    width: 1px;
+
+    height: 1px;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+.tenant-profile-upload.is-disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+.tenant-profile-remove-photo {
+    border: 1px solid var(--settings-border-soft);
+
+    background: #ffffff;
+
+    color: var(--settings-muted);
+
+    transition:
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.tenant-profile-remove-photo:hover:not(:disabled) {
+    border-color: var(--settings-primary);
+
+    color: var(--settings-primary);
+}
+
+.tenant-profile-photo-actions p {
+    margin: 0;
+
+    text-align: center;
+
+    font-size: 12px;
+
+    line-height: 18px;
+
+    color: var(--settings-muted);
+}
+
+
+/* ==========================================================================
+   SECTION HEADINGS
+   ========================================================================== */
+
+.tenant-profile-section-heading {
+    margin: 0 0 18px;
+}
+
+.tenant-profile-section-heading h2 {
+    margin: 0;
+
+    color: var(--settings-heading);
+
+    font-size: 16px;
+
+    line-height: 22px;
+
+    font-weight: 700;
+}
+
+.tenant-profile-section-heading p {
+    margin: 4px 0 0;
+
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 20px;
+
+    font-weight: 400;
+}
+
+
+/* ==========================================================================
+   PERSONAL INFORMATION
+   ========================================================================== */
+
+.tenant-profile-information {
+    min-height: 453px;
+
+    padding: 24px;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.tenant-profile-fields {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    column-gap: 80px;
+
+    row-gap: 14px;
+}
+
+.tenant-profile-field {
+    min-width: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.tenant-profile-field label {
+    display: block;
+
+    margin: 0;
+
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 18px;
+
+    font-weight: 500;
+}
+
+.tenant-profile-field label .required {
+    color: #ef4444;
+}
+
+.tenant-profile-input-wrap {
+    width: 100%;
+
+    height: 44px;
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+}
+
+.tenant-profile-input-wrap input {
+    width: 100%;
+
+    height: 44px;
+
+    box-sizing: border-box;
+
+    padding: 0 40px 0 12px;
+
+    border: 1px solid var(--settings-border);
+
+    border-radius: 6px;
+
+    background: #ffffff;
+
+    color: var(--settings-text);
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 400;
+
+    outline: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.tenant-profile-input-wrap input:focus {
+    border-color: var(--settings-primary);
+
+    box-shadow:
+        0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+.tenant-profile-input-wrap input::placeholder {
+    color: var(--settings-placeholder);
+}
+
+.tenant-profile-input-wrap input:disabled {
+    background: #f8fafc;
+
+    cursor: not-allowed;
+
+    opacity: 0.7;
+}
+
+.tenant-profile-input-wrap > svg {
+    position: absolute;
+
+    right: 12px;
+
+    color: #7c8fa3;
+
+    pointer-events: none;
+}
+
+.tenant-profile-helper {
+    margin: 0;
+
+    color: var(--settings-muted);
+
+    font-size: 13px;
+
+    line-height: 18px;
+}
+
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.tenant-profile-card-actions {
+    margin-top: auto;
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.tenant-profile-secondary-button,
+.tenant-profile-primary-button {
+    height: 48px;
+
+    box-sizing: border-box;
+
+    border-radius: 6px;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        opacity 0.15s ease;
+}
+
+.tenant-profile-secondary-button {
+    width: 140px;
+
+    border: 1px solid var(--settings-border-soft);
+
+    background: #ffffff;
+
+    color: #475569;
+}
+
+.tenant-profile-secondary-button:hover:not(:disabled) {
+    border-color: var(--settings-primary);
+
+    color: var(--settings-primary);
+}
+
+.tenant-profile-primary-button {
+    width: 160px;
+
+    border: 1px solid var(--settings-primary);
+
+    background: var(--settings-primary);
+
+    color: #ffffff;
+}
+
+.tenant-profile-primary-button:hover:not(:disabled) {
+    background: var(--settings-primary-dark);
+
+    border-color: var(--settings-primary-dark);
+}
+
+.tenant-profile-secondary-button:disabled,
+.tenant-profile-primary-button:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+
+/* ==========================================================================
+   CHANGE PASSWORD
+   ========================================================================== */
+
+.tenant-profile-password-card {
+    min-height: 457px;
+
+    padding: 24px;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.tenant-profile-password-fields {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 14px;
+}
+
+.tenant-profile-password-field {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.tenant-profile-password-field label {
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 18px;
+
+    font-weight: 500;
+}
+
+.tenant-profile-password-input-wrap {
+    width: 100%;
+
+    height: 44px;
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+}
+
+.tenant-profile-password-input-wrap input {
+    width: 100%;
+
+    height: 44px;
+
+    box-sizing: border-box;
+
+    padding: 0 42px 0 12px;
+
+    border: 1px solid var(--settings-border);
+
+    border-radius: 6px;
+
+    background: #ffffff;
+
+    color: var(--settings-text);
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.tenant-profile-password-input-wrap input:focus {
+    border-color: var(--settings-primary);
+
+    box-shadow:
+        0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+.tenant-profile-password-input-wrap input::placeholder {
+    color: var(--settings-placeholder);
+}
+
+.tenant-profile-password-input-wrap input:disabled {
+    background: #f8fafc;
+
+    cursor: not-allowed;
+
+    opacity: 0.7;
+}
+
+.tenant-profile-password-toggle {
+    position: absolute;
+
+    top: 50%;
+
+    right: 10px;
+
+    width: 28px;
+
+    height: 28px;
+
+    transform: translateY(-50%);
+
+    padding: 0;
+
+    border: 0;
+
+    background: transparent;
+
+    color: #7c8fa3;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    cursor: pointer;
+}
+
+.tenant-profile-password-toggle:hover {
+    color: var(--settings-primary);
+}
+
+.tenant-profile-password-message {
+    margin-top: 10px;
+
+    font-size: 13px;
+
+    line-height: 18px;
+}
+
+.tenant-profile-password-message.is-error {
+    color: #dc2626;
+}
+
+.tenant-profile-password-message.is-success {
+    color: #16a34a;
+}
+
+
+/* ==========================================================================
+   DANGER ZONE
+   ========================================================================== */
+
+.tenant-profile-danger-zone {
+    min-height: 151px;
+
+    padding: 24px 48px;
+
+    background: var(--settings-danger-bg) !important;
+
+    border-color: var(--settings-danger-border) !important;
+
+    display: flex;
+
+    align-items: center;
+}
+
+.tenant-profile-danger-content {
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 32px;
+}
+
+.tenant-profile-danger-info {
+    min-width: 0;
+}
+
+.tenant-profile-danger-info h2 {
+    margin: 0 0 2px;
+
+    color: var(--settings-danger-title);
+
+    font-size: 24px;
+
+    line-height: 30px;
+
+    font-weight: 700;
+}
+
+.tenant-profile-danger-info h3 {
+    margin: 0 0 2px;
+
+    color: var(--settings-heading);
+
+    font-size: 18px;
+
+    line-height: 24px;
+
+    font-weight: 600;
+}
+
+.tenant-profile-danger-info p {
+    margin: 0;
+
+    color: var(--settings-muted);
+
+    font-size: 13px;
+
+    line-height: 18px;
+}
+
+.tenant-profile-delete-button {
+    width: 160px;
+
+    height: 48px;
+
+    flex: 0 0 160px;
+
+    border: 1px solid #de071b;
+
+    border-radius: 6px;
+
+    background: var(--settings-danger-bg);
+
+    color: var(--settings-danger);
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+.tenant-profile-delete-button:hover:not(:disabled) {
+    background: #de071b;
+
+    color: #ffffff;
+}
+
+.tenant-profile-delete-button:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+
+/* ==========================================================================
+   DELETE ACCOUNT MODAL
+   ========================================================================== */
+
+.tenant-profile-delete-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    padding: 24px;
+
+    background: rgba(15, 23, 42, 0.45);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+.tenant-profile-delete-dialog {
+    width: min(460px, 100%);
+
+    box-sizing: border-box;
+
+    padding: 28px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--settings-border-soft);
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+.tenant-profile-delete-warning {
+    width: 44px;
+
+    height: 44px;
+
+    margin-bottom: 16px;
+
+    border-radius: 50%;
+
+    background: #fef2f2;
+
+    color: #dc2626;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+.tenant-profile-delete-dialog h2 {
+    margin: 0 0 8px;
+
+    color: var(--settings-heading);
+
+    font-size: 20px;
+
+    line-height: 26px;
+
+    font-weight: 700;
+}
+
+.tenant-profile-delete-dialog > p {
+    margin: 0;
+
+    color: var(--settings-muted);
+
+    font-size: 14px;
+
+    line-height: 21px;
+}
+
+.tenant-profile-delete-unavailable {
+    margin-top: 16px;
+
+    padding: 12px;
+
+    border: 1px solid #fecaca;
+
+    border-radius: 6px;
+
+    background: #fef2f2;
+
+    color: #b91c1c;
+
+    font-size: 13px;
+
+    line-height: 18px;
+}
+
+.tenant-profile-delete-actions {
+    margin-top: 24px;
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+}
+
+.tenant-profile-delete-cancel,
+.tenant-profile-delete-confirm {
+    height: 44px;
+
+    padding: 0 18px;
+
+    border-radius: 6px;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.tenant-profile-delete-cancel {
+    border: 1px solid var(--settings-border-soft);
+
+    background: #ffffff;
+
+    color: #475569;
+}
+
+.tenant-profile-delete-confirm {
+    border: 1px solid #de071b;
+
+    background: #de071b;
+
+    color: #ffffff;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 7px;
+}
+
+.tenant-profile-delete-cancel:disabled,
+.tenant-profile-delete-confirm:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 1500px) {
+    .tenant-profile-settings {
+        width: calc(100% - 32px);
+
+        max-width: 1400px;
+    }
+}
+
+
+@media (max-width: 1000px) {
+    .tenant-profile-heading {
+        padding: 32px;
+    }
+
+    .tenant-profile-summary {
+        padding: 24px;
+    }
+
+    .tenant-profile-information,
+    .tenant-profile-password-card {
+        padding: 24px;
+    }
+
+    .tenant-profile-fields {
+        column-gap: 32px;
+    }
+
+    .tenant-profile-danger-zone {
+        padding: 24px 32px;
+    }
+}
+
+
+@media (max-width: 760px) {
+    .tenant-profile-settings {
+        width: calc(100% - 20px);
+
+        margin-top: 10px;
+
+        margin-bottom: 24px;
+
+        gap: 16px;
+    }
+
+    .tenant-profile-heading {
+        min-height: auto;
+
+        padding: 24px;
+
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .tenant-profile-edit-profile {
+        width: 100%;
+
+        flex-basis: 48px;
+    }
+
+    .tenant-profile-summary {
+        min-height: auto;
+
+        padding: 24px;
+
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .tenant-profile-photo-actions,
+    .tenant-profile-upload,
+    .tenant-profile-remove-photo {
+        width: 100%;
+    }
+
+    .tenant-profile-fields {
+        grid-template-columns: 1fr;
+
+        column-gap: 0;
+    }
+
+    .tenant-profile-information,
+    .tenant-profile-password-card {
+        min-height: auto;
+
+        padding: 20px;
+    }
+
+    .tenant-profile-card-actions {
+        margin-top: 24px;
+    }
+
+    .tenant-profile-danger-zone {
+        min-height: auto;
+
+        padding: 24px;
+    }
+
+    .tenant-profile-danger-content {
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .tenant-profile-delete-button {
+        width: 100%;
+
+        flex-basis: 48px;
+    }
+}
+
+
+@media (max-width: 480px) {
+    .tenant-profile-settings {
+        width: calc(100% - 12px);
+    }
+
+    .tenant-profile-heading {
+        padding: 20px;
+    }
+
+    .tenant-profile-heading h1 {
+        font-size: 22px;
+    }
+
+    .tenant-profile-summary {
+        padding: 20px;
+    }
+
+    .tenant-profile-information,
+    .tenant-profile-password-card {
+        padding: 18px;
+    }
+
+    .tenant-profile-card-actions {
+        width: 100%;
+
+        display: grid;
+
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tenant-profile-secondary-button,
+    .tenant-profile-primary-button {
+        width: 100%;
+    }
+
+    .tenant-profile-danger-zone {
+        padding: 20px;
+    }
+
+    .tenant-profile-danger-info h2 {
+        font-size: 22px;
+    }
+
+    .tenant-profile-delete-actions {
+        display: grid;
+
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tenant-profile-delete-cancel,
+    .tenant-profile-delete-confirm {
+        width: 100%;
+    }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .tenant-profile-input-wrap input, .tenant-profile-password-input-wrap input
+  { font-size: 16px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .tenant-profile-input-wrap input, .tenant-profile-password-input-wrap input
+  { font-size: 16px; }
+}

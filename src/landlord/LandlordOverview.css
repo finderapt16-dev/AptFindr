@@ -1,0 +1,1740 @@
+/* ============================================================
+   FIGMA DESKTOP PLACEMENT
+   ============================================================ */
+
+@media (min-width: 681px) {
+
+  /* Main dashboard content */
+  .ld-simple-dashboard {
+    width: 100%;
+    max-width: 1400px;
+    margin: 15px auto 40px;
+    padding: 0;
+  }
+
+  /* ==========================================================
+     PAGE HEADER
+     ========================================================== */
+
+  .ld-simple-heading {
+    width: 100%;
+    min-height: 130px;
+    margin: 0 0 24px;
+    padding: 40px 64px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    background: #ffffff;
+  }
+
+  .ld-simple-heading h1 {
+    margin: 0;
+    color: #1f1f1f;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .ld-simple-heading p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+
+  /* ==========================================================
+     MY PROPERTIES
+     ========================================================== */
+
+  .ld-properties-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 18px !important;
+
+    border: 1px solid #dce3ea;
+    border-radius: 7px;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .ld-properties-header {
+    height: auto;
+    margin: 0 0 18px !important;
+  }
+
+  .ld-properties-header h2 {
+    color: #111827;
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 700;
+  }
+
+  .ld-properties-header p {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 10px;
+    line-height: 15px;
+  }
+
+  .ld-empty-properties {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    padding: 18px 12px 20px;
+    text-align: center;
+  }
+
+  .ld-empty-properties svg {
+    width: min(100%, 430px);
+    height: auto;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .ld-empty-properties h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 17px;
+    line-height: 1.3;
+    font-weight: 700;
+  }
+
+  .ld-empty-properties p {
+    max-width: 420px;
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .ld-empty-properties-add-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 184px;
+    min-width: 184px;
+    height: 42px;
+    margin-top: 18px;
+    padding: 0 18px;
+    border-radius: 6px;
+    background: #14ace8;
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-decoration: none;
+    box-shadow: none;
+    transform: translateY(0);
+  }
+
+  .ld-empty-properties-add-button svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    color: #ffffff;
+    flex-shrink: 0;
+    stroke-width: 2.5;
+  }
+
+  .ld-add-property-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    flex: 0 0 18px;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transform: translateY(4px);
+  }
+
+  .ld-empty-properties-add-button:hover {
+    background: #079bd5;
+  }
+
+  .ld-empty-properties-review {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .ld-empty-properties-review svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+
+  /* ==========================================================
+     PROPERTY LIST
+     ========================================================== */
+
+  .ld-property-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+  }
+
+  .ld-property-with-engagement {
+    display: grid;
+    gap: 14px;
+  }
+
+
+  /* ==========================================================
+     PROPERTY ROW
+     ========================================================== */
+
+  .ld-property-row {
+    display: grid;
+
+    /*
+      Figma placement:
+
+      Image       Information       Analytics       Actions
+      172px       185px             flexible         116px
+    */
+
+    grid-template-columns:
+      172px
+      185px
+      minmax(390px, 1fr)
+      116px;
+
+    grid-template-rows: 120px;
+
+    width: 100%;
+    min-height: 152px;
+    height: 152px;
+
+    column-gap: 18px;
+
+    align-items: center;
+
+    padding: 15px;
+
+    border: 1px solid #dce3ea;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .ld-property-row:first-child {
+    padding-top: 15px;
+    border-top: 1px solid #dce3ea;
+  }
+
+
+  /* ==========================================================
+     PROPERTY IMAGE
+     ========================================================== */
+
+  .ld-property-image {
+    grid-column: 1;
+    grid-row: 1;
+
+    width: 172px;
+    height: 120px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background: #eaf5fb;
+    overflow: hidden;
+  }
+
+  .ld-property-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+
+  /* ==========================================================
+     PROPERTY INFORMATION
+     ========================================================== */
+
+  .ld-property-info {
+    grid-column: 2;
+    grid-row: 1;
+
+    align-self: start;
+    padding-top: 2px;
+
+    min-width: 0;
+  }
+
+  .ld-property-title-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    min-height: 24px;
+  }
+
+  .ld-property-info h3 {
+    margin: 0;
+
+    color: #111827;
+
+    font-size: 13px;
+    line-height: 17px;
+    font-weight: 700;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ld-status {
+    flex-shrink: 0;
+
+    min-height: 20px;
+    padding: 4px 8px;
+
+    border-radius: 5px;
+
+    font-size: 8px;
+    line-height: 12px;
+    font-weight: 600;
+  }
+
+  .ld-status:not(.draft) {
+    color: #15803d;
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+  }
+
+  .ld-status.draft {
+    color: #d97706;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+  }
+
+  .ld-property-info > p {
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+
+    margin: 9px 0 0;
+
+    color: #64748b;
+
+    font-size: 9px;
+    line-height: 13px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ld-property-info > p svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+  }
+
+  .ld-property-price {
+    margin-top: 7px;
+
+    color: #475569;
+
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 500;
+  }
+
+
+  /* ==========================================================
+     PROPERTY ANALYTICS
+     ========================================================== */
+
+  .ld-property-stats {
+    grid-column: 3;
+    grid-row: 1;
+
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+
+    width: 100%;
+    height: 92px;
+
+    margin: 0;
+
+    align-self: center;
+  }
+
+  .ld-property-stats > button,
+  .ld-property-stats > div,
+  .ld-property-stats > div:nth-child(2),
+  .ld-property-stats > div:nth-child(3) {
+    display: flex;
+
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    height: 92px;
+
+    padding: 8px;
+
+    gap: 4px;
+
+    border: 0;
+    border-left: 1px solid #dce3ea;
+    border-radius: 0;
+
+    background: #ffffff;
+
+    font: inherit;
+  }
+
+  .ld-property-stats > div:last-child {
+    border-right: 1px solid #dce3ea;
+  }
+
+  .ld-property-stats > button {
+    cursor: pointer;
+  }
+
+  .ld-property-stats > button:hover {
+    background: #f8fafc;
+  }
+
+  .ld-property-stats svg {
+    width: 17px;
+    height: 17px;
+
+    margin: 0;
+  }
+
+  .ld-property-stats > button:first-child {
+    color: #0a7ef5;
+  }
+
+  .ld-property-stats > button:nth-child(2) {
+    color: #fc464b;
+  }
+
+  .ld-property-stats > div:last-child {
+    color: #fab202;
+  }
+
+  .ld-property-stats b {
+    color: #111827;
+
+    font-size: 13px;
+    line-height: 17px;
+    font-weight: 700;
+  }
+
+  .ld-property-stats span {
+    color: #64748b;
+
+    font-size: 9px;
+    line-height: 12px;
+  }
+
+
+  /* ==========================================================
+     PROPERTY ACTIONS
+     ========================================================== */
+
+  .ld-property-actions {
+    grid-column: 4;
+    grid-row: 1;
+
+    display: flex;
+
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+
+    width: 116px;
+    height: 120px;
+
+    margin: 0;
+    padding: 0;
+
+    border: 0;
+  }
+
+  /* Three-dot menu */
+
+  .ld-property-actions > .ld-property-menu-wrap {
+    position: relative;
+
+    align-self: flex-end;
+
+    display: block;
+
+    width: 24px;
+    height: 24px;
+
+    z-index: 2;
+  }
+
+  .ld-property-actions
+    > .ld-property-menu-wrap
+    > .ld-property-menu-trigger {
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+
+    display: grid;
+    place-items: center;
+
+    margin: 0;
+    padding: 0;
+
+    border: 0;
+    border-radius: 4px;
+
+    background: transparent;
+    color: #475569;
+
+    cursor: pointer;
+  }
+
+  .ld-property-actions
+    > .ld-property-menu-wrap
+    > .ld-property-menu-trigger:hover,
+  .ld-property-actions
+    > .ld-property-menu-wrap
+    > .ld-property-menu-trigger[aria-expanded="true"] {
+    background: #f1f5f9;
+  }
+
+  .ld-property-menu-trigger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .ld-property-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+
+    z-index: 20;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 108px;
+    padding: 4px;
+    gap: 2px;
+
+    border: 1px solid #d7e1e8;
+    border-radius: 6px;
+
+    background: #ffffff;
+
+    box-shadow:
+      0 8px 18px rgba(15, 23, 42, 0.14),
+      0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+
+  .ld-property-menu > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 30px;
+    margin: 0;
+    padding: 0 8px;
+
+    border: 0;
+    border-radius: 4px;
+
+    background: #ffffff;
+    color: #111827;
+
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+
+    cursor: pointer;
+  }
+
+  .ld-property-menu > button:hover {
+    background: #f1f5f9;
+  }
+
+  .ld-property-menu > button.danger {
+    border: 1px solid #ef4444;
+
+    color: #dc2626;
+  }
+
+  .ld-property-menu > button.danger:hover:not(:disabled) {
+    background: #dc2626;
+    color: #ffffff;
+  }
+
+  .ld-property-menu > button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+
+  /* ==========================================================
+     PROPERTY ACTION BUTTONS
+     ========================================================== */
+
+  .ld-property-action-buttons {
+    display: flex;
+    flex-direction: column;
+
+    width: 116px;
+
+    gap: 7px;
+  }
+
+  .ld-property-actions
+    > .ld-property-action-buttons
+    > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 116px;
+    min-height: 36px;
+
+    padding: 8px 10px;
+
+    border: 1px solid #0369a1;
+    border-radius: 7px;
+
+    background: #ffffff;
+    color: #0369a1 !important;
+
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 600;
+
+    text-decoration: none;
+  }
+
+  .ld-property-actions
+    > .ld-property-action-buttons
+    > a:hover {
+    background: #eff6ff;
+  }
+
+
+  /* ==========================================================
+     PROPERTY ENGAGEMENT
+     ========================================================== */
+
+  .ld-engagement-card {
+    width: 100%;
+
+    margin-top: 14px;
+    padding: 18px;
+
+    border: 1px solid #dce3ea;
+    border-radius: 7px;
+
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .ld-engagement-header {
+    margin-bottom: 18px;
+  }
+
+  .ld-engagement-header h2 {
+    color: #111827;
+
+    font-size: 15px;
+    line-height: 19px;
+    font-weight: 700;
+  }
+
+  .ld-engagement-header p {
+    margin-top: 4px;
+
+    color: #64748b;
+
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .ld-engagement-period {
+    min-height: 32px;
+
+    padding: 7px 12px;
+
+    border: 1px solid #dce3ea;
+    border-radius: 7px;
+
+    background: #ffffff;
+    color: #334155;
+
+    font-size: 9px;
+  }
+
+
+  /* ==========================================================
+     ENGAGEMENT 3-COLUMN LAYOUT
+     ========================================================== */
+
+  .ld-engagement-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    gap: 24px;
+  }
+
+  .ld-engagement-metric {
+    min-height: 184px;
+
+    padding: 14px;
+
+    border: 1px solid #dce3ea;
+    border-radius: 8px;
+
+    background: #ffffff;
+  }
+
+  .ld-engagement-metric-top {
+    gap: 8px;
+  }
+
+  .ld-engagement-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .ld-engagement-metric-top > span:last-child {
+    color: #475569;
+
+    font-size: 10px;
+    line-height: 13px;
+    font-weight: 600;
+
+    text-transform: none;
+  }
+
+  .ld-engagement-metric > strong {
+    margin: 8px 0 3px 40px;
+
+    color: #172033;
+
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .ld-engagement-change {
+    margin-left: 40px;
+
+    font-size: 8px;
+  }
+
+  .ld-engagement-chart {
+    height: 62px;
+    margin-top: 8px;
+  }
+
+  .ld-engagement-metric .ld-trend-axis {
+    font-size: 7px;
+  }
+}
+
+
+/* ============================================================
+   LARGE SCREEN
+   ============================================================ */
+
+@media (min-width: 1200px) {
+  .ld-simple-dashboard {
+    max-width: 1400px;
+  }
+}
+
+
+/* ============================================================
+   MEDIUM DESKTOP
+   ============================================================ */
+
+@media (min-width: 681px) and (max-width: 1100px) {
+
+  .ld-simple-dashboard {
+    max-width: calc(100% - 32px);
+  }
+
+  .ld-property-row {
+    grid-template-columns:
+      145px
+      165px
+      minmax(260px, 1fr)
+      100px;
+
+    column-gap: 12px;
+  }
+
+  .ld-property-image {
+    width: 145px;
+    height: 110px;
+  }
+
+  .ld-property-actions,
+  .ld-property-action-buttons,
+  .ld-property-actions
+    > .ld-property-action-buttons
+    > a {
+    width: 100px;
+  }
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 680px) {
+
+  /* Reserve space for the fixed mobile navigation trigger. */
+  .landlord-shell .app-shell-content-mobile-nav {
+    padding-top: 72px !important;
+  }
+
+  .ld-simple-dashboard {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 12px 30px;
+  }
+
+  .ld-simple-heading {
+    padding: 20px;
+  }
+
+  .ld-simple-heading h1 {
+    font-size: 19px;
+  }
+
+  .ld-properties-card {
+    padding: 14px !important;
+  }
+
+  /* The empty-properties action needs its own phone layout. The desktop rule
+     above is deliberately scoped to wide screens, which previously left this
+     link looking like unstyled text on mobile. */
+  .ld-empty-properties {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 8px 4px 22px;
+    text-align: center;
+  }
+
+  .ld-empty-properties > svg {
+    width: min(100%, 280px);
+    height: auto;
+    margin: 0 auto 14px;
+  }
+
+  .ld-empty-properties h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.3;
+    font-weight: 800;
+  }
+
+  .ld-empty-properties p {
+    max-width: 285px;
+    margin: 7px auto 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .ld-empty-properties-add-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: min(100%, 184px);
+    min-height: 42px;
+    margin-top: 18px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #14ace8;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(14, 165, 233, .25);
+  }
+
+  .ld-empty-properties-add-button svg {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    color: currentColor;
+    flex: 0 0 auto;
+  }
+
+  .ld-add-property-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    flex: 0 0 18px;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transform: translateY(4px);
+  }
+
+  .ld-empty-properties-add-button:active { transform: translateY(1px); }
+  .ld-empty-properties-add-button:focus-visible { outline: 3px solid rgba(14, 165, 233, .35); outline-offset: 3px; }
+
+  .ld-empty-properties-review {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    max-width: 285px;
+    margin-top: 15px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+  }
+
+  .ld-empty-properties-review svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  .ld-property-row {
+    display: grid;
+
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+
+    gap: 12px;
+
+    height: auto;
+    min-height: 0;
+
+    padding: 10px;
+  }
+
+  .ld-property-image {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+
+    width: 96px;
+    height: 96px;
+  }
+
+  .ld-property-info {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ld-property-stats {
+    grid-column: 1 / -1;
+    grid-row: 3;
+
+    width: 100%;
+    height: 60px;
+  }
+
+  .ld-property-stats > button,
+  .ld-property-stats > div {
+    height: 60px;
+  }
+
+  .ld-property-actions {
+    grid-column: 1 / -1;
+    grid-row: 4;
+
+    width: 100%;
+    height: auto;
+  }
+
+  .ld-property-action-buttons {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ld-property-actions
+    > .ld-property-action-buttons
+    > a {
+    width: 100%;
+  }
+
+  .ld-engagement-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* A property card must not compress its image, address, metrics, and actions
+   into two narrow columns on small phones. */
+@media (max-width: 480px) {
+  .ld-simple-dashboard {
+    padding-inline: 12px;
+  }
+
+  .ld-simple-heading {
+    padding: 18px;
+  }
+
+  .ld-simple-heading h1 {
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .ld-properties-card {
+    padding: 12px !important;
+  }
+
+  .ld-property-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .ld-property-image,
+  .ld-property-info,
+  .ld-property-stats,
+  .ld-property-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .ld-property-image {
+    width: 100%;
+    height: 180px;
+  }
+
+  .ld-property-info {
+    padding-top: 0;
+  }
+
+  .ld-property-info > p {
+    align-items: flex-start;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .ld-property-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    height: auto;
+    border-top: 1px solid #dce3ea;
+    border-bottom: 1px solid #dce3ea;
+  }
+
+  .ld-property-stats > button,
+  .ld-property-stats > div {
+    min-height: 68px;
+    height: auto;
+    padding: 8px 4px;
+  }
+
+  .ld-property-actions {
+    min-height: 0;
+  }
+
+  .ld-property-action-buttons {
+    gap: 8px;
+  }
+}
+
+/* Use a single-column property card throughout the phone range.  Some mobile
+   browsers report a wider CSS viewport than their visible screen, so keeping
+   the former two-column layout until 480px still made the card overlap there. */
+@media (max-width: 680px) {
+  main.app-shell-content.app-shell-content-mobile-nav {
+    padding-top: max(6rem, calc(5rem + env(safe-area-inset-top))) !important;
+  }
+
+  /* Keep the phone header deliberately simple and easy to scan. */
+  .ld-simple-heading {
+    margin: 0 0 16px;
+    padding: 18px 20px;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .ld-simple-heading h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 20px;
+    line-height: 1.18;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .ld-simple-heading p {
+    max-width: 285px;
+    margin: 7px 0 0;
+    color: #52657a;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .ld-property-row {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+  }
+
+  .ld-property-row > * {
+    min-width: 0;
+  }
+
+  .ld-property-image {
+    width: 100% !important;
+    height: 180px !important;
+  }
+
+  .ld-property-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ld-property-info {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .ld-property-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .ld-property-info h3 {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* Keep publication state as a clear, readable badge on portrait cards. */
+  .ld-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 9px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    color: #15803d;
+    background: #ecfdf5;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+  }
+
+  .ld-status.draft {
+    border-color: #fde68a;
+    color: #b45309;
+    background: #fffbeb;
+  }
+
+  .ld-property-info > p {
+    align-items: flex-start;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .ld-property-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+    margin: 0;
+    border-top: 1px solid #dce3ea;
+    border-bottom: 1px solid #dce3ea;
+  }
+
+  .ld-property-stats > button,
+  .ld-property-stats > div {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    height: auto;
+    padding: 8px 4px;
+    gap: 2px;
+  }
+
+  .ld-property-stats b {
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .ld-property-stats span {
+    font-size: 11px;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .ld-property-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .ld-property-actions > .ld-property-menu-wrap {
+    align-self: flex-end;
+  }
+
+  .ld-property-action-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .ld-property-actions > .ld-property-action-buttons > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 8px;
+    border: 1px solid #0284c7;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0279b5 !important;
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .ld-property-actions > .ld-property-action-buttons > .ld-primary-action {
+    border-color: #0ea5e9;
+    background: #0ea5e9;
+    color: #ffffff !important;
+  }
+
+  .ld-property-actions > .ld-property-action-buttons > a:active {
+    transform: translateY(1px);
+  }
+}
+
+/* A phone in landscape can be wider than the normal mobile breakpoint. Keep
+   the two action colours consistent with the portrait phone view. */
+@media (orientation: landscape) and (max-height: 600px) and (max-width: 960px) {
+  .ld-property-actions > .ld-property-action-buttons > a {
+    border-color: #0284c7;
+    background: #ffffff;
+    color: #0279b5 !important;
+  }
+
+  .ld-property-actions > .ld-property-action-buttons > .ld-primary-action {
+    border-color: #0ea5e9;
+    background: #0ea5e9;
+    color: #ffffff !important;
+  }
+}
+
+/* Property engagement colors and chart treatment. */
+.ld-engagement-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ld-engagement-period svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ld-engagement-metric-top > strong {
+  margin: 0;
+  color: #334155;
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 800;
+}
+
+.ld-engagement-metric-label {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 13px;
+  font-weight: 600;
+}
+
+.ld-engagement-change {
+  margin-left: 0;
+  color: #16a36d;
+}
+
+.ld-engagement-change small {
+  color: #8aa0af;
+}
+
+.ld-engagement-chart {
+  background-image:
+    linear-gradient(to bottom, transparent 24%, #edf2f7 25%, transparent 26%, transparent 49%, #edf2f7 50%, transparent 51%, transparent 74%, #edf2f7 75%, transparent 76%),
+    linear-gradient(to right, #edf2f7 1px, transparent 1px);
+  background-size: 100% 100%, 16.666% 100%;
+}
+
+.ld-engagement-metric:nth-child(1) .ld-engagement-icon {
+  background: #eaf8ff;
+  color: #46b5ed;
+}
+
+.ld-engagement-metric:nth-child(1) .ld-engagement-chart polyline {
+  stroke: #48aef0;
+}
+
+.ld-engagement-metric:nth-child(2) .ld-engagement-icon {
+  background: #fff1f2;
+  color: #ff7e87;
+}
+
+.ld-engagement-metric:nth-child(2) .ld-engagement-chart polyline {
+  stroke: #ff7e87;
+}
+
+.ld-engagement-metric:nth-child(3) .ld-engagement-icon {
+  background: #fff8db;
+  color: #f5b31b;
+}
+
+.ld-engagement-metric:nth-child(3) .ld-engagement-chart polyline {
+  stroke: #f2b01e;
+}
+
+/* Match the reference placement within each analytics card. */
+@media (min-width: 681px) {
+  .ld-engagement-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .ld-engagement-period {
+    flex: 0 0 auto;
+  }
+}
+
+.ld-engagement-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-engagement-metric-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  order: 1;
+}
+
+.ld-engagement-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.ld-engagement-chart,
+.ld-no-activity-chart {
+  display: block;
+  order: 2;
+  width: 100%;
+}
+
+.ld-engagement-chart polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.ld-engagement-metric .ld-trend-axis {
+  display: flex;
+  order: 3;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ld-engagement-change {
+  display: flex;
+  order: 4;
+  align-items: center;
+  gap: 3px;
+  margin-top: 7px;
+}
+
+/* Empty analytics state: retain the chart structure with a clear zero state. */
+.ld-no-activity-chart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  order: 2;
+  width: 100%;
+  min-height: 62px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 0;
+  background-image:
+    linear-gradient(to bottom, transparent 24%, #edf2f7 25%, transparent 26%, transparent 49%, #edf2f7 50%, transparent 51%, transparent 74%, #edf2f7 75%, transparent 76%),
+    linear-gradient(to right, #edf2f7 1px, transparent 1px);
+  background-size: 100% 100%, 16.666% 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.ld-no-activity-chart::after {
+  position: absolute;
+  right: 0;
+  bottom: 7px;
+  left: 0;
+  height: 2px;
+  background: #48aef0;
+  content: "";
+}
+
+.ld-no-activity-chart strong {
+  position: relative;
+  z-index: 1;
+  color: #475569;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 700;
+}
+
+.ld-no-activity-chart span {
+  position: relative;
+  z-index: 1;
+  max-width: 180px;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 7px;
+  line-height: 9px;
+}
+
+.ld-engagement-metric:nth-child(2) .ld-no-activity-chart::after {
+  background: #ff7e87;
+}
+
+.ld-engagement-metric:nth-child(3) .ld-no-activity-chart::after {
+  background: #f2b01e;
+}
+
+/* Phone-only engagement layout. This is intentionally separate from the
+   property card above, so the approved portrait card layout remains intact. */
+@media (max-width: 680px) {
+  /* Keep the comparison note at the bottom of an activity card. This leaves
+     the zero-state chart and its “No favorites/views yet” message together. */
+  .ld-engagement-metric .ld-engagement-change {
+    order: 5;
+    width: 100%;
+    margin-top: 12px;
+    padding-top: 9px;
+    border-top: 1px solid #edf2f7;
+  }
+
+  .ld-property-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ld-property-row {
+    position: relative;
+    border: 1px solid #dce3ea;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .ld-property-row:first-child {
+    border-top: 1px solid #dce3ea;
+  }
+
+  .ld-property-info > p > span {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ld-property-info > p {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 5px;
+  }
+
+  .ld-property-info > p svg {
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 2px;
+  }
+
+  .ld-property-info > p > span {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ld-engagement-card {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #dce3ea;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .ld-engagement-header {
+    margin-bottom: 14px;
+  }
+
+  .ld-engagement-header h2 {
+    font-size: 19px;
+    line-height: 1.25;
+  }
+
+  .ld-engagement-header p {
+    margin-top: 5px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .ld-engagement-period {
+    display: inline-flex;
+    min-height: 34px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    border: 1px solid #dce3ea;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .ld-engagement-grid {
+    gap: 12px;
+  }
+
+  .ld-engagement-metric {
+    min-height: 0;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #ffffff;
+  }
+
+  .ld-engagement-metric-top {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 9px;
+    row-gap: 1px;
+  }
+
+  .ld-engagement-icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 34px;
+    height: 34px;
+  }
+
+  .ld-engagement-metric-top > strong {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .ld-engagement-metric-label {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 12px;
+  }
+
+  .ld-engagement-change {
+    order: 2;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .ld-engagement-chart,
+  .ld-no-activity-chart {
+    order: 3;
+    min-height: 88px;
+    margin-top: 12px;
+  }
+
+  .ld-engagement-metric .ld-trend-axis {
+    order: 4;
+    margin-top: 8px;
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .ld-property-actions > .ld-property-menu-wrap {
+    position: absolute;
+    /* Keep the menu beside the content below the photo, not on the image. */
+    top: 202px;
+    right: 10px;
+    width: 34px;
+    height: 30px;
+    z-index: 3;
+  }
+
+  .ld-property-actions > .ld-property-menu-wrap > .ld-property-menu-trigger {
+    display: grid;
+    width: 34px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #475569;
+  }
+
+  .ld-property-info {
+    padding-right: 42px;
+  }
+
+  .ld-property-stats > button:first-child svg {
+    color: #0ea5e9;
+  }
+
+  .ld-property-stats > button:nth-child(2) svg {
+    color: #f43f5e;
+  }
+
+  .ld-property-stats > div:last-child svg {
+    color: #eab308;
+  }
+
+  .ld-property-actions > .ld-property-menu-wrap > .ld-property-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    width: 120px;
+    padding: 5px;
+    gap: 3px;
+    border: 1px solid #d7e1e8;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  }
+
+  .ld-property-menu > button {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .ld-property-menu > button.danger {
+    color: #dc2626;
+    background: #fff5f5;
+  }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .ld-no-activity-chart span, .ld-no-activity-chart strong
+  { font-size: 12px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .ld-engagement-change, .ld-engagement-metric .ld-trend-axis, .ld-engagement-period,
+  .ld-no-activity-chart span, .ld-no-activity-chart strong, .ld-property-info > p,
+  .ld-property-stats span, .ld-status
+  { font-size: 11px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .ld-engagement-header p, .ld-engagement-metric-label,
+  .ld-engagement-metric-top > span:last-child, .ld-properties-header p,
+  .ld-property-actions > .ld-property-action-buttons > a, .ld-property-price
+  { font-size: 11px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .ld-engagement-change { font-size: 10px; }
+  .ld-engagement-metric .ld-trend-axis { font-size: 10px; }
+  .ld-engagement-period { font-size: 10px; }
+  .ld-no-activity-chart span { font-size: 10px; }
+  .ld-no-activity-chart strong { font-size: 10px; }
+  .ld-property-info > p { font-size: 10px; }
+  .ld-property-stats span { font-size: 10px; }
+  .ld-status { font-size: 10px; }
+}

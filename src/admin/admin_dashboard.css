@@ -1,0 +1,1328 @@
+/* Admin styles stay scoped to the portal so other role shells are unaffected. */
+.admin-portal-shell .app-sidebar-trigger {
+  background: #0ea5e9 !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 14px rgba(14, 165, 233, 0.18) !important;
+}
+.admin-apartment-detail .app-sidebar-trigger {
+  border-color: #7dd3fc !important;
+  background: #0ea5e9 !important;
+  color: #fff !important;
+  box-shadow: 0 6px 14px rgba(14, 165, 233, .18) !important;
+}
+.admin-apartment-detail .app-sidebar-trigger:hover {
+  background: #0284c7 !important;
+}
+.landlord-shell .app-sidebar-trigger {
+  border-color: #16a5e1 !important;
+  background: #16a5e1 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(22, 165, 225, .18) !important;
+}
+
+.landlord-shell .app-sidebar-trigger:hover {
+  background: #0e93ca !important;
+}
+
+/* Compact admin Figma shell. Scoped so tenant and landlord navigation retain
+   their existing visual systems. */
+.admin-portal-shell .app-shell-main {
+  background: #f8fafc !important;
+}
+
+/* Appeal review is a focused workspace, without the portal navigation. */
+.admin-portal-shell.admin-appeal-review-shell .app-shell-main {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-portal-shell.admin-appeal-review-shell .app-shell-content {
+  padding: 16px 20px;
+}
+
+.admin-portal-shell.app-shell {
+  background: #f8fafc !important;
+}
+
+.admin-portal-shell .app-shell-sidebar {
+  width: 175px !important;
+  min-width: 175px !important;
+}
+
+.admin-portal-shell .app-shell-main::before {
+  background: #e5e7eb;
+}
+
+.admin-portal-shell .app-sidebar.admin-figma-sidebar {
+  --sidebar-primary: #0ea5e9;
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 100vh;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0 !important;
+  border-right: 1px solid #e5e7eb !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  color: #334155 !important;
+}
+
+.admin-portal-shell .app-sidebar.admin-figma-sidebar::before {
+  display: none;
+}
+
+.admin-figma-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 16px 13px 18px;
+}
+
+.admin-figma-sidebar-brand img {
+  width: 20px;
+  height: auto;
+  max-height: 20px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+.admin-figma-sidebar-brand span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.admin-portal-shell .admin-figma-sidebar-brand strong {
+  color: #111827 !important;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.admin-portal-shell .admin-figma-sidebar-brand small {
+  color: #94a3b8 !important;
+  font-size: 5.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-figma-sidebar-group {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0 12px 14px;
+  border: 0 !important;
+}
+
+.admin-figma-sidebar-group > p {
+  margin: 0 0 2px;
+  padding: 0 2px;
+  color: #94a3b8 !important;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group > p::after {
+  display: none;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item {
+  display: flex;
+  min-height: 31px !important;
+  align-items: center;
+  gap: 7px !important;
+  padding: 6px 9px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  color: #475569 !important;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 600;
+  text-align: left;
+  transform: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:not(.is-active)::before {
+  display: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item > svg {
+  width: 12px !important;
+  height: 12px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #64748b !important;
+  transform: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active {
+  border-color: #bae6fd !important;
+  background: #f0f9ff !important;
+  color: #0284c7 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover > svg,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active > svg {
+  color: #0284c7 !important;
+}
+
+/* Match the tenant sidebar's clear active-location cue for admin navigation. */
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item {
+  position: relative;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active::before {
+  content: "";
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: -13px;
+  width: 4px;
+  border-radius: 0 999px 999px 0;
+  background: #16a5e1;
+  animation: app-sidebar-indicator-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.admin-figma-sidebar-item small {
+  display: inline-grid;
+  min-width: 14px;
+  height: 14px;
+  margin-left: auto;
+  place-items: center;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.admin-figma-sidebar-logout {
+  margin-top: auto;
+  padding: 0 12px 16px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout button {
+  display: flex;
+  width: 100%;
+  min-height: 31px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #475569;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-figma-sidebar-logout svg {
+  width: 12px;
+  height: 12px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout button:hover {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+
+/* Keep the admin navigation independently scrollable and the shared logout
+   action visible at the bottom, like the tenant and landlord sidebars. */
+@media (min-width: 761px) {
+  .admin-portal-shell .app-shell-sidebar {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  .admin-portal-shell .app-sidebar.admin-figma-sidebar {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+.admin-figma-sidebar-logout {
+  flex: 0 0 auto;
+}
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button {
+  min-height: 46px;
+  gap: 12px;
+  padding: 0 12px;
+  border-color: #d9d9d9 !important;
+  border-radius: 13px !important;
+  background: #fff !important;
+  color: #666 !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 600;
+  transform: none !important;
+}
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button svg {
+  width: 18px;
+  height: 18px;
+  color: #8a8a8a !important;
+}
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button:hover {
+  border-color: #b9ddec !important;
+  background: #f2f9fc !important;
+  color: #167da9 !important;
+}
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button:hover svg { color: #16a5e1 !important; }
+
+/* Log Out belongs to the navigation flow, so it appears when the sidebar is
+   scrolled to its end instead of staying pinned over the menu. */
+.admin-portal-shell .admin-figma-sidebar-logout {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  .admin-portal-shell .app-sidebar.admin-figma-sidebar {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-figma-sidebar-brand { padding-top: 22px; }
+  .admin-figma-sidebar-group > p { font-size: 9px; }
+  .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item,
+  .admin-portal-shell .admin-figma-sidebar-logout button { min-height: 42px; font-size: 14px; }
+  .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item > svg,
+  .admin-figma-sidebar-logout svg { width: 18px !important; height: 18px !important; }
+}
+.landlord-home .landlord-panel { box-shadow: 0 10px 28px rgba(76, 60, 45, .045); }
+
+.admin-figma-sidebar-role {
+  width: fit-content;
+  margin: -2px 12px 16px;
+  padding: 6px 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  color: #334155;
+  background: #ffffff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+/* Give the admin portal the same sidebar hierarchy as the tenant and landlord
+   portals, while retaining admin-specific navigation. */
+.admin-portal-shell .app-shell-sidebar {
+  width: 284px !important;
+  min-width: 284px !important;
+}
+
+.admin-figma-sidebar-brand {
+  padding: 21px 20px 17px;
+}
+
+.admin-figma-sidebar-brand img {
+  display: block;
+  width: min(10rem, 100%);
+  max-height: 44px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.admin-figma-sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px 16px;
+}
+
+.admin-figma-sidebar-avatar {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  background: #16a5e1;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-figma-sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-figma-sidebar-profile-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.admin-figma-sidebar-profile-copy strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-figma-sidebar-profile-copy small {
+  overflow: hidden;
+  color: #667085;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-figma-sidebar-group {
+  gap: 3px;
+  padding: 12px 12px 14px;
+}
+
+.admin-figma-sidebar-group > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0 8px;
+  color: #667085 !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group > p::after {
+  display: block;
+  width: 20px;
+  height: 2px;
+  content: "";
+  border-radius: 999px;
+  background: #7dd3fc;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item {
+  min-height: 54px !important;
+  gap: 16px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  color: #333333 !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item > svg {
+  width: 20px !important;
+  height: 20px !important;
+  color: #9a9a9a !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active {
+  border-color: transparent !important;
+  background: #eaf7fd !important;
+  color: #16a5e1 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover > svg,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active > svg {
+  color: #16a5e1 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active::before {
+  top: 10px;
+  bottom: 10px;
+  left: -12px;
+}
+
+.admin-figma-sidebar-logout {
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  box-shadow: 0 -6px 14px rgba(15, 23, 42, .04);
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout button {
+  min-height: 52px;
+  gap: 12px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.admin-figma-sidebar-logout svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 760px) {
+  .admin-portal-shell .app-shell-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Compact apartment inventory, aligned with the supplied admin reference. */
+.admin-portal-shell .admin-apartments-panel {
+  padding: 14px 18px 28px;
+  background: #f8fafc;
+}
+
+.admin-portal-shell .admin-apartments-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.admin-portal-shell .admin-apartments-header {
+  min-height: 0;
+  margin: 0 0 10px;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.admin-portal-shell .admin-apartments-card,
+.admin-portal-shell .admin-apartments-row-2 { display: none; }
+.admin-portal-shell .admin-apartments-apartments { font-size: 16px; line-height: 1.2; }
+.admin-portal-shell .admin-apartments-text { margin-top: 4px; font-size: 11px; }
+
+.admin-portal-shell .admin-apartments-section {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.admin-portal-shell .admin-apartments-row-3 {
+  min-height: 88px;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.admin-portal-shell .admin-apartments-row-4 {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #16a5e1;
+}
+.admin-portal-shell .admin-apartments-icon-icon { width: 18px; height: 18px; }
+.admin-portal-shell .admin-apartments-span-2 { gap: 0; }
+.admin-portal-shell .admin-apartments-span-3 { font-size: 18px; line-height: 1.1; }
+.admin-portal-shell .admin-apartments-span-4 { font-size: 12px; line-height: 1.35; }
+.admin-portal-shell .admin-apartments-span-5 { font-size: 10px; line-height: 1.35; }
+
+.admin-portal-shell .admin-apartments-section-2 {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.admin-portal-shell .admin-apartments-label { height: 48px; flex: 1; border: 1px solid #dce3eb; border-radius: 8px; background: #ffffff; }
+.admin-portal-shell .admin-apartments-search-icon { width: 14px; height: 14px; margin-left: 10px; }
+.admin-portal-shell .admin-apartments-label { overflow: hidden; transition: border-color .18s ease, box-shadow .18s ease; }
+.admin-portal-shell .admin-apartments-label:focus-within { border-color: #38bdf8; box-shadow: 0 0 0 3px rgb(14 165 233 / .13); }
+.admin-portal-shell .admin-apartments-input { box-sizing: border-box; height: 100%; border: 0; border-radius: inherit; background: transparent; box-shadow: none; font-size: 12px; }
+.admin-portal-shell .admin-apartments-input:focus { border: 0; background: transparent; box-shadow: none; }
+.admin-portal-shell .admin-apartments-section-2 .admin-apartments-select { width: 170px; min-height: 48px; border: 1px solid #dce3eb; border-radius: 8px; background: #ffffff; font-size: 11px; }
+.admin-portal-shell .admin-apartments-section-2 .admin-apartments-select:nth-of-type(n + 2) { display: none; }
+
+.admin-portal-shell .admin-apartments-section-3 { display: grid; gap: 12px; }
+.admin-portal-shell .admin-apartments-article {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) auto;
+  min-height: 122px;
+  gap: 20px;
+  padding: 14px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: none;
+}
+.admin-portal-shell .admin-apartments-panel-2 { width: 118px; height: 92px; border-radius: 7px; }
+.admin-portal-shell .admin-apartments-image-with-fallback { width: 100%; height: 100%; object-fit: cover; }
+.admin-portal-shell .admin-apartments-panel-3 { gap: 5px; justify-content: center; }
+.admin-portal-shell .admin-apartments-title-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.admin-portal-shell .admin-apartments-heading { margin: 0; font-size: 13px; line-height: 1.35; white-space: nowrap; }
+.admin-portal-shell .admin-apartments-inline-status,
+.admin-portal-shell .admin-apartments-inline-type { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.admin-portal-shell .admin-apartments-inline-status { color: #16803b; background: #dcfce7; }
+.admin-portal-shell .admin-apartments-inline-type { color: #64748b; background: #f1f5f9; }
+.admin-portal-shell .admin-apartments-text-2,
+.admin-portal-shell .admin-apartments-submitted-by { margin: 0; font-size: 11px; line-height: 1.4; }
+.admin-portal-shell .admin-apartments-text-2 svg { width: 10px; height: 10px; }
+.admin-portal-shell .admin-apartments-row-6 { gap: 12px; margin-top: 5px; }
+.admin-portal-shell .admin-apartments-row-7,
+.admin-portal-shell .admin-apartments-starting-at,
+.admin-portal-shell .admin-apartments-added { font-size: 10px; }
+.admin-portal-shell .admin-apartments-row-8 { display: none; }
+.admin-portal-shell .admin-apartments-row-9 { align-self: center; }
+.admin-portal-shell .admin-apartments-inspect { min-width: 78px; height: 38px; border-color: #7dd3fc; border-radius: 7px; color: #0284c7; font-size: 11px; }
+.admin-portal-shell .admin-apartments-inspect svg { display: none; }
+
+/* The detailed modal remains available; hide the legacy duplicate card grid. */
+.admin-portal-shell .admin-apartments-panel-4,
+.admin-portal-shell .admin-apartments-card-5,
+.admin-portal-shell .admin-apartments-panel-5,
+.admin-portal-shell .admin-apartments-grid,
+.admin-portal-shell .admin-apartments-panel-8 { display: none; }
+
+@media (max-width: 800px) {
+  .admin-portal-shell .admin-apartments-section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-portal-shell .admin-apartments-article { grid-template-columns: 64px minmax(0, 1fr); }
+  .admin-portal-shell .admin-apartments-panel-2 { width: 64px; }
+  .admin-portal-shell .admin-apartments-row-9 { grid-column: 2; justify-self: start; }
+}
+
+/* Compact notification center, matched to the supplied reference. */
+.admin-portal-shell .admin-dashboard-container-3 {
+  width: calc(100% - 36px);
+  max-width: none;
+  margin: 14px 18px 28px;
+}
+
+.admin-portal-shell .admin-dashboard-container-3 > header {
+  margin: 0 0 10px;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.admin-portal-shell .admin-dashboard-notifications { font-size: 13px; line-height: 1.2; }
+.admin-portal-shell .admin-dashboard-text-6 { margin-top: 4px; font-size: 8px; line-height: 1.35; }
+.admin-portal-shell .admin-dashboard-row-17 { display: none; }
+
+.admin-portal-shell .admin-dashboard-section-5 { margin: 0; }
+.admin-portal-shell .admin-dashboard-notification-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.admin-portal-shell .admin-dashboard-card-2 {
+  display: flex;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.admin-portal-shell .admin-dashboard-button-7 {
+  height: 24px;
+  min-width: 36px;
+  padding: 0 9px;
+  border-radius: 4px;
+  font-size: 8px;
+}
+.admin-portal-shell .admin-dashboard-button-7 svg { display: none; }
+.admin-portal-shell .admin-dashboard-button-8 { background: #16a5e1; color: #ffffff; }
+.admin-portal-shell .admin-dashboard-button-9 { border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; }
+
+.admin-portal-shell .admin-dashboard-button-6 {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid #dce3eb;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 8px;
+  font-weight: 600;
+}
+.admin-portal-shell .admin-dashboard-button-6 svg { display: none; }
+
+.admin-portal-shell .admin-dashboard-card-3 {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.admin-portal-shell .admin-dashboard-article-2 {
+  position: relative;
+  display: block;
+  min-height: 36px;
+  padding: 7px 70px 7px 8px;
+  border: 0;
+  border-bottom: 1px solid #eef2f6;
+  border-radius: 0;
+  background: #ffffff;
+}
+.admin-portal-shell .admin-dashboard-article-2:last-child { border-bottom: 0; }
+.admin-portal-shell .admin-dashboard-article-3 { background: #eaf6ff; }
+.admin-portal-shell .admin-dashboard-row-18,
+.admin-portal-shell .admin-dashboard-row-20,
+.admin-portal-shell .admin-dashboard-unread { display: none; }
+.admin-portal-shell .admin-dashboard-panel-7 { display: block; min-width: 0; }
+.admin-portal-shell .admin-dashboard-row-19 { display: block; }
+.admin-portal-shell .admin-dashboard-heading,
+.admin-portal-shell .admin-dashboard-heading-2,
+.admin-portal-shell .admin-dashboard-heading-3 { margin: 0; color: #334155; font-size: 8px; line-height: 1.2; font-weight: 700; }
+.admin-portal-shell .admin-dashboard-text-8 { margin: 2px 0 0; overflow: hidden; color: #7a8798; font-size: 6.5px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.admin-portal-shell .admin-dashboard-text-9 { position: absolute; top: 13px; right: 8px; margin: 0; color: #94a3b8; font-size: 6.5px; line-height: 1; white-space: nowrap; }
+.admin-portal-shell .admin-dashboard-notification-pages { margin-top: 10px; }
+
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-dashboard-container-3 { margin: 12px; }
+  .admin-portal-shell .admin-dashboard-notification-toolbar { align-items: flex-start; flex-direction: column; }
+  .admin-portal-shell .admin-dashboard-button-6 { align-self: flex-end; }
+}
+
+/* Admin inbox uses the same spacious, interactive card language as tenant and
+   landlord notifications. */
+.admin-portal-shell .admin-dashboard-container-3 {
+  width: calc(100% - 80px);
+  max-width: 1200px;
+  margin: 15px auto 32px;
+}
+
+.admin-portal-shell .admin-dashboard-container-3 > header {
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0 0 20px;
+  padding: 32px 40px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #ffffff;
+}
+.admin-portal-shell .admin-dashboard-notifications { font-size: 24px; font-weight: 700; }
+.admin-portal-shell .admin-dashboard-text-6 { margin-top: 5px; font-size: 14px; color: #64748b; }
+
+.admin-portal-shell .admin-dashboard-section-5 {
+  overflow: hidden;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(30, 41, 59, .045);
+}
+.admin-portal-shell .admin-dashboard-notification-toolbar {
+  min-height: 56px;
+  margin: 0;
+  padding: 12px 18px;
+  border-bottom: 1px solid #edf1f4;
+}
+.admin-portal-shell .admin-dashboard-button-7 { min-width: 72px; height: 32px; padding: 6px 14px; font-size: 11px; }
+.admin-portal-shell .admin-dashboard-button-8 { background: #18a8e5; color: #ffffff; }
+.admin-portal-shell .admin-dashboard-button-9 { border: 0; background: #ffffff; color: #52606d; }
+.admin-portal-shell .admin-dashboard-button-6 { height: 32px; padding: 0 14px; font-size: 11px; }
+
+.admin-portal-shell .admin-dashboard-card-3 { border: 0; border-radius: 0; box-shadow: none; }
+.admin-portal-shell .admin-dashboard-article-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* Give notification content enough vertical room for its title and detail. */
+  min-height: 76px;
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf1f4;
+  background: #ffffff;
+  transition: background-color 150ms ease;
+}
+.admin-portal-shell .admin-dashboard-article-2:last-child { border-bottom: 0; }
+.admin-portal-shell .admin-dashboard-article-3 { background: #eaf7fe; }
+.admin-portal-shell .admin-dashboard-article-2:hover { background: #f9fcfe; }
+.admin-portal-shell .admin-dashboard-article-3:hover { background: #e1f4fd; }
+.admin-portal-shell .admin-dashboard-row-18 { display: none; }
+.admin-portal-shell .admin-dashboard-panel-7 { grid-column: 1; min-width: 0; }
+.admin-portal-shell .admin-dashboard-notification-open { cursor: pointer; border-radius: 4px; }
+.admin-portal-shell .admin-dashboard-notification-open:focus-visible { outline: 2px solid #18a8e5; outline-offset: 4px; }
+.admin-portal-shell .admin-dashboard-row-19 { display: block; }
+.admin-portal-shell .admin-dashboard-heading,
+.admin-portal-shell .admin-dashboard-heading-2,
+.admin-portal-shell .admin-dashboard-heading-3 { font-size: 11px; color: #334155; }
+.admin-portal-shell .admin-dashboard-text-8 { margin-top: 3px; font-size: 9px; color: #7a8798; }
+.admin-portal-shell .admin-dashboard-text-9 { display: none; }
+.admin-portal-shell .admin-dashboard-row-20 { grid-column: 2; grid-row: 1; align-self: center; }
+
+@media (max-width: 760px) {
+  .admin-portal-shell .admin-dashboard-container-3 { width: calc(100% - 24px); margin: 12px; }
+  .admin-portal-shell .admin-dashboard-container-3 > header { min-height: 0; padding: 20px; }
+}
+
+/* Give the inbox the same comfortable rhythm as the expanded apartment list. */
+.admin-portal-shell .admin-dashboard-notification-toolbar { min-height: 64px; padding: 13px 20px; }
+.admin-portal-shell .admin-dashboard-button-7 { height: 38px; min-width: 82px; padding-inline: 16px; font-size: 12px; }
+.admin-portal-shell .admin-dashboard-button-6 { height: 38px; padding-inline: 16px; font-size: 12px; }
+.admin-portal-shell .admin-dashboard-article-2 { min-height: 102px; padding: 19px 18px; }
+.admin-portal-shell .admin-dashboard-heading,
+.admin-portal-shell .admin-dashboard-heading-2,
+.admin-portal-shell .admin-dashboard-heading-3 { font-size: 13px; line-height: 1.35; }
+.admin-portal-shell .admin-dashboard-text-8 { margin-top: 5px; font-size: 10px; line-height: 1.45; }
+
+/* Settings page: compact administration layout matching the reference design. */
+.admin-portal-shell .admin-settings-reference {
+  width: calc(100% - 80px);
+  max-width: 1200px;
+  margin: 15px auto 32px;
+  color: #162235;
+}
+.admin-portal-shell .admin-settings-reference-header {
+  min-height: 64px;
+  box-sizing: border-box;
+  margin: 0 0 10px;
+  padding: 15px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+.admin-portal-shell .admin-settings-reference-header h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+}
+.admin-portal-shell .admin-settings-reference-header p {
+  margin: 3px 0 0;
+  color: #738399;
+  font-size: 9px;
+}
+.admin-portal-shell .admin-settings-reference-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .91fr) minmax(0, 1.09fr);
+  gap: 14px;
+  align-items: start;
+}
+.admin-portal-shell .admin-settings-reference-column { display: grid; gap: 14px; }
+.admin-portal-shell .admin-settings-reference-card {
+  overflow: hidden;
+  border: 1px solid #dfe6ed;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .025);
+}
+.admin-portal-shell .admin-settings-reference-card > div { padding: 17px 18px; }
+.admin-portal-shell .admin-settings-reference-card-heading h2,
+.admin-portal-shell .admin-settings-admins-heading h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -.015em;
+}
+.admin-portal-shell .admin-settings-reference-card-heading p,
+.admin-portal-shell .admin-settings-admins-heading p {
+  margin: 3px 0 0;
+  color: #8491a3;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.admin-portal-shell .admin-settings-profile-body {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  gap: 17px;
+  margin-top: 17px;
+}
+.admin-portal-shell .admin-settings-profile-photo { text-align: center; }
+.admin-portal-shell .admin-settings-profile-avatar {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 7px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #cdeaff;
+  color: #139fe0;
+  font-size: 33px;
+  font-weight: 700;
+}
+.admin-portal-shell .admin-settings-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.admin-portal-shell .admin-settings-photo-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2c3c50;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+.admin-portal-shell .admin-settings-profile-photo span { display: block; margin-top: 2px; color: #9aa6b5; font-size: 7px; }
+.admin-portal-shell .admin-settings-profile-fields,
+.admin-portal-shell .admin-settings-password-fields,
+.admin-portal-shell .admin-settings-system-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.admin-portal-shell .admin-settings-profile-fields,
+.admin-portal-shell .admin-settings-password-fields { display: grid; gap: 8px; }
+.admin-portal-shell .admin-settings-profile-fields label,
+.admin-portal-shell .admin-settings-password-fields label,
+.admin-portal-shell .admin-settings-system-fields label {
+  display: grid;
+  gap: 3px;
+  color: #4e5d70;
+  font-size: 9px;
+  font-weight: 650;
+}
+.admin-portal-shell .admin-settings-reference input,
+.admin-portal-shell .admin-settings-reference select {
+  width: 100%;
+  height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #dbe3ea;
+  border-radius: 3px;
+  outline: none;
+  background: #fff;
+  color: #354256;
+  font-size: 9px;
+  font-weight: 400;
+}
+.admin-portal-shell .admin-settings-reference input:focus,
+.admin-portal-shell .admin-settings-reference select:focus { border-color: #21ace8; box-shadow: 0 0 0 2px rgba(33, 172, 232, .12); }
+.admin-portal-shell .admin-settings-card-actions { display: flex; justify-content: flex-end; margin-top: 15px; }
+.admin-portal-shell .admin-settings-primary-button,
+.admin-portal-shell .admin-settings-add-admin {
+  height: 31px;
+  padding: 0 17px;
+  border-radius: 4px;
+  background: #16a7e4;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.admin-portal-shell .admin-settings-primary-button:hover,
+.admin-portal-shell .admin-settings-add-admin:hover { background: #0798d6; }
+.admin-portal-shell .admin-settings-password-fields { margin-top: 15px; }
+.admin-portal-shell .admin-settings-password-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 8px 9px;
+  border: 1px solid #dcecff;
+  border-radius: 4px;
+  background: #f0f8ff;
+  color: #76879a;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.admin-portal-shell .admin-settings-password-note svg { flex: 0 0 auto; width: 12px; height: 12px; color: #17a7e4; }
+.admin-portal-shell .admin-settings-system-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 11px; margin-top: 15px; }
+.admin-portal-shell .admin-settings-system-fields label { grid-template-columns: 145px minmax(0, 1fr); align-items: center; gap: 7px; }
+.admin-portal-shell .admin-settings-admins-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.admin-portal-shell .admin-settings-add-admin { flex: 0 0 auto; padding: 0 15px; }
+.admin-portal-shell .admin-settings-admin-table-wrap { margin-top: 15px; overflow-x: auto; border: 1px solid #e1e7ec; border-radius: 4px; }
+.admin-portal-shell .admin-settings-admin-table { width: 100%; min-width: 590px; border-collapse: collapse; color: #657287; font-size: 8px; }
+.admin-portal-shell .admin-settings-admin-table th { padding: 7px 8px; border-bottom: 1px solid #e1e7ec; background: #f8fafc; color: #7b8797; font-size: 8px; font-weight: 700; text-align: left; }
+.admin-portal-shell .admin-settings-admin-table td { padding: 7px 8px; border-bottom: 1px solid #edf1f4; vertical-align: middle; white-space: nowrap; }
+.admin-portal-shell .admin-settings-admin-table tbody tr:last-child td { border-bottom: 0; }
+.admin-portal-shell .admin-settings-admin-table td:first-child { display: flex; align-items: center; gap: 6px; min-width: 130px; }
+.admin-portal-shell .admin-settings-admin-table strong,
+.admin-portal-shell .admin-settings-admin-table small { display: block; }
+.admin-portal-shell .admin-settings-admin-table strong { color: #344154; font-size: 8px; }
+.admin-portal-shell .admin-settings-admin-table small { margin-top: 1px; color: #99a5b3; font-size: 7px; }
+.admin-portal-shell .admin-settings-table-avatar { display: grid; flex: 0 0 auto; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: #d9f2ff; color: #12a5e4; font-size: 11px; font-weight: 700; }
+.admin-portal-shell .admin-settings-role,
+.admin-portal-shell .admin-settings-active { display: inline-block; padding: 3px 7px; border-radius: 999px; font-size: 7px; font-weight: 700; }
+.admin-portal-shell .admin-settings-role { background: #edf2f7; color: #748296; }
+.admin-portal-shell .admin-settings-active { background: #dcf8e9; color: #32a66d; }
+.admin-portal-shell .admin-settings-edit-admin { padding: 3px 10px; border: 1px solid #a9ddf6; border-radius: 4px; background: #fff; color: #149ddc; cursor: pointer; font-size: 8px; font-weight: 700; }
+.admin-portal-shell .admin-settings-empty-admins { padding: 18px !important; text-align: center; color: #8996a6; }
+
+@media (max-width: 900px) {
+  .admin-portal-shell .admin-settings-reference { width: calc(100% - 24px); margin: 12px; }
+  .admin-portal-shell .admin-settings-reference-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .admin-portal-shell .admin-settings-reference { width: calc(100% - 22px); margin: 11px; }
+  .admin-portal-shell .admin-settings-reference-card > div { padding: 14px; }
+  .admin-portal-shell .admin-settings-profile-body { grid-template-columns: 1fr; }
+  .admin-portal-shell .admin-settings-profile-photo { display: grid; justify-items: center; }
+  .admin-portal-shell .admin-settings-system-fields { grid-template-columns: 1fr; }
+  .admin-portal-shell .admin-settings-system-fields label { grid-template-columns: 1fr; gap: 3px; }
+}
+
+/* One shared compact heading size across the admin modules. */
+.admin-portal-shell .admin-dashboard-container-3 > header,
+.admin-portal-shell .admin-apartments-header {
+  min-height: 64px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  padding: 15px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+.admin-portal-shell .admin-dashboard-container-3 > header { display: block; }
+.admin-portal-shell .admin-dashboard-notifications,
+.admin-portal-shell .admin-apartments-apartments { font-size: 14px; line-height: 1.2; }
+.admin-portal-shell .admin-dashboard-text-6,
+.admin-portal-shell .admin-apartments-text { margin-top: 3px; font-size: 9px; }
+
+/* Give the Apartments header the same footprint as the Notifications header. */
+.admin-portal-shell .admin-apartments-panel { padding: 0; background: #f8fafc; }
+.admin-portal-shell .admin-apartments-container {
+  width: calc(100% - 80px);
+  max-width: 1200px;
+  margin: 15px auto 32px;
+}
+.admin-portal-shell .admin-apartments-header {
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  margin: 0 0 20px;
+  padding: 32px 40px;
+  border-radius: 6px;
+}
+.admin-portal-shell .admin-apartments-apartments { font-size: 24px; }
+.admin-portal-shell .admin-apartments-text { margin-top: 5px; font-size: 14px; }
+
+@media (max-width: 760px) {
+  .admin-portal-shell .admin-apartments-container { width: calc(100% - 24px); margin: 12px; }
+  .admin-portal-shell .admin-apartments-header { min-height: 0; padding: 20px; }
+}
+
+/* Notification filter row: the small, clean tab row from the reference. */
+.admin-portal-shell .admin-dashboard-section-5 {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.admin-portal-shell .admin-dashboard-notification-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+  min-height: 44px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.admin-portal-shell .admin-dashboard-card-2 { align-items: center; flex-wrap: nowrap; gap: 5px; }
+.admin-portal-shell .admin-dashboard-button-7 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 72px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.admin-portal-shell .admin-dashboard-card-2 .admin-dashboard-button-7:nth-child(2) { min-width: 72px; }
+.admin-portal-shell .admin-dashboard-button-8 { background: #16a8e6; }
+.admin-portal-shell .admin-dashboard-button-9 { border: 1px solid #e3e8ee; background: #fff; color: #657284; }
+.admin-portal-shell .admin-dashboard-button-6 {
+  flex: 0 0 auto;
+  min-width: 124px;
+  height: 32px;
+  padding: 0 14px;
+  border-color: #dfe5eb;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-portal-shell .admin-dashboard-button-7:hover,
+.admin-portal-shell .admin-dashboard-button-6:hover { filter: brightness(.97); }
+.admin-portal-shell .admin-dashboard-button-6:hover,
+.admin-portal-shell .admin-dashboard-button-9:hover,
+.admin-portal-shell .admin-dashboard-refresh-notifications:hover,
+.admin-portal-shell .admin-dashboard-button-11:hover,
+.admin-portal-shell .admin-dashboard-archive-notification:hover {
+  border-color: #a9ddf6;
+  background: #eef9ff;
+  color: #109bd8;
+}
+
+/* Replace every remaining legacy brown hover with AptFindr's blue hover. */
+@media (hover: hover) {
+  .admin-portal-shell .admin-sidebar-nav-idle:hover,
+  .admin-portal-shell .admin-apartment-detail-log-out:hover,
+  .admin-portal-shell .admin-apartment-detail-preview-tenant-view:hover,
+  .admin-portal-shell .admin-apartment-detail-preview-tenant-view-2:hover,
+  .admin-portal-shell .admin-apartment-detail-refresh-apartment-data:hover,
+  .admin-portal-shell .admin-dashboard-refresh-notifications:hover,
+  .admin-portal-shell .admin-dashboard-button-6:hover,
+  .admin-portal-shell .admin-dashboard-button-9:hover,
+  .admin-portal-shell .admin-dashboard-button-11:hover,
+  .admin-portal-shell .admin-dashboard-archive-notification:hover,
+  .admin-portal-shell .admin-dashboard-button-13:hover,
+  .admin-portal-shell .admin-dashboard-helpers-refresh:hover {
+    border-color: #a9ddf6;
+    background-color: #eef9ff;
+    color: #109bd8;
+  }
+}
+.admin-portal-shell .admin-dashboard-article-2 {
+  min-height: 76px;
+  padding: 14px 12px;
+  border-bottom-color: #d9e3ea;
+}
+.admin-portal-shell .admin-dashboard-article-2:last-child { border-bottom: 0; }
+.admin-portal-shell .admin-dashboard-heading,
+.admin-portal-shell .admin-dashboard-heading-2,
+.admin-portal-shell .admin-dashboard-heading-3 { font-size: 10px; }
+.admin-portal-shell .admin-dashboard-text-8 { margin-top: 3px; font-size: 8px; }
+
+/* Keep this after the apartment-specific rules so every admin header matches Settings. */
+.admin-portal-shell .admin-apartments-header {
+  min-height: 64px;
+  margin-bottom: 10px;
+  padding: 15px 20px;
+}
+.admin-portal-shell .admin-apartments-apartments { font-size: 14px; }
+.admin-portal-shell .admin-apartments-text { margin-top: 3px; font-size: 9px; }
+
+/* Shared desktop header copied from the tenant and landlord dashboards. */
+.admin-portal-shell .admin-settings-reference,
+.admin-portal-shell .admin-dashboard-container-3,
+.admin-portal-shell .admin-apartments-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 15px auto 40px;
+}
+.admin-portal-shell .admin-settings-reference-header,
+.admin-portal-shell .admin-apartments-header {
+  min-height: 130px;
+  margin: 0 0 24px;
+  padding: 40px 64px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+}
+.admin-portal-shell .admin-settings-reference-header,
+.admin-portal-shell .admin-dashboard-container-3 > header {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.admin-portal-shell .admin-dashboard-container-3 > header {
+  min-height: 130px;
+  margin: 0 0 24px;
+  padding: 40px 64px;
+  box-sizing: border-box;
+  display: flex;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+}
+.admin-portal-shell .admin-settings-reference-header h1,
+.admin-portal-shell .admin-dashboard-notifications,
+.admin-portal-shell .admin-apartments-apartments {
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+.admin-portal-shell .admin-settings-reference-header p,
+.admin-portal-shell .admin-dashboard-text-6,
+.admin-portal-shell .admin-apartments-text {
+  margin-top: 5px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+@media (max-width: 760px) {
+  .admin-portal-shell .admin-settings-reference,
+  .admin-portal-shell .admin-dashboard-container-3,
+  .admin-portal-shell .admin-apartments-container { width: calc(100% - 24px); margin: 12px; }
+  .admin-portal-shell .admin-settings-reference-header,
+  .admin-portal-shell .admin-dashboard-container-3 > header,
+  .admin-portal-shell .admin-apartments-header { min-height: 0; margin-bottom: 16px; padding: 20px; }
+}
+
+/* Log Out scrolls with the rest of the admin navigation. */
+.admin-portal-shell .admin-figma-sidebar-logout {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+.admin-portal-shell .admin-dashboard-card-3 {
+  overflow: hidden;
+  border: 1px solid #e1e7ec;
+  border-radius: 5px;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-dashboard-notification-toolbar { align-items: center; flex-direction: row; }
+  .admin-portal-shell .admin-dashboard-button-6 { align-self: auto; }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-apartments-added, .admin-portal-shell .admin-apartments-row-7,
+  .admin-portal-shell .admin-apartments-span-5, .admin-portal-shell .admin-apartments-starting-at,
+  .admin-portal-shell .admin-dashboard-heading-2, .admin-portal-shell .admin-dashboard-heading-3,
+  .admin-portal-shell .admin-dashboard-heading, .admin-portal-shell .admin-settings-photo-button
+  { font-size: 11px; }
+}
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-apartments-inline-status,
+  .admin-portal-shell .admin-apartments-inline-type, .admin-portal-shell .admin-dashboard-text-8,
+  .admin-portal-shell .admin-dashboard-text-9,
+  .admin-portal-shell .admin-figma-sidebar-brand small,
+  .admin-portal-shell .admin-figma-sidebar-brand strong, .admin-figma-sidebar-item small,
+  .admin-figma-sidebar-role, .admin-portal-shell .admin-settings-active,
+  .admin-portal-shell .admin-settings-add-admin, .admin-portal-shell .admin-settings-admin-table,
+  .admin-portal-shell .admin-settings-admin-table small,
+  .admin-portal-shell .admin-settings-admin-table strong,
+  .admin-portal-shell .admin-settings-admin-table th,
+  .admin-portal-shell .admin-settings-admins-heading p,
+  .admin-portal-shell .admin-settings-edit-admin,
+  .admin-portal-shell .admin-settings-password-fields label,
+  .admin-portal-shell .admin-settings-password-note,
+  .admin-portal-shell .admin-settings-primary-button,
+  .admin-portal-shell .admin-settings-profile-fields label,
+  .admin-portal-shell .admin-settings-profile-photo span,
+  .admin-portal-shell .admin-settings-reference-card-heading p,
+  .admin-portal-shell .admin-settings-role,
+  .admin-portal-shell .admin-settings-system-fields label
+  { font-size: 12px; }
+}
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-settings-reference input,
+  .admin-portal-shell .admin-settings-reference select
+  { font-size: 16px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .admin-portal-shell .admin-apartments-inline-status,
+  .admin-portal-shell .admin-apartments-inline-type, .admin-portal-shell .admin-dashboard-text-8,
+  .admin-portal-shell .admin-dashboard-text-9,
+  .admin-portal-shell .admin-figma-sidebar-brand small,
+  .admin-portal-shell .admin-figma-sidebar-brand strong, .admin-figma-sidebar-item small,
+  .admin-figma-sidebar-role, .admin-portal-shell .admin-settings-active,
+  .admin-portal-shell .admin-settings-add-admin, .admin-portal-shell .admin-settings-admin-table,
+  .admin-portal-shell .admin-settings-admin-table small,
+  .admin-portal-shell .admin-settings-admin-table strong,
+  .admin-portal-shell .admin-settings-admin-table th,
+  .admin-portal-shell .admin-settings-admins-heading p,
+  .admin-portal-shell .admin-settings-edit-admin,
+  .admin-portal-shell .admin-settings-password-fields label,
+  .admin-portal-shell .admin-settings-password-note,
+  .admin-portal-shell .admin-settings-primary-button,
+  .admin-portal-shell .admin-settings-profile-fields label,
+  .admin-portal-shell .admin-settings-profile-photo span,
+  .admin-portal-shell .admin-settings-reference-card-heading p,
+  .admin-portal-shell .admin-settings-role,
+  .admin-portal-shell .admin-settings-system-fields label
+  { font-size: 11px; }
+}
+@media (max-width: 1023px) {
+  .admin-portal-shell .admin-settings-reference input,
+  .admin-portal-shell .admin-settings-reference select
+  { font-size: 16px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .admin-portal-shell .admin-apartments-added, .admin-portal-shell .admin-apartments-row-7,
+  .admin-portal-shell .admin-apartments-span-5, .admin-portal-shell .admin-apartments-starting-at,
+  .admin-portal-shell .admin-dashboard-heading-2, .admin-portal-shell .admin-dashboard-heading-3,
+  .admin-portal-shell .admin-dashboard-heading, .admin-portal-shell .admin-settings-photo-button
+  { font-size: 11px; }
+}
+
+/* Dynamic viewport height for the admin shell so mobile browser chrome cannot
+   cut the sidebar or the portal grid. */
+.admin-portal-shell .admin-figma-sidebar,
+.admin-portal-shell .app-sidebar.admin-figma-sidebar { min-height: 100vh; min-height: 100dvh; }
+@media (min-width: 761px) {
+  .admin-portal-shell .app-shell-sidebar { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; }
+  .admin-portal-shell .admin-figma-sidebar { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; }
+}
+
+/* Touch devices: admin action buttons need finger-sized targets. */
+@media (hover: none) {
+  .admin-portal-shell .admin-settings-primary-button { min-height: 40px; }
+  .admin-portal-shell .admin-settings-photo-button { min-height: 40px; }
+  .admin-portal-shell .admin-dashboard-button-6 { min-height: 38px; }
+  .admin-portal-shell .admin-dashboard-button-7 { min-height: 38px; }
+}
+
+/* Desktop readability floor: these selectors resolved below 10px above the
+   tablet breakpoint (unreadable at any distance). Raised to a 10px minimum.
+   Phone and tablet widths already carry their own 11px floors. */
+@media (min-width: 1024px) {
+  .admin-portal-shell .admin-apartments-inline-status { font-size: 10px; }
+  .admin-portal-shell .admin-apartments-inline-type { font-size: 10px; }
+  .admin-portal-shell .admin-dashboard-text-8 { font-size: 10px; }
+  .admin-portal-shell .admin-dashboard-text-9 { font-size: 10px; }
+  .admin-portal-shell .admin-figma-sidebar-brand small { font-size: 10px; }
+  .admin-portal-shell .admin-figma-sidebar-brand strong { font-size: 10px; }
+  .admin-figma-sidebar-item small { font-size: 10px; }
+  .admin-figma-sidebar-role { font-size: 10px; }
+  .admin-portal-shell .admin-settings-active { font-size: 10px; }
+  .admin-portal-shell .admin-settings-add-admin { font-size: 10px; }
+  .admin-portal-shell .admin-settings-admin-table { font-size: 10px; }
+  .admin-portal-shell .admin-settings-admin-table small { font-size: 10px; }
+  .admin-portal-shell .admin-settings-admin-table strong { font-size: 10px; }
+  .admin-portal-shell .admin-settings-admin-table th { font-size: 10px; }
+  .admin-portal-shell .admin-settings-admins-heading p { font-size: 10px; }
+  .admin-portal-shell .admin-settings-edit-admin { font-size: 10px; }
+  .admin-portal-shell .admin-settings-password-fields label { font-size: 10px; }
+  .admin-portal-shell .admin-settings-password-note { font-size: 10px; }
+  .admin-portal-shell .admin-settings-primary-button { font-size: 10px; }
+  .admin-portal-shell .admin-settings-profile-fields label { font-size: 10px; }
+  .admin-portal-shell .admin-settings-profile-photo span { font-size: 10px; }
+  .admin-portal-shell .admin-settings-reference-card-heading p { font-size: 10px; }
+  .admin-portal-shell .admin-settings-role { font-size: 10px; }
+  .admin-portal-shell .admin-settings-system-fields label { font-size: 10px; }
+}

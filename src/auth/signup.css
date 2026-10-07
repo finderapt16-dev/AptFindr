@@ -1,0 +1,347 @@
+/* Registration cards follow the tenant/landlord screenshot references.
+   Inputs stay readable on phones; short screens scroll instead of shrinking. */
+.signup-page,
+.signup-review-dialog {
+  --signup-accent: #00a6f7;
+  --signup-accent-hover: #008fd7;
+  --signup-text: #293548;
+  --signup-muted: #7c8390;
+  --signup-border: #a3a3a3;
+  --auth-text: #293548;
+  --auth-border: #9ca3af;
+  --auth-accent: #00a6f7;
+  --auth-muted: #7c8390;
+  color: var(--signup-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+.signup-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.signup-page--standalone {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f6f8fb !important;
+}
+
+.signup-page--floater {
+  width: 100%;
+  min-height: 0;
+  background: transparent !important;
+}
+
+.signup-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 16px max(24px, env(safe-area-inset-left));
+  background: #fff;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.signup-mobile-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #293548;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.signup-mobile-logo { width: 32px; height: 32px; }
+.signup-login-link { color: #008fd7; font-size: 14px; font-weight: 600; text-decoration: none; }
+.signup-content { display: flex; flex: 1; min-width: 0; }
+
+.signup-form-container {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding: 32px 16px max(32px, env(safe-area-inset-bottom));
+}
+
+.signup-form-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 550px;
+  min-width: 0;
+  padding: 32px 64px;
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgb(15 23 42 / 6%);
+}
+
+.signup-page--floater .signup-form-container { padding: 0; }
+.signup-page--floater .signup-form-shell { max-width: none; padding: 0; border: 0; box-shadow: none; }
+.signup-form-heading { margin-bottom: 22px; }
+
+.signup-page .signup-title {
+  margin: 0;
+  color: var(--signup-text) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+.signup-description { margin: 12px 0 0; color: #64748b; font-size: 14px; line-height: 1.5; }
+.signup-form,
+.signup-tenant-simple-form,
+.signup-landlord-panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* Shared fields are reused in registration and floating review editors. */
+.signup-page .auth-field,
+.signup-review-dialog .auth-field { min-width: 0; }
+.signup-page .auth-field > :not(:last-child),
+.signup-review-dialog .auth-field > :not(:last-child) { margin-bottom: 5px; }
+.signup-page .auth-field-label,
+.signup-review-dialog .auth-field-label { color: #334155; font-size: 12px; font-weight: 500; line-height: 1.4; }
+.signup-page .auth-field-required { display: none; }
+.signup-page .auth-field-control,
+.signup-review-dialog .auth-field-control { height: 44px; border: 1.5px solid #8f959e; border-radius: 5px; background: #fff; }
+.signup-page .auth-field-control:focus-within,
+.signup-review-dialog .auth-field-control:focus-within { border-color: var(--signup-accent); box-shadow: 0 0 0 3px rgb(0 166 247 / 12%); }
+.signup-page .auth-field-input,
+.signup-review-dialog .auth-field-input { box-sizing: border-box; min-width: 0; padding-inline: 12px; color: var(--signup-text); font-family: inherit; font-size: 16px; }
+.signup-page .auth-field-input::placeholder,
+.signup-review-dialog .auth-field-input::placeholder { color: #8a8a8a !important; opacity: 1; }
+.signup-page .auth-field-with-suffix,
+.signup-review-dialog .auth-field-with-suffix { padding-right: 46px; }
+.signup-page .auth-field-suffix,
+.signup-review-dialog .auth-field-suffix { width: 44px; }
+.signup-page .auth-field--invalid .auth-field-control,
+.signup-review-dialog .auth-field--invalid .auth-field-control { border-color: #e11d48; }
+.signup-page .auth-field-error,
+.signup-review-dialog .auth-field-error { margin: 5px 0 0; color: #be123c; font-size: 12px; line-height: 1.45; }
+
+.signup-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: #8a8a8a;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.signup-password-toggle svg { width: 18px; height: 18px; }
+.signup-password-toggle:hover { color: #334155; }
+
+.signup-password-help {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 3px;
+  padding: 16px 20px;
+  border-radius: 5px;
+  background: #f0f5fc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.signup-password-help strong { color: #334155; font-weight: 500; }
+.signup-password-help span { color: #7b808a; }
+
+.signup-primary-button,
+.signup-secondary-button,
+.signup-google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.signup-primary-button { color: #fff; background: var(--signup-accent, #00a6f7); border-color: var(--signup-accent, #00a6f7); }
+.signup-primary-button:hover:not(:disabled) { background: var(--signup-accent-hover, #008fd7); border-color: var(--signup-accent-hover, #008fd7); }
+.signup-secondary-button,
+.signup-google-button { color: #334155; background: #fff; border-color: #9ca3af; }
+.signup-secondary-button:hover:not(:disabled),
+.signup-google-button:hover:not(:disabled) { background: #f7f9fc; border-color: #64748b; }
+.signup-primary-button svg,
+.signup-secondary-button svg { width: 18px; height: 18px; flex-shrink: 0; }
+.signup-page button:disabled,
+.signup-review-dialog button:disabled { cursor: not-allowed; opacity: 0.6; }
+.signup-page .auth-field-input:disabled { background: #f8fafc; opacity: 0.7; }
+.signup-google-icon { flex-shrink: 0; width: 18px; height: 18px; }
+
+.signup-agreement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-top: 2px;
+  color: #293548;
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.signup-checkbox { flex-shrink: 0; width: 16px; height: 16px; margin: 0; accent-color: var(--signup-accent); }
+.signup-policy-link { display: inline; padding: 0; color: #008fd7; background: transparent; border: 0; font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.signup-social-divider { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 12px; }
+.signup-social-divider span { flex: 1; height: 1px; background: #b4b8c0; }
+.signup-social-divider b { font-weight: 400; }
+.signup-login-prompt { margin: 0; color: #8490a3; font-size: 12px; line-height: 1.5; text-align: center; }
+.signup-login-prompt a { color: var(--signup-accent); font-weight: 600; text-decoration: none; }
+.signup-login-prompt a:hover { text-decoration: underline; }
+.signup-change-role { display: block; margin: 12px auto 0; padding: 5px 0; color: #78869a; background: transparent; border: 0; font: inherit; font-size: 11px; cursor: pointer; }
+.signup-change-role:hover { color: #008fd7; text-decoration: underline; }
+
+/* Role selection appears only before the tenant form / landlord wizard. */
+.signup-account-type-options { display: flex; flex-direction: column; gap: 16px; }
+.signup-account-type-option { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 100px; padding: 20px; border: 1px solid #9ca3af; border-radius: 8px; background: #fff; text-align: left; cursor: pointer; }
+.signup-account-type-option:hover { border-color: var(--signup-accent); background: #f8fcff; }
+.signup-account-type-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; color: #fff; background: var(--signup-accent); }
+.signup-account-type-icon svg { width: 22px; height: 22px; }
+.signup-account-type-content { display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
+.signup-account-type-content strong { color: #293548; font-size: 16px; font-weight: 600; }
+.signup-account-type-content span { color: #7c8390; font-size: 13px; line-height: 1.4; }
+.signup-account-type-chevron { flex-shrink: 0; width: 18px; height: 18px; color: #7c8390; }
+.signup-home-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; color: #64748b; font-size: 13px; text-decoration: none; }
+.signup-home-link svg { width: 16px; height: 16px; }
+
+/* Landlord: Account Details -> Personal Information -> Review. */
+.signup-landlord-wizard { min-width: 0; }
+.signup-landlord-stepper { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 24px; padding: 0; list-style: none; }
+.signup-landlord-step-item { position: relative; min-width: 0; }
+.signup-landlord-step-item:not(:last-child)::after { position: absolute; top: 15px; left: calc(50% + 16px); z-index: 0; width: calc(100% - 32px); height: 2px; background: #eef2f7; content: ""; }
+.signup-landlord-step-button { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 0; color: #8a8a8a; background: transparent; border: 0; cursor: pointer; }
+.signup-page .signup-landlord-step-button:disabled { opacity: 1; cursor: default; }
+.signup-landlord-step-circle { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: #465368; background: #e9eef5; font-size: 13px; font-weight: 700; }
+.signup-landlord-step-text { max-width: 88px; min-height: 28px; color: #81858c; font-size: 11px; line-height: 1.25; text-align: center; }
+.signup-landlord-step-button.is-active .signup-landlord-step-circle { color: #fff; background: var(--signup-accent); }
+.signup-landlord-step-button.is-active .signup-landlord-step-text { color: #293548; }
+.signup-landlord-panel-title { margin: 0 0 2px; color: #293548; font-size: 21px; font-weight: 700; line-height: 1.3; }
+.signup-landlord-panel-title:focus { outline: none; }
+.signup-landlord-continue { margin-top: 8px; }
+.signup-landlord-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+
+.signup-landlord-review-card { min-width: 0; padding: 16px; border: 1px solid #8d949d; border-radius: 5px; background: #fff; }
+.signup-landlord-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.signup-landlord-review-heading h3 { margin: 0; color: #334155; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.signup-landlord-review-heading button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0; min-height: 32px; margin: -8px -4px -8px 0; padding: 4px; color: var(--signup-accent); background: transparent; border: 0; font: inherit; font-size: 12px; cursor: pointer; }
+.signup-landlord-review-heading button svg { width: 14px; height: 14px; }
+.signup-landlord-review-heading button:hover { text-decoration: underline; }
+.signup-landlord-review-card dl { margin: 0; }
+.signup-landlord-review-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 10px; padding: 3px 0; font-size: 12px; line-height: 1.5; }
+.signup-landlord-review-row dt { color: #8a8a8a; }
+.signup-landlord-review-row dd { min-width: 0; margin: 0; color: #6b7280; overflow-wrap: anywhere; }
+
+/* Feedback always stays inside the card, including in landscape / keyboard view. */
+.signup-message { margin: 0 0 16px; }
+.signup-error-alert { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border: 1px solid #fecdd3; border-radius: 5px; color: #be123c; background: #fff1f2; font-size: 13px; line-height: 1.5; }
+.signup-error-alert svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+.signup-error-alert p { margin: 0; }
+.signup-error-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.signup-error-actions a { color: #008fd7; font-size: 12px; font-weight: 600; }
+/* Google is authorized but has no AptFindr account yet (/signup?google=setup). */
+.signup-google-setup-notice { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 16px; padding: 12px; border: 1px solid #bae6fd; border-radius: 5px; color: #075985; background: #f0f9ff; font-size: 13px; line-height: 1.5; }
+.signup-google-setup-notice svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; color: #0284c7; }
+.signup-google-setup-notice p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.signup-google-setup-notice strong { color: #0c4a6e; }
+.signup-spinner { width: 16px; height: 16px; border: 2px solid rgb(255 255 255 / 40%); border-top-color: #fff; border-radius: 50%; animation: signup-spin 700ms linear infinite; }
+@keyframes signup-spin { to { transform: rotate(360deg); } }
+
+/* Review editing and its confirmation are BODY portals, above the signup card.
+   Radix handles focus trapping, Escape, outside-click and scroll locking. */
+.ui-dialog-overlay.signup-review-overlay { z-index: 10001; background: rgb(15 23 42 / 30%); backdrop-filter: blur(3px); }
+.ui-dialog-content.signup-review-dialog {
+  position: fixed;
+  top: calc(var(--signup-viewport-top, 0px) + var(--signup-viewport-height, 100dvh) / 2);
+  left: 50%;
+  z-index: 10002;
+  display: block;
+  box-sizing: border-box;
+  width: min(420px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(var(--signup-viewport-height, 100dvh) - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translate(-50%, -50%);
+  border: 1px solid #e0e4eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 60px rgb(15 23 42 / 20%);
+}
+.signup-review-dialog .ui-dialog-title { margin: 0; padding-right: 4px; color: #293548; font-size: 21px; font-weight: 700; line-height: 1.35; }
+.signup-review-dialog .ui-dialog-description { display: block; margin: 6px 0 24px; color: #81858c; font-size: 13px; line-height: 1.5; }
+.signup-review-dialog .auth-field-required { color: #e5484d; }
+.signup-review-form { display: flex; flex-direction: column; gap: 16px; }
+.signup-review-dialog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.signup-review-dialog-actions .signup-secondary-button { border-color: #dfe3e9; }
+.signup-review-error { margin: 0; color: #be123c; font-size: 12px; line-height: 1.5; }
+.ui-dialog-content.signup-review-dialog--success { padding: 36px 28px 28px; text-align: center; }
+.signup-review-success-icon { display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; margin-bottom: 16px; border-radius: 50%; color: #fff; background: #80edac; }
+.signup-review-success-icon svg { width: 38px; height: 38px; }
+.signup-review-dialog--success .ui-dialog-title { padding: 0; color: #111; font-size: 20px; }
+.signup-review-dialog--success .ui-dialog-description { max-width: 290px; margin: 8px auto 24px; color: #64748b; font-size: 14px; }
+.signup-review-ok { max-width: 280px; margin-inline: auto; }
+/* Policy popups opened from the consent checkbox keep the signup viewport
+   clamping (so they stay above the mobile keyboard) while the shared legal
+   panel supplies the header and scroll layout. */
+.ui-dialog-content.signup-review-dialog.signup-policy-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(450px, calc(100% - 32px));
+  max-height: calc(var(--signup-viewport-height, 100dvh) - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding: 0;
+  overflow: hidden;
+}
+
+.signup-page button:focus-visible,
+.signup-page a:focus-visible,
+.signup-review-dialog button:focus-visible,
+.signup-review-dialog a:focus-visible { outline: 3px solid rgb(0 166 247 / 28%); outline-offset: 3px; }
+.signup-page input[type="password"]::-ms-reveal,
+.signup-page input[type="password"]::-ms-clear { display: none; }
+
+
+@media (max-width: 640px) {
+  .signup-form-container { padding: 20px 12px max(24px, env(safe-area-inset-bottom)); }
+  .signup-form-shell { padding: 28px 24px; }
+  .signup-page .signup-title { font-size: 22px !important; }
+  .signup-page .auth-field-label,
+  .signup-review-dialog .auth-field-label { font-size: 13px; }
+  .signup-agreement { min-height: 44px; font-size: 12px; }
+  .signup-change-role { min-height: 36px; font-size: 12px; }
+  .signup-landlord-panel-title { font-size: 20px; }
+  .signup-landlord-review-heading button { min-height: 44px; }
+  .signup-account-type-option { min-height: 88px; padding: 16px; gap: 12px; }
+  .signup-password-help { padding: 14px 16px; }
+  .signup-landlord-stepper { margin-bottom: 20px; }
+  .signup-landlord-review-card { padding: 12px; }
+  .signup-landlord-review-row { font-size: 13px; }
+}
+
+@media (max-width: 360px) {
+  .signup-landlord-actions,
+  .signup-review-dialog-actions { gap: 8px; }
+  .signup-landlord-review-row { grid-template-columns: 1fr; gap: 0; }
+  .signup-review-dialog .ui-dialog-title { font-size: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signup-page *, .signup-review-dialog * { transition: none !important; }
+  .signup-spinner { animation-duration: 1400ms; }
+}

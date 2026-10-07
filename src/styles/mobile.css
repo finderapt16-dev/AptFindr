@@ -1,0 +1,154 @@
+/* Shared phone safeguards. Page-specific layouts keep their own breakpoints;
+   these rules prevent common overflow and touch-target issues at small widths. */
+@media (max-width: 640px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  :where(main, section, article, form, header, footer, aside, div) {
+    min-width: 0;
+  }
+
+  :where(img, picture, video, canvas, svg) {
+    max-width: 100%;
+  }
+
+  :where(input, select, textarea) {
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  :where(button, a, input, select, textarea) {
+    touch-action: manipulation;
+  }
+
+  .ui-dialog-content,
+  .ui-alert-dialog-content {
+    width: min(calc(100vw - 24px), 32rem);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .landing-login-overlay {
+    align-items: flex-start;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .landing-login-modal {
+    width: 100%;
+    max-height: none;
+    margin: auto 0;
+    padding: 24px 20px;
+    border-radius: 14px;
+  }
+
+  .tenant-profile-danger-content,
+  .security-tab-danger-content,
+  .landlord-view-property-header,
+  .manage-rooms-table-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tenant-profile-delete-button,
+  .security-tab-delete-my-account,
+  .landlord-view-edit,
+  .manage-rooms-table-add-room {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tenant-profile-danger-zone,
+  .security-tab-card-8 {
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .manage-rooms-table-scroll,
+  .admin-verification-table-panel,
+  .admin-dashboard-table-scroll,
+  .admin-apartments-table-scroll,
+  .admin-reports-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Preserve page-level fluidity while allowing deliberately wide tables to
+     scroll inside their own panels. */
+  .app-shell-content,
+  .app-shell-content > *,
+  .tenant-shell-content,
+  .tenant-shell-content > * {
+    min-width: 0;
+  }
+
+  :where(.ui-dialog-content, .ui-alert-dialog-content) {
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell-content,
+  .landlord-property-view-shell .app-shell-content,
+  .landlord-manage-rooms .app-shell-content {
+    padding-inline: 12px;
+  }
+
+  .tenant-notifications-row,
+  .tenant-notifications-notification-filter,
+  .signup-landlord-actions,
+  .signup-review-dialog-actions {
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------
+   DEVICE-PROGRESSIVENESS PASS (phone safeguards)
+   ------------------------------------------------------------------ */
+
+/* 1. Tall dialogs must scroll instead of running off the screen. The base
+      dialog rule only caps the width, so a long confirmation or form could
+      be cut off with no way to reach the buttons on a short phone screen. */
+@media (max-width: 640px) {
+  .ui-dialog-content,
+  .ui-alert-dialog-content {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* 2. iOS Safari zooms the whole page when a focused field is under 16px,
+      which shifts the layout while typing. 1em keeps fields that are
+      intentionally larger than 16px at their own size. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* 2b. The same iOS focus-zoom applies to touch tablets and large phones whose
+       viewport is wider than the phone breakpoint (iPad portrait/landscape),
+       so the guard is repeated for every non-hover device, not just <=640px. */
+@media (hover: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* 3. Keep the last row of a page clear of the home indicator on phones. */
+@media (max-width: 640px) {
+  .app-shell-content:not(.app-shell-content-mobile-nav) {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+  }
+}

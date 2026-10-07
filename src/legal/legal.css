@@ -1,0 +1,215 @@
+/* ==========================================================================
+   LEGAL / POLICY POPUPS
+   Shared by the signup consent links and the landing footer. The popup
+   floats above every other overlay in the app.
+   ========================================================================== */
+
+.ui-dialog-overlay.apf-policy-overlay {
+    z-index: 10020;
+    background: rgb(15 23 42 / 42%);
+    backdrop-filter: blur(4px);
+    animation: apf-policy-fade 120ms ease-out;
+}
+
+.ui-dialog-content.apf-policy-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 10021;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: min(450px, calc(100% - 2rem));
+    max-width: none;
+    max-height: min(88dvh, 760px);
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 26px 60px -18px rgb(15 23 42 / 32%);
+    animation: apf-policy-pop 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    color: #293548;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: left;
+}
+
+.ui-dialog-content.apf-policy-dialog:focus-visible {
+    outline: none;
+}
+
+/* ------------------------------ header ---------------------------------- */
+
+.apf-policy-head {
+    flex: 0 0 auto;
+    padding: 18px 56px 14px 22px;
+    border-bottom: none;
+    background: #ffffff;
+}
+
+.ui-dialog-content.apf-policy-dialog .apf-policy-title {
+    margin: 0;
+    color: #1e293b;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* ------------------------------ body ------------------------------------ */
+
+.apf-policy-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 8px 24px 24px;
+    padding: 18px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.apf-policy-scroll:focus,
+.apf-policy-scroll:focus-visible {
+    outline: none;
+}
+
+.apf-policy-section {
+    padding-top: 16px;
+
+}
+
+.apf-policy-section-title {
+    margin: 0 0 6px;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.apf-policy-paragraph {
+    margin: 0 0 8px;
+    color: #7486a3;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.apf-policy-list {
+    margin: 4px 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.apf-policy-list-item {
+    position: relative;
+    margin: 0 0 6px;
+    padding-left: 18px;
+    color: #7486a3;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.apf-policy-list-item::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #00a6f7;
+}
+
+.apf-policy-list--tight .apf-policy-list-item {
+    font-size: 12.5px;
+}
+
+/* ------------------------------ skeleton -------------------------------- */
+
+.apf-policy-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.apf-policy-skeleton-line {
+    display: block;
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #eef2f7 0%, #e2e8f0 40%, #eef2f7 80%);
+    background-size: 300% 100%;
+    animation: apf-policy-shimmer 1.1s ease-in-out infinite;
+}
+
+/* --------------------------- close control ------------------------------ */
+
+/* The shared dialog ships its own close button styling because the panel is
+   used outside the signup card as well. */
+.ui-dialog-content.apf-policy-dialog .ui-dialog-close {
+    top: 14px;
+    right: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    color: #64748b;
+    opacity: 1;
+}
+
+.ui-dialog-content.apf-policy-dialog .ui-dialog-close:hover {
+    background: #eef2f7;
+    color: #1e293b;
+}
+
+.ui-dialog-content.apf-policy-dialog .ui-dialog-close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(0 166 247 / 28%);
+}
+
+@media (max-width: 640px) {
+    .ui-dialog-content.apf-policy-dialog {
+        width: calc(100% - 1rem);
+        max-height: calc(100dvh - 1rem);
+        border-radius: 12px;
+    }
+
+    .apf-policy-head {
+        padding: 16px 52px 12px 16px;
+    }
+
+    .apf-policy-scroll {
+        padding: 12px 16px 16px;
+    }
+
+}
+
+@keyframes apf-policy-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes apf-policy-pop {
+    from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes apf-policy-shimmer {
+    from { background-position: 120% 0; }
+    to { background-position: -20% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-dialog-overlay.apf-policy-overlay,
+    .ui-dialog-content.apf-policy-dialog,
+    .apf-policy-skeleton-line {
+        animation: none;
+    }
+}
+
+.apf-policy-section:first-child { padding-top: 0; }
