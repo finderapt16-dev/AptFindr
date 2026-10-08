@@ -1,3 +1,4 @@
+import { getRoomStatus } from "@/utils/roomAvailability";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { RoomImageGallery } from "@/components/RoomImageGallery";
 
@@ -10,7 +11,7 @@ const dateLabel = value => {
 export function RoomDetails({ room, apartment, onClose }) {
     const safeRoom = room ?? {};
     const safeApartment = apartment ?? {};
-    const status = safeRoom.isOccupied ? "occupied" : safeRoom.status || "available";
+    const status = getRoomStatus(safeRoom);
     const statusLabel = { available: "Available", occupied: "Occupied", maintenance: "Under Maintenance" }[status] || "Not provided";
     const capacity = Number(safeRoom.maxOccupants);
     const rent = Number(safeRoom.price);

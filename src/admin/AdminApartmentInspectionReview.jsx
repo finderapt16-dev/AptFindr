@@ -1,5 +1,5 @@
 import "./AdminApartmentInspectionReview.css";
-import { ArrowLeft, ArrowRight, Check, Clock3, FileText, MapPin, Trash2, UserRound, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Check, Clock3, FileText, MapPin, Trash2, UserRound, X } from "lucide-react";
 import { MapView } from "@/components/MapView";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { useState } from "react";
@@ -31,7 +31,13 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
           <h2>Property Information</h2>
           <div className="admin-inspection-review-property">
             <div className="admin-inspection-review-gallery">
+              <div className="admin-inspection-review-main-photo">
               {images.length ? <ImageWithFallback src={images[selectedImageIndex] ?? images[0]} alt={apartment.title || "Property"} className="admin-inspection-review-cover" /> : <div className="admin-inspection-review-no-image">No property image</div>}
+                {images.length > 1 && <>
+                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-prev" aria-label="Previous property image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) - 1 + images.length) % images.length)}><ChevronLeft /></button>
+                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-next" aria-label="Next property image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) + 1) % images.length)}><ChevronRight /></button>
+                </>}
+              </div>
               {images.length > 1 && <div className="admin-inspection-review-dots">{images.slice(0, 6).map((image, index) => <button type="button" aria-label={`View image ${index + 1}`} aria-current={selectedImageIndex === index} key={`${image}-${index}`} onClick={() => onSelectImage(index)} />)}</div>}
               {images.length > 1 && <div className="admin-inspection-review-thumbnails">{images.slice(0, 4).map((image, index) => <button type="button" key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>)}</div>}
             </div>

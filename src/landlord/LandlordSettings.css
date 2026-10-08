@@ -258,3 +258,22 @@
 @media (min-width: 1024px) {
   .landlord-settings-field small { font-size: 10px; }
 }
+
+.landlord-settings-business-record { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 24px; padding: 24px; border: 1px solid #dfe5ec; border-radius: 8px; }
+.landlord-settings-business-record .landlord-settings-permit-details { margin: 0; gap: 24px; }
+.landlord-settings-business-record .landlord-settings-permit-details div { padding: 8px 12px; }
+.landlord-settings-business-record .landlord-settings-permit-details dd { font-size: 15px; overflow-wrap: anywhere; }
+.landlord-settings-business-record .landlord-settings-permit-details dt { font-size: 12px; }
+.landlord-settings-business-record .landlord-settings-permit-file { min-height: 130px; background: #f8fafc; }
+.landlord-settings-business-record .landlord-settings-permit-file a,
+.landlord-settings-business-record .landlord-settings-permit-file strong { font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+.landlord-settings-business-record .landlord-settings-permit-file small { font-size: 12px; margin-top: 8px; }
+.landlord-settings-permit-pagination { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 20px; font-size: 14px; }
+.landlord-settings-permit-pagination button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #0f172a; cursor: pointer; }
+.landlord-settings-permit-pagination button:hover:not(:disabled) { background: #f1f5f9; }
+.landlord-settings-permit-pagination button:disabled { opacity: .35; cursor: default; }
+.landlord-settings-permit-pagination button:focus-visible { outline: 2px solid #0b9ed8; outline-offset: 2px; }
+@media (max-width: 700px) {
+  .landlord-settings-business-record { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+  .landlord-settings-business-record .landlord-settings-permit-details { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}

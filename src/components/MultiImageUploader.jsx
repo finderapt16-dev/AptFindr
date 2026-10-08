@@ -251,10 +251,10 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
               <div className="multi-image-uploader-style-27">
                 <img src={previewImage.url} alt={previewImage.isPrimary ? "Primary" : "Preview"} className="multi-image-uploader-style-28"/>
                 {images.length > 1 && (<>
-                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)} className="multi-image-uploader-style-29 multi-image-center-y">
+                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)} aria-label="Previous property image" className="photo-navigation-arrow multi-image-uploader-style-29 multi-image-center-y">
                       <ChevronLeft className="multi-image-uploader-style-30"/>
                     </button>
-                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === images.length - 1 ? 0 : prev + 1)} className="multi-image-uploader-style-31 multi-image-center-y">
+                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === images.length - 1 ? 0 : prev + 1)} aria-label="Next property image" className="photo-navigation-arrow multi-image-uploader-style-31 multi-image-center-y">
                       <ChevronRight className="multi-image-uploader-style-32"/>
                     </button>
                   </>)}

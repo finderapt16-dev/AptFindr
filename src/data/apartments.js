@@ -108,6 +108,7 @@ export const apartmentRowToApartment = (row) => {
         price: toNumber(room.rent),
         sqft: toNumber(room.sqft),
         maxOccupants: toNumber(room.max_occupants, 1),
+        bedrooms: room.bedrooms == null ? null : toNumber(room.bedrooms),
         status: toApartmentStatus(room.status ?? (room.is_occupied ? 'occupied' : 'available')),
         // Keep the persisted occupancy flag independent from the room status. Tenant
         // visibility requires both `status = available` and `is_occupied = false`;

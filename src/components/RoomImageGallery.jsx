@@ -29,8 +29,8 @@ export function RoomImageGallery({ images = [], roomName = "Room", compact = fal
     const previous = () => setActiveIndex((current) => (current - 1 + sources.length) % sources.length);
     const next = () => setActiveIndex((current) => (current + 1) % sources.length);
     const controls = sources.length > 1 && <>
-    <button type="button" aria-label="Previous room image" onClick={(event) => { event.stopPropagation(); previous(); }} className="room-image-gallery-style-4 room-image-gallery-centered-y"><ChevronLeft className="room-image-gallery-style-5"/></button>
-    <button type="button" aria-label="Next room image" onClick={(event) => { event.stopPropagation(); next(); }} className="room-image-gallery-style-6 room-image-gallery-centered-y"><ChevronRight className="room-image-gallery-style-7"/></button>
+    <button type="button" aria-label="Previous room image" onClick={(event) => { event.stopPropagation(); previous(); }} className="photo-navigation-arrow room-image-gallery-style-4 room-image-gallery-centered-y"><ChevronLeft className="room-image-gallery-style-5"/></button>
+    <button type="button" aria-label="Next room image" onClick={(event) => { event.stopPropagation(); next(); }} className="photo-navigation-arrow room-image-gallery-style-6 room-image-gallery-centered-y"><ChevronRight className="room-image-gallery-style-7"/></button>
   </>;
     return <>
     <div className="room-image-gallery-style-8">

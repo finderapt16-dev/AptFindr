@@ -806,10 +806,10 @@ export function AdminApartmentDetail() {
                   <Badge className="admin-apartment-detail-uploaded-image-s">{imageCount} uploaded image(s)</Badge>
                 </div>
                 {canNavigateImages && (<>
-                    <button type="button" title="Previous image" onClick={handlePreviousImage} className="admin-apartment-detail-button-6">
+                    <button type="button" title="Previous image" aria-label="Previous property image" onClick={handlePreviousImage} className="photo-navigation-arrow admin-apartment-detail-button-6">
                       <ChevronLeft className="admin-apartment-detail-chevron-left-icon"/>
                     </button>
-                    <button type="button" title="Next image" onClick={handleNextImage} className="admin-apartment-detail-button-7">
+                    <button type="button" title="Next image" aria-label="Next property image" onClick={handleNextImage} className="photo-navigation-arrow admin-apartment-detail-button-7">
                       <ChevronRight className="admin-apartment-detail-chevron-right-icon"/>
                     </button>
                   </>)}

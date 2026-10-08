@@ -1,4 +1,5 @@
 import "./ManageRooms.css";
+import { getRoomStatus, sortRoomsByAvailability } from "@/utils/roomAvailability";
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, DoorOpen, ImagePlus, MoreVertical, Pencil, Plus, Star, Upload, Users, Wrench, X } from "lucide-react";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { LandlordMenuTrigger } from "@/landlord/LandlordMenuTrigger";
@@ -28,6 +29,7 @@ const emptyRoomForm = () => ({
     type: "Bedroom",
     price: "",
     maxOccupants: "",
+    bedrooms: "",
     sqft: "",
     description: "",
     hasPrivateBath: false,
@@ -42,6 +44,7 @@ const roomToForm = (room) => ({
     type: room.type || "Bedroom",
     price: room.price ? String(room.price) : "",
     maxOccupants: room.maxOccupants ? String(room.maxOccupants) : "",
+    bedrooms: room.bedrooms == null ? "" : String(room.bedrooms),
     sqft: String(room.sqft ?? ""),
     description: room.description ?? "",
     hasPrivateBath: room.hasPrivateBath === true,
@@ -50,7 +53,7 @@ const roomToForm = (room) => ({
     hasAC: room.hasAC === true,
     status: room.status ?? (room.isOccupied ? "occupied" : "available"),
 });
-const statusForRoom = (room) => room.status ?? (room.isOccupied ? "occupied" : "available");
+const statusForRoom = getRoomStatus;
 const getStatusOption = (status) => ROOM_STATUS_OPTIONS.find((option) => option.value === status) ?? ROOM_STATUS_OPTIONS[0];
 
 // Cover photo is always the first image; keep isPrimary / sortOrder in sync with the order.
@@ -59,8 +62,8 @@ const imagesFromRoom = (room) => normalizeImages((room?.images ?? []).filter(Boo
 const revokeIfBlob = (url) => { if (typeof url === "string" && url.startsWith("blob:"))
     URL.revokeObjectURL(url); };
 
-// Used to tell whether a card has unsaved edits, including the status chosen in Edit Room.
-const DIRTY_FIELDS = ["name", "type", "price", "maxOccupants", "sqft", "description", "hasPrivateBath", "bathroomType", "sharedBathLocation", "hasAC", "status"];
+// Used to tell whether a card has unsaved edits, including the status chosen in Edit Unit.
+const DIRTY_FIELDS = ["name", "type", "price", "maxOccupants", "bedrooms", "sqft", "description", "hasPrivateBath", "bathroomType", "sharedBathLocation", "hasAC", "status"];
 const snapshotOf = (form, images) => JSON.stringify([
     DIRTY_FIELDS.map((key) => form[key] ?? ""),
     images.map((image) => (image.file ? `file:${image.id}` : image.url)),
@@ -122,6 +125,7 @@ const buildRoomPayload = (form, imageUrls, status) => ({
     type: form.type,
     price: Number(form.price) || 0,
     maxOccupants: Number(form.maxOccupants) || 1,
+    bedrooms: Number(form.bedrooms),
     sqft: Number(form.sqft) || 0,
     description: form.description.trim(),
     hasPrivateBath: form.hasPrivateBath,
@@ -264,7 +268,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
         }
         const slotsLeft = Math.max(MAX_ROOM_IMAGES - images.length, 0);
         if (accepted.length > slotsLeft)
-            toast.error(`You can upload up to ${MAX_ROOM_IMAGES} photos per room.`);
+            toast.error(`You can upload up to ${MAX_ROOM_IMAGES} photos per unit.`);
         const toAdd = accepted.slice(0, slotsLeft);
         if (toAdd.length === 0)
             return;
@@ -313,25 +317,26 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
       <div className="mr-reference-layout">
         <div className="mr-reference-main">
           <section className="mr-reference-section">
-            <h3>Room Photos</h3><p>Add or update photos of this room. You can upload multiple images.</p>
+            <h3>Unit Photos</h3><p>Add or update photos of this unit. You can upload multiple images.</p>
             <div className="mr-reference-photos">
-              {images.map((image, index) => <div className="mr-reference-photo" key={image.id}><img src={image.url} alt={`Room photo ${index + 1}`}/><button type="button" aria-label="Remove photo" onClick={() => removeImage(index)}><X /></button></div>)}
+              {images.map((image, index) => <div className="mr-reference-photo" key={image.id}><img src={image.url} alt={`Unit photo ${index + 1}`}/><button type="button" aria-label="Remove photo" onClick={() => removeImage(index)}><X /></button></div>)}
               {images.length < MAX_ROOM_IMAGES && <button type="button" className="mr-reference-add-photo" onClick={openPicker}><Plus /><span>Add Photo</span></button>}
             </div>
             <small>Support: JPG, PNG, WebP, Max {MAX_ROOM_IMAGE_MB}MB each. ({images.length}/{MAX_ROOM_IMAGES} photos)</small>
             <input ref={fileInputRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} multiple hidden onChange={handleFiles}/>
           </section>
           <section className="mr-reference-section">
-            <h3>Room Information</h3>
-            <div className="mr-reference-fields">
-              <Field label="Room Number / Name *"><input value={draft.name} onChange={setField("name")} className="mr-input" disabled={isSaving}/></Field>
-              <Field label="Capacity *" suffix="pax"><input type="number" min={1} value={draft.maxOccupants} onChange={setField("maxOccupants")} className="mr-input" disabled={isSaving}/></Field>
-              <Field label="Monthly Rent *" prefix="₱"><input type="number" min={0} value={draft.price} onChange={setField("price")} className="mr-input" disabled={isSaving}/></Field>
-              <label className="mr-field"><span className="mr-field-label">Description *</span><textarea rows={3} value={draft.description} onChange={setField("description")} className="mr-textarea" disabled={isSaving}/></label>
+            <h3>Unit Information</h3>
+            <div className="mr-reference-fields mr-unit-information">
+              <label className="mr-unit-field"><span>Unit Number / Name *</span><input required value={draft.name} onChange={setField("name")} className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Capacity *</span><span className="mr-unit-capacity"><input required type="number" min={1} step={1} value={draft.maxOccupants} onChange={setField("maxOccupants")} className="mr-input" disabled={isSaving}/><span>pax</span></span></label>
+              <label className="mr-unit-field"><span>Bedroom *</span><input required type="number" min={0} step={1} value={draft.bedrooms} onChange={setField("bedrooms")} className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Monthly Rent *</span><input required type="number" min={0} step="0.01" value={draft.price} onChange={setField("price")} className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field mr-unit-description"><span>Description *</span><small>Provide a short description of this unit (maximum 500 characters).</small><textarea required rows={3} maxLength={500} value={draft.description} onChange={setField("description")} className="mr-textarea" disabled={isSaving}/><small className="mr-unit-description-count">{draft.description.length} / 500</small></label>
             </div>
           </section>
           <section className="mr-reference-section">
-            <h3>Amenities</h3><p>Select the amenities available in this room.</p>
+            <h3>Amenities</h3><p>Select the amenities available in this unit.</p>
             <div className="mr-reference-chips">{["WiFi", "Air Conditioning", "Bed", "Study Table", "Balcony", "Private Bathroom", "Hot & Cold Shower", "Window"].map((item) => <button type="button" key={item} onClick={() => toggleSelection(setSelectedAmenities, item)} className={selectedAmenities.has(item) ? "is-selected" : ""}>{item}</button>)}</div>
           </section>
           <section className="mr-reference-section">
@@ -343,8 +348,8 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
           <section className="mr-reference-section"><h3>Unit Status</h3><p>Set the current status of this unit.</p>
             {["available", "occupied", "maintenance"].map((value) => <button type="button" key={value} aria-pressed={status === value} onClick={() => applyStatus(value)} className={`mr-reference-status ${status === value ? "is-selected" : ""}`}><span aria-hidden="true"/><strong>{getStatusOption(value).label}</strong><small>{value === "available" ? "Unit is available for rent." : value === "occupied" ? "Unit is currently rented out." : "Unit is temporarily unavailable."}</small></button>)}
           </section>
-          <section className="mr-reference-section"><h3>Room Preview</h3><p>This is how room will appear to tenants.</p>
-            <div className="mr-reference-preview"><div>{activeImage && <img src={activeImage.url} alt="Room preview"/>}</div><section><b>{draft.name || "Room"}</b><span>{draft.type} &nbsp;–&nbsp; {draft.maxOccupants || 1} pax</span><strong>₱{Number(draft.price || 0).toLocaleString("en-PH")}/month</strong><div className="mr-reference-preview-tags">{[...selectedAmenities].slice(0, 4).map((item) => <em key={item}>{item}</em>)}</div></section><small>{draft.description || "No room description provided."}</small></div>
+          <section className="mr-reference-section"><h3>Unit Preview</h3><p>This is how this unit will appear to tenants.</p>
+            <div className="mr-reference-preview"><div>{activeImage && <img src={activeImage.url} alt="Unit preview"/>}</div><section><b>{draft.name || "Unit"}</b><span>{draft.type} &nbsp;–&nbsp; {draft.maxOccupants || 1} pax</span><strong>₱{Number(draft.price || 0).toLocaleString("en-PH")}/month</strong><div className="mr-reference-preview-tags">{[...selectedAmenities].slice(0, 4).map((item) => <em key={item}>{item}</em>)}</div></section><small>{draft.description || "No unit description provided."}</small></div>
           </section>
         </aside>
       </div>
@@ -363,7 +368,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
         <div className="mr-gallery">
           <div className="mr-stage">
             {activeImage ? (<>
-                <img src={activeImage.url} alt={`${draft.name || "Room"} photo ${safeActiveIndex + 1}`} className="mr-stage-image"/>
+                <img src={activeImage.url} alt={`${draft.name || "Unit"} photo ${safeActiveIndex + 1}`} className="mr-stage-image"/>
                 {safeActiveIndex === 0 ? <span className="mr-cover-tag">Cover</span> : null}
                 <div className="mr-stage-tools">
                   {safeActiveIndex > 0 ? <button type="button" className="mr-chip" onClick={() => makeCover(safeActiveIndex)} disabled={isSaving}><Star className="mr-icon-sm"/>Make cover</button> : null}
@@ -371,8 +376,8 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
                 </div>
               </>) : (<button type="button" className="mr-stage-empty" onClick={openPicker} disabled={isSaving}><ImagePlus className="mr-stage-empty-icon"/><span>No photo yet</span></button>)}
             {images.length > 1 ? (<>
-                <button type="button" className="mr-arrow mr-arrow--prev" aria-label="Previous photo" onClick={showPrevious}><ChevronLeft className="mr-icon-md"/></button>
-                <button type="button" className="mr-arrow mr-arrow--next" aria-label="Next photo" onClick={showNext}><ChevronRight className="mr-icon-md"/></button>
+                <button type="button" className="photo-navigation-arrow mr-arrow mr-arrow--prev" aria-label="Previous photo" onClick={showPrevious}><ChevronLeft className="mr-icon-md"/></button>
+                <button type="button" className="photo-navigation-arrow mr-arrow mr-arrow--next" aria-label="Next photo" onClick={showNext}><ChevronRight className="mr-icon-md"/></button>
               </>) : null}
           </div>
 
@@ -393,23 +398,23 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
             <div className="mr-head-main">
               <div className="mr-title-row">
                 <label className="mr-name">
-                  <input ref={nameInputRef} value={draft.name} onChange={setField("name")} placeholder="Room number / name" aria-label="Room number or name" className="mr-name-input" disabled={isSaving}/>
+                  <input ref={nameInputRef} value={draft.name} onChange={setField("name")} placeholder="Unit number / name" aria-label="Unit number or name" className="mr-name-input" disabled={isSaving}/>
                   <Pencil className="mr-pencil" aria-hidden="true"/>
                 </label>
                 <Badge className={`${statusOption.className} manage-rooms-badge-5`}>{statusOption.label}</Badge>
               </div>
-              <p className="mr-muted">{(room?.description ?? "").trim() || "No room description provided."}</p>
+              <p className="mr-muted">{(room?.description ?? "").trim() || "No unit description provided."}</p>
             </div>
 
             <div className="mr-head-actions">
               <div className="mr-mini">
                 {isNew ? (<button type="button" className="mr-mini-btn" onClick={onCancelNew} disabled={isSaving}>Cancel</button>) : (<>
-                    <button type="button" className="mr-mini-btn" onClick={() => nameInputRef.current?.focus()} disabled={controlsLocked}>Edit Room</button>
-                    <button type="button" className="mr-mini-btn mr-mini-btn--danger" onClick={() => void onDelete(room)} disabled={controlsLocked}>Delete Room</button>
+                    <button type="button" className="mr-mini-btn" onClick={() => nameInputRef.current?.focus()} disabled={controlsLocked}>Edit Unit</button>
+                    <button type="button" className="mr-mini-btn mr-mini-btn--danger" onClick={() => void onDelete(room)} disabled={controlsLocked}>Delete Unit</button>
                   </>)}
               </div>
               <div className="mr-menu" ref={menuRef}>
-                <button type="button" aria-label={`Actions for ${draft.name || "room"}`} aria-expanded={menuOpen} disabled={controlsLocked} onClick={() => setMenuOpen((open) => !open)} className="mr-kebab"><MoreVertical className="mr-icon-md"/></button>
+                <button type="button" aria-label={`Actions for ${draft.name || "unit"}`} aria-expanded={menuOpen} disabled={controlsLocked} onClick={() => setMenuOpen((open) => !open)} className="mr-kebab"><MoreVertical className="mr-icon-md"/></button>
                 {menuOpen ? (<div className="mr-menu-list" role="menu">
                     {status !== "maintenance"
                 ? <button type="button" role="menuitem" onClick={() => applyStatus("maintenance")}><Wrench className="mr-icon-sm"/>Mark as Under Maintenance</button>
@@ -422,17 +427,17 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
           <div className="mr-fields">
             <Field label="Monthly Rent" prefix="₱" className="mr-span-1"><input type="number" inputMode="decimal" min={0} step="any" value={draft.price} onChange={setField("price")} className="mr-input hide-number-spinners" placeholder="0" disabled={isSaving}/></Field>
             <Field label="Capacity" suffix={Number(draft.maxOccupants) === 1 ? "person" : "people"} className="mr-span-1"><input type="number" min={1} value={draft.maxOccupants} onChange={setField("maxOccupants")} className="mr-input hide-number-spinners" placeholder="1" disabled={isSaving}/></Field>
-            <Field label="Room Type" chevron className="mr-span-1"><select value={draft.type} onChange={setField("type")} className="mr-input mr-select" disabled={isSaving}>{ROOM_TYPES.map((type) => <option key={type}>{type}</option>)}</select></Field>
-            <Field label="Room Size" suffix="sq ft" className="mr-span-1"><input type="number" min={0} value={draft.sqft} onChange={setField("sqft")} className="mr-input hide-number-spinners" placeholder="0" disabled={isSaving}/></Field>
+            <Field label="Unit Type" chevron className="mr-span-1"><select value={draft.type} onChange={setField("type")} className="mr-input mr-select" disabled={isSaving}>{ROOM_TYPES.map((type) => <option key={type}>{type}</option>)}</select></Field>
+            <Field label="Unit Size" suffix="sq ft" className="mr-span-1"><input type="number" min={0} value={draft.sqft} onChange={setField("sqft")} className="mr-input hide-number-spinners" placeholder="0" disabled={isSaving}/></Field>
             <Field label="Bathroom" chevron className="mr-span-2">{bathroomSelect}</Field>
             <Field label="Air Conditioning" chevron className="mr-span-2"><select value={draft.hasAC ? "yes" : "no"} onChange={setAirCon} className="mr-input mr-select" disabled={isSaving}><option value="no">No air conditioning</option><option value="yes">With air conditioning</option></select></Field>
             {bathroomValue === "shared" ? <Field label="Shared bathroom location (optional)" className="mr-span-4"><input value={draft.sharedBathLocation} onChange={setField("sharedBathLocation")} className="mr-input" placeholder="e.g. End of the hallway" disabled={isSaving}/></Field> : null}
           </div>
 
           <label className="mr-desc">
-            <span className="mr-desc-label">Room description</span>
+            <span className="mr-desc-label">Unit description</span>
             <span className="mr-desc-control">
-              <textarea rows={3} value={draft.description} onChange={setField("description")} placeholder="Add room description..." className="mr-textarea" disabled={isSaving}/>
+              <textarea rows={3} value={draft.description} onChange={setField("description")} placeholder="Add unit description..." className="mr-textarea" disabled={isSaving}/>
               <Pencil className="mr-pencil mr-pencil--corner" aria-hidden="true"/>
             </span>
           </label>
@@ -482,7 +487,7 @@ export function ManageRooms({ propertyId }) {
                 setRooms(loadedRooms);
             }
             catch (error) {
-                toast.error(error instanceof Error ? error.message : "Unable to load rooms.");
+                toast.error(error instanceof Error ? error.message : "Unable to load units.");
             }
             finally {
                 if (active)
@@ -533,7 +538,7 @@ export function ManageRooms({ propertyId }) {
         if (!id)
             return null;
         if (!form.name.trim()) {
-            toast.error("Please enter a room number or name.");
+            toast.error("Please enter a unit number or name.");
             return null;
         }
         if (!form.price || Number(form.price) < 0) {
@@ -541,7 +546,19 @@ export function ManageRooms({ propertyId }) {
             return null;
         }
         if (Number(form.maxOccupants) < 1) {
-            toast.error("Room capacity must be at least one.");
+            toast.error("Unit capacity must be at least one.");
+            return null;
+        }
+        if (!Number.isInteger(Number(form.maxOccupants)) || Number(form.maxOccupants) < 1) {
+            toast.error("Capacity must be a whole number of at least one.");
+            return null;
+        }
+        if (form.bedrooms === "" || !Number.isInteger(Number(form.bedrooms)) || Number(form.bedrooms) < 0) {
+            toast.error("Please enter a whole number of bedrooms (zero for a studio).");
+            return null;
+        }
+        if (!form.description.trim() || form.description.length > 500) {
+            toast.error("Please enter a unit description of up to 500 characters.");
             return null;
         }
         try {
@@ -552,12 +569,12 @@ export function ManageRooms({ propertyId }) {
             if (existing) {
                 saved = await updateApartmentRoom(id, existing.id, payload, user.id);
                 setRooms((current) => current.map((item) => item.id === existing.id ? saved : item));
-                toast.success("Room updated");
+                toast.success("Unit updated");
             }
             else {
                 saved = await createApartmentRoom(id, payload, user.id);
                 setRooms((current) => [...current, saved]);
-                toast.success("Room added");
+                toast.success("Unit added");
             }
             try {
                 await refreshApartments();
@@ -568,26 +585,26 @@ export function ManageRooms({ propertyId }) {
             return saved;
         }
         catch (error) {
-            toast.error(error instanceof Error ? error.message : "Unable to save room.");
+            toast.error(error instanceof Error ? error.message : "Unable to save unit.");
             return null;
         }
     };
     const removeRoom = async (room) => {
         if (!id || !room.id || processingRoomId)
             return false;
-        const roomName = room.name || "this room";
-        if (!window.confirm(`Are you sure you want to delete ${roomName}?\n\nThis removes only this room, not the property.`))
+        const roomName = room.name || "this unit";
+        if (!window.confirm(`Are you sure you want to delete ${roomName}?\n\nThis removes only this unit, not the property.`))
             return false;
         setProcessingRoomId(room.id);
         try {
             await deleteApartmentRoom(id, room.id, user.id);
             setRooms((current) => current.filter((item) => item.id !== room.id));
             await refreshApartments();
-            toast.success("Room deleted");
+            toast.success("Unit deleted");
             return true;
         }
         catch (error) {
-            toast.error(error instanceof Error ? error.message : "Unable to delete room.");
+            toast.error(error instanceof Error ? error.message : "Unable to delete unit.");
             return false;
         }
         finally {
@@ -599,7 +616,7 @@ export function ManageRooms({ propertyId }) {
         navigate("/", { replace: true });
     };
     if (isLoading) {
-        return <div className="manage-rooms-loading-room-management">Loading room management...</div>;
+        return <div className="manage-rooms-loading-room-management">Loading unit management...</div>;
     }
     if (!property || !canManage) {
         return (<div className="manage-rooms-grid">
@@ -614,7 +631,7 @@ export function ManageRooms({ propertyId }) {
     const roomsPerPage = 4;
     const totalPages = Math.max(1, Math.ceil(rooms.length / roomsPerPage));
     const safePage = Math.min(currentPage, totalPages);
-    const visibleRooms = rooms.slice((safePage - 1) * roomsPerPage, safePage * roomsPerPage);
+    const visibleRooms = sortRoomsByAvailability(rooms).slice((safePage - 1) * roomsPerPage, safePage * roomsPerPage);
     const formatRent = (value) => `₱${Number(value || 0).toLocaleString("en-PH")}`;
     const statusLabel = (room) => getStatusOption(statusForRoom(room)).label;
     const editorRoom = roomId === "new" ? null : rooms.find((room) => room.id === roomId);
@@ -622,13 +639,13 @@ export function ManageRooms({ propertyId }) {
 
     if (roomId) {
         if (!editorRoom && roomId !== "new") {
-            return <div className="manage-rooms-grid"><div><DoorOpen className="manage-rooms-door-open-icon"/><h1 className="manage-rooms-property-not-available">Room Not Available</h1><p className="manage-rooms-text">This room could not be found in the selected property.</p><Button onClick={returnToRooms}>Back to Manage Rooms</Button></div></div>;
+            return <div className="manage-rooms-grid"><div><DoorOpen className="manage-rooms-door-open-icon"/><h1 className="manage-rooms-property-not-available">Unit Not Available</h1><p className="manage-rooms-text">This room could not be found in the selected property.</p><Button onClick={returnToRooms}>Back to Manage Units</Button></div></div>;
         }
         return <main className="manage-rooms-editor-page">
           <div className="manage-rooms-editor-page-content">
             <header className="manage-rooms-editor-header">
-              <button type="button" className="manage-rooms-editor-back" onClick={returnToRooms}><ArrowLeft /> Back to Manage Rooms</button>
-              <div><h1>{editorRoom ? `Edit Room — ${editorRoom.name || "Unnamed room"}` : "Add a Room"}</h1><p>{editorRoom ? "Update this room's details, photos, and availability." : "Enter the details for the new rental room."}</p></div>
+              <button type="button" className="manage-rooms-editor-back" onClick={returnToRooms}><ArrowLeft /> Back to Manage Units</button>
+              <div><h1>{editorRoom ? `Edit Unit — ${editorRoom.name || "Unnamed unit"}` : "Add a Unit"}</h1><p>{editorRoom ? "Update this unit's details, photos, and availability." : "Enter the details for the new rental unit."}</p></div>
             </header>
             <RoomEditorCard key={editorRoom?.id || "new-room"} room={editorRoom} busy={processingRoomId !== null} onSave={async (...args) => {
               const saved = await saveRoom(...args);
@@ -648,44 +665,44 @@ export function ManageRooms({ propertyId }) {
       </button>
 
       <header className="manage-rooms-table-title">
-        <h1>Manage Rooms — {property.title || "Apartment"}</h1>
-        <p>Add, edit, or update the rooms.</p>
+        <h1>Manage Units — {property.title || "Apartment"}</h1>
+        <p>Add, edit, or update the units.</p>
       </header>
 
       <section className="manage-rooms-table-card">
         <div className="manage-rooms-table-heading">
           <div>
-            <h2>Rooms ({roomCounts.total})</h2>
+            <h2>Units ({roomCounts.total})</h2>
             <p>Manage the individual rental units inside this apartment building.</p>
           </div>
           <Button onClick={() => navigate(`/landlord/properties/${id}/rooms/new/edit`)} className="manage-rooms-table-add-room">
-            <Plus /> Add Room
+            <Plus /> Add Unit
           </Button>
         </div>
 
         {rooms.length === 0 ? (<div className="manage-rooms-table-empty">
             <DoorOpen />
-            <h3>No rooms have been added yet.</h3>
-            <p>Add the first room to make availability visible across your property listing.</p>
-            <Button onClick={() => navigate(`/landlord/properties/${id}/rooms/new/edit`)} className="manage-rooms-table-add-room"><Plus /> Add First Room</Button>
+            <h3>No units have been added yet.</h3>
+            <p>Add the first unit to make availability visible across your property listing.</p>
+            <Button onClick={() => navigate(`/landlord/properties/${id}/rooms/new/edit`)} className="manage-rooms-table-add-room"><Plus /> Add First Unit</Button>
           </div>) : (<>
             <div className="manage-rooms-mobile-list">
               {visibleRooms.map((room) => (
                 <article className="manage-rooms-mobile-room" key={room.id}>
                   <div className="manage-rooms-mobile-room-heading">
                     <div>
-                      <p>Room</p>
-                      <h3>{room.name || "Unnamed room"}</h3>
+                      <p>Unit</p>
+                      <h3>{room.name || "Unnamed unit"}</h3>
                     </div>
                     <span className={`manage-rooms-table-status manage-rooms-table-status--${statusForRoom(room)}`}>{statusLabel(room)}</span>
                   </div>
                   <dl className="manage-rooms-mobile-room-details">
-                    <div><dt>Type</dt><dd>{room.type || "Room"}</dd></div>
+                    <div><dt>Type</dt><dd>{room.type || "Unit"}</dd></div>
                     <div><dt>Monthly rent</dt><dd>{formatRent(room.price)}</dd></div>
                     <div><dt>Capacity</dt><dd>{Number(room.maxOccupants || 1)} {Number(room.maxOccupants || 1) === 1 ? "person" : "people"}</dd></div>
                   </dl>
                   <div className="manage-rooms-mobile-room-actions">
-                    <button type="button" onClick={() => navigate(`/landlord/properties/${id}/rooms/${room.id}/edit`)} disabled={processingRoomId !== null}><Pencil /> Edit room</button>
+                    <button type="button" onClick={() => navigate(`/landlord/properties/${id}/rooms/${room.id}/edit`)} disabled={processingRoomId !== null}><Pencil /> Edit unit</button>
                     <button type="button" onClick={() => void removeRoom(room)} disabled={processingRoomId !== null} className="manage-rooms-table-delete">Delete</button>
                   </div>
                 </article>
@@ -693,10 +710,10 @@ export function ManageRooms({ propertyId }) {
             </div>
             <div className="manage-rooms-table-scroll">
               <table className="manage-rooms-table">
-                <thead><tr><th>Apartment Unit</th><th>Room Type</th><th>Monthly Rent</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Apartment Unit</th><th>Unit Type</th><th>Monthly Rent</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>{visibleRooms.map((room) => (<tr key={room.id}>
-                    <th scope="row">{room.name || "Unnamed room"}</th>
-                    <td><span className="manage-rooms-table-type">{room.type || "Room"}</span></td>
+                    <th scope="row">{room.name || "Unnamed unit"}</th>
+                    <td><span className="manage-rooms-table-type">{room.type || "Unit"}</span></td>
                     <td>{formatRent(room.price)}</td>
                     <td>{Number(room.maxOccupants || 1)} {Number(room.maxOccupants || 1) === 1 ? "pax" : "pax"}</td>
                     <td><span className={`manage-rooms-table-status manage-rooms-table-status--${statusForRoom(room)}`}>{statusLabel(room)}</span></td>

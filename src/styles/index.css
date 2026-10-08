@@ -133,3 +133,5 @@
 
 /* Shared phone safeguards must load after all page styles. */
 @import './mobile.css';
+
+@import "./photoNavigation.css";

@@ -1257,3 +1257,14 @@
 @media (max-width: 1023px) {
   .manage-rooms-mobile-room-details dt { font-size: 11px; }
 }
+
+.mr-unit-information { margin-top: 8px; gap: 14px 36px; }
+.mr-unit-field { display: grid; align-content: start; gap: 5px; color: #475569; font-size: 13px; }
+.mr-unit-field .mr-input { width: 100%; min-width: 0; height: 32px; padding: 5px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; box-sizing: border-box; color: #111827; }
+.mr-unit-capacity { display: flex; align-items: center; gap: 8px; }
+.mr-unit-capacity > span { flex-shrink: 0; }
+.mr-unit-description { grid-column: 1 / -1; }
+.mr-unit-description small { font-size: 13px; line-height: 1.4; }
+.mr-unit-description .mr-textarea { width: 100%; min-height: 58px; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box; background: #fff; }
+.mr-unit-description-count { text-align: right; }
+@media (max-width: 480px) { .mr-unit-information { grid-template-columns: 1fr; } }

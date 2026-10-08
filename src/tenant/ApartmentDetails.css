@@ -3546,3 +3546,9 @@
   .apartment-detail-page .apartment-detail-grid-6 small { font-size: 10px; }
   .apartment-detail-house-rule-list span { font-size: 10px; }
 }
+
+.landlord-view-room-list { display: grid; gap: 10px; }
+.landlord-view-room { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px; border: 1px solid #dce3ea; border-radius: 8px; background: #fff; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.landlord-view-room:hover { background: #f8fafc; }
+.landlord-view-room > span:first-child { display: grid; gap: 5px; min-width: 0; }
+.landlord-view-room small { color: #64748b; }

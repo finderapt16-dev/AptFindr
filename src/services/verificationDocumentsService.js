@@ -115,3 +115,35 @@ export async function removeVerificationDocument(document) {
     if (storageError)
         throw new Error(storageError.message || "Unable to remove the stored file.");
 }
+
+export async function fetchLandlordBusinessPermits(landlordId) {
+    const [propertiesResult, documentsResult] = await Promise.all([
+        supabase.from("apartments").select("id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
+        supabase.from("apartment_verification_documents").select("*").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
+    ]);
+    if (propertiesResult.error) throw new Error(propertiesResult.error.message);
+    if (documentsResult.error) throw new Error(documentsResult.error.message);
+    const properties = propertiesResult.data ?? [];
+    const documents = documentsResult.data ?? [];
+    const entries = properties.flatMap(property => {
+        const verification = property.features?.verification ?? {};
+        const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id));
+        if (!propertyDocuments.length && !verification.businessPermit) return [];
+        return (propertyDocuments.length ? propertyDocuments : [null]).map(document => ({
+            id: String(document?.id ?? property.id),
+            businessName: verification.businessName || verification.propertyName || property.title || "",
+            permitNumber: verification.businessPermit || "",
+            issuedAt: verification.dateIssued || verification.issuedAt || "",
+            permitExpiry: verification.permitExpiry || "",
+            fileName: document?.file_name || "",
+            fileSize: document?.file_size ?? document?.size_bytes ?? null,
+            storagePath: document?.storage_path || "",
+        }));
+    });
+    return Promise.all(entries.map(async entry => {
+        if (!entry.storagePath) return { ...entry, documentUrl: "" };
+        const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(entry.storagePath, 15 * 60);
+        if (error) throw new Error(error.message || "Unable to open business permit.");
+        return { ...entry, documentUrl: data?.signedUrl ?? "" };
+    }));
+}

@@ -3,7 +3,7 @@ import { apartmentFormValuesToInsertRow, apartmentFormValuesToUpdateRow, apartme
 import { isTenantRole } from './authService';
 import { optimizeImageForUpload } from '../utils/imageUpload';
 import { isTenantVisibleApartment } from '../utils/listingVisibility';
-const APARTMENT_SELECT = '*, apartment_images(url, is_primary, sort_order), apartment_rooms(id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at)';
+const APARTMENT_SELECT = '*, apartment_images(url, is_primary, sort_order), apartment_rooms(*)';
 const APARTMENT_INSPECTION_SELECT = '*, apartment_images(*), apartment_rooms(*)';
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const comparableValue = (value) => value === undefined ? null : value;
@@ -588,6 +588,7 @@ export const insertApartmentRooms = async (apartmentId, rooms) => {
         room_type: room.type?.trim() || 'Bedroom',
         sqft: Math.max(0, Number(room.sqft) || 0),
         max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
+        ...(room.bedrooms != null ? { bedrooms: Math.max(0, Number(room.bedrooms) || 0) } : {}),
         rent: Math.max(0, Number(room.price) || 0),
         has_private_bath: room.hasPrivateBath === true,
         bathroom_type: room.hasPrivateBath ? room.bathroomType?.trim() || null : null,
@@ -614,6 +615,7 @@ const apartmentRoomToPayload = (apartmentId, room) => {
         room_type: room.type?.trim() || 'Bedroom',
         sqft: Math.max(0, Number(room.sqft) || 0),
         max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
+        ...(room.bedrooms != null ? { bedrooms: Math.max(0, Number(room.bedrooms) || 0) } : {}),
         rent: Math.max(0, Number(room.price) || 0),
         has_private_bath: room.hasPrivateBath === true,
         bathroom_type: room.hasPrivateBath ? room.bathroomType?.trim() || null : null,
@@ -648,6 +650,7 @@ const apartmentRoomRowToRoom = (row) => {
         price: Number(row.rent) || 0,
         sqft: Number(row.sqft) || 0,
         maxOccupants: Number(row.max_occupants) || 1,
+        bedrooms: row.bedrooms == null ? null : Number(row.bedrooms),
         hasPrivateBath: row.has_private_bath === true,
         bathroomType: typeof row.bathroom_type === 'string' ? row.bathroom_type : '',
         sharedBathLocation: typeof row.shared_bath_location === 'string' ? row.shared_bath_location : '',
@@ -689,7 +692,7 @@ const syncApartmentRoomSummary = async (apartmentId) => {
 export const fetchApartmentRooms = async (apartmentId) => {
     const { data, error } = await supabase
         .from('apartment_rooms')
-        .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
+        .select('*')
         .eq('apartment_id', apartmentId);
     if (error) {
         throw new Error(unwrapErrorMessage(error, 'Unable to load rooms.'));
@@ -700,7 +703,7 @@ export const createApartmentRoom = async (apartmentId, room, actorUserId) => {
     const { data, error } = await supabase
         .from('apartment_rooms')
         .insert(apartmentRoomToPayload(apartmentId, room))
-        .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
+        .select('*')
         .single();
     if (error) {
         throw new Error(unwrapErrorMessage(error, 'Unable to add room.'));
@@ -722,14 +725,14 @@ export const updateApartmentRoom = async (apartmentId, roomId, room, actorUserId
         .update(apartmentRoomToPayload(apartmentId, room))
         .eq('id', roomId)
         .eq('apartment_id', apartmentId)
-        .select('id, name, room_type, sqft, max_occupants, rent, has_private_bath, bathroom_type, shared_bath_location, has_ac, is_occupied, status, description, images, created_at')
+        .select('*')
         .single();
     if (error) {
         throw new Error(unwrapErrorMessage(error, 'Unable to update room.'));
     }
     await syncApartmentRoomSummary(apartmentId);
     const trackedRoomFields = [
-        'name', 'room_type', 'sqft', 'max_occupants', 'rent', 'has_private_bath',
+        'name', 'room_type', 'sqft', 'max_occupants', 'bedrooms', 'rent', 'has_private_bath',
         'bathroom_type', 'shared_bath_location', 'has_ac', 'status', 'description', 'images',
     ];
     const changedFields = trackedRoomFields.filter((field) => valuesDiffer(before?.[field], data[field]));
