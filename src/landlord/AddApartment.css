@@ -2880,3 +2880,50 @@
   .landlord-add-property .multi-image-uploader-style-3 { font-size: 10px; }
   .landlord-add-property .multi-image-uploader-style-4 { font-size: 10px; }
 }
+
+/* Step 3 is a dense set of controls on phones. Keep the same choices and
+   selection behavior, while giving every tap target a comfortable 48px area. */
+@media (max-width: 640px) {
+  .landlord-add-property .add-apartment-choice-section {
+    touch-action: pan-y;
+  }
+
+  .landlord-add-property .add-apartment-choice {
+    min-height: 48px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.2;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 100ms ease;
+  }
+
+  .landlord-add-property .add-apartment-choice:active {
+    transform: scale(0.98);
+  }
+
+  .landlord-add-property .add-apartment-choice:focus-visible {
+    outline: 3px solid rgb(20 172 232 / 35%);
+    outline-offset: 2px;
+  }
+
+  .landlord-add-property .add-apartment-add-choice {
+    grid-template-columns: minmax(0, 1fr) 56px;
+    gap: 8px;
+  }
+
+  .landlord-add-property .add-apartment-add-choice input,
+  .landlord-add-property .add-apartment-add-choice button {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .landlord-add-property .add-apartment-add-choice button {
+    border-radius: 6px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

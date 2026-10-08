@@ -1211,11 +1211,6 @@ export function AdminApartmentDetail() {
                             <p className="admin-apartment-detail-text-24">{landlordProfile.business_permit_number}</p>
                           </div>)}
 
-                        {landlordProfile.tin_number && (<div>
-                            <p className="admin-apartment-detail-tin-number">TIN Number</p>
-                            <p className="admin-apartment-detail-text-24">{landlordProfile.tin_number}</p>
-                          </div>)}
-
                         {landlordProfile.business_name && (<div>
                             <p className="admin-apartment-detail-business-name">Business Name</p>
                             <p className="admin-apartment-detail-text-24">{landlordProfile.business_name}</p>

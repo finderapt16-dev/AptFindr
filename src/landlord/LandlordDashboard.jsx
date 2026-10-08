@@ -1913,9 +1913,12 @@ export function LandlordDashboard() {
             user.mobileNumber ||
             "",
           middleInitial: String(userRow?.middle_initial ?? user?.middleInitial ?? ""),
-          facebookLink: typeof preferenceSections.landlordProfile?.facebookLink === "string"
-            ? preferenceSections.landlordProfile.facebookLink
-            : "",
+          facebookLink: String(
+            landlordRow?.facebook_url ??
+              (typeof preferenceSections.landlordProfile?.facebookLink === "string"
+                ? preferenceSections.landlordProfile.facebookLink
+                : "")
+          ),
           bio: userRow?.bio || "",
           avatar:
             userRow?.avatar_url ||
@@ -1928,14 +1931,6 @@ export function LandlordDashboard() {
           businessName: String(
             landlordRow?.business_name ??
               ""
-          ),
-          taxId: String(
-            landlordRow?.tin_number ??
-              ""
-          ),
-          businessType: String(
-            landlordRow?.business_type ??
-              "sole_proprietor"
           ),
           yearsActive:
             landlordRow?.years_active ==
@@ -2177,6 +2172,7 @@ export function LandlordDashboard() {
                 profile.avatar,
               bio: profile.bio,
               middle_initial: profile.middleInitial.trim(),
+              facebook_url: profile.facebookLink.trim(),
             });
 
 
@@ -2185,13 +2181,6 @@ export function LandlordDashboard() {
               "Unable to sync profile information."
             );
           }
-
-          await saveUserPreferenceSection(
-            user.id,
-            "landlordProfile",
-            { facebookLink: profile.facebookLink.trim() }
-          );
-
 
           setSavedProfile(
             profile

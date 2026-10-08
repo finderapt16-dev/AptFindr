@@ -1,15 +1,12 @@
 export const ACCOUNT_REVIEW_FIELDS = ["username", "email"];
 export const PERSONAL_REVIEW_FIELDS = ["firstName", "lastName", "middleInitial", "mobileNumber"];
 
-export const PASSWORD_REQUIREMENTS = "At least 8 characters, an uppercase and lowercase letter, a number, and a special character (e.g. !@#$%).";
+export const PASSWORD_REQUIREMENTS = "At least 8 characters with letters and numbers.";
 
 export function validateSignupPassword(password = "") {
   if (password.length < 8) return "Password must be at least 8 characters.";
-  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
-    return "Include an uppercase and a lowercase letter in your password.";
-  }
+  if (!/[A-Za-z]/.test(password)) return "Include at least one letter in your password.";
   if (!/[0-9]/.test(password)) return "Include a number in your password.";
-  if (!/[^A-Za-z0-9\s]/.test(password)) return "Include a special character in your password.";
   return "";
 }
 

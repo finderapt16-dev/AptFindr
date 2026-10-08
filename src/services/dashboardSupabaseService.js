@@ -1365,22 +1365,12 @@ async function syncRoleProfile(userId, role, payload) {
         assignIfProvided(profilePayload, "business_permit_number", payload.business_permit_number ?? payload.permit_number);
         assignIfProvided(profilePayload, "verification_document_url", payload.verification_document_url);
         assignIfProvided(profilePayload, "is_verified", payload.is_verified);
+        assignIfProvided(profilePayload, "facebook_url", payload.facebook_url);
         assignIfProvided(profilePayload, "business_name", payload.business_name);
-        assignIfProvided(profilePayload, "tin_number", payload.tin_number);
-        assignIfProvided(profilePayload, "id_type", payload.id_type);
         assignIfProvided(profilePayload, "id_number", payload.id_number);
         assignIfProvided(profilePayload, "permit_expiry", payload.permit_expiry);
-        assignIfProvided(profilePayload, "business_type", payload.business_type);
         assignIfProvided(profilePayload, "years_active", toNullableInteger(payload.years_active));
         assignIfProvided(profilePayload, "total_units", toNullableInteger(payload.total_units));
-        assignIfProvided(profilePayload, "service_areas", payload.service_areas);
-        assignIfProvided(profilePayload, "deposit_months", toNullableInteger(payload.deposit_months));
-        assignIfProvided(profilePayload, "advance_months", toNullableInteger(payload.advance_months));
-        assignIfProvided(profilePayload, "min_lease_months", toNullableInteger(payload.min_lease_months));
-        assignIfProvided(profilePayload, "pet_policy", payload.pet_policy);
-        assignIfProvided(profilePayload, "smoking_policy", payload.smoking_policy);
-        assignIfProvided(profilePayload, "maintenance_response_hours", toNullableInteger(payload.maintenance_response_hours));
-        assignIfProvided(profilePayload, "listing_visibility", payload.listing_visibility);
         const { error } = await supabase.from("landlord_profiles").upsert(profilePayload, { onConflict: "user_id" });
         if (error) {
             throw new Error(error.message || "Unable to save the landlord verification profile.");
@@ -1760,13 +1750,15 @@ export async function syncDashboardCache() {
  */
 export async function fetchLandlordProfile(landlordId) {
     try {
+        if (!landlordId)
+            throw new Error("A landlord profile ID is required.");
         const { data, error } = await supabase
             .from("landlord_profiles")
             .select("*")
             .eq("user_id", landlordId)
             .maybeSingle();
         if (error) {
-            return null;
+            throw new Error(error.message || "Unable to load the landlord profile.");
         }
         const profile = data ?? { user_id: landlordId };
         // Listings created before the profile-sync flow stored the submitted
@@ -1792,6 +1784,10 @@ export async function fetchLandlordProfile(landlordId) {
                     .eq("landlord_id", landlordId)
                     .order("updated_at", { ascending: false }),
             ]);
+            if (propertiesResult.error)
+                throw new Error(propertiesResult.error.message || "Unable to load landlord apartments for verification.");
+            if (documentsResult.error)
+                throw new Error(documentsResult.error.message || "Unable to load landlord verification documents.");
             const features = propertiesResult.data?.[0]?.features;
             if (features && typeof features === "object" && !Array.isArray(features)
                 && features.verification && typeof features.verification === "object" && !Array.isArray(features.verification)) {
@@ -1829,7 +1825,7 @@ export async function fetchLandlordProfile(landlordId) {
     }
     catch (err) {
         console.error("Error fetching landlord profile:", err);
-        return null;
+        throw err instanceof Error ? err : new Error("Unable to load the landlord profile.");
     }
 }
 /**
