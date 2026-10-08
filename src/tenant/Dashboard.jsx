@@ -40,6 +40,8 @@ export function Dashboard() {
     const location = useLocation();
     const { favorites: favoriteIds, toggleFavorite, refreshFavorites } = useFavorites();
     const tenantNotifications = useTenantNotifications();
+    const unreadNotificationCount = Math.max(0, Number(tenantNotifications?.unreadCount) || 0);
+    const notificationBadge = unreadNotificationCount > 99 ? "99+" : unreadNotificationCount;
     const [activeSection, setActiveSection] = useState(() => readDashboardSection(location.search));
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [favoriteFilter, setFavoriteFilter] = useState("all");
@@ -407,8 +409,9 @@ export function Dashboard() {
           <Sidebar mode="dashboard" displayName={displayName} favoriteIds={favoriteIds} tenantNotifications={tenantNotifications} activeSection={activeSection} setActiveSection={selectDashboardSection} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout}/>
         </aside>
 
-        <button aria-label="Open navigation" onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        <button aria-label={unreadNotificationCount ? `Open navigation, ${notificationBadge} unread notification${unreadNotificationCount === 1 ? "" : "s"}` : "Open navigation"} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="tenant-dashboard-menu-icon"/>
+          {unreadNotificationCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{notificationBadge}</span>}
         </button>
 
         <div className="app-shell-main">

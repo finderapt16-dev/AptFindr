@@ -13,7 +13,6 @@ import {
     isTenantRole,
     loginWithGoogle,
     resendSignupVerification,
-    signOutAuthSession,
     clearPendingGoogleOAuthFlow,
 } from "@/services/authService";
 
@@ -407,11 +406,8 @@ export function Login({
                  * login. End it locally and require an explicit signup flow.
                  */
                 if (result?.needsAccount) {
-                    const { error: signOutError } = await signOutAuthSession({ scope: "local" });
-                    if (signOutError) throw signOutError;
                     clearPendingGoogleOAuthFlow();
-                    setError("No AptFindr account was found for this Google account. Create an account first, then sign in with Google.");
-                    setLoading(false);
+                    navigate("/signup?google=setup&role=tenant");
                     return;
                 }
             } catch (googleError) {

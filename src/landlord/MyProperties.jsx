@@ -26,7 +26,8 @@ export const QuietStreetIllustration = () => {
   return (
     <svg
       className="properties-empty-illustration"
-      viewBox="0 0 562 254"
+      viewBox="0 -10 562 264"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Quiet street with houses and trees"
       xmlns="http://www.w3.org/2000/svg"

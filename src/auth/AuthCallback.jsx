@@ -85,12 +85,10 @@ export function AuthCallback() {
 
                     if (oauthFlow === "login" && !existingProfile) {
                         clearPendingGoogleOAuthFlow();
-                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
-                        if (signOutError) throw signOutError;
-                        if (active) navigate("/login", {
-                            replace: true,
-                            state: { error: "No AptFindr account was found for this Google account. Create an account first, then sign in with Google." },
-                        });
+                        // A first-time Google visitor starts from Sign In. Keep
+                        // their verified Google session so the tenant setup form
+                        // can show the email as read-only and finish the account.
+                        if (active) navigate("/signup?google=setup&role=tenant", { replace: true });
                         return;
                     }
 

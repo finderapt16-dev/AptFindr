@@ -11,6 +11,8 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
     const { favorites } = useFavorites();
     const [open, setOpen] = useState(false);
     const isTenant = isTenantRole(user?.role);
+    const unreadNotificationCount = Math.max(0, Number(unreadCount) || 0);
+    const notificationBadge = unreadNotificationCount > 99 ? "99+" : unreadNotificationCount;
     const portalLabel = "Tenant Portal";
     const displayName = user?.name?.trim();
     useEffect(() => {
@@ -46,8 +48,9 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
         </span>)}
     </Link>);
     return (<>
-      <button aria-label="Open navigation" onClick={() => setOpen(true)} className="app-sidebar-trigger">
+      <button aria-label={unreadNotificationCount ? `Open navigation, ${notificationBadge} unread notification${unreadNotificationCount === 1 ? "" : "s"}` : "Open navigation"} onClick={() => setOpen(true)} className="app-sidebar-trigger">
         <Menu className="tenant-mobile-navigation-menu-icon"/>
+        {unreadNotificationCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{notificationBadge}</span>}
       </button>
 
       {open && (<div className="tenant-mobile-navigation-overlay">

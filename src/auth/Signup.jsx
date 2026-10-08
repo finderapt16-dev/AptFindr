@@ -47,7 +47,7 @@ function getGoogleNameFields(authUser) {
 export function Signup({ embedded = false, redirect = null, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signup } = useAuth();
+  const { signup, hydrateSession } = useAuth();
   useSignupViewport();
 
   const query = new URLSearchParams(location.search);
@@ -201,14 +201,13 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
         landlordVerificationAccepted: isLandlord ? termsAccepted : undefined,
       };
       if (googleSetup) {
-        await finalizeGoogleSignup(googleIdentity, input);
+        const createdProfile = await finalizeGoogleSignup(googleIdentity, input);
         clearPendingGoogleOAuthFlow();
-        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
-        if (signOutError) throw signOutError;
-        navigate(loginPath, {
-          replace: true,
-          state: { message: "Account created successfully. Please sign in to continue." },
-        });
+        const profile = await hydrateSession();
+        if (!profile || profile.role !== "tenant" || createdProfile?.id !== profile.id) {
+          throw new Error("Your tenant account was created, but AptFindr could not start your session. Please sign in with Google.");
+        }
+        navigate("/browse", { replace: true });
         return;
       }
       const result = await signup(input);
@@ -359,7 +358,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               )}
               {values.role === "tenant" && (
                 <>
-                  <div className="signup-tenant-simple-form"><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} hideEmail={googleSetup} /></div>
+                  <div className="signup-tenant-simple-form"><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} /></div>
                   {agreement}
                   {createButton}
                   {!googleSetup && <><div className="signup-social-divider" aria-hidden="true"><span /><b>or</b><span /></div>

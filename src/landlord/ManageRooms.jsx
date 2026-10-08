@@ -340,8 +340,8 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
           </section>
         </div>
         <aside className="mr-reference-side">
-          <section className="mr-reference-section"><h3>Room Status</h3><p>Set the current status of this room.</p>
-            {["available", "occupied", "maintenance"].map((value) => <button type="button" key={value} aria-pressed={status === value} onClick={() => applyStatus(value)} className={`mr-reference-status ${status === value ? "is-selected" : ""}`}><span aria-hidden="true"/><strong>{getStatusOption(value).label}</strong><small>{value === "available" ? "Room is available for rent." : value === "occupied" ? "Room is currently rented out." : "Room is temporarily unavailable."}</small></button>)}
+          <section className="mr-reference-section"><h3>Unit Status</h3><p>Set the current status of this unit.</p>
+            {["available", "occupied", "maintenance"].map((value) => <button type="button" key={value} aria-pressed={status === value} onClick={() => applyStatus(value)} className={`mr-reference-status ${status === value ? "is-selected" : ""}`}><span aria-hidden="true"/><strong>{getStatusOption(value).label}</strong><small>{value === "available" ? "Unit is available for rent." : value === "occupied" ? "Unit is currently rented out." : "Unit is temporarily unavailable."}</small></button>)}
           </section>
           <section className="mr-reference-section"><h3>Room Preview</h3><p>This is how room will appear to tenants.</p>
             <div className="mr-reference-preview"><div>{activeImage && <img src={activeImage.url} alt="Room preview"/>}</div><section><b>{draft.name || "Room"}</b><span>{draft.type} &nbsp;–&nbsp; {draft.maxOccupants || 1} pax</span><strong>₱{Number(draft.price || 0).toLocaleString("en-PH")}/month</strong><div className="mr-reference-preview-tags">{[...selectedAmenities].slice(0, 4).map((item) => <em key={item}>{item}</em>)}</div></section><small>{draft.description || "No room description provided."}</small></div>

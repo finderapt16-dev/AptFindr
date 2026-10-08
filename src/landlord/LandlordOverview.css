@@ -1738,3 +1738,129 @@
   .ld-property-stats span { font-size: 10px; }
   .ld-status { font-size: 10px; }
 }
+
+/* Tablet and small-laptop layout.
+   The desktop property row needs more horizontal space than a dashboard has
+   beside the sidebar. Move its metrics below the apartment summary before
+   columns become too narrow, rather than letting the actions overflow. */
+@media (min-width: 681px) and (max-width: 1279px) {
+  .ld-simple-dashboard {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-block: 12px 32px;
+  }
+
+  .ld-simple-heading {
+    min-height: 112px;
+    padding: 30px 36px;
+  }
+
+  .ld-properties-card,
+  .ld-engagement-card {
+    box-sizing: border-box;
+  }
+
+  .ld-property-row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 106px;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 14px;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .ld-property-image {
+    grid-column: 1;
+    grid-row: 1;
+    width: 120px;
+    height: 104px;
+  }
+
+  .ld-property-info {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    min-width: 0;
+    padding-top: 0;
+  }
+
+  .ld-property-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ld-property-info h3 {
+    min-width: 0;
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+
+  .ld-property-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    height: 70px;
+    border-top: 1px solid #dce3ea;
+    border-bottom: 1px solid #dce3ea;
+  }
+
+  .ld-property-stats > button,
+  .ld-property-stats > div,
+  .ld-property-stats > div:nth-child(2),
+  .ld-property-stats > div:nth-child(3) {
+    height: 70px;
+    min-width: 0;
+    padding: 7px 5px;
+  }
+
+  .ld-property-actions {
+    grid-column: 3;
+    grid-row: 1;
+    width: 106px;
+    height: 104px;
+    min-width: 0;
+  }
+
+  .ld-property-action-buttons,
+  .ld-property-actions > .ld-property-action-buttons > a {
+    width: 106px;
+  }
+
+  .ld-property-action-buttons {
+    gap: 6px;
+  }
+
+  .ld-property-actions > .ld-property-action-buttons > a {
+    min-height: 34px;
+    padding: 6px 7px;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .ld-engagement-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .ld-engagement-period {
+    flex: 0 0 auto;
+  }
+
+  .ld-engagement-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .ld-engagement-metric:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
