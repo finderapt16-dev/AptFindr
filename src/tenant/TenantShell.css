@@ -424,3 +424,14 @@
 @media (min-width: 80rem) {
   .favorites-section-grid-2 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* The landlord mobile drawer has no divider between its navigation groups.
+   Keep the tenant's own links and styling; only match that border treatment. */
+@media (max-width: 1023px) {
+  .app-sidebar-drawer .tenant-sidebar-nav-2,
+  .tenant-mobile-navigation-drawer .tenant-mobile-navigation-nav-2 {
+    border-top: 0 !important;
+    border-top-width: 0 !important;
+    border-top-style: none !important;
+  }
+}

@@ -32,6 +32,24 @@ const SUGGESTED_AMENITIES = [
     "Wi-Fi", "Laundry Area", "AC", "Parking", "CCTV", "Gym", "Study Lounge", "Balcony", "Pool", "Elevator",
 ];
 const SUGGESTED_HOUSE_RULES = ["Students Only", "Visitors Allowed", "Cooking Allowed", "No Smoking", "No Alcohol", "Pets Allowed"];
+const INCLUDED_FEATURES = [
+    { label: "Pet Friendly", source: "feature" },
+    { label: "Parking", source: "feature" },
+    { label: "Own Bathroom", source: "amenity" },
+    { label: "AC", source: "amenity" },
+    { label: "Laundry Area", source: "amenity" },
+    { label: "Wi-Fi", source: "amenity" },
+    { label: "Water", source: "utility" },
+    { label: "Electricity", source: "utility" },
+    { label: "Internet", source: "utility" },
+    { label: "Cooking Area", source: "amenity" },
+    { label: "Furnished", source: "feature" },
+    { label: "Balcony", source: "amenity" },
+];
+const INCLUDED_AMENITIES = INCLUDED_FEATURES.filter((item) => item.source === "amenity").map((item) => item.label);
+const INCLUDED_UTILITIES = INCLUDED_FEATURES.filter((item) => item.source === "utility").map((item) => item.label);
+const DISPLAY_HOUSE_RULES = ["Students Only", "Visitors Allowed", "No Smoking", "No Alcohol"];
+const CONTRACT_DURATIONS = ["1 Month", "3 Months", "6 Months", "12 Months", "Flexible"];
 const propertyGuidelinesStorageKey = (userId) => `aptfindr:add-property-guidelines-seen:${userId ?? "anonymous"}`;
 const splitChoiceValues = (value) => String(value ?? "")
     .split(",")
@@ -77,6 +95,7 @@ const INITIAL_FORM_DATA = {
 };
 const INITIAL_VERIFICATION_DATA = {
     businessPermit: "",
+    businessAccount: "",
     permitExpiry: "",
 };
 export function AddApartment() {
@@ -92,13 +111,16 @@ export function AddApartment() {
     const stepConfig = [
         { number: 1, title: "Apartment Information", description: "Let's start with the basic details about your apartment." },
         { number: 2, title: "Location Details", description: "Where is your apartment located?" },
-        { number: 3, title: "Amenities & House Rules", description: "Select the amenities, utilities, and policies for your apartment." },
-        { number: 4, title: "Apartment Verification", description: "Submit details and verification documents." },
+        { number: 3, title: "Included & House Rules", description: "Select the included features, set the house rules, and specify the contract duration for your apartment." },
+        { number: 4, title: "Apartment Verification", description: "Permit details and verification documents." },
     ];
     const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
     const [locationLookupRequest, setLocationLookupRequest] = useState(0);
     const [locationPinned, setLocationPinned] = useState(false);
     const [locationResolving, setLocationResolving] = useState(false);
+    const [barangayUnverified, setBarangayUnverified] = useState(false);
+    const [coverageUnverified, setCoverageUnverified] = useState(false);
+    const [manualAddressEdited, setManualAddressEdited] = useState(false);
     const lastAutoGeocodedAddressRef = useRef("");
     const [uploadedImages, setUploadedImages] = useState([]);
     const [amenitiesInput, setAmenitiesInput] = useState("");
@@ -108,6 +130,7 @@ export function AddApartment() {
     const [customRuleInput, setCustomRuleInput] = useState("");
     const [features, setFeatures] = useState([]);
     const [houseRules, setHouseRules] = useState([]);
+    const [contractDuration, setContractDuration] = useState("");
     const toggleCommaValue = (setValue, value) => setValue((current) => {
         const values = splitChoiceValues(current);
         return values.some((item) => item.toLowerCase() === value.toLowerCase())
@@ -132,6 +155,19 @@ export function AddApartment() {
         if (rule && !houseRules.some((item) => item.toLowerCase() === rule.toLowerCase()))
             setHouseRules((current) => [...current, rule]);
         setCustomRuleInput("");
+    };
+    const choiceIsSelected = (value, choice) => splitChoiceValues(value).some((item) => item.toLowerCase() === choice.toLowerCase());
+    const includedFeatureIsSelected = ({ label, source }) => source === "feature"
+        ? features.some((item) => item.toLowerCase() === label.toLowerCase())
+        : choiceIsSelected(source === "utility" ? utilitiesInput : amenitiesInput, label);
+    const toggleIncludedFeature = ({ label, source }) => {
+        if (source === "feature") {
+            setFeatures((current) => current.some((item) => item.toLowerCase() === label.toLowerCase())
+                ? current.filter((item) => item.toLowerCase() !== label.toLowerCase())
+                : [...current, label]);
+            return;
+        }
+        toggleCommaValue(source === "utility" ? setUtilitiesInput : setAmenitiesInput, label);
     };
     const [featureInput, setFeatureInput] = useState("");
     const [verificationData, setVerificationData] = useState({ ...INITIAL_VERIFICATION_DATA });
@@ -196,12 +232,13 @@ export function AddApartment() {
             || utilitiesInput.trim()
             || features.length > 0
             || houseRules.length > 0
+            || contractDuration
             || featureInput.trim()
             || uploadedImages.length > 0
             || verificationDocuments.length > 0
             || verificationHasContent
             || currentStep > 1);
-    }, [amenitiesInput, currentStep, featureInput, features, formData, houseRules, uploadedImages, utilitiesInput, verificationData, verificationDocuments]);
+    }, [amenitiesInput, contractDuration, currentStep, featureInput, features, formData, houseRules, uploadedImages, utilitiesInput, verificationData, verificationDocuments]);
     const resetDraftForm = () => {
         setCurrentStep(1);
         setFormData({ ...INITIAL_FORM_DATA });
@@ -210,6 +247,7 @@ export function AddApartment() {
         setUtilitiesInput("");
         setFeatures([]);
         setHouseRules([]);
+        setContractDuration("");
         setFeatureInput("");
         setVerificationData({ ...INITIAL_VERIFICATION_DATA });
         setVerificationDocuments((current) => {
@@ -223,6 +261,9 @@ export function AddApartment() {
         setImageReuploadRequired(false);
         setLocationPinned(false);
         setLocationResolving(false);
+        setBarangayUnverified(false);
+        setCoverageUnverified(false);
+        setManualAddressEdited(false);
         lastAutoGeocodedAddressRef.current = "";
     };
     const discardDraft = (resetForm = true) => {
@@ -250,6 +291,7 @@ export function AddApartment() {
         setUtilitiesInput(pendingDraft.utilitiesInput ?? "");
         setFeatures(pendingDraft.features ?? []);
         setHouseRules(pendingDraft.houseRules ?? []);
+        setContractDuration(pendingDraft.contractDuration ?? "");
         setFeatureInput(pendingDraft.featureInput ?? "");
         setVerificationData({ ...INITIAL_VERIFICATION_DATA, ...pendingDraft.verificationData });
         setImageReuploadRequired(Boolean(pendingDraft.requiresImageReupload));
@@ -305,6 +347,7 @@ export function AddApartment() {
             utilitiesInput,
             features,
             houseRules,
+            contractDuration,
             featureInput,
             verificationData: INITIAL_VERIFICATION_DATA,
             uploadedImages: persistentImages,
@@ -320,7 +363,7 @@ export function AddApartment() {
             if (updateStatus)
                 setDraftStatus("error");
         }
-    }, [amenitiesInput, currentStep, featureInput, features, formData, hasDraftContent, houseRules, imageReuploadRequired, uploadedImages, user?.id, utilitiesInput, verificationData]);
+    }, [amenitiesInput, contractDuration, currentStep, featureInput, features, formData, hasDraftContent, houseRules, imageReuploadRequired, uploadedImages, user?.id, utilitiesInput, verificationData]);
     useEffect(() => {
         if (!draftReady || !user?.id || submissionCompleteRef.current)
             return;
@@ -360,20 +403,20 @@ export function AddApartment() {
     const persistedStreetAddress = useMemo(() => [formData.address, formData.barangay].filter(Boolean).join(", "), [formData.address, formData.barangay]);
     const locationAddressQuery = useMemo(() => [formData.address, formData.barangay, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", "), [formData.address, formData.barangay, formData.city, formData.state, formData.zip]);
     useEffect(() => {
-        if (currentStep !== 2)
-            return;
-        if (!String(formData.address ?? "").trim())
+        if (currentStep !== 2 || ![formData.address, formData.barangay].some((value) => String(value ?? "").trim()))
             return;
         const normalizedQuery = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
         if (!normalizedQuery || normalizedQuery === lastAutoGeocodedAddressRef.current)
             return;
-        setLocationResolving(true);
         const timer = window.setTimeout(() => {
+            if (normalizedQuery === lastAutoGeocodedAddressRef.current)
+                return;
             lastAutoGeocodedAddressRef.current = normalizedQuery;
+            setLocationResolving(true);
             setLocationLookupRequest((request) => request + 1);
         }, 800);
         return () => window.clearTimeout(timer);
-    }, [currentStep, formData.address, locationAddressQuery]);
+    }, [currentStep, formData.address, formData.barangay, locationAddressQuery]);
     const getSubmittedAmenities = () => normalizeListValues(amenitiesInput);
     const getSubmittedFeatures = () => {
         const submittedFeatures = featureInput.trim() ? [...features, featureInput.trim()] : features;
@@ -401,13 +444,21 @@ export function AddApartment() {
         }
         if (!String(verificationData.businessPermit).trim())
             errors.businessPermit = "Business permit number is required.";
+        if (!String(verificationData.businessAccount).trim())
+            errors.businessAccount = "Business account number is required.";
+        if (!String(verificationData.permitExpiry).trim())
+            errors.permitExpiry = "Date issued is required.";
+        if (!contractDuration)
+            errors.contractDuration = "Select a contract duration.";
         const firstStep = errors.title || errors.sqft || errors.description || errors.images
             ? 1
             : errors.address || errors.barangay || errors.mapLocation
                 ? 2
-                : errors.businessPermit
-                    ? 4
-                    : currentStep;
+                : errors.contractDuration
+                    ? 3
+                    : errors.businessPermit || errors.businessAccount || errors.permitExpiry
+                        ? 4
+                        : currentStep;
         return { isValid: Object.keys(errors).length === 0, errors, firstStep };
     };
     const validateStep = (step) => {
@@ -418,9 +469,9 @@ export function AddApartment() {
             if (step === 2)
                 return ["address", "barangay", "mapLocation"].includes(field);
             if (step === 3)
-                return false;
+                return field === "contractDuration";
             if (step === 4)
-                return field === "businessPermit";
+                return ["businessPermit", "businessAccount", "permitExpiry"].includes(field);
             return false;
         };
         const stepErrors = Object.fromEntries(Object.entries(errors).filter(([field]) => belongsToStep(field)));
@@ -540,11 +591,13 @@ export function AddApartment() {
                 propertyType: formData.propertyType || "Apartment",
                 securityDeposit: String(formData.securityDeposit ?? ""),
                 houseRules,
+                contractDuration,
                 verification: {
                     propertyName: formData.title || "",
                     propertyAddress: [persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", "),
                     businessPermit: verificationData.businessPermit,
-                    permitExpiry: verificationData.permitExpiry,
+                    businessAccount: verificationData.businessAccount,
+                    dateIssued: verificationData.permitExpiry,
                 },
             };
             const landlordIdentity = {
@@ -609,7 +662,7 @@ export function AddApartment() {
                 role: "landlord",
                 email: user.email,
                 name: user.name,
-                permit_number: verificationData.businessPermit.trim(),
+                permit_number: verificationData.businessAccount.trim(),
                 business_permit_number: verificationData.businessPermit.trim(),
                 permit_expiry: verificationData.permitExpiry || null,
                 // Keep the storage path, not a short-lived signed URL. Settings and
@@ -832,9 +885,8 @@ export function AddApartment() {
                     <div className="add-apartment-panel-9">
                       <Label>Barangay *</Label>
                       <Input value={formData.barangay} onChange={(e) => {
-                setFormData({ ...formData, barangay: e.target.value, lat: undefined, lng: undefined });
-                setLocationPinned(false);
-                setLocationResolving(Boolean(e.target.value.trim()));
+                setFormData((current) => ({ ...current, barangay: e.target.value }));
+                setManualAddressEdited(locationPinned);
                 if (e.target.value.trim())
                     clearValidationError("barangay");
             }} placeholder="e.g., Nabitasan" required aria-invalid={Boolean(validationErrors.barangay)} className={fieldClass("barangay")}/>
@@ -843,64 +895,115 @@ export function AddApartment() {
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-detailed-address-street-address">Street *</Label>
                       <Input value={formData.address} onChange={(e) => {
-                setFormData({ ...formData, address: e.target.value, lat: undefined, lng: undefined });
-                setLocationPinned(false);
-                setLocationResolving(Boolean(e.target.value.trim()));
+                setFormData((current) => ({ ...current, address: e.target.value }));
+                setManualAddressEdited(locationPinned);
                 if (e.target.value.trim())
                     clearValidationError("address");
-            }} onBlur={() => setLocationLookupRequest((request) => request + 1)} placeholder="House number, street, subdivision" required aria-invalid={Boolean(validationErrors.address)} className={fieldClass("address")}/>
+            }} placeholder="House number, street, subdivision" required aria-invalid={Boolean(validationErrors.address)} className={fieldClass("address")}/>
                       <FieldError field="address"/>
                     </div>
                   </div>
-
                   <div className="add-apartment-grid-3 add-apartment-location-fields">
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-district-area">District / Area</Label>
-                      <Input value={formData.city} onChange={(e) => {
-                setFormData({ ...formData, city: e.target.value, lat: undefined, lng: undefined });
-                setLocationPinned(false);
-                setLocationResolving(Boolean(e.target.value.trim()));
-            }} placeholder="La Paz" className="add-apartment-input"/>
+                      <Input value={formData.city} readOnly placeholder="La Paz" className="add-apartment-input"/>
                     </div>
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-city">City</Label>
-                      <Input value={formData.state} onChange={(e) => {
-                setFormData({ ...formData, state: e.target.value, lat: undefined, lng: undefined });
-                setLocationPinned(false);
-                setLocationResolving(Boolean(e.target.value.trim()));
-            }} placeholder="Iloilo City" className="add-apartment-input"/>
+                      <Input value={formData.state} readOnly placeholder="Iloilo City" className="add-apartment-input"/>
                     </div>
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-zip-code">ZIP Code</Label>
-                      <Input value={formData.zip} onChange={(e) => setFormData({ ...formData, zip: e.target.value })} placeholder="5000" className="add-apartment-input"/>
+                      <Input value={formData.zip} readOnly placeholder="5000" className="add-apartment-input"/>
                     </div>
                   </div>
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-map-location">Map Location</Label>
-                    <p className="add-apartment-text-6">Enter the apartment address to locate it automatically, or click/drag the map pin to select the exact location. The detected location updates from the selected point.</p>
+                    <p className="add-apartment-text-6">Click or drag the map pin to select your apartment's exact location. The address details will update based on your selected point.</p>
                     <div className="add-apartment-card-7">
                       <PropertyLocationPicker lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {
                 setFormData((current) => ({
                     ...current,
-                    // Preserve detailed landlord-entered directions; the detected
-                    // map address remains visible below the map while coordinates
-                    // provide the authoritative exact point.
-                    address: String(current.address ?? "").trim() || detectedAddress,
+                    // A pin selection is authoritative. Clear unavailable OSM
+                    // fields instead of retaining labels from the old location.
+                    address: detectedAddress.street,
+                    barangay: detectedAddress.barangay || detectedAddress.barangayCandidate || "",
+                    city: detectedAddress.district,
+                    state: detectedAddress.city,
+                    zip: detectedAddress.zip,
                 }));
-                clearValidationError("address");
-            }} onLocationChange={(lat, lng) => {
+                setLocationPinned(!detectedAddress.unresolved);
+                setBarangayUnverified(!detectedAddress.unresolved && !detectedAddress.barangayVerified);
+                setCoverageUnverified(!detectedAddress.unresolved && !detectedAddress.coverageVerified);
+                setManualAddressEdited(false);
+                lastAutoGeocodedAddressRef.current = [detectedAddress.street, detectedAddress.barangay || detectedAddress.barangayCandidate, detectedAddress.district, detectedAddress.city, detectedAddress.zip, "Philippines"].filter(Boolean).join(", ").trim().replace(/\s+/g, " ").toLowerCase();
+                if (!detectedAddress.unresolved) {
+                    clearValidationError("address");
+                    clearValidationError("barangay");
+                    clearValidationError("mapLocation");
+                }
+            }} onLocationChange={(lat, lng, metadata = {}) => {
                 setFormData((current) => ({ ...current, lat, lng }));
-                setLocationPinned(hasValidApartmentCoordinates(lat, lng));
-                if (hasValidApartmentCoordinates(lat, lng))
+                const resolved = Boolean(metadata.locationResolved || metadata.verified) && hasValidApartmentCoordinates(lat, lng);
+                setLocationPinned(resolved);
+                if (metadata.source === "map")
+                    lastAutoGeocodedAddressRef.current = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
+                if (metadata.source === "address") {
+                    setManualAddressEdited(false);
+                    setCoverageUnverified(!metadata.coverageVerified);
+                }
+                if (resolved)
                     clearValidationError("mapLocation");
             }}/>
                     </div>
+                    {barangayUnverified && <p className="add-apartment-text">Barangay could not be verified from official map boundary data. Enter or correct it manually; the selected pin will stay in place.</p>}
+                    {coverageUnverified && <p className="add-apartment-text">La Paz coverage could not be verified from map boundary data. Review the selected pin before continuing.</p>}
+                    {manualAddressEdited && <p className="add-apartment-text">The address was edited after selecting the map pin. The pin was not moved; review the address details before continuing.</p>}
                     <FieldError field="mapLocation"/>
                   </div>
                 </div>)}
 
               {currentStep === 3 && (<>
+                  <div className="add-apartment-step-three-reference">
+                    <section className="add-apartment-step-section">
+                      <h3 className="add-apartment-section-title">Included Features <span aria-hidden="true">*</span></h3>
+                      <p className="add-apartment-section-description">Select the amenities and utilities included in the base rent price.</p>
+                      <div className="add-apartment-choice-grid add-apartment-included-features-grid">
+                        {INCLUDED_FEATURES.map((feature) => {
+                const selected = includedFeatureIsSelected(feature);
+                return <button key={feature.label} type="button" aria-pressed={selected} onClick={() => toggleIncludedFeature(feature)} className={`add-apartment-choice ${selected ? "is-selected" : ""}`}>{feature.label}</button>;
+            })}
+                      </div>
+                      <p className="add-apartment-other-label">Other included feature <span>(optional)</span></p>
+                      <div className="add-apartment-add-choice"><Input value={customAmenityInput} onChange={(event) => setCustomAmenityInput(event.target.value)} placeholder="Type a feature and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput))}/><Button type="button" onClick={() => appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput)}>Add</Button></div>
+                      <AddedChoiceTags values={getCustomChoiceValues(amenitiesInput, INCLUDED_AMENITIES)} label="included feature" onRemove={(value) => removeCommaValue(setAmenitiesInput, value)}/>
+                      <AddedChoiceTags values={getCustomChoiceValues(utilitiesInput, INCLUDED_UTILITIES)} label="included utility" onRemove={(value) => removeCommaValue(setUtilitiesInput, value)}/>
+                    </section>
+
+                    <section className="add-apartment-step-section">
+                      <h3 className="add-apartment-section-title">House Rules <span aria-hidden="true">*</span></h3>
+                      <p className="add-apartment-section-description">Specify the rules and restrictions for tenants.</p>
+                      <div className="add-apartment-choice-grid add-apartment-house-rules-grid">
+                        {DISPLAY_HOUSE_RULES.map((rule) => {
+                const selected = houseRules.some((item) => item.toLowerCase() === rule.toLowerCase());
+                return <button type="button" key={rule} aria-pressed={selected} onClick={() => setHouseRules((current) => selected ? current.filter((item) => item.toLowerCase() !== rule.toLowerCase()) : [...current, rule])} className={`add-apartment-choice ${selected ? "is-selected" : ""}`}>{rule}</button>;
+            })}
+                      </div>
+                      <p className="add-apartment-other-label">Other rule <span>(optional)</span></p>
+                      <div className="add-apartment-add-choice"><Input value={customRuleInput} onChange={(event) => setCustomRuleInput(event.target.value)} placeholder="Type a rule and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addCustomHouseRule())}/><Button type="button" onClick={addCustomHouseRule}>Add</Button></div>
+                      <AddedChoiceTags values={houseRules.filter((rule) => !DISPLAY_HOUSE_RULES.some((suggested) => suggested.toLowerCase() === rule.toLowerCase()))} label="rule" onRemove={(value) => setHouseRules((current) => current.filter((rule) => rule.toLowerCase() !== value.toLowerCase()))}/>
+                    </section>
+
+                    <section className="add-apartment-step-section add-apartment-contract-section">
+                      <h3 className="add-apartment-section-title">Contract Duration <span aria-hidden="true">*</span></h3>
+                      <p className="add-apartment-section-description">Select the rental contract duration required for this apartment.</p>
+                      <div className="add-apartment-choice-grid add-apartment-contract-grid">
+                        {CONTRACT_DURATIONS.map((duration) => <button key={duration} type="button" aria-pressed={contractDuration === duration} onClick={() => { setContractDuration(duration); clearValidationError("contractDuration"); }} className={`add-apartment-choice ${contractDuration === duration ? "is-selected" : ""}`}>{duration}</button>)}
+                      </div>
+                      <FieldError field="contractDuration"/>
+                    </section>
+                  </div>
                   <section className="add-apartment-panel-8 add-apartment-choice-section">
                     <div className="add-apartment-row-6"><h3>Amenities</h3></div>
                     <p className="add-apartment-text-5">Select the available amenities for the apartment listing.</p>
@@ -976,7 +1079,7 @@ export function AddApartment() {
                   <div className="add-apartment-grid-4">
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-business-permit-number">
-                        <FileText className="add-apartment-file-text-icon"/> Business Permit Number *
+                        <FileText className="add-apartment-file-text-icon"/> Business Permit Number <span aria-hidden="true">*</span>
                       </Label>
                       <Input value={verificationData.businessPermit} onChange={(e) => {
                 setVerificationData({ ...verificationData, businessPermit: e.target.value });
@@ -987,8 +1090,23 @@ export function AddApartment() {
                     </div>
 
                     <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-permit-expiry-date-optional">Permit Expiry Date <span aria-hidden="true">*</span></Label>
-                      <Input type="date" value={verificationData.permitExpiry} onChange={(e) => setVerificationData({ ...verificationData, permitExpiry: e.target.value })}/>
+                      <Label>Business Account Number <span aria-hidden="true">*</span></Label>
+                      <Input value={verificationData.businessAccount} onChange={(e) => {
+                setVerificationData({ ...verificationData, businessAccount: e.target.value });
+                if (e.target.value.trim())
+                    clearValidationError("businessAccount");
+            }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
+                      <FieldError field="businessAccount"/>
+                    </div>
+
+                    <div className="add-apartment-panel-9">
+                      <Label className="add-apartment-permit-expiry-date-optional">Date Issued <span aria-hidden="true">*</span></Label>
+                      <Input type="date" value={verificationData.permitExpiry} onChange={(e) => {
+                setVerificationData({ ...verificationData, permitExpiry: e.target.value });
+                if (e.target.value)
+                    clearValidationError("permitExpiry");
+            }} aria-invalid={Boolean(validationErrors.permitExpiry)} className={fieldClass("permitExpiry")}/>
+                      <FieldError field="permitExpiry"/>
                     </div>
                   </div>
 
@@ -1034,7 +1152,7 @@ export function AddApartment() {
                 {currentStep < totalSteps ? (<Button type="button" onClick={handleNextStep} className="add-apartment-next">
                     Next <ArrowRight className="add-apartment-arrow-right-icon"/>
                   </Button>) : (<Button type="submit" disabled={isSubmitting || locationResolving} className="add-apartment-button-14">
-                    <Check className="add-apartment-check-icon"/> {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "Submit Apartment"}
+                    {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "Submit"}
                   </Button>)}
               </div>
             </form>

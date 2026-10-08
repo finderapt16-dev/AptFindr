@@ -2,7 +2,7 @@ import "./PropertyLocationPicker.css";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { Label } from "../components/ui/label";
-import { geocodeLocationWithinLaPaz, reverseGeocodeWithinLaPaz, GeocodingError } from "../services/geocodingService";
+import { geocodeAddPropertyAddressWithinLaPaz, reverseGeocodeAddPropertyLocationWithinLaPaz, GeocodingError } from "../services/geocodingService";
 // Fix for default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -18,10 +18,13 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
     const onGeocodeStatusChangeRef = useRef(onGeocodeStatusChange);
     const onMapAddressChangeRef = useRef(onMapAddressChange);
     const reverseControllerRef = useRef(null);
-    const coordinatesRef = useRef({ lat, lng });
+    const forwardControllerRef = useRef(null);
+    const reverseRequestRef = useRef(0);
+    const forwardRequestRef = useRef(0);
     const [isClient, setIsClient] = useState(false);
     const [geocodeStatus, setGeocodeStatus] = useState("idle");
     const [matchedAddress, setMatchedAddress] = useState("");
+    const [geocodeMessage, setGeocodeMessage] = useState("");
     useEffect(() => {
         onLocationChangeRef.current = onLocationChange;
     }, [onLocationChange]);
@@ -31,9 +34,10 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
     useEffect(() => {
         onMapAddressChangeRef.current = onMapAddressChange;
     }, [onMapAddressChange]);
-    const updateGeocodeStatus = (status) => {
+    const updateGeocodeStatus = (status, message = "") => {
         setGeocodeStatus(status);
-        onGeocodeStatusChangeRef.current?.(status);
+        setGeocodeMessage(message);
+        onGeocodeStatusChangeRef.current?.(status, message);
     };
     useEffect(() => {
         setIsClient(true);
@@ -52,26 +56,46 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
         const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
         markerRef.current = marker;
         const selectMapPoint = async (newLat, newLng) => {
-            const previousPoint = coordinatesRef.current;
+            const requestId = ++reverseRequestRef.current;
             marker.setLatLng([newLat, newLng]);
+            // A map selection is newer than a pending address lookup. Abort it
+            // before it has a chance to move the marker back to an old address.
+            forwardRequestRef.current += 1;
+            forwardControllerRef.current?.abort();
             reverseControllerRef.current?.abort();
             const controller = new AbortController();
             reverseControllerRef.current = controller;
             updateGeocodeStatus("loading");
+            // Coordinates are authoritative immediately, even while Nominatim
+            // is resolving the address fields for this exact point.
+            onLocationChangeRef.current(newLat, newLng, { source: "map", verified: false });
             try {
-                const location = await reverseGeocodeWithinLaPaz(newLat, newLng, controller.signal);
+                const location = await reverseGeocodeAddPropertyLocationWithinLaPaz(newLat, newLng, controller.signal);
+                if (requestId !== reverseRequestRef.current)
+                    return;
                 setMatchedAddress(location.label);
                 updateGeocodeStatus("found");
-                coordinatesRef.current = { lat: newLat, lng: newLng };
-                onLocationChangeRef.current(newLat, newLng);
-                onMapAddressChangeRef.current?.(location.label);
+                onMapAddressChangeRef.current?.(location);
             }
             catch (error) {
                 if (error instanceof DOMException && error.name === "AbortError")
                     return;
+                if (requestId !== reverseRequestRef.current)
+                    return;
                 console.error("Unable to identify the selected map location:", error);
-                marker.setLatLng([previousPoint.lat, previousPoint.lng]);
-                updateGeocodeStatus(error instanceof GeocodingError && error.reason !== "network" ? "not-found" : "error");
+                // Keep the selected pin visible. The parent marks it invalid for
+                // submission until a location inside La Paz is selected.
+                onMapAddressChangeRef.current?.({
+                    street: "",
+                    barangay: "",
+                    barangayVerified: false,
+                    barangayCandidate: "",
+                    district: "La Paz",
+                    city: "Iloilo City",
+                    zip: "5000",
+                    unresolved: true,
+                });
+                updateGeocodeStatus(error instanceof GeocodingError && error.reason === "outside-scope" ? "outside-scope" : error instanceof GeocodingError && error.reason !== "network" ? "not-found" : "error", error instanceof Error ? error.message : "Unable to identify this map location.");
             }
         };
         // Handle map click to move marker
@@ -91,11 +115,11 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
                 mapInstanceRef.current = null;
             }
             reverseControllerRef.current?.abort();
+            forwardControllerRef.current?.abort();
         };
     }, [isClient]);
     // Update marker position when lat/lng props change
     useEffect(() => {
-        coordinatesRef.current = { lat, lng };
         if (markerRef.current && mapInstanceRef.current) {
             markerRef.current.setLatLng([lat, lng]);
             mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom());
@@ -110,22 +134,33 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
             setMatchedAddress("");
             return;
         }
+        const requestId = ++forwardRequestRef.current;
+        forwardControllerRef.current?.abort();
         const controller = new AbortController();
+        forwardControllerRef.current = controller;
         updateGeocodeStatus("loading");
         setMatchedAddress("");
         // Delay each user-triggered lookup so rapid focus changes never flood the public service.
         const timer = window.setTimeout(async () => {
             try {
-                const location = await geocodeLocationWithinLaPaz(query, controller.signal);
+                const location = await geocodeAddPropertyAddressWithinLaPaz(query, controller.signal);
+                if (requestId !== forwardRequestRef.current)
+                    return;
                 updateGeocodeStatus("found");
                 setMatchedAddress(location.label);
-                onLocationChangeRef.current(location.lat, location.lng);
+                onLocationChangeRef.current(location.lat, location.lng, {
+                    source: "address",
+                    locationResolved: true,
+                    coverageVerified: Boolean(location.coverageVerified),
+                });
             }
             catch (error) {
                 if (error instanceof DOMException && error.name === "AbortError")
                     return;
+                if (requestId !== forwardRequestRef.current)
+                    return;
                 console.error("Unable to locate the entered address:", error);
-                updateGeocodeStatus(error instanceof GeocodingError && error.reason !== "network" ? "not-found" : "error");
+                updateGeocodeStatus(error instanceof GeocodingError && error.reason === "outside-scope" ? "outside-scope" : error instanceof GeocodingError && error.reason !== "network" ? "not-found" : "error", error instanceof Error ? error.message : "Unable to locate this address.");
             }
         }, 500);
         return () => {
@@ -147,6 +182,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
       {geocodeStatus === "loading" && <p className="location-picker-text-2">Finding the entered address on the map...</p>}
       {geocodeStatus === "found" && matchedAddress && <p className="location-picker-map-pinned-to">Map pinned to: {matchedAddress}</p>}
       {geocodeStatus === "not-found" && <p className="location-picker-text-3">We could not find this address on the map. Please check the address or move the marker manually.</p>}
+      {geocodeStatus === "outside-scope" && <p className="location-picker-text-3">{geocodeMessage || "This location is outside AptFindr's supported La Paz area."}</p>}
       {geocodeStatus === "error" && <p className="location-picker-text-3">The address lookup is temporarily unavailable. You can still click or drag the map pin.</p>}
       <div className="location-picker-grid">
         <div>

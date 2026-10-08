@@ -205,6 +205,9 @@ export const apartmentFormValuesFromApartment = (apartment) => {
         houseRules: apartment.features && !Array.isArray(apartment.features) && Array.isArray(apartment.features.houseRules)
             ? apartment.features.houseRules.filter((rule) => typeof rule === 'string')
             : [],
+        contractDuration: apartment.features && !Array.isArray(apartment.features) && typeof apartment.features.contractDuration === 'string'
+            ? apartment.features.contractDuration
+            : '',
         verification,
         lat: String(apartment.lat),
         lng: String(apartment.lng),
@@ -265,6 +268,7 @@ export const apartmentFormValuesToInsertRow = (values, landlordId) => {
             houseRules: Array.isArray(values.houseRules)
                 ? values.houseRules.map((rule) => rule.trim()).filter(Boolean)
                 : [],
+            contractDuration: typeof values.contractDuration === 'string' ? values.contractDuration.trim() : '',
             verification,
         },
     };

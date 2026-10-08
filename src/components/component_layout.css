@@ -130,6 +130,7 @@
 .settings-style-19 { @apply text-2xl font-black text-[var(--settings-text,#302820)]; }
 .settings-style-20 { @apply mt-3 rounded-full bg-[var(--settings-soft,#f3efea)] text-[var(--settings-accent,#8b735b)] ring-1 ring-[var(--settings-border,#e8ded1)]; }
 .settings-style-21 { @apply mt-3 text-sm font-medium text-[var(--settings-muted,#756a60)]; }
+.settings-style-21 { min-width:0; max-width:100%; overflow-wrap:anywhere; word-break:break-word; }
 .settings-style-22 { @apply mt-1 text-xs font-semibold text-slate-400; }
 .settings-style-23 { @apply flex gap-3 lg:w-56; }
 .settings-style-24 { @apply inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--settings-accent,#8b735b)] px-4 text-sm font-black text-white shadow-sm transition hover:bg-[var(--settings-accent-hover,#75614e)]; }

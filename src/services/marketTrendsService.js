@@ -13,6 +13,13 @@ const EMPTY_PREFERENCE_ANALYTICS = {
   bedrooms: [],
   roomCapacity: [],
   priceRanges: [],
+  responseCounts: {
+    preferredAreas: 0,
+    amenities: 0,
+    bedrooms: 0,
+    roomCapacity: 0,
+    priceRanges: 0,
+  },
 };
 
 async function fetchTenantPreferenceAnalytics() {
@@ -24,12 +31,12 @@ async function fetchTenantPreferenceAnalytics() {
       data: EMPTY_PREFERENCE_ANALYTICS,
       error: error.code === "PGRST202"
         ? "Install the tenant preference analytics database function to display these charts."
-        : "Tenant preference analytics are currently unavailable.",
+        : `Tenant preference analytics are currently unavailable: ${error.message || "an unknown database error occurred."}`,
     };
   }
 
   return {
-    data: data && typeof data === "object" ? data : EMPTY_PREFERENCE_ANALYTICS,
+    data: data && typeof data === "object" && !Array.isArray(data) ? data : EMPTY_PREFERENCE_ANALYTICS,
     error: "",
   };
 }

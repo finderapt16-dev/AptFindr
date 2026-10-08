@@ -1,6 +1,6 @@
 import "./MarketTrends.css";
 
-import { CalendarDays, Eye, Heart, Star, X } from "lucide-react";
+import { CalendarDays, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,15 +14,7 @@ import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { fetchMarketTrendsData } from "@/services/marketTrendsService";
 import { supabase } from "@/services/supabaseClient";
 import { isTenantVisibleApartment } from "@/utils/listingVisibility";
-import { buildMarketTrendEntries, formatTenantPreferenceAnalytics, getMarketPropertyIds, getMarketTrendDetails, hasMarketTrendEngagement, preferenceInsight, rankMarketTrendEntries } from "@/utils/marketTrendsUtils";
-
-const METRIC_ORDER_BY_TREND = { demand: ["views", "favorites", "rating"], views: ["views", "favorites", "rating"], favorites: ["favorites", "views", "rating"], ratings: ["rating", "views", "favorites"] };
-const PROPERTY_METRICS = {
-  views: { className: "market-metric-views", icon: Eye, label: "Views", value: (item) => Number(item.views ?? 0).toLocaleString() },
-  favorites: { className: "market-metric-favorites", icon: Heart, label: "Favorites", value: (item) => Number(item.favorites ?? 0).toLocaleString() },
-  rating: { className: "market-metric-rating", icon: Star, label: "Average Rating", value: (item) => item.ratingAverage === null || item.ratingAverage === undefined ? "—" : Number(item.ratingAverage).toFixed(1) },
-};
-const metricsForTrend = (trendType) => (METRIC_ORDER_BY_TREND[trendType] ?? METRIC_ORDER_BY_TREND.demand).map((metricId) => ({ id: metricId, ...PROPERTY_METRICS[metricId] }));
+import { buildMarketTrendEntries, formatTenantPreferenceAnalytics, getMarketPropertyIds, hasMarketTrendEngagement, preferenceInsight, rankMarketTrendEntries } from "@/utils/marketTrendsUtils";
 
 /** Main container for the existing Market Trends page. */
 export function MarketTrends() {
@@ -30,7 +22,7 @@ export function MarketTrends() {
   const { user, logout } = useAuth();
   const { apartments = [], isLoading } = useApartmentsContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [period, setPeriod] = useState("allTime");
+  const [period, setPeriod] = useState("thisWeek");
   const trendType = "demand";
   const [allTimeViews, setAllTimeViews] = useState([]);
   const [viewActivity, setViewActivity] = useState([]);
@@ -95,12 +87,21 @@ export function MarketTrends() {
     return () => { void supabase.removeChannel(channel); };
   }, [propertyIdsKey]);
 
+  useEffect(() => {
+    const channel = supabase.channel("landlord-market-trends-preferences")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_users", filter: "role=eq.tenant" }, () => {
+        setMarketDataRevision((current) => current + 1);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, []);
+
   const entries = useMemo(() => buildMarketTrendEntries({ properties, allTimeViews, viewActivity, favorites, ratings, period }), [allTimeViews, favorites, period, properties, ratings, viewActivity]);
   const rankedEntries = useMemo(() => rankMarketTrendEntries(entries, trendType), [entries, trendType]);
-  const selectedTrend = useMemo(() => getMarketTrendDetails(trendType), [trendType]);
   const hasSelectedEngagement = useMemo(() => hasMarketTrendEngagement(rankedEntries, trendType), [rankedEntries, trendType]);
-  const orderedMetrics = useMemo(() => metricsForTrend(trendType), [trendType]);
+  const topPerformingEntries = useMemo(() => rankedEntries.slice(0, 3), [rankedEntries]);
   const preferenceCharts = useMemo(() => formatTenantPreferenceAnalytics(preferenceAnalytics), [preferenceAnalytics]);
+  const landlordVerified = user?.isVerified === true || user?.is_verified === true;
 
   const SidebarContent = () => <LandlordSidebar user={user} verified={user?.isVerified ?? user?.is_verified} activeSection="market" unreadNotifications={unreadNotifications} onSectionChange={(section) => { navigate(`/landlord/dashboard?section=${section}`); setSidebarOpen(false); }} onClose={() => setSidebarOpen(false)} onLogout={() => { logout?.(); navigate("/", { replace: true }); }} />;
 
@@ -111,24 +112,30 @@ export function MarketTrends() {
       <aside className={`app-sidebar-drawer ${sidebarOpen ? "is-open" : ""}`}><button type="button" title="Close navigation" className="app-sidebar-close" onClick={() => setSidebarOpen(false)}><X /></button><SidebarContent /></aside>
       <LandlordMenuTrigger expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} />
       <div className="app-shell-main"><main className="app-shell-content app-shell-content-mobile-nav"><div className="market-trends-page">
-        <header className="market-trends-header"><div><h1>Market Trends</h1><p>Discover apartment market performance based on tenant engagement.</p></div></header>
+        <header className="market-trends-header"><div><h1>Market Trends</h1><p>Discover the most popular apartment listings based on tenant engagement.</p></div></header>
         {(isLoading || marketLoading) && <div className="market-trends-empty">Loading Market Trends...</div>}
         {!isLoading && !marketLoading && marketError && <div className="market-trends-empty">{marketError}</div>}
         {!isLoading && !marketLoading && !marketError && <>
-          {properties.length === 0 ? <div className="market-trends-empty">No apartment listings found for Market Trends.</div> : <section className="market-details"><header><div><h2>{selectedTrend.heading}</h2><p>{selectedTrend.description}</p></div><label className="market-period-select"><CalendarDays size={17} /><select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="thisWeek">This Week</option><option value="lastWeek">Last Week</option><option value="last30Days">Last 30 Days</option><option value="allTime">All Time</option></select></label></header>
-            {!hasSelectedEngagement && <p className="market-period-empty">No tenant engagement has been recorded for this period.</p>}
-            <div className="market-property-list">{rankedEntries.map((entry) => <PropertyPerformanceCard key={entry.apartment.id} entry={entry} metrics={orderedMetrics} trendType={trendType} onViewDetails={(apartment) => navigate(`/landlord/market/${apartment.id}`)} />)}</div>
-          </section>}
-          <section className="market-preference-insights" aria-labelledby="tenant-preference-insights-title">
-            <header className="market-preference-insights-header"><div><h2 id="tenant-preference-insights-title">Tenant Preference Insights</h2><p>Aggregated preferences saved by tenants across AptFindr.</p></div></header>
-            {preferenceAnalyticsError ? <p className="market-preference-unavailable">{preferenceAnalyticsError}</p> : <div className="market-preference-grid">
-              <MarketTrendBarChart title="Top Preferred Areas" data={preferenceCharts.preferredAreas} insight={preferenceInsight(preferenceCharts.preferredAreas, "area")} />
-              <MarketTrendBarChart title="Top Amenities in Demand" data={preferenceCharts.amenities} insight={preferenceInsight(preferenceCharts.amenities, "amenity")} />
-              <MarketTrendDonutChart title="Bedroom Preferences" data={preferenceCharts.bedrooms} insight={preferenceInsight(preferenceCharts.bedrooms, "bedroom preference")} />
-              <MarketTrendDonutChart title="Room-Capacity Preferences" data={preferenceCharts.roomCapacity} insight={preferenceInsight(preferenceCharts.roomCapacity, "room-capacity preference")} />
-              <MarketTrendBarChart title="Preferred Price Range" data={preferenceCharts.priceRanges} insight={preferenceInsight(preferenceCharts.priceRanges, "price range")} />
-            </div>}
-          </section>
+          <div className="market-trends-layout">
+            <div className="market-trends-primary">
+              <section className="market-details"><header><div><h2>Top Performing Apartments</h2><p>These apartments are based on recorded tenant engagement across all published listings.</p></div><label className="market-period-select"><CalendarDays size={17} /><select aria-label="Market Trends period" value={period} onChange={(event) => setPeriod(event.target.value)}><option value="thisWeek">This Week</option><option value="lastWeek">Last Week</option><option value="last30Days">Last 30 Days</option><option value="allTime">All Time</option></select></label></header>
+                {properties.length === 0 ? <p className="market-period-empty">No apartment listings found for Market Trends.</p> : <>
+                  {!hasSelectedEngagement && <p className="market-period-empty">No tenant engagement has been recorded for this period yet.</p>}
+                  <div className="market-property-list">{topPerformingEntries.map((entry) => <PropertyPerformanceCard key={entry.apartment.id} entry={entry} showVerification verified={landlordVerified} onViewDetails={(apartment) => navigate(`/landlord/market/${apartment.id}`)} />)}</div>
+                </>}
+              </section>
+              {preferenceAnalyticsError && <p className="market-preference-unavailable" role="alert">{preferenceAnalyticsError}</p>}
+              <section className="market-preference-duo" aria-label="Tenant apartment preferences">
+                <MarketTrendDonutChart title="Bedroom Preferences" data={preferenceCharts.bedrooms.data} responseCount={preferenceCharts.bedrooms.responseCount} insight={preferenceInsight(preferenceCharts.bedrooms.data, "bedroom preference")} />
+                <MarketTrendDonutChart title="Capacity Preferences" data={preferenceCharts.roomCapacity.data} responseCount={preferenceCharts.roomCapacity.responseCount} insight={preferenceInsight(preferenceCharts.roomCapacity.data, "room-capacity preference")} />
+              </section>
+              <section className="market-price-range-panel"><MarketTrendBarChart title="Preferred Price Range" data={preferenceCharts.priceRanges.data} responseCount={preferenceCharts.priceRanges.responseCount} variant="columns" insight={preferenceInsight(preferenceCharts.priceRanges.data, "price range")} /></section>
+            </div>
+            <aside className="market-trends-aside" aria-label="Tenant preference insights">
+              <MarketTrendBarChart title="Top Preferred Areas" data={preferenceCharts.preferredAreas.data} responseCount={preferenceCharts.preferredAreas.responseCount} variant="columns" insight={preferenceInsight(preferenceCharts.preferredAreas.data, "area")} />
+              <MarketTrendBarChart title="Top Included Features in Demand" data={preferenceCharts.amenities.data} responseCount={preferenceCharts.amenities.responseCount} variant="columns" insight={preferenceInsight(preferenceCharts.amenities.data, "amenity")} />
+            </aside>
+          </div>
         </>}
       </div></main></div>
     </div>

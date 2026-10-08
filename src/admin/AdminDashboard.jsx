@@ -1114,7 +1114,7 @@ export function AdminDashboard() {
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
-    const PortalSidebarContent = () => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout}/>);
+    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
         const notificationCenterItems = adminNotifs.filter((notification) => {
@@ -1615,13 +1615,13 @@ export function AdminDashboard() {
           {PortalSidebarContent()}
         </aside>}
         {!isFocusedAppealReview && sidebarOpen && <div className="app-sidebar-overlay" onClick={() => setSidebarOpen(false)}/>}
-        {!isFocusedAppealReview && <aside className={`app-sidebar-drawer ${sidebarOpen ? "admin-dashboard-aside" : "admin-dashboard-aside-2"}`}>
+        {!isFocusedAppealReview && <aside className={`app-sidebar-drawer ${sidebarOpen ? "is-open" : ""}`}>
           <button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="app-sidebar-close">
             <X className="admin-dashboard-x-icon"/>
           </button>
-          {PortalSidebarContent()}
+          {PortalSidebarContent({ onNavigate: () => setSidebarOpen(false) })}
         </aside>}
-        {!isFocusedAppealReview && <button aria-label="Open navigation" onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        {!isFocusedAppealReview && <button aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="admin-dashboard-menu-icon"/>
         </button>}
         <div className="app-shell-main">

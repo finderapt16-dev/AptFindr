@@ -1083,6 +1083,14 @@
     padding-top: max(6rem, calc(5rem + env(safe-area-inset-top))) !important;
   }
 
+  /* The shared mobile shell already provides the Notifications page's 16px
+     side margins. Fill that shell so this page has the identical width. */
+  .ld-simple-dashboard {
+    width: 100%;
+    max-width: none;
+    padding: 0 0 30px;
+  }
+
   /* Keep the phone header deliberately simple and easy to scan. */
   .ld-simple-heading {
     margin: 0 0 16px;

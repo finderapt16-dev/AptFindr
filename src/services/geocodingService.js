@@ -742,7 +742,8 @@ const inside = ({
 async function lookup(
     query,
     bounded,
-    signal
+    signal,
+    includePolygon = false
 ) {
     const params =
         new URLSearchParams({
@@ -765,6 +766,10 @@ async function lookup(
             "bounded",
             "1"
         );
+    }
+
+    if (includePolygon) {
+        params.set("polygon_geojson", "1");
     }
 
     const response =
@@ -807,6 +812,21 @@ async function lookup(
 
                 label:
                     row.display_name,
+
+                address:
+                    row.address ?? {},
+
+                geojson:
+                    row.geojson ?? null,
+
+                category:
+                    row.category ?? row.class ?? "",
+
+                type:
+                    row.type ?? "",
+
+                addresstype:
+                    row.addresstype ?? "",
             })
         )
         .filter(
@@ -820,6 +840,276 @@ async function lookup(
         );
 }
 
+
+/* =========================================================
+   ADD-PROPERTY ADDRESS RESOLUTION
+
+   The tenant preference search still uses the legacy landmark helpers below.
+   Property pins must be based on a real Nominatim result, never a barangay
+   reference point, so the Add Property flow uses these stricter helpers.
+========================================================= */
+
+let laPazBoundaryPromise = null;
+const barangayBoundaryPromises = new Map();
+
+const normalizeAdministrativeName = (value = "") => String(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const isLaPazName = (value) => {
+    const normalized = normalizeAdministrativeName(value);
+    return normalized === "la paz" || normalized === "lapaz";
+};
+
+const hasLaPazAdministrativeAddress = (address = {}, label = "") => {
+    const administrativeValues = [
+        address.city_district,
+        address.suburb,
+        address.borough,
+        address.district,
+        address.municipality,
+    ];
+
+    return administrativeValues.some(isLaPazName)
+        || /(?:^|,)\s*la\s*-?\s*paz\s*(?:,|$)/i.test(String(label));
+};
+
+const coordinateIsInRing = (lng, lat, ring) => {
+    let contained = false;
+    for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+        const [currentLng, currentLat] = ring[index];
+        const [previousLng, previousLat] = ring[previous];
+        const crossesLatitude = (currentLat > lat) !== (previousLat > lat);
+        const intersectionLng = ((previousLng - currentLng) * (lat - currentLat)) / ((previousLat - currentLat) || Number.EPSILON) + currentLng;
+        if (crossesLatitude && lng < intersectionLng)
+            contained = !contained;
+    }
+    return contained;
+};
+
+const coordinateIsInPolygon = (lat, lng, polygon) => {
+    if (!Array.isArray(polygon) || polygon.length === 0)
+        return false;
+    if (!coordinateIsInRing(lng, lat, polygon[0]))
+        return false;
+    return !polygon.slice(1).some((hole) => coordinateIsInRing(lng, lat, hole));
+};
+
+const coordinateIsInBoundary = (lat, lng, geometry) => {
+    if (!geometry)
+        return null;
+    if (geometry.type === "Polygon")
+        return coordinateIsInPolygon(lat, lng, geometry.coordinates);
+    if (geometry.type === "MultiPolygon")
+        return geometry.coordinates.some((polygon) => coordinateIsInPolygon(lat, lng, polygon));
+    return null;
+};
+
+const getLaPazBoundary = (signal) => {
+    if (!laPazBoundaryPromise) {
+        laPazBoundaryPromise = lookup("La Paz, Iloilo City, Philippines", false, signal, true)
+            .then((rows) => {
+            const boundary = rows.find((row) => (row.geojson?.type === "Polygon" || row.geojson?.type === "MultiPolygon")
+                && hasLaPazAdministrativeAddress(row.address, row.label));
+            if (!boundary)
+                throw new GeocodingError("The La Paz boundary is temporarily unavailable.", "boundary-unavailable");
+            return boundary.geojson;
+        })
+            .catch((error) => {
+            laPazBoundaryPromise = null;
+            throw error;
+        });
+    }
+    return laPazBoundaryPromise;
+};
+
+const isVerifiedLaPazPoint = async (lat, lng, address, label, signal) => {
+    try {
+        const boundary = await getLaPazBoundary(signal);
+        return coordinateIsInBoundary(lat, lng, boundary);
+    }
+    catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+            throw error;
+        // Nominatim does not always expose an administrative polygon. The
+        // caller may use a La Paz-labelled result as an incomplete check, but
+        // must not describe that result as boundary-verified.
+        return null;
+    }
+};
+
+const firstAddressValue = (address, keys) => {
+    for (const key of keys) {
+        const value = String(address?.[key] ?? "").trim();
+        if (value)
+            return value;
+    }
+    return "";
+};
+
+const getVerifiedBarangayBoundary = (candidate, signal) => {
+    const normalizedCandidate = normalizeAdministrativeName(candidate);
+    if (!normalizedCandidate)
+        return Promise.resolve(null);
+
+    if (!barangayBoundaryPromises.has(normalizedCandidate)) {
+        const request = lookup(`Barangay ${candidate}, La Paz, Iloilo City, Philippines`, false, signal, true)
+            .then((rows) => rows.find((row) => (row.category === "boundary" || row.type === "administrative")
+            && (row.geojson?.type === "Polygon" || row.geojson?.type === "MultiPolygon")
+            && normalizeAdministrativeName(row.label).includes(normalizedCandidate)))
+            .then((boundary) => boundary?.geojson ?? null)
+            .catch((error) => {
+            barangayBoundaryPromises.delete(normalizedCandidate);
+            throw error;
+        });
+        barangayBoundaryPromises.set(normalizedCandidate, request);
+    }
+
+    return barangayBoundaryPromises.get(normalizedCandidate);
+};
+
+const resolveVerifiedBarangayAtPoint = async (candidate, lat, lng, signal) => {
+    if (!candidate)
+        return { barangay: "", barangayVerified: false, barangayCandidate: "" };
+
+    try {
+        const boundary = await getVerifiedBarangayBoundary(candidate, signal);
+        if (coordinateIsInBoundary(lat, lng, boundary) === true) {
+            return { barangay: candidate, barangayVerified: true, barangayCandidate: candidate };
+        }
+    }
+    catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+            throw error;
+    }
+
+    // A reverse-address component may describe a zone, subdivision, or nearby
+    // neighbourhood. Never place it in the Barangay field unless its official
+    // administrative boundary contains the selected coordinate.
+    return { barangay: "", barangayVerified: false, barangayCandidate: candidate };
+};
+
+const locationFromNominatimRow = (row, lat = row.lat, lng = row.lng) => {
+    const address = row.address ?? {};
+    const road = firstAddressValue(address, ["road", "pedestrian", "residential", "footway", "path", "cycleway"]);
+    const houseNumber = firstAddressValue(address, ["house_number"]);
+    const barangayCandidate = firstAddressValue(address, ["village", "neighbourhood", "quarter", "hamlet"]);
+    return {
+        lat,
+        lng,
+        label: String(row.label ?? row.display_name ?? "").trim(),
+        street: [houseNumber, road].filter(Boolean).join(" "),
+        barangay: "",
+        barangayVerified: false,
+        barangayCandidate: isLaPazName(barangayCandidate) ? "" : barangayCandidate,
+        district: "La Paz",
+        city: "Iloilo City",
+        zip: "5000",
+        source: "openstreetmap",
+    };
+};
+
+const withVerifiedBarangay = async (location, signal) => ({
+    ...location,
+    ...await resolveVerifiedBarangayAtPoint(location.barangayCandidate, location.lat, location.lng, signal),
+});
+
+const assertLocationIsInLaPaz = async (location, sourceAddress, signal) => {
+    const withinBoundary = await isVerifiedLaPazPoint(location.lat, location.lng, sourceAddress, location.label, signal);
+    if (withinBoundary === false || (withinBoundary === null && !hasLaPazAdministrativeAddress(sourceAddress, location.label))) {
+        throw new GeocodingError(
+            OUTSIDE_SCOPE_MESSAGE,
+            "outside-scope"
+        );
+    }
+    return withinBoundary === true;
+};
+
+export async function geocodeAddPropertyAddressWithinLaPaz(target, signal) {
+    const cleanTarget = String(target ?? "").trim();
+    if (!cleanTarget) {
+        throw new GeocodingError("Please enter an address or barangay.", "not-found");
+    }
+
+    const scopedQuery = /\b(?:la\s*-?\s*paz)\b/i.test(cleanTarget)
+        ? cleanTarget
+        : `${cleanTarget}, La Paz, Iloilo City, Philippines`;
+    const candidates = await lookup(scopedQuery, false, signal);
+    let foundOutsideLaPaz = false;
+
+    for (const candidate of candidates) {
+        const location = locationFromNominatimRow(candidate);
+        try {
+            const coverageVerified = await assertLocationIsInLaPaz(location, candidate.address, signal);
+            return { ...location, coverageVerified };
+        }
+        catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError")
+                throw error;
+            if (!(error instanceof GeocodingError) || error.reason !== "outside-scope")
+                throw error;
+            foundOutsideLaPaz = true;
+        }
+    }
+
+    if (foundOutsideLaPaz)
+        throw new GeocodingError(OUTSIDE_SCOPE_MESSAGE, "outside-scope");
+
+    throw new GeocodingError(
+        "We could not find this address within La Paz, Iloilo City. Check the details or place the pin manually.",
+        "not-found"
+    );
+}
+
+export async function reverseGeocodeAddPropertyLocationWithinLaPaz(lat, lng, signal) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new GeocodingError("Select a valid point on the map.", "not-found");
+    }
+
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    const cached = reverseCache.get(key);
+    if (cached)
+        return cached;
+
+    try {
+        const params = new URLSearchParams({
+            lat: String(lat),
+            lon: String(lng),
+            format: "jsonv2",
+            addressdetails: "1",
+            zoom: "18",
+        });
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+            signal,
+            headers: { Accept: "application/json" },
+        });
+        if (!response.ok)
+            throw new GeocodingError("Location lookup is temporarily unavailable.", "network");
+
+        const row = await response.json();
+        const label = String(row.display_name ?? "").trim();
+        if (!label)
+            throw new GeocodingError("No address was found for that map point.", "not-found");
+
+        const location = locationFromNominatimRow({ ...row, label }, lat, lng);
+        const coverageVerified = await assertLocationIsInLaPaz(location, row.address, signal);
+        const verifiedLocation = { ...await withVerifiedBarangay(location, signal), coverageVerified };
+        if (reverseCache.size >= 100)
+            reverseCache.delete(reverseCache.keys().next().value);
+        reverseCache.set(key, verifiedLocation);
+        return verifiedLocation;
+    }
+    catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+            throw error;
+        if (error instanceof GeocodingError)
+            throw error;
+        throw new GeocodingError("Location lookup is temporarily unavailable.", "network");
+    }
+}
 
 /* =========================================================
    GEOCODE WITHIN LA PAZ

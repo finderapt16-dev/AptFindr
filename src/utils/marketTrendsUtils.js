@@ -124,18 +124,64 @@ function preferenceEntries(rows, labelFormatter = (label) => label) {
       label: labelFormatter(row?.label),
       value: numericPreferenceValue(row?.value),
     }))
-    .filter((row) => row.label && row.value > 0)
-    .sort((left, right) => right.value - left.value || left.label.localeCompare(right.label));
+    .filter((row) => row.label);
 }
 
 function formatBedroomLabel(value) {
+  if (String(value).toLowerCase() === "any") return "Any";
   if (value === "4+") return "4+ Bedrooms";
   return `${value} Bedroom${value === "1" ? "" : "s"}`;
 }
 
 function formatRoomCapacityLabel(value) {
+  if (String(value).toLowerCase() === "any") return "Any";
   if (value === "4+") return "4+ People";
   return `${value} ${value === "1" ? "Person" : "People"}`;
+}
+
+// These are the actual values available in Tenant Preferences. They only
+// provide labels for an empty chart; their values always begin at zero.
+const PREFERENCE_CATEGORY_DEFAULTS = {
+  preferredAreas: [
+    "Aguinaldo", "Baldoza", "Bantud", "Banuyao", "Burgos-Mabini-Plaza",
+    "Caingin", "Divinagracia", "Gustilo", "Hinactacan", "Ingore", "Jereos",
+    "Laguda", "Lopez Jaena Norte", "Lopez Jaena Sur", "Luna", "Macarthur",
+    "Magdalo", "Magsaysay Village", "Nabitasan", "Railway", "Rizal",
+    "San Isidro", "San Nicolas", "Tabuc Suba", "Ticud",
+  ],
+  amenities: ["Pet Friendly", "Parking", "Furnished", "Own Bathroom", "Wi-Fi", "Air Conditioning", "Laundry Area"],
+  bedrooms: ["Any", "1 Bedroom", "2 Bedrooms", "3 Bedrooms", "4+ Bedrooms"],
+  roomCapacity: ["Any", "1 Person", "2 People", "3 People", "4+ People"],
+};
+
+const PREFERENCE_PRICE_RANGE_DEFAULTS = [
+  { min: 5000, max: 7000 },
+  { min: 7000, max: 9000 },
+  { min: 9000, max: 11000 },
+  { min: 11000, max: 15000 },
+  { min: 15000, max: null },
+];
+
+function responseCount(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function buildPreferenceChart(rows, defaultLabels = [], labelFormatter = (label) => label, responses) {
+  const totals = new Map();
+  preferenceEntries(rows, labelFormatter).forEach(({ label, value }) => {
+    totals.set(label, (totals.get(label) ?? 0) + value);
+  });
+
+  const defaultOrder = new Map(defaultLabels.map((label, index) => [label, index]));
+  const labels = [...defaultLabels, ...[...totals.keys()].filter((label) => !defaultOrder.has(label))];
+  const data = labels
+    .map((label, index) => ({ label, value: totals.get(label) ?? 0, order: defaultOrder.get(label) ?? defaultLabels.length + index }))
+    .sort((left, right) => right.value - left.value || left.order - right.order || left.label.localeCompare(right.label))
+    .map(({ label, value }) => ({ label, value }));
+  const recordedResponses = responseCount(responses, data.reduce((sum, item) => sum + item.value, 0));
+
+  return { data, responseCount: recordedResponses };
 }
 
 function formatPeso(value) {
@@ -151,25 +197,26 @@ export function formatPreferredPriceRange({ min, max }) {
 
 export function formatTenantPreferenceAnalytics(analytics = {}) {
   const source = analytics && typeof analytics === "object" ? analytics : {};
-  const priceRanges = (Array.isArray(source.priceRanges) ? source.priceRanges : [])
+  const priceRangeRows = (Array.isArray(source.priceRanges) ? source.priceRanges : [])
     .map((row) => ({
       label: formatPreferredPriceRange(row ?? {}),
       value: numericPreferenceValue(row?.value),
     }))
-    .filter((row) => row.value > 0)
-    .sort((left, right) => right.value - left.value || left.label.localeCompare(right.label));
+    .filter((row) => row.label);
+  const priceRangeDefaults = PREFERENCE_PRICE_RANGE_DEFAULTS.map((range) => formatPreferredPriceRange(range));
+  const responseCounts = source.responseCounts && typeof source.responseCounts === "object" ? source.responseCounts : {};
 
   return {
-    preferredAreas: preferenceEntries(source.preferredAreas),
-    amenities: preferenceEntries(source.amenities),
-    bedrooms: preferenceEntries(source.bedrooms, formatBedroomLabel),
-    roomCapacity: preferenceEntries(source.roomCapacity, formatRoomCapacityLabel),
-    priceRanges,
+    preferredAreas: buildPreferenceChart(source.preferredAreas, PREFERENCE_CATEGORY_DEFAULTS.preferredAreas, undefined, responseCounts.preferredAreas),
+    amenities: buildPreferenceChart(source.amenities, PREFERENCE_CATEGORY_DEFAULTS.amenities, undefined, responseCounts.amenities),
+    bedrooms: buildPreferenceChart(source.bedrooms, PREFERENCE_CATEGORY_DEFAULTS.bedrooms, formatBedroomLabel, responseCounts.bedrooms),
+    roomCapacity: buildPreferenceChart(source.roomCapacity, PREFERENCE_CATEGORY_DEFAULTS.roomCapacity, formatRoomCapacityLabel, responseCounts.roomCapacity),
+    priceRanges: buildPreferenceChart(priceRangeRows, priceRangeDefaults, undefined, responseCounts.priceRanges),
   };
 }
 
 export function preferenceInsight(data = [], noun = "preference") {
-  if (!data.length) return "No tenant preferences have been recorded yet.";
-  const leading = data[0];
+  const leading = (Array.isArray(data) ? data : []).find((item) => numericPreferenceValue(item?.value) > 0);
+  if (!leading) return "No tenant preferences recorded yet.";
   return `${leading.label} is the most selected ${noun} (${leading.value} tenant${leading.value === 1 ? "" : "s"}).`;
 }

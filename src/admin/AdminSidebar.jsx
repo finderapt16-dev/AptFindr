@@ -36,6 +36,7 @@ export function AdminSidebar({
   navigateToAdminModule,
   navigateToSupport,
   handleLogout,
+  onNavigate,
 }) {
   const countFor = (section, label) => {
     if (label === "Help & Support") return 0;
@@ -61,7 +62,14 @@ export function AdminSidebar({
             aria-current={isCurrent ? "page" : undefined}
             className={`admin-figma-sidebar-item ${isCurrent ? "is-active" : ""}`}
             key={itemLabel}
-            onClick={() => itemLabel === "Help & Support" ? navigateToSupport?.() : navigateToAdminModule(section)}
+            onClick={() => {
+              if (itemLabel === "Help & Support") {
+                navigateToSupport?.();
+              } else {
+                navigateToAdminModule(section);
+              }
+              onNavigate?.();
+            }}
             type="button"
           >
             <Icon aria-hidden="true" />

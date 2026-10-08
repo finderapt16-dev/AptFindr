@@ -678,94 +678,6 @@
   border-color: #0000;
 }
 
-.apartment-detail-section-2 {
-  margin-bottom: calc(var(--spacing, .25rem) * 5);
-  border-radius: var(--radius-lg, .5rem);
-  background-color: var(--color-slate-200, #d9d9d9);
-  border-style: solid;
-  border-width: 1px;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 1px;
-  min-width: 0;
-  display: grid;
-  overflow: hidden;
-  box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a;
-}
-
-@supports (color: lab(0% 0 0)) {
-  .apartment-detail-section-2 {
-    background-color: var(--color-slate-200, lab(91.7353% -.998765 -4.76968));
-  }
-}
-
-@media (min-width: 360px) {
-  .apartment-detail-section-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 40rem) {
-  .apartment-detail-section-2 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
-.apartment-detail-row-7 {
-  min-height: calc(var(--spacing, .25rem) * 24);
-  align-items: center;
-  gap: calc(var(--spacing, .25rem) * 3);
-  background-color: var(--color-white, #fff);
-  min-width: 0;
-  padding: calc(var(--spacing, .25rem) * 4);
-  display: flex;
-}
-
-.apartment-detail-grid-2 {
-  height: calc(var(--spacing, .25rem) * 10);
-  width: calc(var(--spacing, .25rem) * 10);
-  border-radius: var(--radius-lg, .5rem);
-  background-color: var(--color-slate-50, #f2f6fa);
-  color: var(--color-slate-600, #666666);
-  flex-shrink: 0;
-  place-items: center;
-  display: grid;
-}
-
-@supports (color: lab(0% 0 0)) {
-  .apartment-detail-grid-2 {
-    background-color: var(--color-slate-50, lab(98.1434% -.369549 -1.05968));
-    color: var(--color-slate-600, lab(35.5623% -1.74978 -15.4316));
-  }
-}
-
-.apartment-detail-icon-icon {
-  height: calc(var(--spacing, .25rem) * 5);
-  width: calc(var(--spacing, .25rem) * 5);
-}
-
-.apartment-detail-span-5 {
-  min-width: 0;
-}
-
-.apartment-detail-strong {
-  font-size: var(--text-sm, .875rem);
-  line-height: var(--text-sm--line-height, calc(1.25 / .875));
-  overflow-wrap: break-word;
-  display: block;
-}
-
-.apartment-detail-span-6 {
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-slate-500, #666666);
-}
-
-@supports (color: lab(0% 0 0)) {
-  .apartment-detail-span-6 {
-    color: var(--color-slate-500, lab(48.0876% -2.03595 -16.5814));
-  }
-}
-
 .apartment-detail-grid-3 {
   gap: calc(var(--spacing, .25rem) * 5);
   min-width: 0;
@@ -2856,8 +2768,6 @@
 .apartment-detail-gallery-card .apartment-detail-panel-10 { min-height: 330px; border-radius: 6px; }
 .apartment-detail-gallery-card .apartment-detail-row-6 { margin-top: 8px; }
 
-.apartment-detail-page .apartment-detail-section-2 { display: none; }
-
 @media (min-width: 900px) {
   .apartment-detail-page {
     display: grid;
@@ -3022,7 +2932,7 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -3310,10 +3220,6 @@
     grid-row: 3;
   }
 
-  .apartment-detail-container > .apartment-detail-section-2 {
-    display: none;
-  }
-
   .apartment-detail-container > .apartment-detail-grid-3 {
     display: contents;
   }
@@ -3470,17 +3376,6 @@
     border-radius: 8px;
   }
 
-  .apartment-detail-section-2 {
-    margin-bottom: 18px;
-    border-color: #dce6ee;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgb(15 23 42 / 0.04);
-  }
-
-  .apartment-detail-row-7 {
-    min-height: 76px;
-    padding: 12px;
-  }
 }
 
 .apartment-detail-map-wrap {
@@ -3606,7 +3501,7 @@
 @media (max-width: 640px) {
   .apartment-detail-card-heading p, .apartment-detail-dt,
   .apartment-detail-page .apartment-detail-span-7, .apartment-detail-required,
-  .apartment-detail-span-6, .landlord-view-address label, .landlord-view-prices label,
+  .landlord-view-address label, .landlord-view-prices label,
   .landlord-view-rules span, .landlord-view-utilities span
   { font-size: 11px; }
 }
@@ -3635,7 +3530,7 @@
 @media (max-width: 1023px) {
   .apartment-detail-card-heading p, .apartment-detail-dt,
   .apartment-detail-page .apartment-detail-span-7, .apartment-detail-required,
-  .apartment-detail-span-6, .landlord-view-address label, .landlord-view-prices label,
+  .landlord-view-address label, .landlord-view-prices label,
   .landlord-view-rules span, .landlord-view-utilities span
   { font-size: 11px; }
 }

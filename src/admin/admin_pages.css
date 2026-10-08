@@ -15014,14 +15014,6 @@
   }
 }
 
-.admin-dashboard-aside {
-  translate: 0;
-}
-
-.admin-dashboard-aside-2 {
-  translate: -100%;
-}
-
 .app-sidebar-close {
   top: calc(var(--spacing, .25rem) * 4);
   right: calc(var(--spacing, .25rem) * 4);
