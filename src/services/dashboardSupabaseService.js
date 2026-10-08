@@ -721,8 +721,7 @@ export async function fetchSupportTicketById(ticketId) {
         .eq("id", ticketId)
         .maybeSingle();
     if (error) {
-        console.error("Error fetching support request:", error);
-        return null;
+        throw new Error(error.message || "Unable to load the support request.");
     }
     return data ? data : null;
 }
@@ -1842,13 +1841,12 @@ export async function fetchLandlordWithDetails(landlordId) {
         // landlord_profiles row yet. Keep verification details visible before the
         // administrator approves the account instead of relying on verification to
         // create/repair the profile first.
-        const [storedProfile, properties, allViolations, allReports, views, favorites] = await Promise.all([
+        const [storedProfile, properties, allViolations, allReports, views] = await Promise.all([
             fetchLandlordProfile(landlordId),
             fetchRowsByColumn("apartments", "landlord_id", landlordId),
             fetchViolations(),
             fetchAdminReports(),
             fetchApartmentViews(),
-            fetchApartmentFavorites(""),
         ]);
         const userPermit = getStringValue(user.permit_number ?? user.permitNumber);
         const profile = {
@@ -1859,6 +1857,7 @@ export async function fetchLandlordWithDetails(landlordId) {
             is_verified: storedProfile?.is_verified ?? user.is_verified ?? user.isVerified ?? false,
         };
         const normalizedProperties = properties.map((row) => toApartmentRow(row));
+        const favorites = await fetchFavoritesForApartments(normalizedProperties.map((property) => property.id).filter(Boolean));
         const violations = allViolations.filter((v) => (v.landlord_id ?? v.landlordId) === landlordId);
         const reports = allReports.filter((r) => normalizedProperties.some((p) => p.id === (r.apartment_id ?? r.apartmentId)));
         const totalViews = views

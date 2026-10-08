@@ -190,16 +190,21 @@ export function Settings({ embedded = false } = {}) {
         }
     };
     const handleRemoveAvatar = async () => {
-        updateProfile((p) => ({ ...p, avatar: "" }));
-        if (user) {
-            try {
-                await updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: "" });
-            }
-            catch {
-                // Profile UI still updates locally.
-            }
+        if (!user) {
+            toast.error("Sign in before removing your profile photo.");
+            return;
         }
-        toast.success("Profile photo removed.");
+        try {
+            const updated = await updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: "" });
+            if (!updated) {
+                throw new Error("Unable to remove the profile photo.");
+            }
+            updateProfile((p) => ({ ...p, avatar: "" }));
+            toast.success("Profile photo removed.");
+        }
+        catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to remove the profile photo.");
+        }
     };
     const handleUpdateProfile = async () => {
         if (!user)

@@ -447,7 +447,7 @@ export function AddApartment() {
         if (!String(verificationData.businessAccount).trim())
             errors.businessAccount = "Business account number is required.";
         if (!String(verificationData.permitExpiry).trim())
-            errors.permitExpiry = "Date issued is required.";
+            errors.permitExpiry = "Permit expiry date is required.";
         if (!contractDuration)
             errors.contractDuration = "Select a contract duration.";
         const firstStep = errors.title || errors.sqft || errors.description || errors.images
@@ -597,7 +597,7 @@ export function AddApartment() {
                     propertyAddress: [persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", "),
                     businessPermit: verificationData.businessPermit,
                     businessAccount: verificationData.businessAccount,
-                    dateIssued: verificationData.permitExpiry,
+                    permitExpiry: verificationData.permitExpiry,
                 },
             };
             const landlordIdentity = {
@@ -1100,7 +1100,7 @@ export function AddApartment() {
                     </div>
 
                     <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-permit-expiry-date-optional">Date Issued <span aria-hidden="true">*</span></Label>
+                      <Label className="add-apartment-permit-expiry-date-optional">Permit Expiry Date <span aria-hidden="true">*</span></Label>
                       <Input type="date" value={verificationData.permitExpiry} onChange={(e) => {
                 setVerificationData({ ...verificationData, permitExpiry: e.target.value });
                 if (e.target.value)

@@ -1261,7 +1261,6 @@ export function AdminDashboard() {
                 const [firstName = "", ...lastName] = value.trimStart().split(/\s+/);
                 updateAdminProfile((profile) => ({ ...profile, firstName, lastName: lastName.join(" ") }));
             };
-            const saveSystemSettings = () => toast.info("System-wide preferences can be connected when their settings service is ready.");
             return (<main className="admin-settings-reference">
               <header className="admin-settings-reference-header">
                 <h1>Settings</h1>
@@ -1298,17 +1297,17 @@ export function AdminDashboard() {
                 </section>
                 <section className="admin-settings-reference-column">
                   <Card className="admin-settings-reference-card"><CardContent>
-                    <div className="admin-settings-reference-card-heading"><h2>System Settings</h2><p>Configure application settings and business rules.</p></div>
-                    <div className="admin-settings-system-fields">
+                    <div className="admin-settings-reference-card-heading"><h2>System Settings</h2><p>System-wide settings are unavailable until a secured settings service is configured.</p></div>
+                    <fieldset disabled hidden className="admin-settings-system-fields">
                       <label>Application Name<input defaultValue="AptFindr"/></label><label>Support Email<input type="email" defaultValue="support@aptfindr.com"/></label><label>Contact Number<input defaultValue="0912 345 6789"/></label><label>Address<input defaultValue="La Paz, Iloilo City"/></label>
                       <label>Default Currency<select defaultValue="PHP"><option value="PHP">Philippine Peso (₱)</option></select></label><label>Permit Renewal Reminder<select defaultValue="30"><option value="30">30 days before expiration</option></select></label><label>Max Apartment Photos<input type="number" defaultValue="10" min="1"/></label><label>Items Per Page<input type="number" defaultValue="10" min="1"/></label>
-                    </div>
-                    <div className="admin-settings-card-actions"><Button onClick={saveSystemSettings} className="admin-settings-primary-button">Save Changes</Button></div>
+                    </fieldset>
+                    <div className="admin-settings-card-actions"><Button disabled className="admin-settings-primary-button">System settings unavailable</Button></div>
                   </CardContent></Card>
                   <Card className="admin-settings-reference-card admin-settings-admins-card"><CardContent>
-                    <div className="admin-settings-admins-heading"><div><h2>System Administrators</h2><p>Manage administrator access and roles.</p></div><Button onClick={() => toast.info("Admin invitations are not available yet.")} className="admin-settings-add-admin">+ Add Admin</Button></div>
+                    <div className="admin-settings-admins-heading"><div><h2>System Administrators</h2><p>View administrator accounts. Invitations and role changes require a secured backend.</p></div><Button disabled className="admin-settings-add-admin">Admin invitations unavailable</Button></div>
                     <div className="admin-settings-admin-table-wrap"><table className="admin-settings-admin-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead><tbody>
-                      {visibleAdmins.slice(0, 5).map((admin, index) => { const name = admin.name || `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || "Administrator"; const email = admin.email || "Not provided"; return <tr key={admin.id || email}><td><span className="admin-settings-table-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name}</strong><small>{email}</small></span></td><td>{email}</td><td><span className="admin-settings-role">Admin</span></td><td><span className="admin-settings-active">Active</span></td><td>{index === 0 ? "Current session" : "—"}</td><td><button type="button" onClick={() => toast.info("Administrator editing is not available yet.")} className="admin-settings-edit-admin">Edit</button></td></tr>; })}
+                      {visibleAdmins.slice(0, 5).map((admin) => { const name = admin.name || `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || "Administrator"; const email = admin.email || "Not provided"; const status = admin.status || "Not Available"; return <tr key={admin.id || email}><td><span className="admin-settings-table-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name}</strong><small>{email}</small></span></td><td>{email}</td><td><span className="admin-settings-role">{admin.role || "Admin"}</span></td><td><span className="admin-settings-active">{status}</span></td><td>Not Available</td><td><button type="button" disabled title="Administrator editing requires a secured backend" className="admin-settings-edit-admin">Edit unavailable</button></td></tr>; })}
                       {visibleAdmins.length === 0 && <tr><td colSpan="6" className="admin-settings-empty-admins">No administrator accounts found.</td></tr>}
                     </tbody></table></div>
                   </CardContent></Card>
