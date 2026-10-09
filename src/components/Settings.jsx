@@ -27,10 +27,18 @@ const CardTitle = ({ icon: Icon, title, subtitle, tone = "settings-tone-brand" }
       {subtitle && <p className="settings-style-7">{subtitle}</p>}
     </div>
   </div>);
+function profileNameParts(user) {
+    const name = String(user?.name ?? "").trim();
+    const username = String(user?.username ?? "").trim();
+    // Tenant signup stores the username as a display name until a real name is saved.
+    if (isTenantRole(user?.role) && username && name.toLowerCase() === username.toLowerCase()) return [];
+    return name.split(/\s+/).filter(Boolean);
+}
 function profileStateFromUser(user) {
+    const nameParts = profileNameParts(user);
     return {
-        firstName: user?.name?.split(" ")[0] || "",
-        lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+        firstName: nameParts[0] || "",
+        lastName: nameParts.slice(1).join(" "),
         middleInitial: user?.middleInitial || "",
         email: user?.email || "",
         mobile: user?.mobileNumber || user?.mobile || "",
@@ -88,7 +96,7 @@ export function Settings({ embedded = false } = {}) {
             if (!active)
                 return;
             if (details?.user) {
-                const nameParts = String(details.user.name ?? "").trim().split(/\s+/).filter(Boolean);
+                const nameParts = profileNameParts({ ...user, ...details.user });
                 const middleInitial = String(details.user.middle_initial ?? "").trim();
                 const lastName = middleInitial
                     ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")
@@ -244,7 +252,7 @@ export function Settings({ embedded = false } = {}) {
             if (updated) {
                 const refreshed = await fetchUserProfileDetails(user.id);
                 if (refreshed?.user) {
-                    const nameParts = String(refreshed.user.name ?? "").trim().split(/\s+/).filter(Boolean);
+                    const nameParts = profileNameParts({ ...user, ...refreshed.user });
                     const middleInitial = String(refreshed.user.middle_initial ?? "").trim();
                     const lastName = middleInitial
                         ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")

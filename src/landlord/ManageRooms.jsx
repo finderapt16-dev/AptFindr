@@ -598,9 +598,9 @@ export function ManageRooms({ propertyId }) {
             <h2>Units ({roomCounts.total})</h2>
             <p>Manage the individual rental units in this apartment.</p>
           </div>
-          <Button onClick={() => setAddingUnit(true)} className="manage-rooms-table-add-room">
+          {rooms.length > 0 && <Button onClick={() => setAddingUnit(true)} className="manage-rooms-table-add-room">
             <Plus /> Add Unit
-          </Button>
+          </Button>}
         </div>
 
         {rooms.length === 0 ? (<div className="manage-rooms-table-empty">

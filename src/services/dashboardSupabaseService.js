@@ -1627,14 +1627,16 @@ export async function updateReportStatus(reportId, status) {
         .from("reports")
         .update({
         status,
-        resolved_at: status === "pending" ? null : new Date().toISOString(),
+        resolved_at: ["resolved", "dismissed"].includes(status) ? new Date().toISOString() : null,
     })
         .eq("id", reportId)
         .select("*")
         .single();
-    if (error || !data) {
-        return null;
+    if (error) {
+        console.error("Report status update failed:", { code: error.code, message: error.message, details: error.details });
+        throw new Error(`Unable to update report (${error.code || "database error"}): ${error.message}`);
     }
+    if (!data) throw new Error("The report was not updated. Check your admin permissions and try again.");
     const normalized = toReportRow(data);
     const cached = await fetchAdminReports();
     const next = cached.map((report) => (report.id === reportId ? normalized : report));

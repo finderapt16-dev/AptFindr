@@ -6,7 +6,6 @@ import {
     useState,
 } from "react";
 
-import { Link } from "react-router-dom";
 
 import {
     useApartmentsContext,
@@ -28,11 +27,14 @@ import {
 
 const SKELETON_CARD_COUNT = 4;
 
-const listingSortTime = (apartment) => {
-    const timestamp = Date.parse(apartment.publishedAt ?? apartment.createdAt ?? apartment.updatedAt ?? "");
-    return Number.isFinite(timestamp) ? timestamp : 0;
-};
-
+function selectRandomListings(apartments) {
+    const listings = apartments.filter(isTenantVisibleApartment);
+    for (let index = listings.length - 1; index > 0; index--) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [listings[index], listings[swapIndex]] = [listings[swapIndex], listings[index]];
+    }
+    return listings.slice(0, 4);
+}
 
 function PreviewCard({ apartment, onApartmentClick, viewCount = 0, ratingStats, ratingsLoading }) {
     return <div className="landing-preview-wrapper">
@@ -177,15 +179,7 @@ export function LandingApartmentPreview({
 
     const publishedApartments =
         useMemo(
-            () =>
-                apartments
-                    .filter(isTenantVisibleApartment)
-                    .slice()
-                    .sort((first, second) => {
-                        const timestampDifference = listingSortTime(second) - listingSortTime(first);
-                        if (timestampDifference !== 0) return timestampDifference;
-                        return String(first.id ?? "").localeCompare(String(second.id ?? ""));
-                    }),
+            () => selectRandomListings(apartments),
             [
                 apartments,
             ]
@@ -218,10 +212,6 @@ export function LandingApartmentPreview({
                 <div className="landing-listings-container">
 
                     <div className="landing-section-heading">
-
-                        <h2 className="landing-listings-title">
-                            Available Apartment Listings
-                        </h2>
 
                         <p className="landing-listings-loading">
 
@@ -306,28 +296,6 @@ export function LandingApartmentPreview({
         <section className="landing-listings-section">
 
             <div className="landing-section-container">
-
-                <section className="landing-listings-heading">
-
-                    <div className="landing-listings-copy">
-
-                        <h2 className="landing-section-title">
-                            Available Apartments in La Paz
-                        </h2>
-
-                    </div>
-
-
-                    <Link
-                        to="/browse"
-                        onClick={
-                            onBrowseClick
-                        }
-                        className="landing-listings-link"
-                    />
-
-                </section>
-
 
                 <div className="landing-listings-grid">
 
