@@ -34,6 +34,7 @@
 .tenant-search-filters .tenant-filter-actions button[type="submit"] { background: #0ba5df; border-color: #0ba5df; color: #fff; font-weight: 600; }
 .tenant-search-filters :is(input, button):focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }
 .tenant-search-filters .tenant-filter-error { color: #b91c1c; font-size: 12px; margin: 0; }
+.tenant-search-filters .tenant-filter-notice { color: #b91c1c; font-size: 12px; margin: 0; }
 .tenant-search-filters fieldset:disabled { opacity: .65; }
 
 /* ------------------------------------------------------------------

@@ -1,5 +1,6 @@
 
 import { getNormalizedApartmentAmenities } from "./apartmentAmenities";
+import { hasListingsInPreferredArea } from "../utils/preferredArea";
 import { matchesRoomCapacity } from "./roomCapacity";
 import {
     getLowestAvailableRoomPrice,
@@ -899,6 +900,8 @@ export function rankApartments(
                 false &&
             preferences?.preferredArea?.trim()
         );
+
+    if (hasLocationPreference && !hasListingsInPreferredArea(apartments, preferences.preferredArea)) return [];
 
     const ranked =
         apartments

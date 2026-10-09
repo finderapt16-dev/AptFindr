@@ -131,7 +131,10 @@ export async function fetchLandlordBusinessPermits(landlordId) {
         if (!propertyDocuments.length && !verification.businessPermit) return [];
         return (propertyDocuments.length ? propertyDocuments : [null]).map(document => ({
             id: String(document?.id ?? property.id),
+            apartmentId: String(property.id),
             businessName: verification.businessName || verification.propertyName || property.title || "",
+            apartmentName: property.title || verification.propertyName || "",
+            businessAccount: verification.businessAccount || "",
             permitNumber: verification.businessPermit || "",
             issuedAt: verification.dateIssued || verification.issuedAt || "",
             permitExpiry: verification.permitExpiry || "",

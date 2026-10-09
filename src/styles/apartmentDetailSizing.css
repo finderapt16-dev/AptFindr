@@ -1,0 +1,71 @@
+/* Dimensions from the supplied View Apartment design export. */
+.tenant-detail-colors .apartment-detail-container { max-width: 1402px; }
+.tenant-detail-colors .tenant-property-information { width: 100%; gap: 16px; }
+.tenant-detail-colors .tenant-property-info-panel { box-sizing: border-box; padding: 16px; border-color: rgb(0 0 0 / 20%); border-radius: 10px; }
+.tenant-detail-colors .tenant-property-info-panel h2 { margin-bottom: 8px; font-size: 20px; font-weight: 600; line-height: 24px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(1) { min-height: 154px; padding: 12px 16px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(1) h2 { margin-bottom: 24px; font-size: 18px; line-height: 22px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(2) { min-height: 190px; padding: 12px 16px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(3) { min-height: 158px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(4),
+.tenant-detail-colors .tenant-property-info-panel:nth-child(5) { min-height: 107px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(6) { min-height: 321px; padding: 16px 17px; }
+.tenant-detail-colors .tenant-property-info-panel:nth-child(6) h2 { margin-bottom: 4px; font-size: 18px; font-weight: 700; line-height: 22px; }
+.tenant-detail-colors .tenant-property-owner { grid-template-columns: minmax(0, 301fr) minmax(0, 213fr); gap: 0; padding-top: 0; }
+.tenant-detail-colors .tenant-property-owner-profile { align-items: flex-start; gap: 8px; }
+.tenant-detail-colors .tenant-property-owner-avatar { flex-basis: 60px; width: 60px; height: 60px; background: #047857; font-size: 14px; }
+.tenant-detail-colors .tenant-property-owner-identity { gap: 8px; }
+.tenant-detail-colors .tenant-property-owner-identity > strong { font-size: 16px; font-weight: 600; line-height: 19px; }
+.tenant-detail-colors .tenant-property-owner-identity .verified-badge { box-sizing: border-box; justify-content: center; width: 103px; height: 30px; padding: 4px 8px; border-color: #93c5fd; border-radius: 8px; background: #eff6ff; color: #0369a1; font-size: 12px; line-height: 15px; }
+.tenant-detail-colors .tenant-property-owner-identity .verified-badge-seal { width: 16px; height: 16px; }
+.tenant-detail-colors .tenant-property-owner-identity .verified-badge-check { width: 12px; height: 12px; }
+.tenant-detail-colors .tenant-property-owner-rating { gap: 8px; font-size: 14px; line-height: 17px; }
+.tenant-detail-colors .tenant-property-owner-stars { gap: 8px; }
+.tenant-detail-colors .tenant-property-owner-stars svg { width: 16px; height: 16px; }
+.tenant-detail-colors .tenant-property-owner-contact { gap: 20px; }
+.tenant-detail-colors .tenant-property-owner-contact a,
+.tenant-detail-colors .tenant-property-owner-contact button,
+.tenant-detail-colors .tenant-property-no-contact { gap: 7px; font-size: 14px; font-weight: 500; line-height: 17px; }
+.tenant-detail-colors .tenant-property-owner-contact svg { flex-basis: 20px; width: 20px; height: 20px; }
+.tenant-detail-colors .tenant-property-description { box-sizing: border-box; min-height: 132px; padding: 13px 14px; border-color: rgb(0 0 0 / 20%); border-radius: 10px; font-size: 14px; line-height: 17px; }
+.tenant-detail-colors .tenant-property-info-pills { gap: 12px 32px; }
+.tenant-detail-colors .tenant-property-info-pills > span { box-sizing: border-box; min-height: 40px; padding: 8px 6px; border-color: rgb(0 0 0 / 20%); border-radius: 10px; font-size: 14px; font-weight: 500; line-height: 17px; }
+.tenant-detail-colors .tenant-property-info-empty,
+.tenant-detail-colors .tenant-property-location-caption { font-size: 14px; line-height: 17px; }
+.tenant-detail-colors .tenant-property-location-map { height: 216px; margin-top: 28px; border-color: rgb(0 0 0 / 20%); border-radius: 12px; }
+.tenant-detail-colors .tenant-property-location-empty { min-height: 216px; margin-top: 28px; border-radius: 12px; font-size: 14px; }
+.tenant-detail-colors .tenant-property-map-label strong { font-size: 16px; line-height: 19px; }
+.tenant-detail-colors .tenant-property-map-label span { font-size: 13px; line-height: 16px; }
+.tenant-detail-colors .tenant-property-report-panel { min-height: 165px; padding: 12px 16px; }
+.tenant-detail-colors .tenant-property-report-panel h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 26px; font-size: 18px; line-height: 22px; }
+.tenant-property-report-panel h2 svg { width: 21px; height: 21px; }
+.tenant-property-report-panel p { margin: 0 0 26px; color: #475569; font-size: 14px; line-height: 17px; }
+.tenant-property-report-panel > button { width: 100%; min-height: 48px; padding: 11px 16px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #0369a1; font-size: 14px; font-weight: 700; cursor: pointer; }
+@media (min-width: 1280px) {
+  .tenant-detail-colors .apartment-detail-container {
+    grid-template-columns: minmax(0, 834fr) minmax(0, 548fr);
+    /* Keep sidebar height from stretching the gallery row and pushing units down. */
+    grid-template-rows: auto auto min-content minmax(0, 1fr);
+    column-gap: 20px;
+    row-gap: 24px;
+  }
+  .tenant-detail-colors .apartment-property-image-card { min-height: 652px; padding: 19px 28px; }
+  .tenant-detail-colors .apartment-property-main-image { min-height: 0; aspect-ratio: 777 / 391; }
+  .tenant-detail-colors .apartment-property-thumbnails { grid-template-columns: repeat(4, minmax(0, 170px)); justify-content: space-between; gap: 16px; margin-top: 16px; }
+  .tenant-detail-colors .apartment-property-thumbnail { height: 141px; }
+  .tenant-detail-colors .apartment-detail-title { font-size: 24px; font-weight: 600; line-height: 29px; }
+  .tenant-detail-colors .tenant-apartment-rate-button,
+  .tenant-detail-colors .tenant-apartment-favorite-button { width: 112px; height: 44px; border-radius: 8px; font-size: 16px; font-weight: 600; }
+  .tenant-detail-colors .apartment-detail-row-2 { gap: 24px; }
+  .tenant-detail-colors .tenant-apartment-rate-button svg,
+  .tenant-detail-colors .tenant-apartment-favorite-button svg { width: 24px; height: 24px; }
+}
+@media (max-width: 1279px) {
+  .tenant-detail-colors .tenant-property-owner { grid-template-columns: 1fr; gap: 16px; }
+  .tenant-detail-colors .tenant-property-owner-contact { gap: 12px; }
+  .tenant-detail-colors .tenant-property-info-pills { gap: 10px; }
+}
+@media (max-width: 480px) {
+  .tenant-detail-colors .tenant-property-info-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tenant-detail-colors .tenant-property-info-panel h2 { font-size: 18px; }
+}

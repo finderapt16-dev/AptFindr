@@ -1,0 +1,54 @@
+/* Manage Units dimensions and colors from the supplied Figma export. */
+.landlord-manage-rooms { background: #fff; }
+.landlord-manage-rooms .app-shell-content { padding: 0 28px 32px; }
+.landlord-manage-rooms .manage-rooms-table-page { box-sizing: border-box; width: 100%; max-width: 1436px; margin: 0 auto; padding: 32px 0; background: #fff; }
+.manage-rooms-table-page .manage-rooms-table-back { gap: 8px; color: #0ea5e9; font-size: 14px; font-weight: 400; line-height: 17px; }
+.manage-rooms-table-page .manage-rooms-table-back svg { width: 16px; height: 16px; }
+.manage-rooms-table-page .manage-rooms-table-title { margin: 16px 0; }
+.manage-rooms-table-page .manage-rooms-table-title h1 { color: #000; font-size: 20px; font-weight: 600; line-height: 24px; }
+.manage-rooms-table-page .manage-rooms-table-title p { margin-top: 4px; color: #475569; font-size: 14px; line-height: 17px; }
+.manage-rooms-table-page .manage-rooms-table-card { box-sizing: border-box; min-height: 0; margin-top: 0; padding: 23px 16px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; box-shadow: none; }
+.manage-rooms-table-page .manage-rooms-table-heading { align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.manage-rooms-table-page .manage-rooms-table-heading h2 { color: #000; font-size: 24px; font-weight: 700; line-height: 29px; }
+.manage-rooms-table-page .manage-rooms-table-heading p { margin-top: 4px; color: #64748b; font-size: 14px; line-height: 17px; }
+.manage-rooms-table-page .manage-rooms-table-add-room { min-width: 128px; height: 44px; border-radius: 10px; background: #0ea5e9; font-size: 14px; font-weight: 500; }
+.manage-rooms-table-page .manage-rooms-table-add-room svg { width: 18px; height: 18px; }
+.manage-rooms-table-page .manage-rooms-table-scroll { border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; }
+.manage-rooms-table-page .manage-rooms-table th,
+.manage-rooms-table-page .manage-rooms-table td { padding: 16px 10px; border-color: rgb(0 0 0 / 20%); color: #0f172a; font-size: 14px; line-height: 19px; }
+.manage-rooms-table-page .manage-rooms-table thead th { height: 67px; padding: 16px 8px; background: #f1f4fb; color: #000; font-size: 16px; font-weight: 600; }
+.manage-rooms-table-page .manage-rooms-table tbody tr { height: 113px; }
+.manage-rooms-table-page .manage-rooms-table tbody th { font-weight: 500; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(1) { width: 19.76%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(2) { width: 12.84%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(3) { width: 12.84%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(4) { width: 12.84%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(5) { width: 10.34%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(6) { width: 14.26%; }
+.manage-rooms-table-page .manage-rooms-table th:nth-child(7) { width: 17.12%; }
+.manage-rooms-table-page .manage-rooms-table-status { min-width: 0; max-width: 100%; padding: 8px 12px; border-radius: 8px; font-size: 14px; line-height: 17px; font-weight: 400; }
+.manage-rooms-table-page .manage-rooms-table-status--available { background: #dcfce7; color: #15803d; }
+.manage-rooms-table-page .manage-rooms-table-status--occupied { background: #fecaca; color: #ef4444; }
+.manage-rooms-table-page .manage-rooms-table-status--maintenance { background: #fff7ed; color: #c2410c; }
+.manage-rooms-table-page .manage-rooms-table-actions { justify-content: center; gap: 16px; }
+.manage-rooms-table-page .manage-rooms-table-actions button { flex: 0 1 80px; height: 38px; padding: 6px 10px; border-color: rgb(0 0 0 / 20%); border-radius: 10px; font-size: 12px; }
+.manage-rooms-table-page .manage-rooms-table-actions .manage-rooms-table-delete { border-color: #fecaca; background: #fff7f7; color: #ef4444; }
+.manage-rooms-table-page .manage-rooms-table-pagination { justify-content: flex-end; gap: 12px; padding: 22px 0 0; font-size: 14px; }
+@media (min-width: 1440px) {
+  .landlord-manage-rooms .app-shell-fixed-sidebar { width: 340px; }
+  .landlord-manage-rooms .app-shell-page-main { margin-left: 340px; }
+  .landlord-manage-rooms .app-shell-content { padding-inline: 56px; }
+}
+@media (min-width: 641px) and (max-width: 1100px) {
+  .manage-rooms-table-page .manage-rooms-table-scroll { overflow-x: auto; }
+  .manage-rooms-table-page .manage-rooms-table { min-width: 900px; }
+}
+@media (max-width: 640px) {
+  .landlord-manage-rooms .app-shell-content { padding-inline: 12px; }
+  .landlord-manage-rooms .manage-rooms-table-page { padding-top: 20px; }
+  .manage-rooms-table-page .manage-rooms-table-card { padding: 16px 12px; }
+  .manage-rooms-table-page .manage-rooms-table-heading { flex-direction: column; }
+  .manage-rooms-table-page .manage-rooms-table-heading h2 { font-size: 22px; }
+  .manage-rooms-table-page .manage-rooms-table-add-room { width: 100%; }
+  .manage-rooms-table-page .manage-rooms-mobile-room-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

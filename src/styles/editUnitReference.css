@@ -1,0 +1,112 @@
+/* Edit Unit sizes from the supplied Figma reference. */
+.manage-rooms-editor-page { background: #fff; }
+.manage-rooms-editor-page .manage-rooms-editor-page-content { box-sizing: border-box; width: min(1443px, calc(100% - 48px)); padding: 21px 0 24px; }
+.manage-rooms-editor-page .manage-rooms-editor-header { padding-bottom: 24px; }
+.manage-rooms-editor-page .manage-rooms-editor-back { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: transparent; color: #0ea5e9; font-size: 14px; line-height: 17px; cursor: pointer; }
+.manage-rooms-editor-page .manage-rooms-editor-back svg { width: 16px; height: 16px; }
+.manage-rooms-editor-page .manage-rooms-editor-header h1 { margin: 24px 0 1px; color: #000; font-size: 24px; font-weight: 700; line-height: 29px; }
+.manage-rooms-editor-page .manage-rooms-editor-header p { margin: 0; color: #475569; font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-reference-layout { grid-template-columns: minmax(0, 805fr) minmax(0, 603fr); gap: 35px; padding: 0; }
+.manage-rooms-editor-page .mr-reference-main,
+.manage-rooms-editor-page .mr-reference-side { gap: 13px; }
+.manage-rooms-editor-page .mr-reference-section { box-sizing: border-box; padding: 12px 16px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; }
+.manage-rooms-editor-page .mr-reference-section h3 { margin: 0; color: #000; font-size: 16px; font-weight: 600; line-height: 19px; }
+.manage-rooms-editor-page .mr-reference-section > p { margin: 4px 0 12px; color: #64748b; font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-reference-section > small { margin-top: 8px; color: #64748b; font-size: 12px; line-height: 15px; }
+.manage-rooms-editor-page .mr-reference-main > .mr-reference-section:first-child { min-height: 206px; }
+.mr-unit-upload-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 112px; padding: 12px; border: 1px dashed #cbd5e1; border-radius: 6px; background: #fff; color: #64748b; cursor: pointer; }
+.mr-unit-upload-dropzone > svg { width: 40px; height: 40px; }
+.mr-unit-upload-dropzone > strong { color: #111; font-size: 16px; line-height: 19px; font-weight: 600; }
+.mr-unit-upload-dropzone > span { font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-reference-photos { margin-top: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.manage-rooms-editor-page .mr-reference-main > .mr-reference-section:nth-child(2) { min-height: 320px; }
+.manage-rooms-editor-page .mr-reference-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 40px; margin-top: 8px; }
+.manage-rooms-editor-page .mr-unit-field { display: grid; align-content: start; gap: 4px; min-width: 0; }
+.manage-rooms-editor-page .mr-unit-field > span:first-child { color: #64748b; font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-unit-field .mr-input { box-sizing: border-box; width: 100%; height: 36px; min-height: 0; padding: 8px 14px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 5px; background: #fff; color: #1f2937; font-size: 14px; }
+.manage-rooms-editor-page .mr-unit-capacity { position: relative; display: flex; align-items: center; }
+.manage-rooms-editor-page .mr-unit-capacity > span { margin-left: -44px; z-index: 1; font-size: 14px; color: #475569; pointer-events: none; }
+.manage-rooms-editor-page .mr-unit-capacity input { padding-right: 50px; }
+.manage-rooms-editor-page .mr-unit-description { grid-column: 1 / -1; }
+.manage-rooms-editor-page .mr-unit-description small { color: #64748b; font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-unit-description .mr-textarea { box-sizing: border-box; min-height: 60px; padding: 10px 14px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 5px; background: #fff; font-size: 14px; line-height: 17px; }
+.manage-rooms-editor-page .mr-unit-description-count { justify-self: end; }
+.manage-rooms-editor-page .mr-unit-included { min-height: 310px; padding: 19px 15px; }
+.manage-rooms-editor-page .mr-reference-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 13px; }
+.manage-rooms-editor-page .mr-reference-chips button { min-height: 40px; padding: 8px 6px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #0f172a; font-size: 14px; font-weight: 500; line-height: 17px; }
+.manage-rooms-editor-page .mr-reference-chips button.is-selected { border-color: rgb(3 105 161 / 20%); background: #eff6ff; color: #0369a1; }
+.mr-unit-other-label { display: block; margin: 16px 0 8px; color: #111; font-size: 14px; }
+.mr-unit-other-row { display: flex; gap: 34px; }
+.mr-unit-other-row > input { box-sizing: border-box; flex: 1; min-width: 0; height: 40px; padding: 8px 14px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #1f2937; font-size: 14px; }
+.mr-unit-other-row > button { width: 102px; height: 40px; border-radius: 10px; background: #0ea5e9; color: #fff; }
+.mr-unit-custom-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.mr-unit-custom-tags:empty { display: none; }
+.mr-unit-custom-tags button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid #bae6fd; border-radius: 5px; background: #eff6ff; color: #0369a1; font-size: 12px; }
+.mr-unit-custom-tags svg { width: 12px; height: 12px; }
+.manage-rooms-editor-page .mr-reference-side > .mr-reference-section { min-height: 273px; }
+.manage-rooms-editor-page .mr-reference-status { min-height: 60px; margin-top: 7px; padding: 12px 16px; gap: 0 16px; border-radius: 8px; }
+.manage-rooms-editor-page .mr-reference-status > span { width: 20px; height: 20px; }
+.manage-rooms-editor-page .mr-reference-status > strong { color: #000; font-size: 16px; line-height: 19px; }
+.manage-rooms-editor-page .mr-reference-status > small { font-size: 12px; line-height: 15px; }
+.manage-rooms-editor-page .mr-reference-footer { gap: 16px; padding: 20px 0 0; }
+.manage-rooms-editor-page .mr-reference-footer .ui-button { min-width: 120px; height: 44px; border-radius: 10px; }
+.manage-rooms-editor-page .mr-reference-footer .ui-button:last-child { min-width: 190px; background: #0ea5e9; color: #fff; }
+@media (max-width: 900px) {
+  .manage-rooms-editor-page .mr-reference-layout { grid-template-columns: 1fr; gap: 16px; }
+  .manage-rooms-editor-page .mr-reference-side { grid-row: 1; }
+}
+@media (max-width: 640px) {
+  .manage-rooms-editor-page .manage-rooms-editor-page-content { width: calc(100% - 24px); }
+  .manage-rooms-editor-page .mr-reference-fields { gap: 12px; }
+  .manage-rooms-editor-page .mr-reference-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manage-rooms-editor-page .mr-unit-field .mr-input, .manage-rooms-editor-page .mr-unit-description .mr-textarea, .mr-unit-other-row > input { font-size: 16px; }
+  .mr-unit-other-row { gap: 10px; }
+  .manage-rooms-editor-page .mr-reference-footer .ui-button:last-child { min-width: 150px; }
+}
+
+/* Compact desktop composition keeps the actions close to the form. */
+@media (min-width: 901px) {
+  .manage-rooms-editor-page .manage-rooms-editor-page-content { width: min(1040px, calc(100% - 64px)); padding: 16px 0; }
+  .manage-rooms-editor-page .manage-rooms-editor-header { padding-bottom: 16px; }
+  .manage-rooms-editor-page .manage-rooms-editor-header h1 { margin-top: 16px; font-size: 22px; line-height: 26px; }
+  .manage-rooms-editor-page .manage-rooms-editor-header p,
+  .manage-rooms-editor-page .manage-rooms-editor-back { font-size: 12px; line-height: 15px; }
+  .manage-rooms-editor-page .mr-reference-layout { gap: 24px; }
+  .manage-rooms-editor-page .mr-reference-main { gap: 10px; }
+  .manage-rooms-editor-page .mr-reference-section { padding: 10px 12px; border-radius: 8px; }
+  .manage-rooms-editor-page .mr-reference-section h3 { font-size: 14px; line-height: 17px; }
+  .manage-rooms-editor-page .mr-reference-section > p { margin: 3px 0 8px; font-size: 12px; line-height: 15px; }
+  .manage-rooms-editor-page .mr-reference-section > small { margin-top: 5px; font-size: 10px; line-height: 12px; }
+  .manage-rooms-editor-page .mr-reference-main > .mr-reference-section:first-child,
+  .manage-rooms-editor-page .mr-reference-main > .mr-reference-section:nth-child(2),
+  .manage-rooms-editor-page .mr-unit-included,
+  .manage-rooms-editor-page .mr-reference-side > .mr-reference-section { min-height: 0; }
+  .manage-rooms-editor-page .mr-unit-upload-dropzone { min-height: 80px; gap: 4px; padding: 8px; }
+  .manage-rooms-editor-page .mr-unit-upload-dropzone > svg { width: 26px; height: 26px; }
+  .manage-rooms-editor-page .mr-unit-upload-dropzone > strong { font-size: 12px; line-height: 15px; }
+  .manage-rooms-editor-page .mr-unit-upload-dropzone > span { font-size: 10px; line-height: 12px; }
+  .manage-rooms-editor-page .mr-reference-photos { margin-top: 8px; gap: 8px; }
+  .manage-rooms-editor-page .mr-reference-photo { height: 48px; aspect-ratio: auto; border-radius: 5px; }
+  .manage-rooms-editor-page .mr-reference-photo button { width: 20px; height: 20px; top: 3px; right: 3px; }
+  .manage-rooms-editor-page .mr-reference-fields { gap: 8px 24px; margin-top: 6px; }
+  .manage-rooms-editor-page .mr-unit-field { gap: 3px; }
+  .manage-rooms-editor-page .mr-unit-field > span:first-child,
+  .manage-rooms-editor-page .mr-unit-description small { font-size: 11px; line-height: 14px; }
+  .manage-rooms-editor-page .mr-unit-field .mr-input { height: 28px; padding: 4px 10px; font-size: 12px; }
+  .manage-rooms-editor-page .mr-unit-capacity > span { font-size: 12px; }
+  .manage-rooms-editor-page .mr-unit-description .mr-textarea { height: 48px; min-height: 48px; padding: 6px 10px; font-size: 11px; line-height: 14px; }
+  .manage-rooms-editor-page .mr-unit-included { padding: 10px 12px; }
+  .manage-rooms-editor-page .mr-reference-chips { gap: 5px 8px; }
+  .manage-rooms-editor-page .mr-reference-chips button { min-height: 30px; padding: 5px 4px; border-radius: 7px; font-size: 11px; line-height: 14px; }
+  .manage-rooms-editor-page .mr-unit-other-label { margin: 10px 0 6px; font-size: 11px; }
+  .manage-rooms-editor-page .mr-unit-other-row { gap: 24px; }
+  .manage-rooms-editor-page .mr-unit-other-row > input { height: 32px; padding: 5px 10px; border-radius: 7px; font-size: 11px; }
+  .manage-rooms-editor-page .mr-unit-other-row > button { width: 76px; height: 32px; border-radius: 7px; font-size: 11px; }
+  .manage-rooms-editor-page .mr-reference-status { min-height: 44px; margin-top: 5px; padding: 7px 10px; grid-template-columns: 16px minmax(0, 1fr); gap: 0 10px; border-radius: 6px; }
+  .manage-rooms-editor-page .mr-reference-status > span { width: 14px; height: 14px; }
+  .manage-rooms-editor-page .mr-reference-status > strong { font-size: 12px; line-height: 15px; }
+  .manage-rooms-editor-page .mr-reference-status > small { font-size: 10px; line-height: 12px; }
+  .manage-rooms-editor-page .mr-reference-footer { gap: 12px; padding-top: 14px; }
+  .manage-rooms-editor-page .mr-reference-footer .ui-button { min-width: 86px; height: 34px; border-radius: 7px; font-size: 12px; }
+  .manage-rooms-editor-page .mr-reference-footer .ui-button:last-child { min-width: 136px; }
+}

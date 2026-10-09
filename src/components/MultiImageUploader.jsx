@@ -9,7 +9,7 @@ const FORMAT_EXTENSIONS = {
     "image/png": ["png"],
     "image/webp": ["webp"],
 };
-export function MultiImageUploader({ images, onImagesChange, maxImages = 10, maxFileSize = 5, allowedFormats = VALID_FORMATS, uploadProgress = null, disabled = false, }) {
+export function MultiImageUploader({ images, onImagesChange, maxImages = 10, maxFileSize = 5, allowedFormats = VALID_FORMATS, uploadProgress = null, disabled = false, compact = false, }) {
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
     const videoRef = useRef(null);
@@ -191,6 +191,15 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
     };
     const primaryImage = images.find((img) => img.isPrimary) || images[0];
     const previewImage = images[previewIndex] || primaryImage;
+    if (compact) return <div className="edit-property-photo-grid">
+      <input ref={fileInputRef} type="file" accept={allowedFormats.join(",")} multiple onChange={handleFileInput} disabled={disabled} hidden/>
+      {images.map((img, index) => <div key={img.id} className={`edit-property-photo-tile ${img.isPrimary ? "is-primary" : ""}`} draggable={!disabled} onDragStart={() => setDraggedImageId(img.id)} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); event.stopPropagation(); reorderImage(img.id); }} onDragEnd={() => setDraggedImageId(null)}>
+        <img src={img.url} alt={`Apartment image ${index + 1}`}/>
+        <button type="button" className="edit-property-photo-remove" aria-label={`Remove image ${index + 1}`} onClick={() => removeImage(img.id)} disabled={disabled}><X/></button>
+        <button type="button" className="edit-property-photo-cover" aria-label={`Set image ${index + 1} as cover`} aria-pressed={img.isPrimary} onClick={() => setPrimary(img.id)} disabled={disabled}><Star fill={img.isPrimary ? "currentColor" : "none"}/></button>
+      </div>)}
+      {images.length < maxImages && <button type="button" className="edit-property-photo-upload" onClick={() => fileInputRef.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { if (disabled) { event.preventDefault(); return; } handleDrop(event); }} disabled={disabled}><Upload/><span>Upload Images</span></button>}
+    </div>;
     return (<div className="multi-image-uploader-style-1">
       {images.length < maxImages && (<div ref={dropZoneRef} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop} className={`multi-image-dropzone ${isDragging ? "multi-image-dropzone-active" : "multi-image-dropzone-idle"}`} onClick={() => !disabled && fileInputRef.current?.click()}>
           <Upload className="multi-image-uploader-style-2"/>

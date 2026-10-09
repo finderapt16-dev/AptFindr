@@ -1,61 +1,67 @@
-.edit-property-page { min-height: 100vh; background: #f5f7fa; color: #172033; }
-.edit-property-content { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 26px 0 48px; }
-.edit-property-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
-.edit-property-back { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: #149bd8; font-size: 12px; font-weight: 650; cursor: pointer; }.edit-property-back svg { width: 14px; height: 14px; }
-.edit-property-header h1 { margin: 9px 0 2px; font-size: 25px; line-height: 1.15; }.edit-property-header p { margin: 0; color: #718096; font-size: 12px; }.edit-property-header-actions { display: flex; gap: 8px; }
-.edit-property-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .8fr); align-items: start; gap: 18px; }.edit-property-left, .edit-property-right { display: grid; gap: 14px; }
-.edit-property-card { padding: 15px; border: 1px solid #dce3ea; border-radius: 9px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / .03); }.edit-property-card h2 { margin: 0; font-size: 15px; }.edit-property-card > p, .edit-property-card-heading p { margin: 3px 0 10px; color: #718096; font-size: 11px; }
-.edit-property-main-photo { position: relative; height: 300px; overflow: hidden; border-radius: 6px; background: #a9a9a9; }.edit-property-main-photo img { width: 100%; height: 100%; object-fit: cover; }
-.edit-property-gallery-arrow { position: absolute; top: 50%; display: grid; place-items: center; width: 27px; height: 27px; padding: 0; border: 1px solid #7890a2; border-radius: 50%; background: rgb(255 255 255 / .72); color: #547080; transform: translateY(-50%); cursor: pointer; }.edit-property-gallery-arrow svg { width: 17px; height: 17px; }.edit-property-gallery-arrow.is-left { left: 8px; }.edit-property-gallery-arrow.is-right { right: 8px; }
-.edit-property-thumbnails { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }.edit-property-thumbnails button { height: 86px; overflow: hidden; padding: 0; border: 1px solid #dce3ea; border-radius: 5px; background: #a9a9a9; cursor: pointer; }.edit-property-thumbnails button.is-active { border: 2px solid #16a5e1; }.edit-property-thumbnails img { width: 100%; height: 100%; object-fit: cover; }
-.edit-property-card input, .edit-property-card textarea { width: 100%; box-sizing: border-box; border: 1px solid #d6dee7; border-radius: 5px; background: #fff; color: #334155; font: inherit; font-size: 12px; }.edit-property-card input { height: 36px; padding: 0 10px; }.edit-property-card textarea { min-height: 96px; padding: 10px; resize: vertical; line-height: 1.45; }.edit-property-card input:focus, .edit-property-card textarea:focus { outline: 2px solid rgb(22 165 225 / .18); border-color: #16a5e1; }
-.edit-property-address-fields, .edit-property-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.edit-property-address-fields label, .edit-property-prices label { display: grid; gap: 4px; color: #718096; font-size: 10px; font-weight: 650; }.edit-property-find-location { margin: 12px 0; }.edit-property-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }.edit-property-card-heading p { margin-bottom: 10px; }.edit-property-card-heading button { height: 28px; padding: 0 8px; font-size: 11px; }
-.edit-property-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }.edit-property-rules span { min-height: 30px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 6px; border: 1px solid #dce3ea; border-radius: 5px; color: #526171; font-size: 10px; text-align: center; }.edit-property-rules button { display: grid; place-items: center; padding: 1px; border: 0; color: #718096; background: transparent; cursor: pointer; }.edit-property-rules button:hover { color: #e04f5f; }.edit-property-rules svg { width: 12px; height: 12px; }
-.edit-property-utilities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }.edit-property-utilities button { min-height: 30px; padding: 4px 7px; border: 1px solid #dce3ea; border-radius: 5px; color: #526171; background: #fff; font: inherit; font-size: 11px; cursor: pointer; }.edit-property-utilities button:hover { border-color: #75c8ec; background: #f0faff; }.edit-property-utilities button.is-selected { border-color: #16a5e1; background: #e8f7fe; color: #0879b5; font-weight: 650; }
-.edit-property-rule-add { display: flex; gap: 7px; margin-top: 10px; }.edit-property-rule-add button { height: 36px; padding: 0 10px; }.edit-property-rule-add button svg { width: 14px; height: 14px; }.edit-property-status { min-height: 100vh; display: grid; place-items: center; background: #f5f7fa; color: #526171; font-weight: 600; }
-@media (max-width: 850px) { .edit-property-grid { grid-template-columns: 1fr; }.edit-property-main-photo { height: min(52vw, 300px); } }
-@media (max-width: 560px) { .edit-property-content { width: min(100% - 24px, 1180px); padding-top: 18px; }.edit-property-header { flex-direction: column; }.edit-property-header-actions { width: 100%; }.edit-property-header-actions button { flex: 1; }.edit-property-address-fields, .edit-property-prices, .edit-property-rules, .edit-property-utilities { grid-template-columns: 1fr; }.edit-property-thumbnails button { height: 58px; }.edit-property-card { padding: 12px; }.edit-property-card-heading { flex-direction: column; }.edit-property-card-heading button { width: 100%; } }
-
-/* ------------------------------------------------------------------
-   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
-   The compact screens below were composed at desktop density, so at phone
-   widths their text fell under ~11px (and form controls under 16px, which
-   makes iOS Safari zoom the whole page on focus). These phone-only rules
-   raise the measured small values to a readable minimum without changing
-   the tablet and desktop layouts.
-   ------------------------------------------------------------------ */
+/* Single-column Edit Apartment form, sized from the supplied Figma export. */
+.edit-property-page { min-height: 100dvh; background: #fff; color: #1f2937; }
+.edit-property-content { box-sizing: border-box; width: min(945px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 max(40px, env(safe-area-inset-bottom)); }
+.edit-property-header { margin-bottom: 24px; }
+.edit-property-back { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #0ea5e9; font-size: 14px; cursor: pointer; }
+.edit-property-back svg { width: 16px; height: 16px; }
+.edit-property-header h1 { margin: 14px 0 5px; color: #111; font-size: 24px; line-height: 29px; font-weight: 700; }
+.edit-property-header p { margin: 0; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-fields { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.edit-property-card { box-sizing: border-box; min-width: 0; padding: 16px 24px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; }
+.edit-property-card h2, .edit-property-name > label, .edit-property-card > label:first-child { display: block; margin: 0 0 8px; color: #1f2937; font-size: 16px; font-weight: 600; line-height: 19px; }
+.edit-property-card h2 > span, .edit-property-address-fields label > span { color: #0ea5e9; }
+.edit-property-card > p, .edit-property-map-heading p { margin: -4px 0 12px; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-card input, .edit-property-card textarea, .edit-property-coordinate-fields input { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #334155; font: inherit; font-size: 14px; }
+.edit-property-card input, .edit-property-coordinate-fields input { height: 40px; padding: 8px 14px; }
+.edit-property-card textarea { display: block; min-height: 76px; padding: 12px 14px; resize: vertical; line-height: 20px; }
+.edit-property-card input:focus-visible, .edit-property-card textarea:focus-visible, .edit-property-coordinate-fields input:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.edit-property-prices, .edit-property-coordinate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.edit-property-prices label, .edit-property-address-fields label, .edit-property-coordinate-fields label { display: grid; gap: 6px; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-character-count { display: block; margin-top: 6px; text-align: right; color: #64748b; font-size: 12px; }
+.edit-property-choice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px 34px; }
+.edit-property-choice-grid button { box-sizing: border-box; min-height: 40px; padding: 8px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #0f172a; font: inherit; font-size: 14px; font-weight: 500; line-height: 17px; cursor: pointer; }
+.edit-property-choice-grid button.is-selected { border-color: #0ea5e9; background: #f0f9ff; color: #0284c7; }
+.edit-property-choice-grid button:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.edit-property-other-label { display: block; margin: 14px 0 6px; font-size: 14px; font-weight: 600; }
+.edit-property-add-row { display: flex; gap: 12px; }
+.edit-property-add-row > input { flex: 1; }
+.edit-property-add-row > button { width: 100px; height: 40px; border-radius: 8px; background: #0ea5e9; color: #fff; }
+.edit-property-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.edit-property-tags:empty { display: none; }
+.edit-property-tags > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid #bae6fd; border-radius: 5px; background: #e0f2fe; color: #0284c7; font-size: 12px; }
+.edit-property-tags button { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.edit-property-tags svg { width: 12px; height: 12px; }
+.edit-property-address-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.edit-property-address-full { grid-column: 1 / -1; }
+.edit-property-map-card { padding: 24px 30px; }
+.edit-property-map-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.edit-property-map-heading button { height: 32px; padding: 4px 10px; font-size: 12px; }
+.edit-property-map-card .location-picker-panel > label, .edit-property-map-card .location-picker-grid { display: none; }
+.edit-property-map-card .location-picker-card { height: 270px; border-radius: 10px; }
+.edit-property-map-card .location-picker-text { font-size: 12px; }
+.edit-property-footer { display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px; }
+.edit-property-footer button { min-width: 100px; height: 44px; border-radius: 8px; }
+.edit-property-footer button[type=submit] { background: #0ea5e9; color: #fff; }
+.edit-property-photo-card { min-height: 227px; padding: 12px 16px; }
+.edit-property-photo-card > small { display: block; margin-top: 10px; color: #64748b; font-size: 12px; }
+.edit-property-photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.edit-property-photo-tile, .edit-property-photo-upload { position: relative; height: 120px; overflow: hidden; border-radius: 8px; background: #cbd5e1; }
+.edit-property-photo-tile > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.edit-property-photo-tile.is-primary { outline: 2px solid #0ea5e9; outline-offset: -2px; }
+.edit-property-photo-remove, .edit-property-photo-cover { position: absolute; display: grid; place-items: center; width: 24px; height: 24px; padding: 4px; border: 0; border-radius: 50%; cursor: pointer; }
+.edit-property-photo-remove { top: 6px; right: 6px; background: #0f172a; color: #fff; }
+.edit-property-photo-cover { bottom: 6px; left: 6px; background: #fff; color: #0284c7; }
+.edit-property-photo-remove svg, .edit-property-photo-cover svg { width: 14px; height: 14px; }
+.edit-property-photo-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid #93c5fd; background: #eff6ff; color: #2563eb; font: inherit; font-size: 14px; cursor: pointer; }
+.edit-property-photo-upload svg { width: 24px; height: 24px; }
+.edit-property-status { display: grid; min-height: 100dvh; place-items: center; color: #64748b; }
 @media (max-width: 640px) {
-  .edit-property-address-fields label, .edit-property-prices label, .edit-property-rules span
-  { font-size: 11px; }
-}
-@media (max-width: 640px) {
-  .edit-property-card input, .edit-property-card textarea
-  { font-size: 16px; }
-}
-
-/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
-   same floor applies across the whole compact shell range (<=1023px). */
-@media (max-width: 1023px) {
-  .edit-property-card input, .edit-property-card textarea
-  { font-size: 16px; }
-}
-
-/* Tablet range floor: anything still under 11px between 641px and 1023px
-   (tablet portrait / small laptop) is raised to the same readable minimum. */
-@media (max-width: 1023px) {
-  .edit-property-address-fields label, .edit-property-prices label, .edit-property-rules span
-  { font-size: 11px; }
-}
-
-/* Dynamic viewport height plus bottom safe-area padding for phones. */
-.edit-property-page,
-.edit-property-status { min-height: 100vh; min-height: 100dvh; }
-.edit-property-content { padding-bottom: max(48px, env(safe-area-inset-bottom)); }
-
-/* Touch devices: comfortable tap targets for the gallery and chip controls. */
-@media (hover: none) {
-  .edit-property-gallery-arrow { width: 36px; height: 36px; }
-  .edit-property-utilities button { min-height: 38px; }
-  .edit-property-card-heading button { height: 38px; }
-  .edit-property-rules button { padding: 6px; }
+ .edit-property-content { width: calc(100% - 24px); padding-top: 20px; }
+ .edit-property-card { padding: 14px; }
+ .edit-property-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+ .edit-property-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+ .edit-property-prices, .edit-property-coordinate-fields { gap: 12px; }
+ .edit-property-address-fields { grid-template-columns: 1fr; }
+ .edit-property-card input, .edit-property-card textarea, .edit-property-coordinate-fields input { font-size: 16px; }
+ .edit-property-map-card .location-picker-card { height: 230px; }
 }

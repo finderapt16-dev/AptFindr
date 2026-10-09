@@ -1,0 +1,37 @@
+.tenant-property-information { display: grid; gap: 10px; min-width: 0; }
+.tenant-property-info-panel { min-width: 0; padding: 9px 10px 10px; border: 1px solid #d8d8d8; border-radius: 6px; background: #fff; }
+.tenant-property-info-panel h2 { margin: 0 0 5px; color: #111; font-size: 13px; font-weight: 700; line-height: 18px; }
+.tenant-property-owner { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; padding-top: 7px; }
+.tenant-property-owner-profile { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tenant-property-owner-avatar { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; background: #008363; color: #fff; font-size: 10px; font-weight: 700; }
+.tenant-property-owner-identity { display: grid; gap: 4px; min-width: 0; }
+.tenant-property-owner-identity > strong { color: #111; font-size: 10px; line-height: 14px; overflow-wrap: anywhere; }
+.tenant-property-owner-identity .verified-badge { justify-self: start; gap: 3px; padding: 2px 5px; border: 1px solid #cce4f7; border-radius: 4px; background: #eff8ff; color: #0284c7; font-size: 8px; line-height: 12px; }
+.tenant-property-owner-identity .verified-badge-seal { width: 10px; height: 10px; }
+.tenant-property-owner-identity .verified-badge-check { width: 8px; height: 8px; }
+.tenant-property-owner-rating { display: flex; align-items: center; gap: 7px; color: #526482; font-size: 9px; line-height: 12px; }
+.tenant-property-owner-stars { display: inline-flex; gap: 3px; color: #f59e0b; }
+.tenant-property-owner-stars svg { width: 12px; height: 12px; }
+.tenant-property-owner-contact { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.tenant-property-owner-contact a, .tenant-property-owner-contact button, .tenant-property-no-contact { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 0; border: 0; background: transparent; color: #465878; font: inherit; font-size: 9px; line-height: 13px; text-align: left; }
+.tenant-property-owner-contact a { color: #0866ff; text-decoration: underline; }
+.tenant-property-owner-contact button { cursor: pointer; }
+.tenant-property-owner-contact svg { flex: 0 0 13px; width: 13px; height: 13px; }
+.tenant-property-owner-contact span { overflow-wrap: anywhere; }
+.tenant-property-description { min-height: 80px; margin: 0; padding: 8px; border: 1px solid #d8d8d8; border-radius: 6px; color: #526482; font-size: 10px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tenant-property-info-pills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px 18px; }
+.tenant-property-info-pills > span { display: grid; place-items: center; min-height: 25px; padding: 4px 6px; border: 1px solid #d8d8d8; border-radius: 6px; color: #172033; font-size: 9px; line-height: 14px; text-align: center; overflow-wrap: anywhere; }
+.tenant-property-info-empty, .tenant-property-location-caption { margin: 0; color: #526482; font-size: 10px; line-height: 14px; }
+.tenant-property-location-map { position: relative; height: 132px; margin-top: 14px; overflow: hidden; border: 1px solid #d8d8d8; border-radius: 6px; }
+.tenant-property-location-map .map-view-container, .tenant-property-location-map .leaflet-container { width: 100%; height: 100%; }
+.tenant-property-map-label { position: absolute; top: 50%; left: calc(50% + 10px); z-index: 450; display: flex; align-items: center; gap: 4px; max-width: 46%; padding: 3px; border-radius: 3px; background: #ffffffe6; pointer-events: none; transform: translateY(-50%); }
+.tenant-property-map-label > svg { display: none; }
+.tenant-property-map-label > div { display: grid; gap: 2px; min-width: 0; }
+.tenant-property-map-label strong { color: #222; font-size: 10px; line-height: 13px; }
+.tenant-property-map-label span { color: #666; font-size: 8px; line-height: 11px; }
+.tenant-property-location-empty { display: grid; place-items: center; gap: 5px; min-height: 132px; margin-top: 14px; padding: 12px; border: 1px solid #d8d8d8; border-radius: 6px; background: #f5f5f5; color: #526482; font-size: 11px; text-align: center; }
+@media (max-width: 640px) {
+  .tenant-property-owner-identity > strong, .tenant-property-description, .tenant-property-info-empty, .tenant-property-location-caption { font-size: 12px; }
+  .tenant-property-info-pills > span, .tenant-property-owner-contact a, .tenant-property-owner-contact button, .tenant-property-no-contact { font-size: 11px; }
+  .tenant-property-info-pills { gap: 7px; }
+}

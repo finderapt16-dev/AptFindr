@@ -9,6 +9,8 @@ import {
     geocodeLocationWithinLaPaz,
     GeocodingError,
 } from "../services/geocodingService";
+import { hasListingsInPreferredArea } from "@/utils/preferredArea";
+
 
 const amenities = [
     ["petFriendly", "Pet Friendly"],
@@ -79,6 +81,7 @@ const empty = {
     ac: false,
     laundryArea: false,
     other:false,
+    otherAmenities: "",
 };
 
 const getSavedPriceRange = (preferences) => {
@@ -116,6 +119,9 @@ export function Preferences({
     open,
     preferences,
     onSave,
+    apartments = [],
+    apartmentsLoading = false,
+    apartmentsError = "",
 }) {
     const [draft, setDraft] = useState(empty);
 
@@ -246,7 +252,7 @@ export function Preferences({
 
         try {
             const preferredArea =
-                draft.preferredArea
+                (draft.preferredArea ?? "")
                     .trim()
                     .replace(
                         /\s+/g,
@@ -280,7 +286,7 @@ export function Preferences({
                 maxBudget,
 
                 otherAmenities:
-                    draft.otherAmenities
+                    (draft.otherAmenities ?? "")
                         .trim(),
 
                 recommendationLocation:
@@ -671,6 +677,10 @@ export function Preferences({
                     {/* ========================= */}
                     {/* ERROR */}
                     {/* ========================= */}
+
+                    {!apartmentsLoading && !apartmentsError && draft.preferredArea && !hasListingsInPreferredArea(apartments, draft.preferredArea) && (
+                        <p role="status" className="tenant-filter-notice">No apartments have been listed in this area yet.</p>
+                    )}
 
                     {error && (
                         <p

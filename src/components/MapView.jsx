@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
 import { hasValidApartmentCoordinates } from "@/utils/mapCoordinates";
 import L from "leaflet";
 const singleMarkerIcon = createMarkerIcon("available");
@@ -60,86 +61,10 @@ function groupByCoordinates(apartments) {
         return { key, lat, lng, listings };
     });
 }
-function buildPopup(apartment) {
-    const image = apartment.image
-        ? `<img src="${escapeHtml(apartment.image)}" alt="${escapeHtml(apartment.title)}" class="map-popup-image" />`
-        : `<div class="map-popup-image-placeholder">No image</div>`;
-    const availableRooms = Number(apartment.availableRooms ?? 0);
-    const verifiedBadge = apartment.isVerified
-        ? `<span class="map-popup-badge map-popup-badge-verified">Verified</span>`
-        : `<span class="map-popup-badge map-popup-badge-unverified">Unverified</span>`;
-    const availabilityClass = availableRooms > 0 ? "map-popup-badge-available" : "map-popup-badge-unavailable";
-    const rentLabel = Number(apartment.price || 0) > 0
-        ? `₱${Number(apartment.price || 0).toLocaleString("en-PH")}/mo`
-        : "Unit prices";
-    const location = apartment.location || "Location not provided";
-    return `
-    <div class="map-popup-card">
-      ${image}
-      <div class="map-popup-header">
-        <div class="map-popup-main">
-          <div class="map-popup-title">${escapeHtml(apartment.title)}</div>
-          <div class="map-popup-location">${escapeHtml(location)}</div>
-        </div>
-        <div class="map-popup-price">${escapeHtml(rentLabel)}</div>
-      </div>
-      <div class="map-popup-badges">
-        ${verifiedBadge}
-        <span class="map-popup-badge ${availabilityClass}">
-          ${availableRooms} ${availableRooms === 1 ? "room" : "rooms"} available
-        </span>
-      </div>
-      <div class="map-popup-meta">
-        <span>${Number(apartment.bedrooms || 0)} bed</span>
-        <span>${Number(apartment.bathrooms || 0)} bath</span>
-      </div>
-      <button type="button" class="map-view-details map-popup-details" data-id="${escapeHtml(apartment.id)}">
-        View Details
-      </button>
-    </div>
-  `;
-}
-function buildGroupPopup(apartments) {
-    if (apartments.length === 1)
-        return buildPopup(apartments[0]);
-    const items = apartments.map((apartment) => {
-        const availableRooms = Number(apartment.availableRooms ?? 0);
-        const verifiedBadge = apartment.isVerified
-            ? `<span class="map-popup-badge map-popup-badge-small map-popup-badge-verified">Verified</span>`
-            : `<span class="map-popup-badge map-popup-badge-small map-popup-badge-unverified">Unverified</span>`;
-        const availabilityClass = availableRooms > 0 ? "map-popup-badge-available" : "map-popup-badge-unavailable";
-        return `
-      <div class="map-popup-list-item">
-        ${apartment.image
-            ? `<img src="${escapeHtml(apartment.image)}" alt="${escapeHtml(apartment.title)}" class="map-popup-list-image" />`
-            : `<div class="map-popup-list-placeholder"></div>`}
-        <div class="map-popup-list-content">
-          <div class="map-popup-list-title">${escapeHtml(apartment.title)}</div>
-          <div class="map-popup-list-location">${escapeHtml(apartment.location || "Location not provided")}</div>
-          <div class="map-popup-list-price">${Number(apartment.price || 0) > 0 ? `₱${Number(apartment.price || 0).toLocaleString("en-PH")}/mo` : "Unit prices"}</div>
-          <div class="map-popup-list-badges">
-            ${verifiedBadge}
-            <span class="map-popup-badge map-popup-badge-small ${availabilityClass}">${availableRooms} rooms</span>
-          </div>
-          <button type="button" class="map-view-details map-popup-list-details" data-id="${escapeHtml(apartment.id)}">
-            View Details
-          </button>
-        </div>
-      </div>
-    `;
-    }).join("");
-    return `
-    <div class="map-popup-group">
-      <div class="map-popup-group-title">${apartments.length} apartments at this location</div>
-      <div class="map-popup-group-description">These listings share the same landlord-submitted coordinates.</div>
-      ${items}
-    </div>
-  `;
-}
 export function MapView({ lat, lng, zoom = 13, apartments = [], showSingleMarker = false, emptyMessage = "No apartments found on the map. Try adjusting your filters.", }) {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
-    const navigate = useNavigate();
+    const [activePopup, setActivePopup] = useState(null);
     useEffect(() => {
         if (!mapRef.current || mapInstanceRef.current)
             return;
@@ -164,17 +89,11 @@ export function MapView({ lat, lng, zoom = 13, apartments = [], showSingleMarker
                 const bounds = L.latLngBounds(groups.map((group) => [group.lat, group.lng]));
                 groups.forEach((group) => {
                     const marker = L.marker([group.lat, group.lng], { icon: createMarkerIcon(getGroupTone(group.listings), group.listings.length) }).addTo(map);
-                    marker.bindPopup(buildGroupPopup(group.listings));
-                    marker.on("popupopen", () => {
-                        const popupElement = marker.getPopup()?.getElement();
-                        popupElement?.querySelectorAll(".map-view-details").forEach((detailsButton) => {
-                            detailsButton.addEventListener("click", () => {
-                                const apartmentId = detailsButton.getAttribute("data-id");
-                                if (apartmentId)
-                                    navigate(`/apartment/${apartmentId}`);
-                            });
-                        });
-                    });
+                    const container = document.createElement("div");
+                    container.className = "map-listing-popup";
+                    marker.bindPopup(container, { className: "map-listing-popup-shell", minWidth: 278, maxWidth: 278 });
+                    marker.on("popupopen", () => setActivePopup({ container, listings: group.listings }));
+                    marker.on("popupclose", () => setActivePopup(current => current?.container === container ? null : current));
                 });
                 if (groups.length === 1) {
                     map.setView([groups[0].lat, groups[0].lng], Math.max(zoom, 15));
@@ -189,6 +108,6 @@ export function MapView({ lat, lng, zoom = 13, apartments = [], showSingleMarker
             map.remove();
             mapInstanceRef.current = null;
         };
-    }, [lat, lng, zoom, apartments, showSingleMarker, navigate, emptyMessage]);
-    return <div ref={mapRef} className="map-view-container"/>;
+    }, [lat, lng, zoom, apartments, showSingleMarker, emptyMessage]);
+    return <><div ref={mapRef} className="map-view-container"/>{activePopup && createPortal(<>{activePopup.listings.map(apartment => <ApartmentCard key={apartment.id} apartment={apartment} ratingStats={apartment.ratingStats} ratingsLoading={apartment.ratingsLoading}/>)}</>, activePopup.container)}</>;
 }

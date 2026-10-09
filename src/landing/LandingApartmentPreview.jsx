@@ -1,9 +1,4 @@
-import {
-    Building2,
-    Eye,
-    Loader2,
-    MapPin,
-} from "lucide-react";
+import { Building2, Loader2 } from "lucide-react";
 
 import {
     useEffect,
@@ -17,20 +12,13 @@ import {
     useApartmentsContext,
 } from "@/contexts/ApartmentsContext";
 
-import {
-    getApartmentImageUrl,
-} from "@/utils/images";
 
 import {
     isTenantVisibleApartment,
 } from "@/utils/listingVisibility";
 
-import {
-    ImageWithFallback,
-} from "@/components/ImageWithFallback";
-
-import { Badge } from "@/components/ui/badge";
-import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
+import { fetchRatingsForApartments, summarizeApartmentRatings } from "@/services/apartmentRatingsService";
 
 import {
     fetchApartmentViews,
@@ -39,8 +27,6 @@ import {
 
 
 const SKELETON_CARD_COUNT = 4;
-const STATUS_LABEL = { available: "Available", occupied: "Occupied", maintenance: "Under Maintenance" };
-const STATUS_CLASS = { available: "landing-preview-status-available", occupied: "landing-preview-status-occupied", maintenance: "landing-preview-status-maintenance" };
 
 const listingSortTime = (apartment) => {
     const timestamp = Date.parse(apartment.publishedAt ?? apartment.createdAt ?? apartment.updatedAt ?? "");
@@ -48,186 +34,11 @@ const listingSortTime = (apartment) => {
 };
 
 
-/* =========================================================
-   APARTMENT PRICE
-========================================================= */
-
-function getApartmentPriceLabel(
-    apartment
-) {
-    const prices =
-        (
-            apartment.rooms ||
-            []
-        )
-            .map(
-                (room) =>
-                    Number(
-                        room.price
-                    )
-            )
-            .filter(
-                (price) =>
-                    Number.isFinite(
-                        price
-                    ) &&
-                    price > 0
-            );
-
-    if (
-        prices.length ===
-        0
-    ) {
-        const fallbackPrice =
-            Number(
-                apartment.price
-            );
-
-        if (
-            Number.isFinite(
-                fallbackPrice
-            ) &&
-            fallbackPrice > 0
-        ) {
-            return `₱${fallbackPrice.toLocaleString(
-                "en-PH"
-            )} / month`;
-        }
-
-        return "Price unavailable";
-    }
-
-    const minPrice =
-        Math.min(
-            ...prices
-        );
-
-    const maxPrice =
-        Math.max(
-            ...prices
-        );
-
-    if (
-        minPrice ===
-        maxPrice
-    ) {
-        return `₱${minPrice.toLocaleString(
-            "en-PH"
-        )} / month`;
-    }
-
-    return `₱${minPrice.toLocaleString(
-        "en-PH"
-    )}–₱${maxPrice.toLocaleString(
-        "en-PH"
-    )} / month`;
+function PreviewCard({ apartment, onApartmentClick, viewCount = 0, ratingStats, ratingsLoading }) {
+    return <div className="landing-preview-wrapper">
+      <ApartmentCard apartment={{ ...apartment, views: viewCount }} ratingStats={ratingStats} ratingsLoading={ratingsLoading} onApartmentClick={onApartmentClick} showGuestFavorite/>
+    </div>;
 }
-
-
-/* =========================================================
-   VIEW LABEL
-========================================================= */
-
-const viewLabel = (
-    count = 0
-) =>
-    `${Number(
-        count
-    ).toLocaleString()} ${
-        Number(count) === 1
-            ? "view"
-            : "views"
-    }`;
-
-
-/* =========================================================
-   PREVIEW CARD
-========================================================= */
-
-function PreviewCard({
-    apartment,
-    onApartmentClick,
-    viewCount = 0,
-}) {
-    const status = apartment.status ?? "available";
-    const verified = apartment.landlordVerified === true || apartment.isVerified === true;
-    const location = [
-        apartment.address ||
-            apartment.location,
-
-        apartment.city,
-
-        apartment.state,
-    ]
-        .filter(Boolean)
-        .map(
-            (value) =>
-                value.trim()
-        )
-        .join(", ");
-
-    return (
-        <div className="landing-preview-wrapper">
-            <Link
-                to={`/apartment/${apartment.id}`}
-                onClick={
-                    onApartmentClick
-                }
-                className="landing-preview-card"
-            >
-                {/* IMAGE */}
-
-                <div className="landing-preview-image-wrap">
-                    <ImageWithFallback
-                        src={getApartmentImageUrl(
-                            apartment
-                        )}
-                        alt={
-                            apartment.title ||
-                            "Apartment"
-                        }
-                        className="landing-preview-image"
-                    />
-
-                    <div className="landing-preview-badges">
-                        <Badge className={`landing-preview-status ${STATUS_CLASS[status] ?? STATUS_CLASS.available}`}>
-                            {STATUS_LABEL[status] ?? "Available"}
-                        </Badge>
-                        {verified && <VerifiedBadge label="Verified Listing" className="landing-preview-verified" />}
-                        {apartment.petFriendly && <Badge className="landing-preview-pet">Pet Friendly</Badge>}
-                    </div>
-                </div>
-
-
-                {/* BODY */}
-
-                <div className="landing-preview-body">
-
-                    <div className="landing-preview-heading">
-                        <div className="landing-preview-main">
-                            <h3 className="landing-preview-title">
-                                {apartment.title || "Untitled Apartment"}
-                            </h3>
-                            <div className="landing-preview-location">
-                                <MapPin className="landing-preview-location-icon" aria-hidden="true" />
-                                <span className="landing-preview-address">
-                                    {location || "La Paz, Iloilo City"}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="landing-preview-meta">
-                            <p className="landing-preview-price">{getApartmentPriceLabel(apartment)}</p>
-                            <span className="landing-preview-views"><Eye aria-hidden="true" />{viewLabel(viewCount)}</span>
-                        </div>
-                    </div>
-                    <span className="landing-preview-view-details"><Eye aria-hidden="true" />View Details</span>
-
-                </div>
-            </Link>
-        </div>
-    );
-}
-
 
 /* =========================================================
    SKELETON
@@ -381,6 +192,19 @@ export function LandingApartmentPreview({
         );
 
 
+    const [ratingRows, setRatingRows] = useState([]);
+    const [ratingsLoading, setRatingsLoading] = useState(true);
+    const ratingSummary = useMemo(() => summarizeApartmentRatings(ratingRows), [ratingRows]);
+    useEffect(() => {
+        let active = true;
+        setRatingsLoading(true);
+        fetchRatingsForApartments(publishedApartments.map(apartment => apartment.id))
+            .then(rows => { if (active) setRatingRows(rows); })
+            .catch(error => { console.error("Unable to load apartment ratings:", error); if (active) setRatingRows([]); })
+            .finally(() => { if (active) setRatingsLoading(false); });
+        return () => { active = false; };
+    }, [publishedApartments]);
+
     /* =========================
        LOADING
     ========================= */
@@ -512,6 +336,8 @@ export function LandingApartmentPreview({
                             apartment
                         ) => (
                             <PreviewCard
+                                ratingStats={ratingSummary.byApartment.get(apartment.id)}
+                                ratingsLoading={ratingsLoading}
                                 key={
                                     apartment.id
                                 }

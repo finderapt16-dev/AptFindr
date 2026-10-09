@@ -40,8 +40,8 @@ const getBrowsePriceLabel = (apartment) => {
     const highest = Math.max(...prices);
     const formatPrice = (price) => `₱${price.toLocaleString("en-PH")}`;
     return lowest === highest
-        ? `${formatPrice(lowest)}/month`
-        : `${formatPrice(lowest)} - ${formatPrice(highest)}/month`;
+        ? `${formatPrice(lowest)} / month`
+        : `${formatPrice(lowest)} - ${formatPrice(highest)} / month`;
 };
 
 const favoriteViewLabel = (count) =>
@@ -144,7 +144,7 @@ export function Favorites() {
             <div className="apartment-browse-row-7">
               <div className="apartment-browse-panel-7">
                 <h2 className="apartment-browse-heading">{apartment.title}</h2>
-                <ApartmentRatingSummary stats={(apartment.rating ?? apartment.averageRating ?? apartment.average_rating) ? { average: Number(apartment.rating ?? apartment.averageRating ?? apartment.average_rating), count: Number(apartment.ratingCount ?? apartment.rating_count ?? 1) } : undefined} className="apartment-browse-apartment-rating-summary"/>
+                <ApartmentRatingSummary compact stats={(apartment.rating ?? apartment.averageRating ?? apartment.average_rating) ? { average: Number(apartment.rating ?? apartment.averageRating ?? apartment.average_rating), count: Number(apartment.ratingCount ?? apartment.rating_count ?? 1) } : undefined} className="apartment-browse-apartment-rating-summary"/>
                 <p className="apartment-browse-text-3"><MapPin className="apartment-browse-map-pin-icon"/>{location}</p>
               </div>
               <div className="apartment-browse-panel-8">
@@ -154,7 +154,7 @@ export function Favorites() {
             </div>
 
             <Button asChild variant="outline" className="apartment-browse-button-9">
-              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/favorites", backLabel: "Back to Favorites" }}><Eye className="apartment-browse-eye-icon-2"/>View Details</Link>
+              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/favorites", backLabel: "Back to Favorites" }}><Eye className="apartment-browse-eye-icon-2"/>View room details</Link>
             </Button>
           </div>
         </article>);

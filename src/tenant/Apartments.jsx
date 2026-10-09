@@ -1,5 +1,6 @@
 import { matchesRoomCapacity } from "@/tenant/roomCapacity";
 import { Preferences } from "./Preferences";
+import { hasListingsInPreferredArea } from "@/utils/preferredArea";
 import {
     Building2,
     ChevronLeft,
@@ -167,12 +168,12 @@ const getApartmentPriceLabel = (apartment) => {
         `₱${price.toLocaleString("en-PH")}`;
 
     if (lowestPrice === highestPrice) {
-        return `${formatPrice(lowestPrice)}/month`;
+        return `${formatPrice(lowestPrice)} / month`;
     }
 
     return `${formatPrice(lowestPrice)} - ${formatPrice(
         highestPrice
-    )}/month`;
+    )} / month`;
 };
 
 
@@ -1180,6 +1181,9 @@ if (browseMode === "popular") {
     const renderFilterContent =
         () => (
             <Preferences
+                apartments={allApartments}
+                apartmentsLoading={apartmentsLoading}
+                apartmentsError={apartmentsError}
                 open={
                     preferencesOpen
                 }
@@ -1321,7 +1325,7 @@ if (browseMode === "popular") {
                                 fill={
                                     favorite
                                         ? "currentColor"
-                                        : "none"
+                                        : "currentColor"
                                 }
                             />
                         )}
@@ -1337,7 +1341,7 @@ if (browseMode === "popular") {
                                 }
                             </h2>
 
-                            <ApartmentRatingSummary
+                            <ApartmentRatingSummary compact
                                 stats={ratingSummary.byApartment.get(
                                     apartment.id
                                 )}
@@ -1383,8 +1387,7 @@ if (browseMode === "popular") {
                         >
                             <Eye className="apartment-browse-eye-icon-2" />
 
-                            View
-                            Details
+                            View room details
                         </Link>
                     </Button>
                 </div>
@@ -1670,7 +1673,7 @@ if (browseMode === "popular") {
                                                 : "No apartments found"}
                                         </h2>
 
-                                        <p className="apartment-browse-text-8">
+                                        <p className="apartment-browse-text-8" style={browseMode === "suggested" && savedPreferences.preferredArea && !hasListingsInPreferredArea(allApartments, savedPreferences.preferredArea) ? { color: "#b91c1c" } : undefined}>
                                             {browseMode ===
                                                 "suggested" &&
                                             !activeNearbySearch &&
@@ -1678,7 +1681,9 @@ if (browseMode === "popular") {
                                                 ? "Save your preferences to see apartments suggested for you."
                                                 : activeNearbySearch
                                                   ? "No available apartments were found within 500 meters of this location."
-                                                  : "Try adjusting your search, filters, or preferences to discover other available apartments."}
+                                                  : browseMode === "suggested" && savedPreferences.preferredArea && !hasListingsInPreferredArea(allApartments, savedPreferences.preferredArea)
+                                                    ? "No apartments have been listed in this area yet."
+                                                    : "Try adjusting your search, filters, or preferences to discover other available apartments."}
                                         </p>
 
                                         {browseMode ===
@@ -1800,6 +1805,10 @@ if (browseMode === "popular") {
                                                     apt
                                                 ) => ({
                                                     id: apt.id,
+
+                                                    ...apt,
+                                                    ratingStats: ratingSummary.byApartment.get(apt.id),
+                                                    ratingsLoading,
 
                                                     title: apt.title,
 

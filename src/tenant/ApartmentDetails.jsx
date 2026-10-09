@@ -29,6 +29,8 @@ import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { RoomImageGallery } from "@/components/RoomImageGallery";
 import { RoomDetails } from "./RoomDetails";
 import { uploadReportEvidence } from "@/services/reportEvidenceService";
+import { ApartmentInformationSidebar } from "./ApartmentInformationSidebar";
+import { ApartmentUnitList } from "./ApartmentUnitList";
 const STATUS_LABEL = { available: "Available", occupied: "Occupied", maintenance: "Under Maintenance" };
 const STATUS_STYLE = { available: "apartment-detail-badge-2", occupied: "apartment-detail-badge-3", maintenance: "apartment-detail-badge-4" };
 const roomStatus = getRoomStatus;
@@ -99,6 +101,7 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
                 <section className="landlord-view-card"><h2>About this apartment</h2><textarea value={apartment.description || "No description provided."} readOnly/></section>
                 <section className="landlord-view-card"><h2>Price Range</h2><div className="landlord-view-prices"><label>Minimum Monthly Rent (₱)<input value={formatRent(minimumRent)} readOnly/></label><label>Maximum Monthly Rent (₱)<input value={formatRent(maximumRent)} readOnly/></label></div></section>
                 <section className="landlord-view-card"><h2>House Rules &amp; Policies</h2><div className="landlord-view-rules">{(rules.length ? rules : ["No rules specified."]).slice(0, 4).map((rule) => <span key={rule}>{rule}</span>)}</div></section>
+                <section className="landlord-view-card"><h2>Contract Duration</h2><div className="landlord-view-rules"><span>{apartment.features?.contractDuration || apartment.contractDuration || "Not specified"}</span></div></section>
                 <section className="landlord-view-card"><h2>Utilities Included</h2><div className="landlord-view-utilities">{(includedUtilities.length ? includedUtilities : ["No utilities included."]).map((utility) => <span key={utility}>{utility}</span>)}</div></section>
               </aside>
             </div>
@@ -303,7 +306,7 @@ export function ApartmentDetails() {
     } };
     const handleBack = () => {
         if (landlordMarketDetail)
-            return navigate("/browse");
+            return navigate("/landlord/dashboard?section=market");
         if (returnTo)
             return navigate(returnTo);
         if (ownListing)
@@ -437,14 +440,14 @@ export function ApartmentDetails() {
         }
         return <Sidebar active="apartments" unreadCount={unreadCount}/>;
     };
-    return (<div className={`app-shell ${landlordPortal ? "landlord-shell landlord-property-detail" : "tenant-detail-colors"}`}>
+    return (<div className={`app-shell ${landlordPortal ? "landlord-shell landlord-property-detail" : "tenant-detail-colors"} ${landlordMarketDetail ? "tenant-detail-colors market-apartment-detail" : ""}`}>
       <div className="app-shell-frame">
       {landlordPortal
             ? <aside className="app-shell-sidebar">{renderSidebar()}</aside>
             : <div className="apartment-detail-panel"><Sidebar active="apartments" unreadCount={unreadCount}/></div>}
       {mobileNav && !renter && <div className="app-sidebar-overlay"><button aria-label="Close navigation" className="apartment-detail-close-navigation" onClick={() => setMobileNav(false)}/><div className="app-sidebar-drawer is-open">{renderSidebar()}<button aria-label="Close navigation" onClick={() => setMobileNav(false)} className="app-sidebar-close"><X className="apartment-detail-x-icon"/></button></div></div>}
       <div className="app-shell-main"><main className="app-shell-content app-shell-content-mobile-nav"><div className="apartment-detail-container">
-        <div className="apartment-detail-content"><div className="apartment-detail-row"><Button variant="ghost" onClick={handleBack} className={`apartment-detail-button ${landlordPortal ? "apartment-detail-button-2" : ""}`}><ArrowLeft className="apartment-detail-arrow-left-icon"/><span className="apartment-detail-span">{landlordMarketDetail ? "Back to Market Overview" : backLabel ?? (ownListing ? "Back to My Apartments" : "Back to Browse")}</span></Button></div><div className="apartment-detail-row-2">{tenantAccount && <><Button variant="outline" onClick={() => { setPendingRating(currentRating); setRatingSubmitted(false); setRatingOpen(true); }} className="tenant-apartment-rate-button"><Star/>Rate</Button><Button variant="outline" onClick={() => void toggleFavorite(apartment.id)} title={favorite ? "Remove favorite" : "Add favorite"} className="tenant-apartment-favorite-button"><Heart className={`apartment-detail-heart-icon ${favorite ? "apartment-detail-heart-icon-2" : ""}`}/>{favorite ? "Favorited" : "Favorite"}</Button></>}</div></div>
+        <div className="apartment-detail-content"><div className="apartment-detail-row"><Button variant="ghost" onClick={handleBack} className={`apartment-detail-button ${landlordPortal ? "apartment-detail-button-2" : ""}`}><ArrowLeft className="apartment-detail-arrow-left-icon"/><span className="apartment-detail-span">{landlordMarketDetail ? "Back to Market Trends" : backLabel ?? (ownListing ? "Back to My Apartments" : "Back to Browse")}</span></Button></div><div className="apartment-detail-row-2">{tenantAccount && <><Button variant="outline" onClick={() => { setPendingRating(currentRating); setRatingSubmitted(false); setRatingOpen(true); }} className="tenant-apartment-rate-button"><Star/>Rate</Button><Button variant="outline" onClick={() => void toggleFavorite(apartment.id)} title={favorite ? "Remove favorite" : "Add favorite"} className="tenant-apartment-favorite-button"><Heart className={`apartment-detail-heart-icon ${favorite ? "apartment-detail-heart-icon-2" : ""}`}/>{favorite ? "Favorited" : "Favorite"}</Button></>}</div></div>
 
         <header className="apartment-detail-header"><div className="apartment-detail-panel-2">
             <InlinePropertyInfo label="Apartment name" fields={[{ key: "title", label: "Apartment name", required: true }]} apartment={apartment} enabled={editableInfo} onSave={savePropertyInfo}>
@@ -452,7 +455,12 @@ export function ApartmentDetails() {
                 </InlinePropertyInfo><div className={`apartment-detail-row-3 ${landlordPortal ? "apartment-detail-panel-3" : "apartment-detail-panel-4"}`}>
                     <span className="apartment-detail-row-4"><MapPin className={`apartment-detail-map-pin-icon ${landlordPortal ? "apartment-detail-map-pin-icon-2" : "apartment-detail-map-pin-icon-2"}`}/>
                     <span className="apartment-detail-span-2">{locationText}</span></span>
-                    </div></div>
+                    </div>{landlordMarketDetail && <p className="market-apartment-price-line">{(() => {
+                        const prices = (apartment.rooms ?? []).map(room => Number(room.price)).filter(price => Number.isFinite(price) && price > 0);
+                        const min = prices.length ? Math.min(...prices) : Number(apartment.price || 0);
+                        const max = prices.length ? Math.max(...prices) : min;
+                        return min > 0 ? `\u20b1 ${min.toLocaleString("en-PH")}${max > min ? ` - \u20b1 ${max.toLocaleString("en-PH")}` : ""} / month` : "Price unavailable";
+                    })()}{(apartment.publishedAt || apartment.createdAt) && Number.isFinite(Date.parse(apartment.publishedAt || apartment.createdAt)) && ` | Posted on ${new Date(apartment.publishedAt || apartment.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Shanghai" })}`}</p>}</div>
                             </header>
 
         <InlinePropertyInfo label="Apartment Image" fields={[]} apartment={editableApartment} enabled={editableInfo} onSave={savePropertyInfo} photos>
@@ -476,8 +484,11 @@ export function ApartmentDetails() {
         </InlinePropertyInfo>
 
         <div className="apartment-detail-grid-3"><div className="apartment-detail-panel-11">
+          {landlordMarketDetail ? <ApartmentUnitList rooms={roomsForDisplay} apartment={apartment} onSelect={setSelectedRoom}/> : <>
           <section className="apartment-detail-section-4"><div className="apartment-detail-content-2"><div className="apartment-detail-panel-2"><h2 className="apartment-detail-rooms-amenities">Units & Amenities {editableInfo && <Link className="property-inline-pencil" aria-label="Edit units" title="Edit units" to={`/landlord/properties/${apartment.id}/rooms`}><Pencil size={16}/></Link>}</h2><p className="apartment-detail-text-6">Current unit availability from the landlord.</p></div><Badge className="apartment-detail-available">{availableRooms} available</Badge></div>{roomsForDisplay.length ? <div className="apartment-detail-panel-12">{roomsForDisplay.map((room, index) => <button type="button" key={room.id || index} onClick={() => setSelectedRoom(room)} className={`apartment-detail-button-9 ${landlordPortal ? "apartment-detail-button-10" : "apartment-detail-button-11"}`}><div className="apartment-detail-grid-4">{room.images?.[0] ? <img src={getImageUrl(room.images[0])} alt={room.name || `Unit ${index + 1}`} className="apartment-detail-image-2"/> : <div className="apartment-detail-grid-5"><DoorOpen className="apartment-detail-door-open-icon"/></div>}<div className="apartment-detail-panel-13"><div className="apartment-detail-content-3"><div className="apartment-detail-panel-2"><h3 className="apartment-detail-heading">{room.name || `Unit ${index + 1}`}</h3><p className="apartment-detail-text-7">{room.type || "Unit type not provided"}</p></div><Badge className={`${STATUS_STYLE[roomStatus(room)]} apartment-detail-badge-5`}>{STATUS_LABEL[roomStatus(room)]}</Badge></div><div className="apartment-detail-grid-6"><span className="apartment-detail-span-2"><b>₱{Number(room.price || 0).toLocaleString("en-PH")}</b><small className="apartment-detail-monthly-rent">Monthly rent</small></span><span><b>{room.maxOccupants || "-"}</b><small className="apartment-detail-capacity">Capacity</small></span><span><b>{room.hasPrivateBath ? "Private" : "Shared"}</b><small className="apartment-detail-bathroom">Bathroom</small></span><span><b>{room.hasAC ? "Yes" : "No"}</b><small className="apartment-detail-air-conditioning">Air conditioning</small></span></div>{room.description && <p className="apartment-detail-text-8">{room.description}</p>}<p className={`apartment-detail-view-room-details ${landlordPortal ? "apartment-detail-view-room-details-2" : "apartment-detail-view-room-details-3"}`}>View unit details</p></div></div></button>)}</div> : <div className="apartment-detail-no-room-information-available">No unit information available.</div>}</section>
+          </>}
         </div><aside className="apartment-detail-aside">
+          {(tenantAccount || landlordMarketDetail) ? <ApartmentInformationSidebar apartment={apartment} landlordName={landlordName} landlordPhone={landlordPhone} facebookUrl={safeExternalUrl(landlord?.facebookLink)} verified={verified} ratings={ratings} averageRating={averageRating} rules={rules} included={[...new Set([...includedUtilities, ...listFromUnknown(apartment.amenities), ...propertyFeatures])]} contractDuration={featureRecord.contractDuration ?? apartment.contractDuration} locationText={locationText} mapPinAvailable={mapPinAvailable} copyLandlordPhone={() => void copyLandlordPhone()} expandMap={() => setMapExpanded(true)} reportProblem={tenantAccount ? () => setReportOpen(true) : undefined} includedTitle={landlordMarketDetail ? "Utilities Included" : "Apartment Included"}/> : <>
                     <section className="apartment-detail-section-3">
                         <h2 className="apartment-detail-landlord-information">Landlord Information</h2>
                         <div className="apartment-detail-landlord-card">
@@ -529,6 +540,7 @@ export function ApartmentDetails() {
           <section className="apartment-detail-section-3"><h2 className="apartment-detail-utilities-title">Utilities Included</h2><div className="apartment-detail-utilities">{(includedUtilities.length ? includedUtilities : ["No utilities included."]).map((utility) => <span key={utility}>{utility}</span>)}</div></section>
           {renter && <section className="apartment-detail-section-5 tenant-apartment-rating-summary"><h2 className="apartment-detail-tenant-rating">Tenant Rating</h2><p className="apartment-detail-text-12">{ratings.length ? `★ ${averageRating.toFixed(1)} based on ${ratings.length} rating${ratings.length === 1 ? "" : "s"}` : "No ratings yet"}</p>{currentRating > 0 && <button type="button" disabled={ratingSaving} onClick={() => void clearTenantRating()} className="apartment-detail-remove-my-rating">Remove my rating</button>}</section>}
           {renter && <section className="apartment-detail-section-6"><div className="apartment-detail-row-9"><AlertTriangle className="apartment-detail-alert-triangle-icon-2"/><div className="apartment-detail-panel-2"><h2 className="apartment-detail-report-a-problem">Report a Problem</h2><p className="apartment-detail-text-13">Let us know about any issues you encountered with an apartment listing.</p></div></div><Button variant="outline" onClick={() => setReportOpen(true)} className="apartment-detail-report-a-problem-2">Report a Problem</Button></section>}
+          </>}
         </aside></div>
       </div></main>
 
