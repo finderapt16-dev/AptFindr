@@ -168,6 +168,8 @@ export function AdminDashboard() {
             return "landlord";
         return "system";
     };
+    const isBusinessPermitNotification = (notification) => String(notification.type ?? "").toLowerCase().startsWith("business_permit_")
+        || Boolean(notification.payload?.permit_event_id);
     const loadAdminNotifications = useCallback(async () => {
         if (!user?.id) {
             setAdminNotifs([]);
@@ -322,7 +324,7 @@ export function AdminDashboard() {
                 : !isArchived && (notifFilter === "all" || !isRead);
             const matchesType = notifTypeFilter === "all" || category === notifTypeFilter;
             const matchesActivity = notifActivityFilter === "all" || String(n.payload?.activity_type ?? n.type ?? "") === notifActivityFilter;
-            const payloadText = `${n.payload?.landlord_name ?? ""} ${n.payload?.property_name ?? ""} ${n.payload?.room_name ?? ""} ${n.payload?.topic ?? ""}`.toLowerCase();
+            const payloadText = `${n.payload?.landlord_name ?? ""} ${n.payload?.property_name ?? ""} ${n.payload?.room_name ?? ""} ${n.payload?.topic ?? ""} ${n.payload?.renewal_status ?? ""} ${n.payload?.apartment_names ?? ""} ${n.payload?.permit_year ?? ""}`.toLowerCase();
             const matchesExpandedSearch = matchesSearch || Boolean(notifSearch && payloadText.includes(notifSearch.toLowerCase()));
             return matchesExpandedSearch && matchesStatus && matchesType && matchesActivity;
         });
@@ -1161,6 +1163,16 @@ export function AdminDashboard() {
                 return { icon: Users, bg: "admin-dashboard-span-11", text: "admin-dashboard-span-14" };
             return { icon: Bell, bg: "admin-dashboard-span-12", text: "admin-dashboard-span-15" };
         };
+        const openPermitLandlord = (notification) => {
+            const landlordId = String(notification.payload?.landlord_id ?? notification.action_target_id ?? "");
+            const landlord = landlords.find((item) => item.id === landlordId);
+            if (!landlord) {
+                toast.error("The landlord linked to this permit notification could not be loaded.");
+                return;
+            }
+            setSelectedLandlord(landlord);
+            handleSectionChange("landlords");
+        };
         const activityTypes = Array.from(new Set(notificationCenterItems
             .filter((notification) => getNotificationCategory(notification) === "activities")
             .map((notification) => String(notification.payload?.activity_type ?? notification.type ?? ""))
@@ -1216,6 +1228,11 @@ export function AdminDashboard() {
                     const isSupportRequest = String(notification.type ?? "").toLowerCase() === "support_request"
                         || Boolean(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id);
                     const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
+                    const isPermitNotification = isBusinessPermitNotification(notification);
+                    const permitPayload = notification.payload ?? {};
+                    const expirationAt = permitPayload.expiration_at;
+                    const renewalStatus = permitPayload.renewal_status;
+                    const apartmentNames = permitPayload.apartment_names;
                     const supportRequestLoading = loadingSupportRequestId === (notification.id ?? supportTicketId);
                     const openNotification = () => {
                         if (archived)
@@ -1230,6 +1247,10 @@ export function AdminDashboard() {
                             void openAppealNotification(notification);
                             return;
                         }
+                        if (isPermitNotification) {
+                            openPermitLandlord(notification);
+                            return;
+                        }
                         if (actionUrl)
                             navigate(actionUrl, { state: { returnTo: `${portalBasePath}?section=notifications`, backLabel: "Back to Notifications" } });
                     };
@@ -1241,12 +1262,22 @@ export function AdminDashboard() {
                         <h3 className={`admin-dashboard-heading ${read || archived ? "admin-dashboard-heading-2" : "admin-dashboard-heading-3"}`}>{safeNotificationText(notification.title, "Notification")}</h3>
                       </div>
                       <p className="admin-dashboard-text-8">{safeNotificationText(notification.message, "No additional details provided.")}</p>
+                      {isPermitNotification && <div className="admin-dashboard-permit-notification-details">
+                        <span><strong>Landlord:</strong> {String(permitPayload.landlord_name ?? "Not provided")}</span>
+                        <span><strong>Permit year:</strong> {String(permitPayload.permit_year ?? "Not provided")}</span>
+                        <span><strong>Expires:</strong> {expirationAt ? formatOptionalDate(expirationAt, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }) : "Not provided"}</span>
+                        <span><strong>Renewal:</strong> {String(renewalStatus ?? "Awaiting Renewal")}</span>
+                        <span><strong>Apartments:</strong> {String(apartmentNames ?? "Not provided")}</span>
+                        <span><strong>Notification:</strong> {String(permitPayload.notification_status ?? "Notification Created")}</span>
+                      </div>}
                       <p className="admin-dashboard-text-9">{formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                     </div>
                     <div className="admin-dashboard-row-20">
                       {!archived && isSupportRequest && <Button size="sm" variant="outline" disabled={supportRequestLoading} onClick={() => void openSupportRequest(notification)} className="admin-dashboard-button-10"><Eye className="admin-dashboard-eye-icon"/>{supportRequestLoading ? "Loading..." : "View Details"}</Button>}
                       {!archived && isAppealNotification && <Button size="sm" variant="outline" onClick={() => void openAppealNotification(notification)} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
-                      {actionUrl && !archived && !isSupportRequest && !isAppealNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
+                      {!archived && isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
+                        void markNotificationRead(notification.id, user?.id); openPermitLandlord(notification); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Landlord</Button>}
+                      {actionUrl && !archived && !isSupportRequest && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: `${portalBasePath}?section=notifications`, backLabel: "Back to Notifications" } }); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark as unread" : "Mark as read"} aria-label={read ? "Mark as unread" : "Mark as read"} className="admin-dashboard-button-11">{read ? <Mail className="admin-dashboard-mail-icon"/> : <MailOpen className="admin-dashboard-mail-open-icon"/>}</button>}
                       {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive" aria-label="Archive notification" className="admin-dashboard-archive-notification"><Archive className="admin-dashboard-archive-icon"/></button>}

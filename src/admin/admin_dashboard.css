@@ -790,6 +790,26 @@
 .admin-portal-shell .admin-dashboard-heading-2,
 .admin-portal-shell .admin-dashboard-heading-3 { font-size: 13px; line-height: 1.35; }
 .admin-portal-shell .admin-dashboard-text-8 { margin-top: 5px; font-size: 10px; line-height: 1.45; }
+.admin-portal-shell .admin-dashboard-permit-notification-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+  margin-top: 9px;
+  color: #52606d;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.admin-portal-shell .admin-dashboard-permit-notification-details span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-portal-shell .admin-dashboard-permit-notification-details strong { color: #334155; }
+
+@media (max-width: 640px) {
+  .admin-portal-shell .admin-dashboard-permit-notification-details { grid-template-columns: 1fr; }
+}
 
 /* Settings page: compact administration layout matching the reference design. */
 .admin-portal-shell .admin-settings-reference {
