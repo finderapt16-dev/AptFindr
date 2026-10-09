@@ -41,16 +41,16 @@ export function getListingRooms(listing) {
 export function getAdminAvailabilityLabel(listing) {
     const rooms = getListingRooms(listing);
     if (rooms.length === 0)
-        return "No rooms configured";
+        return "No units configured";
     const states = rooms.map(getAdminRoomState);
     const available = states.filter((status) => status === "available").length;
     if (available > 0)
-        return `${available} Available Room${available === 1 ? "" : "s"}`;
+        return `${available} Available Unit${available === 1 ? "" : "s"}`;
     if (states.every((status) => status === "occupied"))
         return "Fully Occupied";
     if (states.every((status) => status === "maintenance"))
         return "Under Maintenance";
-    return "No Available Rooms";
+    return "No Available Units";
 }
 export function getLowestRoomRent(listing) {
     const rents = getListingRooms(listing)

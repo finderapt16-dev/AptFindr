@@ -139,7 +139,7 @@ export function Settings({ embedded = false } = {}) {
             ? "Admin Profile Information"
             : "Tenant Account Information";
     const roleProfileSubtitle = user?.role === "landlord"
-        ? "Account-level information. Property permits are managed separately for each listing."
+        ? "Account-level information. Apartment permits are managed separately for each listing."
         : user?.role === "admin"
             ? "Administrative account details."
             : "Your tenant account details.";
@@ -412,7 +412,7 @@ export function Settings({ embedded = false } = {}) {
 
           {settingsMenu === "employment" && (<DisclosureCard icon={BriefcaseBusiness} title={roleProfileLabel} subtitle={roleProfileSubtitle} tone="settings-tone-brand">
               {user?.role === "landlord" ? (<div className="settings-style-43">
-                  Manage each property&apos;s business permit, expiry, and verification documents from the landlord portal. Account identity verification remains separate.
+                  Manage each apartment&apos;s business permit, expiry, and verification documents from the landlord portal. Account identity verification remains separate.
                 </div>) : user?.role === "admin" ? (<div className="settings-style-44 settings-two-column">
                   <Field label="Department">
                     <input className={inputClass} value={profile.department || ""} onChange={(e) => updateProfile((p) => ({ ...p, department: e.target.value }))} placeholder="Not provided"/>
@@ -433,7 +433,7 @@ export function Settings({ embedded = false } = {}) {
           <CardTitle icon={Bell} title="Apartment Notification Preferences" subtitle="Choose which optional apartment updates you want to receive."/>
           {preferencesLoading ? <div className="settings-style-48" aria-label="Loading notification preferences"><div className="settings-style-49 settings-loading-pulse"/><div className="settings-style-50 settings-loading-pulse"/></div> : <>
             <AlertRow label="New Apartment Updates" hint="Notify me when new apartments become available." pushVal={tenantNotifications.newApartments} onPush={(newApartments) => setTenantNotifications((current) => ({ ...current, newApartments }))}/>
-            <AlertRow label="Favorite Availability" hint="Notify me when a saved apartment or room becomes available." pushVal={tenantNotifications.favoriteAvailability} onPush={(favoriteAvailability) => setTenantNotifications((current) => ({ ...current, favoriteAvailability }))}/>
+            <AlertRow label="Favorite Availability" hint="Notify me when a saved apartment or unit becomes available." pushVal={tenantNotifications.favoriteAvailability} onPush={(favoriteAvailability) => setTenantNotifications((current) => ({ ...current, favoriteAvailability }))}/>
           </>}
           <p className="settings-style-51">Important account and report-status updates are always sent and cannot be disabled.</p>
         </section>

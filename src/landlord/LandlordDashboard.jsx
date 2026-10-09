@@ -1740,13 +1740,13 @@ export function LandlordDashboard() {
       setEditingApartment(null);
 
       toast.success(
-        "Property updated successfully"
+        "Apartment updated successfully"
       );
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to update property.";
+          : "Unable to update apartment.";
 
       toast.error(message);
 

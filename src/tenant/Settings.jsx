@@ -742,7 +742,7 @@ export function Settings({
                         <p>
                             Permanently delete your account and
                             all associated data, including your
-                            profile, properties, and other
+                            profile, apartments, and other
                             information.
                             <br />
                             This action cannot be undone.

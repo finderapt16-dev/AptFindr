@@ -44,7 +44,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             <input value={aptSearch} onChange={(event) => setAptSearch(event.target.value)} placeholder="Search apartments by name, location, or landlord" className="admin-apartments-input"/>
           </label>
           <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value)} className="admin-apartments-select"><option value="all">Listing Status: All</option><option value="published">Published</option><option value="pending">Pending Review</option><option value="rejected">Rejected</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select>
-          <select value={aptPropertyTypeFilter} onChange={(event) => setAptPropertyTypeFilter(event.target.value)} className="admin-apartments-select"><option value="all">Property Type: All</option>{propertyTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
+          <select value={aptPropertyTypeFilter} onChange={(event) => setAptPropertyTypeFilter(event.target.value)} className="admin-apartments-select"><option value="all">Apartment Type: All</option>{propertyTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
           <select value={aptSort} onChange={(event) => setAptSort(event.target.value)} className="admin-apartments-select"><option value="newest">Sort by: Newest</option><option value="oldest">Sort by: Oldest</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option><option value="name">Sort by: Name</option></select>
         </section>
 
@@ -210,7 +210,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
               </div>
               <div className="admin-apartments-grid-2">
                 {[
-                    { label: "Room Pricing", value: "See individual rooms" },
+                    { label: "Unit Pricing", value: "See individual units" },
                     { label: "Bedrooms", value: selectedApt.bedrooms ?? "—" },
                     { label: "Bathrooms", value: selectedApt.bathrooms ?? "—" },
                     { label: "Available", value: new Date(selectedApt.availableDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) },
@@ -254,7 +254,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                         const roomState = getAdminRoomState(roomData);
                         return (<div key={String(roomData.id ?? i)} className="admin-apartments-card-12">
                         <div className="admin-apartments-row-17">
-                          <span className="admin-apartments-span-16">{String(roomData.type ?? "Room")}</span>
+                          <span className="admin-apartments-span-16">{String(roomData.type ?? "Unit")}</span>
                           <span className={`admin-apartments-span-17 ${roomState === "occupied" ? "admin-apartments-span-18" : roomState === "maintenance" ? "admin-apartments-span-19" : "admin-apartments-span-20"}`}>
                             {roomState === "occupied" ? "Occupied" : roomState === "maintenance" ? "Under Maintenance" : "Available"}
                           </span>

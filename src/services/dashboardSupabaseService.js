@@ -736,7 +736,7 @@ export async function notifyAdminsOfPropertySubmission(apartmentId) {
         p_apartment_id: apartmentId,
     });
     if (error) {
-        throw new Error(error.message || "Unable to notify administrators about this property submission.");
+        throw new Error(error.message || "Unable to notify administrators about this apartment submission.");
     }
     return Number(data ?? 0);
 }

@@ -300,7 +300,7 @@ export const deleteApartment = async (id) => {
 };
 export const updateApartmentPublication = async (id, isPublished, actorUserId) => {
     if (!id) {
-        throw new Error('Missing property ID. Please refresh and try again.');
+        throw new Error('Missing apartment ID. Please refresh and try again.');
     }
     const { data: before } = await supabase
         .from('apartments')
@@ -317,14 +317,14 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
             .select('id, status, is_occupied')
             .eq('apartment_id', id);
         if (roomError) {
-            throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available rooms before publishing.'));
+            throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available units before publishing.'));
         }
         const hasAvailableRoom = (roomRows ?? []).some((room) => {
             const roomStatus = room.status ?? (room.is_occupied ? 'occupied' : 'available');
             return roomStatus === 'available' && room.is_occupied !== true;
         });
         if (!hasAvailableRoom) {
-            throw new Error('Add at least one available room before publishing this property. Tenants can only browse properties with an available room.');
+            throw new Error('Add at least one available unit before publishing this apartment. Tenants can only browse apartments with an available unit.');
         }
         const { data: landlord, error: landlordError } = await supabase
             .from('public_landlords')
@@ -352,7 +352,7 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
         p_published: isPublished,
     });
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to update this property publication. Please check landlord verification, inspection status, and database permissions.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to update this apartment publication. Please check landlord verification, inspection status, and database permissions.'));
     }
     const { data: after, error: reloadError } = await supabase
         .from('apartments')
@@ -360,10 +360,10 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
         .eq('id', id)
         .maybeSingle();
     if (reloadError) {
-        throw new Error(unwrapErrorMessage(reloadError, 'Unable to confirm this property publication.'));
+        throw new Error(unwrapErrorMessage(reloadError, 'Unable to confirm this apartment publication.'));
     }
     if (!isRecord(after)) {
-        throw new Error('Unable to confirm this property publication. Please refresh and try again.');
+        throw new Error('Unable to confirm this apartment publication. Please refresh and try again.');
     }
     const publicationMatches = after.is_published === isPublished;
     const validPublishedState = !isPublished || (after.approval_status === 'approved'
@@ -375,7 +375,7 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
     const validUnpublishedState = isPublished || (after.published_at === null
         && after.published_by === null);
     if (!publicationMatches || !validPublishedState || !validUnpublishedState) {
-        throw new Error('The requested property did not reach the expected publication state. Please refresh and try again.');
+        throw new Error('The requested apartment did not reach the expected publication state. Please refresh and try again.');
     }
     await writeApartmentAudit(id, actorUserId, 'apartment_publication_updated', buildAuditChanges(before, after, ['is_published', 'approval_status', 'is_archived', 'deleted_at', 'status', 'published_at', 'published_by']));
 };
@@ -584,7 +584,7 @@ export const insertApartmentRooms = async (apartmentId, rooms) => {
         .filter((room) => room && typeof room === 'object')
         .map((room) => ({
         apartment_id: apartmentId,
-        name: room.name?.trim() || room.type?.trim() || 'Room',
+        name: room.name?.trim() || room.type?.trim() || 'Unit',
         room_type: room.type?.trim() || 'Bedroom',
         sqft: Math.max(0, Number(room.sqft) || 0),
         max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
@@ -604,14 +604,14 @@ export const insertApartmentRooms = async (apartmentId, rooms) => {
     }
     const { error } = await supabase.from('apartment_rooms').insert(payload);
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to save apartment rooms.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to save apartment units.'));
     }
 };
 const apartmentRoomToPayload = (apartmentId, room) => {
     const status = room.status ?? (room.isOccupied ? 'occupied' : 'available');
     return {
         apartment_id: apartmentId,
-        name: room.name?.trim() || room.type?.trim() || 'Room',
+        name: room.name?.trim() || room.type?.trim() || 'Unit',
         room_type: room.type?.trim() || 'Bedroom',
         sqft: Math.max(0, Number(room.sqft) || 0),
         max_occupants: Math.max(1, Number(room.maxOccupants) || 1),
@@ -645,7 +645,7 @@ const apartmentRoomRowToRoom = (row) => {
             ? row.name
             : typeof row.room_type === 'string'
                 ? row.room_type
-                : 'Room',
+                : 'Unit',
         type: typeof row.room_type === 'string' ? row.room_type : 'Bedroom',
         price: Number(row.rent) || 0,
         sqft: Number(row.sqft) || 0,
@@ -668,7 +668,7 @@ const syncApartmentRoomSummary = async (apartmentId) => {
         .select('rent, has_private_bath, status, is_occupied')
         .eq('apartment_id', apartmentId);
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to refresh room summary.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to refresh unit summary.'));
     }
     const rows = (data ?? []);
     const rents = rows
@@ -686,7 +686,7 @@ const syncApartmentRoomSummary = async (apartmentId) => {
         .update(updatePayload)
         .eq('id', apartmentId);
     if (updateError) {
-        throw new Error(unwrapErrorMessage(updateError, 'Unable to update property room summary.'));
+        throw new Error(unwrapErrorMessage(updateError, 'Unable to update apartment unit summary.'));
     }
 };
 export const fetchApartmentRooms = async (apartmentId) => {
@@ -695,7 +695,7 @@ export const fetchApartmentRooms = async (apartmentId) => {
         .select('*')
         .eq('apartment_id', apartmentId);
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to load rooms.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to load units.'));
     }
     return (data ?? []).map(apartmentRoomRowToRoom);
 };
@@ -706,7 +706,7 @@ export const createApartmentRoom = async (apartmentId, room, actorUserId) => {
         .select('*')
         .single();
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to add room.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to add unit.'));
     }
     await syncApartmentRoomSummary(apartmentId);
     await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_created', {
@@ -728,7 +728,7 @@ export const updateApartmentRoom = async (apartmentId, roomId, room, actorUserId
         .select('*')
         .single();
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to update room.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to update unit.'));
     }
     await syncApartmentRoomSummary(apartmentId);
     const trackedRoomFields = [
@@ -760,7 +760,7 @@ export const updateApartmentRoomStatus = async (apartmentId, roomId, status, act
         .eq('id', roomId)
         .eq('apartment_id', apartmentId);
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to update room status.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to update unit status.'));
     }
     await syncApartmentRoomSummary(apartmentId);
     const statusChanges = buildAuditChanges({ room_status: before?.status ?? null }, { room_status: nextStatus }, ['room_status']);
@@ -770,7 +770,7 @@ export const deleteApartmentRoom = async (apartmentId, roomId, actorUserId) => {
     const { data: before } = await supabase.from('apartment_rooms').select('*').eq('id', roomId).eq('apartment_id', apartmentId).maybeSingle();
     const { error } = await supabase.from('apartment_rooms').delete().eq('id', roomId).eq('apartment_id', apartmentId);
     if (error) {
-        throw new Error(unwrapErrorMessage(error, 'Unable to delete room.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to delete unit.'));
     }
     await syncApartmentRoomSummary(apartmentId);
     await writeApartmentAudit(apartmentId, actorUserId, 'apartment_room_deleted', {
@@ -808,10 +808,10 @@ export const uploadApartmentRoomImage = async (apartmentId, roomUploadId, file, 
         contentType: uploadFile.type || file.type || 'image/jpeg',
     });
     if (error)
-        throw new Error(unwrapErrorMessage(error, 'Unable to upload room image.'));
+        throw new Error(unwrapErrorMessage(error, 'Unable to upload unit image.'));
     const publicUrl = supabase.storage.from('apartment-images').getPublicUrl(path).data.publicUrl;
     if (!publicUrl || !/^https?:\/\//i.test(publicUrl))
-        throw new Error('No permanent room image URL was created.');
+        throw new Error('No permanent unit image URL was created.');
     return publicUrl;
 };
 export const persistApartmentImages = async (apartmentId, inputs, actorUserId) => {

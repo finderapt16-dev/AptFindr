@@ -67,7 +67,7 @@ export const POLICIES = {
       {
         "heading": "3. Information Visibility",
         "paragraphs": [
-          "Certain information, such as your display name and profile, may be visible to landlords when you inquire about a property, in order to facilitate safe and legitimate communication."
+          "Certain information, such as your display name and profile, may be visible to landlords when you inquire about a apartment, in order to facilitate safe and legitimate communication."
         ]
       },
       {
@@ -101,19 +101,19 @@ export const POLICIES = {
       {
         "heading": "2. Account Information",
         "paragraphs": [
-          "Users must provide accurate, complete, and up-to-date information when creating and maintaining their accounts. Landlords are responsible for ensuring that property and business information submitted for verification is accurate."
+          "Users must provide accurate, complete, and up-to-date information when creating and maintaining their accounts. Landlords are responsible for ensuring that apartment and business information submitted for verification is accurate."
         ]
       },
       {
-        "heading": "3. Property Listings",
+        "heading": "3. Apartment Listings",
         "paragraphs": [
-          "Landlords must provide accurate information regarding property location, rental prices, room availability, amenities, utilities, house rules, and other listing details."
+          "Landlords must provide accurate information regarding apartment location, rental prices, unit availability, amenities, utilities, house rules, and other listing details."
         ]
       },
       {
         "heading": "4. Verification",
         "paragraphs": [
-          "Landlord accounts and property listings may be subject to administrative verification before being published on AptFindr"
+          "Landlord accounts and apartment listings may be subject to administrative verification before being published on AptFindr"
         ]
       }
     ]
@@ -129,13 +129,13 @@ export const POLICIES = {
       {
         "heading": "1. Information We Collect",
         "paragraphs": [
-          "AptFindr may collect personal information such as your name, mobile number, username, recovery email, business information, property information, and verification documents when necessary for account registration, verification, and listing management."
+          "AptFindr may collect personal information such as your name, mobile number, username, recovery email, business information, apartment information, and verification documents when necessary for account registration, verification, and listing management."
         ]
       },
       {
         "heading": "2. How Information is Used",
         "paragraphs": [
-          "Your information is used exclusively to operate AptFindr, manage accounts and property listings, perform verification, facilitate safe communication between users, process reports and appeals, and maintain platform security."
+          "Your information is used exclusively to operate AptFindr, manage accounts and apartment listings, perform verification, facilitate safe communication between users, process reports and appeals, and maintain platform security."
         ]
       },
       {

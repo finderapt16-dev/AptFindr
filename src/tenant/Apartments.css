@@ -1539,11 +1539,13 @@
 
 @media (max-width: 39.9375rem) {
   .apartment-browse-content-3 {
-    align-items: flex-end;
+    align-items: center;
+    text-align: center;
   }
 
   .apartment-browse-row-14 {
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: center;
   }
 }
 

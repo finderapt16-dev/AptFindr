@@ -226,7 +226,7 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
         </div>)}
 
       {uploadProgress !== null && (<div className="multi-image-uploader-style-13" role="status" aria-live="polite">
-          <div className="multi-image-uploader-style-14"><span>Uploading room images</span><span>{Math.round(uploadProgress)}%</span></div>
+          <div className="multi-image-uploader-style-14"><span>Uploading unit images</span><span>{Math.round(uploadProgress)}%</span></div>
           <progress className="multi-image-upload-progress" value={Math.max(0, Math.min(100, uploadProgress))} max={100}/>
         </div>)}
 
@@ -251,10 +251,10 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
               <div className="multi-image-uploader-style-27">
                 <img src={previewImage.url} alt={previewImage.isPrimary ? "Primary" : "Preview"} className="multi-image-uploader-style-28"/>
                 {images.length > 1 && (<>
-                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)} aria-label="Previous property image" className="photo-navigation-arrow multi-image-uploader-style-29 multi-image-center-y">
+                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)} aria-label="Previous apartment image" className="photo-navigation-arrow multi-image-uploader-style-29 multi-image-center-y">
                       <ChevronLeft className="multi-image-uploader-style-30"/>
                     </button>
-                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === images.length - 1 ? 0 : prev + 1)} aria-label="Next property image" className="photo-navigation-arrow multi-image-uploader-style-31 multi-image-center-y">
+                    <button type="button" onClick={() => setPreviewIndex((prev) => prev === images.length - 1 ? 0 : prev + 1)} aria-label="Next apartment image" className="photo-navigation-arrow multi-image-uploader-style-31 multi-image-center-y">
                       <ChevronRight className="multi-image-uploader-style-32"/>
                     </button>
                   </>)}

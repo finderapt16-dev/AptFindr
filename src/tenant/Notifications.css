@@ -330,7 +330,8 @@
 
 .tenant-notifications-panel-5 {
   position: relative;
-  z-index: 50;
+  align-self: start;
+  z-index: 1;
 }
 
 .tenant-notifications-notification-options {
@@ -547,7 +548,7 @@
 .tenant-notifications-check-icon { display: none; }
 
 .tenant-notifications-panel-4 {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #e1e7ec;
   border-radius: 6px;
   background: #ffffff;
@@ -731,3 +732,8 @@
 @media (min-width: 1024px) {
   .tenant-notifications-time { font-size: 10px; }
 }
+
+/* Anchor the menu to its button and raise the active row above its neighbours. */
+.tenant-notifications-article.is-menu-open { z-index: 2; }
+.tenant-notifications-article:first-child { border-top-left-radius: 5px; border-top-right-radius: 5px; }
+.tenant-notifications-article:last-child { border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; }

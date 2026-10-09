@@ -7,7 +7,7 @@ export async function fetchPropertyDraft(userId) {
         .eq("user_id", userId)
         .maybeSingle();
     if (error)
-        throw new Error(error.message || "Unable to load the property draft.");
+        throw new Error(error.message || "Unable to load the apartment draft.");
     if (!data)
         return null;
     if (Date.parse(String(data.expires_at)) <= Date.now()) {
@@ -24,10 +24,10 @@ export async function savePropertyDraft(userId, draft) {
         updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
     if (error)
-        throw new Error(error.message || "Unable to save the property draft.");
+        throw new Error(error.message || "Unable to save the apartment draft.");
 }
 export async function deletePropertyDraft(userId) {
     const { error } = await supabase.from("property_drafts").delete().eq("user_id", userId);
     if (error)
-        throw new Error(error.message || "Unable to delete the property draft.");
+        throw new Error(error.message || "Unable to delete the apartment draft.");
 }

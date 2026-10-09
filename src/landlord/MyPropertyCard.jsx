@@ -332,7 +332,7 @@ export const MyPropertyCard = ({
               src={apartment.image}
               alt={
                 apartment.title ||
-                "Property"
+                "Apartment"
               }
               className="property-card-image"
             />
@@ -352,7 +352,7 @@ export const MyPropertyCard = ({
           <div className="property-card-title-row">
             <h2 className="property-card-heading">
               {apartment.title ||
-                "Untitled property"}
+                "Untitled apartment"}
             </h2>
 
             <span
@@ -392,7 +392,7 @@ export const MyPropertyCard = ({
 
           <div
             className="property-card-metrics"
-            aria-label="Property engagement"
+            aria-label="Apartment engagement"
           >
             {/* VIEWS */}
 
@@ -513,10 +513,10 @@ export const MyPropertyCard = ({
               state={{
                 returnTo: "/landlord/dashboard",
                 backLabel:
-                  "Back to My Properties",
+                  "Back to My Apartments",
               }}
             >
-              View Property
+              View Apartment
             </Link>
           </Button>
 
@@ -533,7 +533,7 @@ export const MyPropertyCard = ({
               )
             }
           >
-            Manage Rooms
+            Manage Units
           </Button>
         </div>
       </article>

@@ -24,7 +24,7 @@ export function PropertyPerformanceCard({
     <article className="market-property-card market-property-card-compact">
       <div className="market-property-image">
         {image ? <ImageWithFallback src={image} alt={apartment.title || "Apartment"} /> : (
-          <div className="market-property-image-placeholder"><div className="market-building-placeholder"><span>Property</span></div></div>
+          <div className="market-property-image-placeholder"><div className="market-building-placeholder"><span>Apartment</span></div></div>
         )}
       </div>
 

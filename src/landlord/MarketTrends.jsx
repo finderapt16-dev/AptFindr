@@ -127,7 +127,7 @@ export function MarketTrends() {
               {preferenceAnalyticsError && <p className="market-preference-unavailable" role="alert">{preferenceAnalyticsError}</p>}
               <section className="market-preference-duo" aria-label="Tenant apartment preferences">
                 <MarketTrendDonutChart title="Bedroom Preferences" data={preferenceCharts.bedrooms.data} responseCount={preferenceCharts.bedrooms.responseCount} insight={preferenceInsight(preferenceCharts.bedrooms.data, "bedroom preference")} />
-                <MarketTrendDonutChart title="Capacity Preferences" data={preferenceCharts.roomCapacity.data} responseCount={preferenceCharts.roomCapacity.responseCount} insight={preferenceInsight(preferenceCharts.roomCapacity.data, "room-capacity preference")} />
+                <MarketTrendDonutChart title="Capacity Preferences" data={preferenceCharts.roomCapacity.data} responseCount={preferenceCharts.roomCapacity.responseCount} insight={preferenceInsight(preferenceCharts.roomCapacity.data, "unit-capacity preference")} />
               </section>
               <section className="market-price-range-panel"><MarketTrendBarChart title="Preferred Price Range" data={preferenceCharts.priceRanges.data} responseCount={preferenceCharts.priceRanges.responseCount} variant="columns" insight={preferenceInsight(preferenceCharts.priceRanges.data, "price range")} /></section>
             </div>

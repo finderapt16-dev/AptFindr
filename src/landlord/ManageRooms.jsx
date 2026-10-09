@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/services/supabaseClient";
 import { createApartmentRoom, deleteApartmentRoom, fetchApartmentRooms, fetchApartmentWithImages, updateApartmentRoom, uploadApartmentRoomImage, } from "@/data/apartments";
 
-const ROOM_TYPES = ["Bedroom", "Studio", "Shared room", "Suite", "Loft", "Other"];
+const ROOM_TYPES = ["Bedroom", "Studio", "Shared unit", "Suite", "Loft", "Other"];
 const ROOM_STATUS_OPTIONS = [
     { value: "available", label: "Available", className: "manage-rooms-badge" },
     { value: "occupied", label: "Occupied", className: "manage-rooms-badge-2" },
@@ -160,7 +160,7 @@ function Field({ label, prefix, suffix, chevron = false, className = "", childre
 /* One room = one inline-editable card                                         */
 /* -------------------------------------------------------------------------- */
 
-// room === null means "new room" (unsaved draft card).
+// room === null means "new unit" (unsaved draft card).
 function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
     const isNew = room === null;
     const [draft, setDraft] = useState(() => (room ? roomToForm(room) : emptyRoomForm()));
@@ -593,7 +593,7 @@ export function ManageRooms({ propertyId }) {
         if (!id || !room.id || processingRoomId)
             return false;
         const roomName = room.name || "this unit";
-        if (!window.confirm(`Are you sure you want to delete ${roomName}?\n\nThis removes only this unit, not the property.`))
+        if (!window.confirm(`Are you sure you want to delete ${roomName}?\n\nThis removes only this unit, not the apartment.`))
             return false;
         setProcessingRoomId(room.id);
         try {
@@ -622,9 +622,9 @@ export function ManageRooms({ propertyId }) {
         return (<div className="manage-rooms-grid">
         <div>
           <DoorOpen className="manage-rooms-door-open-icon"/>
-          <h1 className="manage-rooms-property-not-available">Property Not Available</h1>
-          <p className="manage-rooms-text">This property could not be found or is not assigned to your account.</p>
-          <Button onClick={() => navigate("/landlord/dashboard?section=overview")}>Back to My Properties</Button>
+          <h1 className="manage-rooms-property-not-available">Apartment Not Available</h1>
+          <p className="manage-rooms-text">This apartment could not be found or is not assigned to your account.</p>
+          <Button onClick={() => navigate("/landlord/dashboard?section=overview")}>Back to My Apartments</Button>
         </div>
       </div>);
     }
@@ -639,7 +639,7 @@ export function ManageRooms({ propertyId }) {
 
     if (roomId) {
         if (!editorRoom && roomId !== "new") {
-            return <div className="manage-rooms-grid"><div><DoorOpen className="manage-rooms-door-open-icon"/><h1 className="manage-rooms-property-not-available">Unit Not Available</h1><p className="manage-rooms-text">This room could not be found in the selected property.</p><Button onClick={returnToRooms}>Back to Manage Units</Button></div></div>;
+            return <div className="manage-rooms-grid"><div><DoorOpen className="manage-rooms-door-open-icon"/><h1 className="manage-rooms-property-not-available">Unit Not Available</h1><p className="manage-rooms-text">This unit could not be found in the selected apartment.</p><Button onClick={returnToRooms}>Back to Manage Units</Button></div></div>;
         }
         return <main className="manage-rooms-editor-page">
           <div className="manage-rooms-editor-page-content">
@@ -661,7 +661,7 @@ export function ManageRooms({ propertyId }) {
 
     const page = (<main ref={mainRef} className="manage-rooms-table-page">
       <button type="button" onClick={() => navigate(-1)} className="manage-rooms-table-back">
-        <ArrowLeft /> Back to View Property
+        <ArrowLeft /> Back to View Apartment
       </button>
 
       <header className="manage-rooms-table-title">
@@ -683,7 +683,7 @@ export function ManageRooms({ propertyId }) {
         {rooms.length === 0 ? (<div className="manage-rooms-table-empty">
             <DoorOpen />
             <h3>No units have been added yet.</h3>
-            <p>Add the first unit to make availability visible across your property listing.</p>
+            <p>Add the first unit to make availability visible across your apartment listing.</p>
             <Button onClick={() => navigate(`/landlord/properties/${id}/rooms/new/edit`)} className="manage-rooms-table-add-room"><Plus /> Add First Unit</Button>
           </div>) : (<>
             <div className="manage-rooms-mobile-list">

@@ -1,12 +1,17 @@
+import "./AdminCaseList.css";
+import { useEffect, useState } from "react";
+import "./AdminReports.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { canArchiveAppealStatus, updateAppealStatus } from "@/services/dashboardSupabaseService";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
-import { AlertTriangle, Archive, ArrowLeft, Bell, Building2, Calendar, Check, Clock3, Eye, FileText, Flag, Mail, MapPin, Phone, RotateCcw, Search, Trash2, UserRound, X } from "lucide-react";
+import { AlertTriangle, Archive, ArrowLeft, Bell, Building2, Calendar, Check, ChevronLeft, ChevronRight, Clock3, Eye, FileText, Flag, Mail, MapPin, Phone, RotateCcw, Search, Trash2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, text } from './adminDashboardHelpers';
 export function AdminAppeals({ landlords, reports, archivedReports, violations, allApartments, appealSearch, appealArchiveView, archivedAppeals, appeals, appealTypeFilter, appealSort, selectedAppeal, user, appealStatus, appealResponse, setAppeals, setSelectedAppeal, setAppealResponse, setAppealStatus, setActiveSection, unreadNotifsCount, setSelectedReport, navigate, apartmentDetailBasePath, portalBasePath, setCaseAction, setAppealSearch, setAppealTypeFilter, setAppealSort, setAppealArchiveView, }) {
+    const [page, setPage] = useState(1);
+    useEffect(() => { setPage(1); }, [appealSearch, appealTypeFilter, appealSort, appealArchiveView]);
     const landlordMap = new Map();
     landlords.forEach((l) => {
         if (l.id)
@@ -44,6 +49,9 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
         const rightTime = new Date(right.submitted_at ?? right.created_at ?? 0).getTime();
         return appealSort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
+    const pageCount = Math.max(1, Math.ceil(visibleAppeals.length / 4));
+    const currentPage = Math.min(page, pageCount);
+    const pageAppeals = visibleAppeals.slice((currentPage - 1) * 4, currentPage * 4);
     const pendingAppealCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
     const approvedAppealCount = appeals.filter((appeal) => appeal.status === "approved").length;
     const deniedAppealCount = appeals.filter((appeal) => appeal.status === "rejected" || appeal.status === "dismissed").length;
@@ -94,7 +102,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
         const sectionClass = "admin-appeals-section";
         const headingClass = "admin-appeals-1-appeal-submitted-by";
         const apartment = context.apartment;
-        const apartmentName = apartment?.title || String(context.source?.apartment_title ?? "Property unavailable");
+        const apartmentName = apartment?.title || String(context.source?.apartment_title ?? "Apartment unavailable");
         const apartmentLocation = apartment ? formatApartmentLocation(apartment) : String(context.source?.related_label ?? "Location not provided");
         const apartmentImages = [
             ...(Array.isArray(apartment?.apartment_images) ? apartment.apartment_images.map((image) => typeof image === "string" ? image : image?.url) : []),
@@ -123,7 +131,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
 
               <section className="admin-appeal-detail-card">
                 <h2>Appeal Information</h2>
-                <dl className="admin-appeal-detail-info"><div><dt>Appeal Type</dt><dd>{appealType}</dd></div><div><dt>Related Property</dt><dd>{apartmentName}</dd></div><div><dt>Date Submitted</dt><dd>{formatOptionalDate(selectedAppeal.submitted_at ?? selectedAppeal.created_at, { month: "long", day: "numeric", year: "numeric" })}</dd></div><div><dt>Status</dt><dd><span className={`admin-appeal-detail-status is-${detailStatusTone}`}>{displayStatus}</span></dd></div></dl>
+                <dl className="admin-appeal-detail-info"><div><dt>Appeal Type</dt><dd>{appealType}</dd></div><div><dt>Related Apartment</dt><dd>{apartmentName}</dd></div><div><dt>Date Submitted</dt><dd>{formatOptionalDate(selectedAppeal.submitted_at ?? selectedAppeal.created_at, { month: "long", day: "numeric", year: "numeric" })}</dd></div><div><dt>Status</dt><dd><span className={`admin-appeal-detail-status is-${detailStatusTone}`}>{displayStatus}</span></dd></div></dl>
               </section>
 
               <section className="admin-appeal-detail-card">
@@ -138,7 +146,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
             </div>
 
             <aside className="admin-appeal-detail-sidebar">
-              <section className="admin-appeal-detail-card admin-appeal-detail-property"><h2>Property Summary</h2><div>{apartmentImage ? <img src={apartmentImage} alt={apartmentName} /> : <span className="admin-appeal-detail-property-placeholder"><Building2 aria-hidden="true" /></span>}<article><strong>{apartmentName}</strong><small><MapPin aria-hidden="true" />{apartmentLocation}</small>{rentText && <small>{rentText}</small>}{roomCount !== null && <small>{roomCount} room{roomCount === 1 ? "" : "s"} · Apartment</small>}</article></div>{context.apartmentId && <Button variant="outline" onClick={() => navigate(`${apartmentDetailBasePath}/${context.apartmentId}`, { state: { returnTo: `${portalBasePath}?section=appeals`, backLabel: "Back to Appeals" } })}>View property</Button>}</section>
+              <section className="admin-appeal-detail-card admin-appeal-detail-property"><h2>Apartment Summary</h2><div>{apartmentImage ? <img src={apartmentImage} alt={apartmentName} /> : <span className="admin-appeal-detail-property-placeholder"><Building2 aria-hidden="true" /></span>}<article><strong>{apartmentName}</strong><small><MapPin aria-hidden="true" />{apartmentLocation}</small>{rentText && <small>{rentText}</small>}{roomCount !== null && <small>{roomCount} room{roomCount === 1 ? "" : "s"} · Apartment</small>}</article></div>{context.apartmentId && <Button variant="outline" onClick={() => navigate(`${apartmentDetailBasePath}/${context.apartmentId}`, { state: { returnTo: `${portalBasePath}?section=appeals`, backLabel: "Back to Appeals" } })}>View apartment</Button>}</section>
               <section className="admin-appeal-detail-card"><h2>Appeal Information</h2><dl className="admin-appeal-detail-side-info"><div><dt>Date</dt><dd>{formatOptionalDate(selectedAppeal.reviewed_at ?? selectedAppeal.submitted_at ?? selectedAppeal.created_at, { month: "long", day: "numeric", year: "numeric" })}</dd></div><div><dt>Decision</dt><dd><span className={`admin-appeal-detail-status is-${detailStatusTone}`}>{displayStatus}</span></dd></div><div><dt>Reason</dt><dd>{selectedAppeal.reason || "Not provided"}</dd></div></dl></section>
               <section className="admin-appeal-detail-card admin-appeal-detail-decision"><h2>Admin Decision</h2><label>Status<select disabled={appealArchiveView} value={appealStatus} onChange={(event) => setAppealStatus(event.target.value)}><option value="under_review">Pending Review</option><option value="approved">Approved</option><option value="needs_information">Request Changes</option><option value="rejected">Denied</option></select></label><label>Admin Notes<textarea disabled={appealArchiveView} value={appealResponse} onChange={(event) => setAppealResponse(event.target.value)} placeholder="Add notes about your decision..." /></label><div className="admin-appeal-detail-decision-actions"><Button disabled={appealArchiveView} onClick={() => void handleUpdateAppealStatus("approved")}><Check aria-hidden="true" />Approve Appeal</Button><Button disabled={appealArchiveView} variant="outline" onClick={() => void handleUpdateAppealStatus("needs_information")}><FileText aria-hidden="true" />Request Changes</Button><Button disabled={appealArchiveView} variant="outline" onClick={() => void handleUpdateAppealStatus("rejected")}><X aria-hidden="true" />Deny Appeal</Button></div>{!appealArchiveView && canArchiveAppealStatus(selectedAppeal.status) && <button type="button" className="admin-appeal-detail-archive" onClick={() => setCaseAction({ type: "archive-appeal", id: text(selectedAppeal.id), label: selectedAppeal.reason || text(selectedAppeal.id) })}>Archive appeal</button>}</section>
             </aside>
@@ -314,7 +322,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
           </Card>
         </div>) : (
         // List view
-        <div className="admin-appeals-reference">
+        <div className="admin-appeals-reference admin-case-list">
           <header className="admin-appeals-reference-header">
             <h1>Appeals</h1>
             <p>Review and manage appeals submitted by landlords.</p>
@@ -338,7 +346,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
 
           {appealArchiveView && archivedAppeals.length === 0 ? <section className="admin-appeals-reference-empty"><ArchiveEmpty kind="appeals" icon={FileText}/></section> : !appealArchiveView && appeals.length === 0 ? <section className="admin-appeals-reference-empty"><AlertTriangle aria-hidden="true" /><h2>No appeals submitted.</h2><p>Landlord appeals will appear here when submitted.</p></section> : visibleAppeals.length === 0 ? <section className="admin-appeals-reference-empty"><OverviewEmpty icon={Search} text="No appeals match the selected filters."/></section> : <section className="admin-appeals-reference-table">
             <div className="admin-appeals-reference-table-head"><span>Landlord</span><span>Related Cases</span><span>Submitted</span><span>Status</span><span>Actions</span></div>
-            <div>{visibleAppeals.map((appeal) => {
+            <div>{pageAppeals.map((appeal) => {
                 const landlord = landlordMap.get(appeal.landlord_id ?? "");
                 const context = getAppealContext(appeal);
                 const caseTitle = appeal.report_id ? "Report appeal" : appeal.violation_id ? context.violation?.mode === "notice" ? "Violation notice" : "Violation appeal" : "General appeal";
@@ -356,6 +364,11 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
                 </article>;
             })}</div>
           </section>}
+          <nav className="reports-reference-pagination" aria-label="Appeal pages">
+            <button type="button" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft/></button>
+            {Array.from({ length: pageCount }, (_, index) => index + 1).filter((number) => number === 1 || number === pageCount || Math.abs(number - currentPage) <= 1).map((number, index, pages) => <span key={number}>{index > 0 && number - pages[index - 1] > 1 && <span className="reports-reference-page-gap">&hellip;</span>}<button type="button" aria-label={`Page ${number}`} aria-current={number === currentPage ? "page" : undefined} onClick={() => setPage(number)}>{number}</button></span>)}
+            <button type="button" aria-label="Next page" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight/></button>
+          </nav>
         </div>)}
     </div>))(selectedAppeal);
 }

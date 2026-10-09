@@ -1,3 +1,5 @@
+import { AdminOverview } from "./AdminOverview";
+import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
 import { getAdminListingState, getLowestRoomRent } from "@/admin/adminListingState";
 import { clearAdminNavigationMemory, getAdminModuleLocation, getAdminModulePath, rememberAdminModuleLocation } from "@/admin/adminNavigationMemory";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
@@ -48,9 +50,7 @@ export function AdminDashboard() {
     const apartmentDetailBasePath = "/admin/apartment";
     const [searchParams] = useSearchParams();
     const requestedSectionValue = searchParams.get("section");
-    const requestedSection = !requestedSectionValue || requestedSectionValue === "overview"
-        ? "landlords"
-        : requestedSectionValue;
+    const requestedSection = requestedSectionValue || "overview";
     const isAvailableSection = (value) => isAdminModule(value);
     const [activeSection, setActiveSection] = useState(() => isAvailableSection(requestedSection) ? requestedSection : "landlords");
     const internalSectionNavigation = useRef(null);
@@ -455,7 +455,7 @@ export function AdminDashboard() {
             };
             setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
             setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
-            toast.success("Property approved and published");
+            toast.success("Apartment approved and published");
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
@@ -1279,10 +1279,12 @@ export function AdminDashboard() {
                         void markNotificationRead(notification.id, user?.id); openPermitLandlord(notification); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Landlord</Button>}
                       {actionUrl && !archived && !isSupportRequest && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: `${portalBasePath}?section=notifications`, backLabel: "Back to Notifications" } }); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
-                      {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark as unread" : "Mark as read"} aria-label={read ? "Mark as unread" : "Mark as read"} className="admin-dashboard-button-11">{read ? <Mail className="admin-dashboard-mail-icon"/> : <MailOpen className="admin-dashboard-mail-open-icon"/>}</button>}
-                      {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive" aria-label="Archive notification" className="admin-dashboard-archive-notification"><Archive className="admin-dashboard-archive-icon"/></button>}
+                      <NotificationActionsMenu triggerClassName="admin-notification-menu-trigger" menuClassName="admin-notification-floating-menu">
+                      {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark as unread" : "Mark as read"} aria-label={read ? "Mark as unread" : "Mark as read"} className="admin-notification-action">{read ? <Mail className="admin-dashboard-mail-icon"/> : <MailOpen className="admin-dashboard-mail-open-icon"/>}{read ? "Mark as unread" : "Mark as read"}</button>}
+                      {!archived && <button onClick={() => void archiveNotif(notification.id || "")} title="Archive" aria-label="Archive notification" className="admin-notification-action"><Archive className="admin-dashboard-archive-icon"/>Archive</button>}
                       {archived && <Button size="sm" variant="outline" disabled={deletingNotifId === notification.id} onClick={() => void unarchiveNotif(notification.id || "")} className="admin-dashboard-restore"><RotateCcw className="admin-dashboard-rotate-ccw-icon"/>Restore</Button>}
                       {archived && <Button size="sm" variant="outline" disabled={deletingNotifId === notification.id} onClick={() => setNotificationToDelete(notification)} className="admin-dashboard-delete-permanently"><Trash2 className="admin-dashboard-trash2-icon"/>Delete Permanently</Button>}
+                      </NotificationActionsMenu>
                     </div>
                   </article>);
                 })}
@@ -1646,7 +1648,7 @@ export function AdminDashboard() {
       </div>);
     };
     const sectionMap = {
-        overview: renderLandlords,
+        overview: () => <AdminOverview apartments={allApartments} landlords={landlords} reports={reports} appeals={appeals} onNavigate={navigateToAdminModule}/>,
         notifications: renderNotifications,
         support: renderNotifications,
         landlords: renderLandlords,

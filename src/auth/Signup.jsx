@@ -346,7 +346,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
             <form ref={formRef} className="signup-form" noValidate onSubmit={handleSubmit} aria-busy={loading}>
               {!values.role && (
                 <div className="signup-account-type-options">
-                  {[{ role: "tenant", label: "Tenant", description: "Find and explore verified apartments in La Paz.", Icon: Users }, { role: "landlord", label: "Landlord", description: "List and manage your apartment properties.", Icon: Building2 }].map(({ role, label, description, Icon }) => (
+                  {[{ role: "tenant", label: "Tenant", description: "Find and explore verified apartments in La Paz.", Icon: Users }, { role: "landlord", label: "Landlord", description: "List and manage your apartment apartments.", Icon: Building2 }].map(({ role, label, description, Icon }) => (
                     <button type="button" className="signup-account-type-option" key={role} onClick={() => selectRole(role)}>
                       <span className="signup-account-type-icon"><Icon aria-hidden="true" /></span>
                       <span className="signup-account-type-content"><strong>{label}</strong><span>{description}</span></span>

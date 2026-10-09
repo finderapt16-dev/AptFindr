@@ -57,8 +57,8 @@ export function EditProperty() {
         setImages((listing.images ?? []).map((url, index) => ({ id: `existing-${index}`, url, isPrimary: index === 0, sortOrder: index })));
       }
     }).catch((error) => {
-      console.error("Unable to load property for editing:", error);
-      toast.error("Unable to load this property.");
+      console.error("Unable to load apartment for editing:", error);
+      toast.error("Unable to load this apartment.");
     }).finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [id]);
@@ -81,11 +81,11 @@ export function EditProperty() {
     event.preventDefault();
     if (!apartment || !canEdit || saving) return;
     if (!form.title.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim()) {
-      toast.error("Please complete the property name and location fields.");
+      toast.error("Please complete the apartment name and location fields.");
       return;
     }
     if (!hasValidApartmentCoordinates(form.lat, form.lng)) {
-      toast.error("Please pin the property's exact location before saving.");
+      toast.error("Please pin the apartment's exact location before saving.");
       return;
     }
     const minPrice = Number(form.minPrice);
@@ -110,8 +110,8 @@ export function EditProperty() {
       const saved = await persistApartmentImages(apartment.id, images, user?.id);
       setApartment(saved ?? savedDetails);
       await refreshApartments();
-      toast.success("Property details saved.");
-      navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Properties" } });
+      toast.success("Apartment details saved.");
+      navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Apartments" } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save changes.");
     } finally {
@@ -119,24 +119,24 @@ export function EditProperty() {
     }
   };
 
-  if (loading) return <div className="edit-property-status">Loading property…</div>;
-  if (!apartment || !form) return <div className="edit-property-status">Property not found.</div>;
-  if (!canEdit) return <div className="edit-property-status">You do not have permission to edit this property.</div>;
+  if (loading) return <div className="edit-property-status">Loading apartment…</div>;
+  if (!apartment || !form) return <div className="edit-property-status">Apartment not found.</div>;
+  if (!canEdit) return <div className="edit-property-status">You do not have permission to edit this apartment.</div>;
 
   return <main className="edit-property-page">
     <form className="edit-property-content" onSubmit={save}>
       <header className="edit-property-header">
         <div>
-          <button type="button" className="edit-property-back" onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Properties" } })}><ArrowLeft/> Back to Property</button>
-          <h1>Edit Property</h1>
-          <p>Update your property information, photos, and location.</p>
+          <button type="button" className="edit-property-back" onClick={() => navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Apartments" } })}><ArrowLeft/> Back to Apartment</button>
+          <h1>Edit Apartment</h1>
+          <p>Update your apartment information, photos, and location.</p>
         </div>
         <div className="edit-property-header-actions"><Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving || resolvingLocation}>{saving ? "Saving…" : resolvingLocation ? "Finding location…" : "Save Changes"}</Button></div>
       </header>
 
       <div className="edit-property-grid">
         <div className="edit-property-left">
-          <section className="edit-property-card edit-property-photo-card"><h2>Apartment Photos</h2><p>Upload clear photos of your property. Drag thumbnails to reorder them.</p>
+          <section className="edit-property-card edit-property-photo-card"><h2>Apartment Photos</h2><p>Upload clear photos of your apartment. Drag thumbnails to reorder them.</p>
             {displayImages.length > 0 && <><div className="edit-property-main-photo">{displayImages[imageIndex] ? <img src={displayImages[imageIndex]} alt={`Property photo ${imageIndex + 1}`}/> : <Building2/>}{displayImages.length > 1 && <><button type="button" className="photo-navigation-arrow edit-property-gallery-arrow is-left" aria-label="Previous photo" onClick={() => setImageIndex((imageIndex - 1 + displayImages.length) % displayImages.length)}><ChevronLeft/></button><button type="button" className="photo-navigation-arrow edit-property-gallery-arrow is-right" aria-label="Next photo" onClick={() => setImageIndex((imageIndex + 1) % displayImages.length)}><ChevronRight/></button></>}</div><div className="edit-property-thumbnails">{displayImages.slice(0, 4).map((url, index) => <button type="button" key={`${url}-${index}`} className={index === imageIndex ? "is-active" : ""} onClick={() => setImageIndex(index)}><img src={url} alt={`Property thumbnail ${index + 1}`}/></button>)}</div></>}
             <MultiImageUploader images={images} onImagesChange={setImages} maxImages={10} disabled={saving}/>
           </section>
@@ -144,9 +144,9 @@ export function EditProperty() {
         </div>
 
         <aside className="edit-property-right">
-          <section className="edit-property-card"><h2>Property Name</h2><input value={form.title} onChange={(event) => setField("title", event.target.value)} placeholder="e.g. La Paz Apartment" required/></section>
-          <section className="edit-property-card"><h2>About this apartment</h2><textarea value={form.description} onChange={(event) => setField("description", event.target.value)} placeholder="Describe the property, nearby landmarks, and what renters can expect."/></section>
-          <section className="edit-property-card"><div className="edit-property-card-heading"><div><h2>Price Range</h2><p>Set the monthly-rent range shown on your property page.</p></div></div><div className="edit-property-prices"><label>Minimum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.minPrice} onChange={(event) => setField("minPrice", event.target.value)} placeholder="e.g. 3500" required/></label><label>Maximum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.maxPrice} onChange={(event) => setField("maxPrice", event.target.value)} placeholder="e.g. 6000" required/></label></div></section>
+          <section className="edit-property-card"><h2>Apartment Name</h2><input value={form.title} onChange={(event) => setField("title", event.target.value)} placeholder="e.g. La Paz Apartment" required/></section>
+          <section className="edit-property-card"><h2>About this apartment</h2><textarea value={form.description} onChange={(event) => setField("description", event.target.value)} placeholder="Describe the apartment, nearby landmarks, and what renters can expect."/></section>
+          <section className="edit-property-card"><div className="edit-property-card-heading"><div><h2>Price Range</h2><p>Set the monthly-rent range shown on your apartment page.</p></div></div><div className="edit-property-prices"><label>Minimum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.minPrice} onChange={(event) => setField("minPrice", event.target.value)} placeholder="e.g. 3500" required/></label><label>Maximum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.maxPrice} onChange={(event) => setField("maxPrice", event.target.value)} placeholder="e.g. 6000" required/></label></div></section>
           <section className="edit-property-card"><h2>House Rules &amp; Policies</h2><p>Add the expectations that tenants should see before inquiring.</p><div className="edit-property-rules">{form.rules.map((rule) => <span key={rule}>{rule}<button type="button" onClick={() => setField("rules", form.rules.filter((item) => item !== rule))} aria-label={`Remove ${rule}`}><X/></button></span>)}</div><div className="edit-property-rule-add"><input value={newRule} onChange={(event) => setNewRule(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addRule(); } }} placeholder="Add a house rule"/><Button type="button" onClick={addRule} disabled={!newRule.trim()}><Plus/>Add</Button></div></section>
           <section className="edit-property-card"><h2>Utilities Included</h2><p>Select the utilities included in the monthly rent.</p><div className="edit-property-utilities">{[...new Set([...DEFAULT_UTILITIES, ...form.utilityItems])].map((utility) => <button type="button" key={utility} aria-pressed={form.utilityItems.includes(utility)} className={form.utilityItems.includes(utility) ? "is-selected" : ""} onClick={() => toggleUtility(utility)}>{utility}</button>)}</div></section>
         </aside>

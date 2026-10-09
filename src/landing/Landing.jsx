@@ -1423,7 +1423,7 @@ export function Landing() {
                                 Browse verified apartment
                                 listings, compare rental
                                 options, explore locations,
-                                and review room details and
+                                and review unit details and
                                 amenities all in one place.
                             </p>
 

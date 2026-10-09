@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apartmentFormValuesFromApartment, createApartment, deleteApartment, fetchApartmentWithImages, resolveAppUserId, uploadApartmentImage, } from "@/data/apartments";
-import { BUSINESS_PERMIT_DOCUMENT_TYPE, VERIFICATION_DOCUMENT_TYPES, uploadVerificationDocuments, validateVerificationFile, } from "@/services/verificationDocumentsService";
+import { BUSINESS_PERMIT_DOCUMENT_TYPE, uploadVerificationDocuments, } from "@/services/verificationDocumentsService";
 import { notifyAdminsOfPropertySubmission, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { deletePropertyDraft, fetchPropertyDraft, savePropertyDraft, } from "@/services/propertyDraftService";
 import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates, } from "@/utils/mapCoordinates";
@@ -110,10 +110,10 @@ export function AddApartment() {
     const [validationErrors, setValidationErrors] = useState({});
     const totalSteps = 4;
     const stepConfig = [
-        { number: 1, title: "Apartment Information", description: "Let's start with the basic details about your apartment." },
-        { number: 2, title: "Location Details", description: "Where is your apartment located?" },
-        { number: 3, title: "Included & House Rules", description: "Select the included features, set the house rules, and specify the contract duration for your apartment." },
-        { number: 4, title: "Apartment Verification", description: "Permit details and verification documents." },
+        { number: 1, title: "Apartment Verification", description: "Permit details and verification documents." },
+        { number: 2, title: "Apartment Information", description: "Photos, name, and basic details." },
+        { number: 3, title: "Location Details", description: "Specify your exact address and map position." },
+        { number: 4, title: "House Rules & Included", description: "Select the included features, set the house rules, and specify the contract duration for your apartment." },
     ];
     const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
     const [locationLookupRequest, setLocationLookupRequest] = useState(0);
@@ -198,22 +198,25 @@ export function AddApartment() {
         }
         setGuidelinesOpen(false);
     };
-    const selectVerificationDocument = (type, file) => {
-        if (!file)
-            return;
-        const error = validateVerificationFile(file);
-        if (error) {
-            toast.error(error);
+    const addPermitFiles = (fileList) => {
+        const files = Array.from(fileList ?? []);
+        if (files.length + verificationDocuments.length > 5) {
+            toast.error("Upload up to 5 files.");
             return;
         }
+        for (const file of files) {
+            if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type) || file.size > 8 * 1024 * 1024) {
+                toast.error("Use JPG, PNG, or PDF files up to 8MB each.");
+                return;
+            }
+        }
         setVerificationDocuments((current) => {
-            const previous = current.find((document) => document.type === type);
-            if (previous?.previewUrl.startsWith("blob:"))
-                URL.revokeObjectURL(previous.previewUrl);
-            return [
-                ...current.filter((document) => document.type !== type),
-                { type, file, previewUrl: URL.createObjectURL(file) },
-            ];
+            const used = new Set(current.map((document) => document.type));
+            return [...current, ...files.map((file) => {
+                const type = Array.from({ length: 5 }, (_, index) => index === 0 ? BUSINESS_PERMIT_DOCUMENT_TYPE : `${BUSINESS_PERMIT_DOCUMENT_TYPE}_${index + 1}`).find((key) => !used.has(key));
+                used.add(type);
+                return { type, file, previewUrl: URL.createObjectURL(file) };
+            })];
         });
     };
     const removePendingVerificationDocument = (type) => {
@@ -270,7 +273,7 @@ export function AddApartment() {
     const discardDraft = (resetForm = true) => {
         if (user?.id) {
             void deletePropertyDraft(user.id).catch((error) => {
-                console.error("Unable to delete the property draft:", error);
+                console.error("Unable to delete the apartment draft:", error);
             });
         }
         setPendingDraft(null);
@@ -283,7 +286,9 @@ export function AddApartment() {
         if (!pendingDraft)
             return;
         skipNextAutoSaveRef.current = true;
-        setCurrentStep(Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1)));
+        setCurrentStep(pendingDraft.flowOrder === "verification-first"
+            ? Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1))
+            : ({ 1: 2, 2: 3, 3: 4, 4: 1 }[pendingDraft.currentStep] ?? 1));
         const restoredFormData = { ...INITIAL_FORM_DATA, ...pendingDraft.formData, image: "", images: [] };
         setFormData(restoredFormData);
         setLocationPinned(hasValidApartmentCoordinates(restoredFormData.lat, restoredFormData.lng));
@@ -316,12 +321,12 @@ export function AddApartment() {
             }
             else if (parsed) {
                 void deletePropertyDraft(user.id).catch((error) => {
-                    console.error("Unable to remove an invalid property draft:", error);
+                    console.error("Unable to remove an invalid apartment draft:", error);
                 });
             }
         })
             .catch((error) => {
-            console.error("Unable to read the Add Property draft:", error);
+            console.error("Unable to read the Add Apartment draft:", error);
         })
             .finally(() => {
             if (active)
@@ -341,6 +346,7 @@ export function AddApartment() {
         const { image: _image, images: _images, ...safeFormData } = formData;
         const draft = {
             version: 2,
+            flowOrder: "verification-first",
             savedAt: new Date().toISOString(),
             currentStep,
             formData: safeFormData,
@@ -360,7 +366,7 @@ export function AddApartment() {
                 setDraftStatus("saved");
         }
         catch (error) {
-            console.error("Unable to save the Add Property draft:", error);
+            console.error("Unable to save the Add Apartment draft:", error);
             if (updateStatus)
                 setDraftStatus("error");
         }
@@ -376,7 +382,7 @@ export function AddApartment() {
             clearTimeout(autoSaveTimerRef.current);
         if (!hasDraftContent) {
             void deletePropertyDraft(user.id).catch((error) => {
-                console.error("Unable to clear the empty property draft:", error);
+                console.error("Unable to clear the empty apartment draft:", error);
             });
             setDraftStatus("idle");
             return;
@@ -404,7 +410,7 @@ export function AddApartment() {
     const persistedStreetAddress = useMemo(() => [formData.address, formData.barangay].filter(Boolean).join(", "), [formData.address, formData.barangay]);
     const locationAddressQuery = useMemo(() => [formData.address, formData.barangay, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", "), [formData.address, formData.barangay, formData.city, formData.state, formData.zip]);
     useEffect(() => {
-        if (currentStep !== 2 || ![formData.address, formData.barangay].some((value) => String(value ?? "").trim()))
+        if (currentStep !== 3 || ![formData.address, formData.barangay].some((value) => String(value ?? "").trim()))
             return;
         const normalizedQuery = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
         if (!normalizedQuery || normalizedQuery === lastAutoGeocodedAddressRef.current)
@@ -449,17 +455,15 @@ export function AddApartment() {
             errors.businessAccount = "Business account number is required.";
         if (!String(verificationData.permitIssuedAt).trim())
             errors.permitIssuedAt = "Permit issue date is required.";
-        if (!String(verificationData.permitExpiry).trim())
-            errors.permitExpiry = "Permit expiry date is required.";
         if (!contractDuration)
             errors.contractDuration = "Select a contract duration.";
-        const firstStep = errors.title || errors.sqft || errors.description || errors.images
+        const firstStep = errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
             ? 1
-            : errors.address || errors.barangay || errors.mapLocation
+            : errors.title || errors.sqft || errors.description || errors.images
                 ? 2
-                : errors.contractDuration
+                : errors.address || errors.barangay || errors.mapLocation
                     ? 3
-                    : errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
+                    : errors.contractDuration
                         ? 4
                         : currentStep;
         return { isValid: Object.keys(errors).length === 0, errors, firstStep };
@@ -468,13 +472,13 @@ export function AddApartment() {
         const { errors } = validateAllFields();
         const belongsToStep = (field) => {
             if (step === 1)
-                return ["title", "sqft", "description", "images"].includes(field);
-            if (step === 2)
-                return ["address", "barangay", "mapLocation"].includes(field);
-            if (step === 3)
-                return field === "contractDuration";
-            if (step === 4)
                 return ["businessPermit", "businessAccount", "permitIssuedAt", "permitExpiry"].includes(field);
+            if (step === 2)
+                return ["title", "sqft", "description", "images"].includes(field);
+            if (step === 3)
+                return ["address", "barangay", "mapLocation"].includes(field);
+            if (step === 4)
+                return field === "contractDuration";
             return false;
         };
         const stepErrors = Object.fromEntries(Object.entries(errors).filter(([field]) => belongsToStep(field)));
@@ -508,7 +512,7 @@ export function AddApartment() {
             }
         }
         else {
-            if (currentStep === 1 && uploadedImages.length === 0) {
+            if (currentStep === 2 && uploadedImages.length === 0) {
                 toast.error("Please upload at least one apartment image");
             }
             else {
@@ -682,13 +686,13 @@ export function AddApartment() {
             try {
                 const notifiedAdminCount = await notifyAdminsOfPropertySubmission(created.id);
                 if (notifiedAdminCount === 0) {
-                    console.warn("No administrator accounts were available for the property-submission notification.");
+                    console.warn("No administrator accounts were available for the apartment-submission notification.");
                 }
             }
             catch (notificationError) {
                 // The property itself is complete. Do not roll it back merely
                 // because a notification delivery needs to be retried.
-                console.error("Unable to notify administrators about the submitted property:", notificationError);
+                console.error("Unable to notify administrators about the submitted apartment:", notificationError);
                 toast.warning("Your apartment was submitted, but the admin notification could not be delivered yet.");
             }
             await refreshApartments();
@@ -744,11 +748,11 @@ export function AddApartment() {
         <LandlordMenuTrigger expanded={sidebarOpen} className="landlord-add-property-trigger" onClick={() => setSidebarOpen(true)} />
 
         <main className="app-shell-main landlord-add-property-main">
-          <div className="landlord-add-property add-apartment-page">
+          <div className={`landlord-add-property add-apartment-page ${currentStep === 1 ? "verification-reference" : ""}`}>
             <div className="app-shell-content add-apartment-page-content add-apartment-flow-container">
         <div className="add-apartment-panel-4">
           <h1 className="add-apartment-add-property">Add Apartment</h1>
-          <p className="add-apartment-text-4">Submit apartment information for review, then manage individual rooms separately.</p>
+          <p className="add-apartment-text-4">Submit apartment information for review, then manage individual units separately.</p>
           <p className="add-apartment-step">Step {currentStep} of {totalSteps}</p>
           <div className="add-apartment-row-3">
             {draftStatus !== "idle" && (<span className={`add-apartment-card-3 ${draftStatus === "error" ? "add-apartment-span" : "add-apartment-span-2"}`}>
@@ -791,7 +795,7 @@ export function AddApartment() {
                 : currentStep > step.number
                     ? "add-apartment-button-8"
                     : "add-apartment-button-9"}`}>
-                  <span>{step.title}</span>
+                  <span>{step.number === 4 ? "Amenities & House Rules" : step.title}</span>
                 </button>
               </div>))}
           </div>
@@ -819,7 +823,79 @@ export function AddApartment() {
 
           <CardContent className="add-apartment-card-content">
             <form onSubmit={handleSubmit} noValidate className="add-apartment-form">
-              {currentStep === 1 && (<>
+              {currentStep === 1 && (<div className="add-apartment-panel-8 add-apartment-verification-step">
+                  <div className="add-apartment-row-6">
+                    <ShieldCheck className="add-apartment-shield-check-icon"/>
+                    <h3 className="add-apartment-property-verification">Apartment Information</h3>
+                  </div>
+                  <p className="add-apartment-verification-intro">Provide the basic apartment details used for verification.</p>
+
+                  <div className="add-apartment-panel-9">
+                    <Label className="add-apartment-property-name-2">
+                      <Building2 className="add-apartment-building2-icon-2"/> Apartment Name
+                    </Label>
+                    <Input value={String(formData.title ?? "")} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} placeholder="Luna" className="add-apartment-input-3"/>
+                    <p className="add-apartment-text-5">Carried from Apartment Information. Go back to step 1 to edit this name.</p>
+                  </div>
+
+                  <div className="add-apartment-panel-9">
+                    <Label className="add-apartment-property-address">
+                      <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address
+                    </Label>
+                    <Input value={formData.address} onChange={(event) => { setFormData((current) => ({ ...current, address: event.target.value })); setLocationPinned(false); setManualAddressEdited(true); }} placeholder="Luna, La Paz, Iloilo City, 5000" className="add-apartment-input-3"/>
+                    <p className="add-apartment-text-5">Carried from Location. Go back to step 2 to change this address.</p>
+                  </div>
+
+                  <div className="add-apartment-grid-4">
+                    <div className="add-apartment-panel-9">
+                      <Label className="add-apartment-business-permit-number">
+                        <FileText className="add-apartment-file-text-icon"/> Business Permit Number <span aria-hidden="true">*</span>
+                      </Label>
+                      <Input value={verificationData.businessPermit} onChange={(e) => {
+                setVerificationData({ ...verificationData, businessPermit: e.target.value });
+                if (e.target.value.trim())
+                    clearValidationError("businessPermit");
+            }} aria-invalid={Boolean(validationErrors.businessPermit)} placeholder="e.g., B-2024-0001" className={fieldClass("businessPermit")}/>
+                      <FieldError field="businessPermit"/>
+                    </div>
+
+                    <div className="add-apartment-panel-9">
+                      <Label>Business Account Number <span aria-hidden="true">*</span></Label>
+                      <Input value={verificationData.businessAccount} onChange={(e) => {
+                setVerificationData({ ...verificationData, businessAccount: e.target.value });
+                if (e.target.value.trim())
+                    clearValidationError("businessAccount");
+            }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
+                      <FieldError field="businessAccount"/>
+                    </div>
+
+                    <div className="add-apartment-panel-9">
+                      <Label>Date Issued <span aria-hidden="true">*</span></Label>
+                      <Input type="date" value={verificationData.permitIssuedAt} onChange={(e) => {
+                setVerificationData({ ...verificationData, permitIssuedAt: e.target.value });
+                if (e.target.value)
+                    clearValidationError("permitIssuedAt");
+            }} aria-invalid={Boolean(validationErrors.permitIssuedAt)} className={fieldClass("permitIssuedAt")}/>
+                      <FieldError field="permitIssuedAt"/>
+                    </div>
+
+
+                  </div>
+
+                  <div className="verification-reference-documents">
+                    <h3>VERIFICATION DOCUMENT</h3>
+                    <p>Upload your business permit documents for admin review.</p>
+                    <label className="verification-reference-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); addPermitFiles(event.dataTransfer.files); }}>
+                      <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => { addPermitFiles(event.target.files); event.target.value = ""; }}/>
+                      <Upload aria-hidden="true"/>
+                      <strong>Drag and drop files here or click to browse</strong>
+                      <span>JPG, PNG, or PDF {"\u2022"} Max 8MB {"\u2022"} Up to 5 files</span>
+                    </label>
+                    {verificationDocuments.length > 0 && <ul className="verification-reference-files">{verificationDocuments.map((document) => <li key={document.type}><a href={document.previewUrl} target="_blank" rel="noopener noreferrer">{document.file.name}</a><button type="button" aria-label={`Remove ${document.file.name}`} onClick={() => removePendingVerificationDocument(document.type)}><X size={16}/></button></li>)}</ul>}
+                  </div>
+                </div>)}
+
+              {currentStep === 2 && (<>
                   <div className="add-apartment-panel-8">
                     <div className="add-apartment-row-6">
                       <Upload className="add-apartment-upload-icon"/>
@@ -835,8 +911,8 @@ export function AddApartment() {
                     delete next.images;
                     return next;
                 });
-            }} maxImages={10} maxFileSize={5}/>
-                    <p className="add-apartment-text-5">Upload clear photos of the apartment exterior, common areas, and facilities. Individual room photos can be managed separately in Manage Rooms.</p>
+            }} maxImages={5} maxFileSize={5}/>
+                    <p className="add-apartment-text-5">Upload clear photos of the apartment exterior, common areas, and facilities. Individual unit photos can be managed separately in Manage Units.</p>
                     {imageReuploadRequired && (<Alert className="add-apartment-card-6">
                         <Upload className="add-apartment-upload-icon-2"/>
                         <AlertDescription className="add-apartment-alert-description-2">Please re-upload images before submitting.</AlertDescription>
@@ -884,7 +960,7 @@ export function AddApartment() {
                   </div>
                 </>)}
 
-              {currentStep === 2 && (<div className="add-apartment-panel-8 add-apartment-location-step">
+              {currentStep === 3 && (<div className="add-apartment-panel-8 add-apartment-location-step">
                   <p className="add-apartment-location-section-label">Address</p>
                   <div className="add-apartment-location-primary-grid">
                     <div className="add-apartment-panel-9">
@@ -969,7 +1045,7 @@ export function AddApartment() {
                   </div>
                 </div>)}
 
-              {currentStep === 3 && (<>
+              {currentStep === 4 && (<>
                   <div className="add-apartment-step-three-reference">
                     <section className="add-apartment-step-section">
                       <h3 className="add-apartment-section-title">Included Features <span aria-hidden="true">*</span></h3>
@@ -1058,114 +1134,15 @@ export function AddApartment() {
                   </section>
                 </>)}
 
-              {currentStep === 4 && (<div className="add-apartment-panel-8">
-                  <div className="add-apartment-row-6">
-                    <ShieldCheck className="add-apartment-shield-check-icon"/>
-                    <h3 className="add-apartment-property-verification">Apartment Information</h3>
-                  </div>
-                  <p className="add-apartment-verification-intro">Provide the apartment details used for verification.</p>
-
-                  <div className="add-apartment-panel-9">
-                    <Label className="add-apartment-property-name-2">
-                      <Building2 className="add-apartment-building2-icon-2"/> Apartment Name
-                    </Label>
-                    <Input value={String(formData.title ?? "")} readOnly placeholder="e.g., Sunset Heights" className="add-apartment-input-3"/>
-                    <p className="add-apartment-text-5">Carried from Apartment Information. Go back to step 1 to edit this name.</p>
-                  </div>
-
-                  <div className="add-apartment-panel-9">
-                    <Label className="add-apartment-property-address">
-                      <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address
-                    </Label>
-                    <Input value={[persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", ")} readOnly className="add-apartment-input-3"/>
-                    <p className="add-apartment-text-5">Carried from Location. Go back to step 2 to change this address.</p>
-                  </div>
-
-                  <div className="add-apartment-grid-4">
-                    <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-business-permit-number">
-                        <FileText className="add-apartment-file-text-icon"/> Business Permit Number <span aria-hidden="true">*</span>
-                      </Label>
-                      <Input value={verificationData.businessPermit} onChange={(e) => {
-                setVerificationData({ ...verificationData, businessPermit: e.target.value });
-                if (e.target.value.trim())
-                    clearValidationError("businessPermit");
-            }} aria-invalid={Boolean(validationErrors.businessPermit)} placeholder="B-2024-XXXXX" className={fieldClass("businessPermit")}/>
-                      <FieldError field="businessPermit"/>
-                    </div>
-
-                    <div className="add-apartment-panel-9">
-                      <Label>Business Account Number <span aria-hidden="true">*</span></Label>
-                      <Input value={verificationData.businessAccount} onChange={(e) => {
-                setVerificationData({ ...verificationData, businessAccount: e.target.value });
-                if (e.target.value.trim())
-                    clearValidationError("businessAccount");
-            }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
-                      <FieldError field="businessAccount"/>
-                    </div>
-
-                    <div className="add-apartment-panel-9">
-                      <Label>Permit Issue Date <span aria-hidden="true">*</span></Label>
-                      <Input type="date" value={verificationData.permitIssuedAt} onChange={(e) => {
-                setVerificationData({ ...verificationData, permitIssuedAt: e.target.value });
-                if (e.target.value)
-                    clearValidationError("permitIssuedAt");
-            }} aria-invalid={Boolean(validationErrors.permitIssuedAt)} className={fieldClass("permitIssuedAt")}/>
-                      <FieldError field="permitIssuedAt"/>
-                    </div>
-
-                    <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-permit-expiry-date-optional">Permit Expiry Date <span aria-hidden="true">*</span></Label>
-                      <Input type="date" value={verificationData.permitExpiry} onChange={(e) => {
-                setVerificationData({ ...verificationData, permitExpiry: e.target.value });
-                if (e.target.value)
-                    clearValidationError("permitExpiry");
-            }} aria-invalid={Boolean(validationErrors.permitExpiry)} className={fieldClass("permitExpiry")}/>
-                      <FieldError field="permitExpiry"/>
-                    </div>
-                  </div>
-
-                  <div className="add-apartment-panel-11">
-                    <div>
-                      <h3 className="add-apartment-verification-documents">Verification Document</h3>
-                      <p className="add-apartment-text-7">Upload your business permit document for admin review. If no document is uploaded, it will be marked as “Not provided.”</p>
-                      <p className="add-apartment-text-8">JPG, JPEG, PNG, WebP, or PDF · maximum 10 MB each</p>
-                    </div>
-                    <div className="add-apartment-grid-5">
-                      {VERIFICATION_DOCUMENT_TYPES.filter((documentType) => documentType.key === BUSINESS_PERMIT_DOCUMENT_TYPE).map((documentType) => {
-                const document = verificationDocuments.find((item) => item.type === documentType.key);
-                const uploadId = `verification-upload-${documentType.key}`;
-                const cameraId = `verification-camera-${documentType.key}`;
-                return (<div key={documentType.key} className="add-apartment-card-9">
-                            <div className="add-apartment-row-9">
-                              <span className="add-apartment-grid-6"><FileText className="add-apartment-file-text-icon-2"/></span>
-                              <div className="add-apartment-panel-12"><p className="add-apartment-text-9">{documentType.label}</p><p className="add-apartment-text-10">{document?.file.name || "Not provided"}</p></div>
-                            </div>
-                            {document && (<div className="add-apartment-panel-13">
-                                {document.file.type === "application/pdf" ? (<a href={document.previewUrl} target="_blank" rel="noopener noreferrer" className="add-apartment-preview-pdf"><FileText className="add-apartment-file-text-icon-3"/>Preview PDF</a>) : (<a href={document.previewUrl} target="_blank" rel="noopener noreferrer"><img src={document.previewUrl} alt={`${documentType.label} preview`} className="add-apartment-image-2"/></a>)}
-                              </div>)}
-                            <div className="add-apartment-grid-7">
-                              <input id={uploadId} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="add-apartment-input-4" onChange={(event) => { selectVerificationDocument(documentType.key, event.target.files?.[0]); event.currentTarget.value = ""; }}/>
-                              <label htmlFor={uploadId} className="add-apartment-label"><Upload className="add-apartment-upload-icon-3"/>{document ? "Replace" : "Browse files"}</label>
-                              <input id={cameraId} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="add-apartment-input-4" onChange={(event) => { selectVerificationDocument(documentType.key, event.target.files?.[0]); event.currentTarget.value = ""; }}/>
-                              <label htmlFor={cameraId} className="add-apartment-take-photo"><Camera className="add-apartment-camera-icon"/>Take photo</label>
-                              {document && <button type="button" onClick={() => removePendingVerificationDocument(documentType.key)} className="add-apartment-remove-file"><Trash2 className="add-apartment-trash2-icon"/>Remove file</button>}
-                            </div>
-                          </div>);
-            })}
-                    </div>
-                  </div>
-                </div>)}
-
               <div className="add-apartment-row-10">
                 {currentStep > 1 ? (<Button type="button" variant="outline" onClick={handlePrevStep} className="add-apartment-previous">
                     <ArrowLeft className="add-apartment-arrow-left-icon"/> Previous
                   </Button>) : (<Button type="button" variant="outline" onClick={() => navigate(-1)} className="add-apartment-cancel">
-                    Cancel
+                    {currentStep === 1 ? <><ArrowLeft className="add-apartment-arrow-left-icon"/> Previous</> : "Cancel"}
                   </Button>)}
 
                 {currentStep < totalSteps ? (<Button type="button" onClick={handleNextStep} className="add-apartment-next">
-                    Next <ArrowRight className="add-apartment-arrow-right-icon"/>
+                    {currentStep === 1 ? "Submit" : <>Next <ArrowRight className="add-apartment-arrow-right-icon"/></>}
                   </Button>) : (<Button type="submit" disabled={isSubmitting || locationResolving} className="add-apartment-button-14">
                     {isSubmitting ? "Submitting..." : locationResolving ? "Finding location..." : "Submit"}
                   </Button>)}
@@ -1184,7 +1161,7 @@ export function AddApartment() {
               <div className="add-apartment-panel-12">
                 <h2 id="draft-dialog-title" className="add-apartment-draft-dialog-title">Continue your apartment draft?</h2>
                 <p className="add-apartment-saved">
-                  Saved {new Date(pendingDraft.savedAt).toLocaleString("en-PH")}. You can return to step {Math.min(totalSteps, Math.max(1, pendingDraft.currentStep || 1))} or start over.
+                  Saved {new Date(pendingDraft.savedAt).toLocaleString("en-PH")}. You can resume your saved apartment details or start over.
                 </p>
               </div>
             </div>

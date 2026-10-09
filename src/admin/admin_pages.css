@@ -20495,3 +20495,9 @@
   .admin-reports-span { font-size: 10px; }
   .admin-reports-submitted-2 { font-size: 10px; }
 }
+
+.admin-notification-menu-trigger { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border: 0; border-radius: 6px; background: transparent; color: #64748b; cursor: pointer; }
+.admin-notification-floating-menu { width: 210px; padding: 6px; border: 1px solid #d9e2e8; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #0f172a26; }
+.admin-notification-floating-menu > button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 5px; background: #fff; color: #334155; font-size: 13px; text-align: left; cursor: pointer; }
+.admin-notification-floating-menu > button:hover { background: #f0f9ff; }
+.admin-notification-floating-menu svg { width: 16px; height: 16px; }

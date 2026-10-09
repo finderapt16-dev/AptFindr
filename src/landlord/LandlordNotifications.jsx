@@ -1,3 +1,4 @@
+import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
 import "./LandlordNotifications.css";
 import { CheckCheck, Clock, MoreHorizontal } from "lucide-react";
 
@@ -77,28 +78,17 @@ export const LandlordNotifications = ({
                   </button>
                   {notification.id ? (
                     <div className="landlord-notification__actions">
-                      <button
-                        type="button"
-                        className="landlord-notification__more"
-                        aria-label="Notification actions"
-                        aria-expanded={menuIsOpen}
-                        onClick={() => setOpenNotifMenuId(menuIsOpen ? null : notification.id)}
-                      >
-                        <MoreHorizontal aria-hidden="true" />
-                      </button>
-                      {menuIsOpen && (
-                        <div className="landlord-notification__menu" role="menu">
+                      <NotificationActionsMenu open={Boolean(menuIsOpen)} onOpenChange={(open) => setOpenNotifMenuId(open ? notification.id : null)} triggerClassName="landlord-notification__more" menuClassName="landlord-notification__menu">
                           <button type="button" role="menuitem" onClick={() => void toggleNotifReadStatus(notification.id, unread ? false : true)}>{unread ? "Mark as read" : "Mark as unread"}</button>
                           <button type="button" role="menuitem" className="is-delete" disabled={deletingNotifId === notification.id} onClick={() => void deleteNotif(notification.id)}>{deletingNotifId === notification.id ? "Deleting..." : "Delete"}</button>
-                        </div>
-                      )}
+                      </NotificationActionsMenu>
                     </div>
                   ) : <span />}
                 </article>
               );
             })
           ) : (
-            <div className="landlord-notifications__empty"><strong>{showingUnread ? "No unread notifications" : "You're all caught up"}</strong><span>New updates about your properties will appear here.</span></div>
+            <div className="landlord-notifications__empty"><strong>{showingUnread ? "No unread notifications" : "You're all caught up"}</strong><span>New updates about your apartments will appear here.</span></div>
           )}
         </div>
       </section>

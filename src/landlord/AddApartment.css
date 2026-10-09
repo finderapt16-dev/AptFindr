@@ -2479,7 +2479,7 @@
 .landlord-add-property .multi-image-uploader-style-1 { display: block; }
 .landlord-add-property .multi-image-dropzone { display: grid; align-content: center; padding: 9px; }
 .landlord-add-property .multi-image-uploader-style-2 { width: 15px; height: 15px; margin: 0 auto 4px; color: #8ba3b7; }
-.landlord-add-property .multi-image-uploader-style-3 { margin: 0; color: #344054; font-size: 9px; font-weight: 650; }
+.landlord-add-property .multi-image-uploader-style-3 { margin: 0; color: #000; font-size: 9px; font-weight: 650; }
 .landlord-add-property .multi-image-uploader-style-4 { margin: 2px 0 0; color: #98a2b3; font-size: 8px; }
 .landlord-add-property .add-apartment-choice-section { padding-bottom: 12px; margin-bottom: 12px; }
 .landlord-add-property .add-apartment-choice-section .add-apartment-row-6 { margin-bottom: 3px; }
@@ -3075,3 +3075,76 @@
     min-height: 136px;
   }
 }
+/* Verification screen from the supplied 920px reference. */
+.landlord-add-property.verification-reference { background: #fff; color: #202b3c; padding-top: 20px; }
+.landlord-add-property.verification-reference .add-apartment-flow-container { max-width: 730px; }
+.verification-reference .add-apartment-panel-4 { padding: 0; }
+.verification-reference .add-apartment-add-property { font-size: 26px; line-height: 32px; font-weight: 700; color: #080808; }
+.verification-reference .add-apartment-text-4, .verification-reference .add-apartment-step { font-size: 14px; line-height: 21px; color: #667b9b; }
+.verification-reference .add-apartment-step { margin-top: 0; }
+.landlord-add-property.verification-reference .add-apartment-row-3,
+.landlord-add-property.verification-reference .add-apartment-card-4,
+.verification-reference .add-apartment-close-wizard { display: none; }
+.landlord-add-property.verification-reference .add-apartment-container { padding: 28px 0 0; margin: 0 0 74px; }
+.landlord-add-property.verification-reference .add-apartment-card-5 { border: 1px solid #ccc; border-radius: 10px; box-shadow: none; }
+.landlord-add-property.verification-reference .add-apartment-card-header { padding: 24px; border-bottom: 1px solid #ccc; }
+.landlord-add-property.verification-reference .add-apartment-card-title { font-size: 24px; font-weight: 600; line-height: 30px; }
+.verification-reference .add-apartment-card-header [data-slot="card-description"], .verification-reference .add-apartment-card-header p { font-size: 14px; color: #667b9b; margin-top: 5px; line-height: 21px; }
+.landlord-add-property.verification-reference .add-apartment-card-content { padding: 24px; }
+.landlord-add-property.verification-reference .add-apartment-verification-step { display: block; margin: 0; padding: 0; border: 0; }
+.verification-reference .add-apartment-verification-step .add-apartment-row-6 { margin: 0; }
+.verification-reference .add-apartment-verification-step .add-apartment-row-6 svg,
+.verification-reference .add-apartment-verification-step label svg { display: none; }
+.verification-reference .add-apartment-property-verification { text-transform: uppercase; font-size: 16px !important; font-weight: 600; }
+.landlord-add-property.verification-reference .add-apartment-verification-intro { margin: 6px 0 30px; font-size: 14px; line-height: 21px; color: #667b9b; }
+.landlord-add-property.verification-reference .add-apartment-verification-step .add-apartment-panel-9 { margin: 0 0 22px; }
+.landlord-add-property.verification-reference .add-apartment-verification-step .add-apartment-panel-9 > label { margin: 0 0 5px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.landlord-add-property.verification-reference input:not([type=file]) { min-height: 42px; height: 42px; border: 1px solid #ccc; border-radius: 10px; padding: 10px 16px; background: #fff; font-size: 14px; box-shadow: none; }
+.verification-reference input::placeholder { color: #667b9b; opacity: 1; }
+.landlord-add-property.verification-reference .add-apartment-verification-step .add-apartment-text-5 { margin: 5px 0 0; font-size: 14px; line-height: 21px; color: #667b9b; }
+.landlord-add-property.verification-reference .add-apartment-verification-step .add-apartment-grid-4 { margin: 0; gap: 22px 78px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.landlord-add-property.verification-reference .add-apartment-grid-4 .add-apartment-panel-9 { margin: 0; }
+.verification-reference-documents { margin-top: 30px; }
+.verification-reference-documents h3 { margin: 0; font-size: 16px; line-height: 21px; font-weight: 600; }
+.verification-reference-documents > p { margin: 6px 0 14px; color: #667b9b; font-size: 14px; line-height: 21px; }
+.verification-reference-dropzone { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 170px; border: 1px dashed #ccc; border-radius: 6px; cursor: pointer; text-align: center; }
+.verification-reference-dropzone input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.verification-reference-dropzone:focus-within { outline: 2px solid #0da7e0; outline-offset: 3px; }
+.verification-reference .add-apartment-verification-step .verification-reference-dropzone > svg { display: block; width: 34px; height: 34px; color: #667b9b; stroke-width: 1.7; }
+.verification-reference-dropzone strong { font-size: 16px; line-height: 21px; color: #080808; font-weight: 600; }
+.verification-reference-dropzone span { color: #667b9b; font-size: 14px; }
+.verification-reference-files { list-style: none; padding: 0; margin: 12px 0 0; }
+.verification-reference-files li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.verification-reference-files button { padding: 8px; }
+.landlord-add-property.verification-reference .add-apartment-row-10 { display: flex; gap: 15px; margin: 32px 0 0; padding: 0; border: 0; }
+.landlord-add-property.verification-reference .add-apartment-row-10 > button { flex: 1; min-height: 49px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+.verification-reference .add-apartment-cancel { background: #fff; border: 1px solid #ccc; color: #202b3c; }
+.verification-reference .add-apartment-next { background: #0da7e0; color: #fff; }
+@media (max-width: 640px) {
+  .landlord-add-property.verification-reference .add-apartment-page-content { padding-top: 50px !important; }
+  .landlord-add-property.verification-reference .add-apartment-container { margin-bottom: 36px; }
+  .landlord-add-property.verification-reference .add-apartment-card-content, .landlord-add-property.verification-reference .add-apartment-card-header { padding: 20px 16px; }
+  .landlord-add-property.verification-reference .add-apartment-verification-step .add-apartment-grid-4 { gap: 20px; grid-template-columns: 1fr; }
+  .landlord-add-property.verification-reference input:not([type=file]) { font-size: 16px; }
+  .verification-reference-dropzone { padding: 16px; }
+}
+
+/* Give the verification upload area the same clickable treatment as Add Photo. */
+.verification-reference-dropzone {
+  border: 2px dashed #38bdf8;
+  background: #f0f9ff;
+  color: #0284c7;
+  touch-action: manipulation;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.verification-reference .add-apartment-verification-step .verification-reference-dropzone > svg { color: #0284c7; }
+.verification-reference-dropzone strong { color: #000; }
+@media (hover: hover) {
+  .verification-reference-dropzone:hover {
+    border-color: #0284c7;
+    background: #e0f2fe;
+    box-shadow: 0 2px 8px rgb(2 132 199 / 15%);
+  }
+}
+.verification-reference-dropzone:focus-within { outline: 3px solid #0ea5e9; outline-offset: 3px; }
+.verification-reference-dropzone:active { background: #bae6fd; border-color: #0284c7; }

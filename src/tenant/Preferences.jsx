@@ -615,7 +615,7 @@ export function Preferences({
 
                     {choices(
                         "roomCapacity",
-                        "Room Capacity",
+                        "Unit Capacity",
                         [
                             "Any",
                             "1 person",

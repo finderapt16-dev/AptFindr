@@ -37,7 +37,7 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
             <h2>Account Information</h2>
             <div className="admin-landlord-review-profile">
               <span aria-hidden="true" className="admin-landlord-review-avatar">{text(landlord.name, "L").charAt(0).toUpperCase()}</span>
-              <div><strong>{text(landlord.name, "Unnamed landlord")}</strong><span>Property Owner</span><span>Member since {formatDate(landlord.created_at ?? landlord.createdAt)}</span></div>
+              <div><strong>{text(landlord.name, "Unnamed landlord")}</strong><span>Apartment Owner</span><span>Member since {formatDate(landlord.created_at ?? landlord.createdAt)}</span></div>
             </div>
             <dl className="admin-landlord-review-details">
               <div><dt><UserRound aria-hidden="true" />Full Name</dt><dd>{text(landlord.name)}</dd></div>
@@ -84,9 +84,9 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
           </section>
 
           <section className="admin-landlord-review-card">
-            <h2>Property Review</h2>
+            <h2>Apartment Review</h2>
             <p>Review the apartment information submitted by this landlord.</p>
-            <button type="button" className="admin-landlord-review-secondary-action" disabled={!property} onClick={() => property && onViewProperty(property.id)}><span>View Property Details</span><ArrowRight aria-hidden="true" /></button>
+            <button type="button" className="admin-landlord-review-secondary-action" disabled={!property} onClick={() => property && onViewProperty(property.id)}><span>View Apartment Details</span><ArrowRight aria-hidden="true" /></button>
           </section>
 
           <section className="admin-landlord-review-card">

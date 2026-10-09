@@ -106,7 +106,7 @@ export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoad
               </div>
             </div>
             <div className="apartment-card-panel-3">
-              <p className="apartment-card-view-room-prices">View room prices</p>
+              <p className="apartment-card-view-room-prices">View unit prices</p>
             </div>
           </div>
         </CardContent>

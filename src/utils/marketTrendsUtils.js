@@ -99,12 +99,12 @@ export function getMarketTrendDetails(trendType) {
     };
   }
   if (trendType === "favorites") {
-    return { heading: "Most Favorited Properties", description: "Apartment listings ranked according to tenant favorites." };
+    return { heading: "Most Favorited Apartments", description: "Apartment listings ranked according to tenant favorites." };
   }
   if (trendType === "ratings") {
-    return { heading: "Highest Rated Properties", description: "Apartment listings ranked according to average tenant ratings." };
+    return { heading: "Highest Rated Apartments", description: "Apartment listings ranked according to average tenant ratings." };
   }
-  return { heading: "Most Viewed Properties", description: "Apartment listings ranked according to tenant views." };
+  return { heading: "Most Viewed Apartments", description: "Apartment listings ranked according to tenant views." };
 }
 
 export function hasMarketTrendEngagement(entries = [], trendType = "demand") {

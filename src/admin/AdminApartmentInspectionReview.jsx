@@ -28,23 +28,23 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
     <div className="admin-inspection-review-layout">
       <div className="admin-inspection-review-main">
         <section className="admin-inspection-review-card">
-          <h2>Property Information</h2>
+          <h2>Apartment Information</h2>
           <div className="admin-inspection-review-property">
             <div className="admin-inspection-review-gallery">
               <div className="admin-inspection-review-main-photo">
-              {images.length ? <ImageWithFallback src={images[selectedImageIndex] ?? images[0]} alt={apartment.title || "Property"} className="admin-inspection-review-cover" /> : <div className="admin-inspection-review-no-image">No property image</div>}
+              {images.length ? <ImageWithFallback src={images[selectedImageIndex] ?? images[0]} alt={apartment.title || "Apartment"} className="admin-inspection-review-cover" /> : <div className="admin-inspection-review-no-image">No apartment image</div>}
                 {images.length > 1 && <>
-                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-prev" aria-label="Previous property image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) - 1 + images.length) % images.length)}><ChevronLeft /></button>
-                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-next" aria-label="Next property image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) + 1) % images.length)}><ChevronRight /></button>
+                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-prev" aria-label="Previous apartment image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) - 1 + images.length) % images.length)}><ChevronLeft /></button>
+                  <button type="button" className="photo-navigation-arrow admin-inspection-photo-next" aria-label="Next apartment image" onClick={() => onSelectImage(((selectedImageIndex ?? 0) + 1) % images.length)}><ChevronRight /></button>
                 </>}
               </div>
               {images.length > 1 && <div className="admin-inspection-review-dots">{images.slice(0, 6).map((image, index) => <button type="button" aria-label={`View image ${index + 1}`} aria-current={selectedImageIndex === index} key={`${image}-${index}`} onClick={() => onSelectImage(index)} />)}</div>}
               {images.length > 1 && <div className="admin-inspection-review-thumbnails">{images.slice(0, 4).map((image, index) => <button type="button" key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>)}</div>}
             </div>
             <div className="admin-inspection-review-summary">
-              <div className="admin-inspection-review-title"><div><h3>{apartment.title || "Untitled property"}</h3><p>{location}</p></div><span className={isPublished ? "published" : "pending"}>{statusLabel}</span></div>
+              <div className="admin-inspection-review-title"><div><h3>{apartment.title || "Untitled apartment"}</h3><p>{location}</p></div><span className={isPublished ? "published" : "pending"}>{statusLabel}</span></div>
               <dl>
-                <div><dt>Property Type</dt><dd>{propertyType}</dd></div><div><dt>Total Rooms</dt><dd>{rooms.length || apartment.bedrooms || 0} rooms</dd></div>
+                <div><dt>Apartment Type</dt><dd>{propertyType}</dd></div><div><dt>Total Units</dt><dd>{rooms.length || apartment.bedrooms || 0} rooms</dd></div>
                 <div><dt>Price Range</dt><dd>{lowestPrice ? `₱${amount(lowestPrice)}${highestPrice && highestPrice !== lowestPrice ? ` - ₱${amount(highestPrice)}` : ""} / month` : "Not set"}</dd></div>
                 <div><dt>Description</dt><dd>{apartment.description || "No description submitted."}</dd></div>
               </dl>
@@ -53,7 +53,7 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
             </div>
           </div>
         </section>
-        <section className="admin-inspection-review-card"><h2>Rooms Overview</h2><p className="admin-inspection-review-subtitle">Review the submitted rooms for this property.</p><div className="admin-inspection-review-rooms">{rooms.length ? rooms.map((room, index) => <article key={room.id ?? index}><ImageWithFallback src={list(room.images ?? room.image ?? room.image_url)[0]} alt={room.name || `Room ${index + 1}`} /><strong>{room.name || `Room ${index + 1}`}</strong><b>{room.price ? `₱${amount(room.price)} / month` : "Price not set"}</b><span>{room.bedrooms ?? 1} Bed | {room.bathrooms ?? 1} Bath</span><span>{room.maxOccupants ?? room.max_occupants ?? 1} Occupancy</span><em>{String(room.status || "available").replace(/\b\w/g, (letter) => letter.toUpperCase())}</em></article>) : <p>No rooms submitted for this property.</p>}</div></section>
+        <section className="admin-inspection-review-card"><h2>Units Overview</h2><p className="admin-inspection-review-subtitle">Review the submitted units for this apartment.</p><div className="admin-inspection-review-rooms">{rooms.length ? rooms.map((room, index) => <article key={room.id ?? index}><ImageWithFallback src={list(room.images ?? room.image ?? room.image_url)[0]} alt={room.name || `Unit ${index + 1}`} /><strong>{room.name || `Unit ${index + 1}`}</strong><b>{room.price ? `₱${amount(room.price)} / month` : "Price not set"}</b><span>{room.bedrooms ?? 1} Bed | {room.bathrooms ?? 1} Bath</span><span>{room.maxOccupants ?? room.max_occupants ?? 1} Occupancy</span><em>{String(room.status || "available").replace(/\b\w/g, (letter) => letter.toUpperCase())}</em></article>) : <p>No units submitted for this apartment.</p>}</div></section>
         <section className="admin-inspection-review-card"><h2>Location</h2><div className="admin-inspection-review-map">{Number.isFinite(Number(apartment.lat)) && Number.isFinite(Number(apartment.lng)) ? <MapView lat={Number(apartment.lat)} lng={Number(apartment.lng)} zoom={15} showSingleMarker /> : <div><MapPin aria-hidden="true" />Location coordinates have not been provided.</div>}</div></section>
       </div>
       <aside className="admin-inspection-review-side">

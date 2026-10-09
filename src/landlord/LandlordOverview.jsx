@@ -459,7 +459,7 @@ export const LandlordOverview = ({
         emptyState: {
           title: "No views yet",
           description:
-            "Views will appear here once tenants start viewing your property.",
+            "Views will appear here once tenants start viewing your apartment.",
         },
       },
       {
@@ -473,7 +473,7 @@ export const LandlordOverview = ({
         emptyState: {
           title: "No favorites yet",
           description:
-            "Favorites will appear here once tenants start saving your property.",
+            "Favorites will appear here once tenants start saving your apartment.",
         },
       },
       {
@@ -487,7 +487,7 @@ export const LandlordOverview = ({
         emptyState: {
           title: "No ratings yet",
           description:
-            "Ratings will appear here once tenants start reviewing your property.",
+            "Ratings will appear here once tenants start reviewing your apartment.",
         },
       },
     ];
@@ -497,12 +497,12 @@ export const LandlordOverview = ({
         <div className="ld-engagement-header">
           <div>
             <h2>
-              {apartment.title || "Untitled property"} — Property
+              {apartment.title || "Untitled apartment"} — Apartment
               Engagement
             </h2>
 
             <p>
-              See how tenants are engaging with this property.
+              See how tenants are engaging with this apartment.
             </p>
           </div>
 
@@ -646,27 +646,27 @@ export const LandlordOverview = ({
       <header className="ld-simple-heading">
         <div>
           <h1>Landlord Dashboard</h1>
-          <p>Monitor your property and tenant engagement.</p>
+          <p>Monitor your apartment and tenant engagement.</p>
         </div>
       </header>
 
       <section className="ld-properties-card">
         <div className="ld-properties-header">
           <div>
-            <h2>Your Properties</h2>
-            <p>Manage your apartments, rooms, and availability.</p>
+            <h2>Your Apartments</h2>
+            <p>Manage your apartments, units, and availability.</p>
           </div>
         </div>
 
         {isLoadingApartments ? (
           <div className="ld-empty">
-            Loading properties...
+            Loading apartments...
           </div>
         ) : myApartments.length === 0 ? (
           <div className="ld-empty-properties">
             <QuietStreetIllustration />
 
-            <h3>Add your first property</h3>
+            <h3>Add your first apartment</h3>
 
             <p>
               Create an apartment listing to start managing your
@@ -680,12 +680,12 @@ export const LandlordOverview = ({
               <span className="ld-add-property-icon" aria-hidden="true">
                 <Plus size={18} strokeWidth={2.5} />
               </span>
-              <span>Add Property</span>
+              <span>Add Apartment</span>
             </Link>
 
             <div className="ld-empty-properties-review">
               <Info size={19} />
-              Property listings are reviewed before publication.
+              Apartment listings are reviewed before publication.
             </div>
           </div>
         ) : (
@@ -756,12 +756,12 @@ export const LandlordOverview = ({
                         src={apartment.image}
                         alt={
                           apartment.title ||
-                          "Property"
+                          "Apartment"
                         }
                       />
                     ) : (
                       <span>
-                        Property Photo
+                        Apartment Photo
                       </span>
                     )}
                   </div>
@@ -770,7 +770,7 @@ export const LandlordOverview = ({
                     <div className="ld-property-title-row">
                       <h3>
                         {apartment.title ||
-                          "Untitled property"}
+                          "Untitled apartment"}
                       </h3>
 
                       <span
@@ -847,17 +847,17 @@ export const LandlordOverview = ({
                         to={`/apartment/${apartment.id}`}
                         state={{
                           returnTo: "/landlord/dashboard?section=overview",
-                          backLabel: "Back to My Properties",
+                          backLabel: "Back to My Apartments",
                         }}
                         className="ld-view-property-action"
                       >
-                        View Property
+                        View Apartment
                       </Link>
                       <Link
                         to={`/landlord/properties/${apartment.id}/rooms`}
                         className="ld-primary-action"
                       >
-                        Manage Rooms
+                        Manage Units
                       </Link>
                     </div>
                   </div>

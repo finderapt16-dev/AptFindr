@@ -5,7 +5,7 @@ import { LogoutConfirmation } from "@/components/LogoutConfirmation";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
 const mainItems = [
-  { label: "My Properties", section: "overview", icon: LayoutGrid },
+  { label: "My Apartments", section: "overview", icon: LayoutGrid },
   { label: "Market Trends", section: "market", icon: TrendingUp, href: "/browse" },
   { label: "Notifications", section: "notifications", icon: Bell },
 ];
@@ -63,7 +63,7 @@ export function LandlordSidebar({ user, activeSection, unreadNotifications, need
       {mainItems.map(renderItem)}
     </nav>
 
-    <nav className="landlord-sidebar-nav" aria-label="Property management navigation">
+    <nav className="landlord-sidebar-nav" aria-label="Apartment management navigation">
       <p className="landlord-sidebar-section-title">Manage</p>
       {manageItems.map(renderItem)}
     </nav>

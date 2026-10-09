@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 const MAIN_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard", section: "landlords" },
+  { icon: LayoutDashboard, label: "Dashboard", section: "overview" },
   { icon: UserRound, label: "Landlord", section: "landlords" },
   { icon: Building2, label: "Apartments", section: "apartments" },
   { icon: Bell, label: "Notifications", section: "notifications" },
@@ -51,9 +51,7 @@ export function AdminSidebar({
       <p>{label}</p>
       {items.map(({ icon: Icon, label: itemLabel, section }) => {
         const count = countFor(section, itemLabel);
-        const isCurrent = itemLabel === "Dashboard"
-          ? false
-          : itemLabel === "Help & Support"
+        const isCurrent = itemLabel === "Help & Support"
           ? isSupportView
           : activeSection === section && !(isSupportView && section === "notifications");
 

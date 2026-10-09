@@ -29,22 +29,22 @@ export const LandlordActivity = ({ activityRange, landlordViewRows, landlordFavo
         ...rangedViews.map((view) => {
             const apartmentId = view.apartment_id ?? view.apartmentId ?? "";
             const count = getViewWeight(view);
-            return { id: `view-${view.id ?? `${apartmentId}-${view.viewed_at}`}`, timestamp: view.viewed_at ?? "", title: `${count.toLocaleString()} new ${count === 1 ? "view" : "views"}`, property: findProperty(apartmentId)?.title || "Untitled property", icon: Eye };
+            return { id: `view-${view.id ?? `${apartmentId}-${view.viewed_at}`}`, timestamp: view.viewed_at ?? "", title: `${count.toLocaleString()} new ${count === 1 ? "view" : "views"}`, property: findProperty(apartmentId)?.title || "Untitled apartment", icon: Eye };
         }).filter((item) => item.title !== "0 new views"),
         ...rangedFavorites.map((favorite) => {
             const apartmentId = favorite.apartment_id ?? favorite.apartmentId ?? "";
-            return { id: `favorite-${favorite.id ?? `${apartmentId}-${favorite.created_at}`}`, timestamp: favorite.created_at ?? "", title: "Added to Favorites", property: findProperty(apartmentId)?.title || "Untitled property", icon: Heart };
+            return { id: `favorite-${favorite.id ?? `${apartmentId}-${favorite.created_at}`}`, timestamp: favorite.created_at ?? "", title: "Added to Favorites", property: findProperty(apartmentId)?.title || "Untitled apartment", icon: Heart };
         }),
-        ...rangedRatings.map((rating) => ({ id: `rating-${rating.id}`, timestamp: ratingTimestamp(rating), title: `Received a ${rating.rating}-star rating`, property: findProperty(rating.apartment_id)?.title || "Untitled property", icon: Star })),
+        ...rangedRatings.map((rating) => ({ id: `rating-${rating.id}`, timestamp: ratingTimestamp(rating), title: `Received a ${rating.rating}-star rating`, property: findProperty(rating.apartment_id)?.title || "Untitled apartment", icon: Star })),
     ].filter((item) => item.timestamp).sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
     const summaryCards = [
-        { label: "Views", value: rangedViews.reduce((total, view) => total + getViewWeight(view), 0), help: "Property views", icon: Eye },
-        { label: "Favorites", value: rangedFavorites.length, help: "Times tenants saved your properties", icon: Heart },
+        { label: "Views", value: rangedViews.reduce((total, view) => total + getViewWeight(view), 0), help: "Apartment views", icon: Eye },
+        { label: "Favorites", value: rangedFavorites.length, help: "Times tenants saved your apartments", icon: Heart },
         { label: "Ratings", value: rangedRatings.length, help: "Ratings received", icon: Star },
     ];
     return (<div className="activity-section-container">
       <header className="activity-section-header">
-        <div className="activity-section-row"><span className="activity-section-row-2"><TrendingUp className="activity-section-trending-up-icon"/></span><div><p className="activity-section-activity">Activity</p><h1 className="activity-section-property-activity">Property Activity</h1><p className="activity-section-text">See how tenants interact with your properties.</p></div></div>
+        <div className="activity-section-row"><span className="activity-section-row-2"><TrendingUp className="activity-section-trending-up-icon"/></span><div><p className="activity-section-activity">Activity</p><h1 className="activity-section-property-activity">Apartment Activity</h1><p className="activity-section-text">See how tenants interact with your apartments.</p></div></div>
         <label className="activity-section-label"><Calendar className="activity-section-calendar-icon"/><select value={activityRange} onChange={(event) => setActivityRange(event.target.value)} className="activity-section-select"><option value="today">Today</option><option value="7d">This Week</option><option value="30d">This Month</option><option value="all">All Time</option></select></label>
       </header>
 

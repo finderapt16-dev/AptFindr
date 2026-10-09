@@ -435,3 +435,18 @@
     border-top-style: none !important;
   }
 }
+
+/* Let the tenant navigation fill its mobile drawer without an inset divider. */
+@media (max-width: 1023px) {
+  .tenant-mobile-navigation-drawer > .app-sidebar,
+  .tenant-browse .app-sidebar-drawer > .app-sidebar {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    border-right: 0 !important;
+  }
+}

@@ -429,7 +429,7 @@ export function AdminApartmentDetail() {
                 isArchived: nextPublished ? false : current.isArchived,
                 deletedAt: nextPublished ? undefined : current.deletedAt,
             } : current);
-            toast.success(nextPublished ? "Property approved and published" : "Property unpublished");
+            toast.success(nextPublished ? "Apartment approved and published" : "Apartment unpublished");
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to update publication status.");
@@ -655,7 +655,7 @@ export function AdminApartmentDetail() {
     const propertyType = getText(rawFeatures, ["propertyType", "property_type", "type"], apartment.propertyType || "—");
     const barangay = getText(rawFeatures, ["barangay", "district", "area"], "—");
     const datePosted = getText(rawApartment, ["created_at", "createdAt"], apartment.createdAt || apartment.availableDate);
-    const submittedDocumentCards = VERIFICATION_DOCUMENT_TYPES.map((definition) => ({
+    const submittedDocumentCards = [...VERIFICATION_DOCUMENT_TYPES, ...verificationDocuments.filter((document) => !VERIFICATION_DOCUMENT_TYPES.some((definition) => definition.key === document.documentType)).map((document) => ({ key: document.documentType, label: "Additional Business Permit Document" }))].map((definition) => ({
         ...definition,
         document: verificationDocuments.find((document) => document.documentType === definition.key),
     }));
@@ -724,7 +724,7 @@ export function AdminApartmentDetail() {
     const sectionNavItems = [
         { label: "Overview", target: "admin-property-details", icon: Building2 },
         { label: "Images", target: "admin-images", icon: ImageIcon },
-        { label: "Rooms", target: "admin-rooms", icon: Home },
+        { label: "Units", target: "admin-rooms", icon: Home },
         { label: "Location", target: "admin-location", icon: MapPin },
         { label: "Documents", target: "admin-verification", icon: FileSearch },
     ];
@@ -759,7 +759,7 @@ export function AdminApartmentDetail() {
             </Button>
             <div className="admin-apartment-detail-content-3">
               <h1 className="admin-apartment-detail-apartment-review">Apartment Review</h1>
-              <p className="admin-apartment-detail-text-3">Review the submitted apartment information, landlord verification, documents, rooms, reports, and publishing readiness.</p>
+              <p className="admin-apartment-detail-text-3">Review the submitted apartment information, landlord verification, documents, units, reports, and publishing readiness.</p>
             </div>
           </div>
           <div className="admin-apartment-detail-row-4">
@@ -775,7 +775,7 @@ export function AdminApartmentDetail() {
           <div className="admin-apartment-detail-grid">
             {[
             { label: "Listing Status", value: listingStatusLabel, helper: listingIsPublished ? "Published for tenant visibility checks" : "Not visible to tenants", icon: listingIsPublished ? CheckCircle2 : EyeOff, tone: listingIsPublished ? "admin-text-success" : "admin-text-warning" },
-            { label: "Room Availability", value: availabilityLabel, helper: `${roomsForDisplay.length} configured room${roomsForDisplay.length === 1 ? "" : "s"}`, icon: Home, tone: availableRoomCount > 0 ? "admin-text-success" : "admin-text-muted" },
+            { label: "Unit Availability", value: availabilityLabel, helper: `${roomsForDisplay.length} configured unit${roomsForDisplay.length === 1 ? "" : "s"}`, icon: Home, tone: availableRoomCount > 0 ? "admin-text-success" : "admin-text-muted" },
             { label: "Landlord Verification", value: landlordVerificationStatus, helper: landlordCanPublish ? "Publication requirement met" : "Requires review", icon: ShieldCheck, tone: landlordCanPublish ? "admin-text-success" : "admin-text-warning" },
             { label: "Submitted On", value: formattedDatePosted, helper: formattedDatePostedTime || "Time not provided", icon: CalendarCheck, tone: "admin-text-brand" },
             { label: "Active Reports", value: String(activeReports.length), helper: activeReports.length ? "Requires review" : "No active reports", icon: Flag, tone: activeReports.length ? "admin-text-danger" : "admin-text-muted" },
@@ -806,10 +806,10 @@ export function AdminApartmentDetail() {
                   <Badge className="admin-apartment-detail-uploaded-image-s">{imageCount} uploaded image(s)</Badge>
                 </div>
                 {canNavigateImages && (<>
-                    <button type="button" title="Previous image" aria-label="Previous property image" onClick={handlePreviousImage} className="photo-navigation-arrow admin-apartment-detail-button-6">
+                    <button type="button" title="Previous image" aria-label="Previous apartment image" onClick={handlePreviousImage} className="photo-navigation-arrow admin-apartment-detail-button-6">
                       <ChevronLeft className="admin-apartment-detail-chevron-left-icon"/>
                     </button>
-                    <button type="button" title="Next image" aria-label="Next property image" onClick={handleNextImage} className="photo-navigation-arrow admin-apartment-detail-button-7">
+                    <button type="button" title="Next image" aria-label="Next apartment image" onClick={handleNextImage} className="photo-navigation-arrow admin-apartment-detail-button-7">
                       <ChevronRight className="admin-apartment-detail-chevron-right-icon"/>
                     </button>
                   </>)}
@@ -827,7 +827,7 @@ export function AdminApartmentDetail() {
                 {imageRows.length > 0 && (<div id="admin-all-images" className="admin-apartment-detail-admin-all-images">
                     <h2 className="admin-apartment-detail-all-property-images">
                       <ImageIcon className="admin-apartment-detail-image-icon-icon"/>
-                      All Property Images
+                      All Apartment Images
                     </h2>
                     <div className="admin-apartment-detail-grid-4">
                       {imageRows.map((image, index) => {
@@ -896,13 +896,13 @@ export function AdminApartmentDetail() {
                 </div>
 
                 <div className="admin-apartment-detail-grid-6">
-                  <DetailRow label="Property Name" value={apartment.title}/>
-                  <DetailRow label="Property Type" value={propertyType}/>
-                  <DetailRow label="Property Description" value={apartment.description}/>
+                  <DetailRow label="Apartment Name" value={apartment.title}/>
+                  <DetailRow label="Apartment Type" value={propertyType}/>
+                  <DetailRow label="Apartment Description" value={apartment.description}/>
                   <DetailRow label="Complete Address" value={`${apartment.address}, ${apartment.city}, ${apartment.state} ${apartment.zip}`}/>
-                  <DetailRow label="Room Pricing" value="See individual room records"/>
-                  <DetailRow label="Available Rooms" value={availableRoomCount}/>
-                  <DetailRow label="Total Rooms" value={roomsForDisplay.length || apartment.bedrooms}/>
+                  <DetailRow label="Unit Pricing" value="See individual unit records"/>
+                  <DetailRow label="Available Units" value={availableRoomCount}/>
+                  <DetailRow label="Total Units" value={roomsForDisplay.length || apartment.bedrooms}/>
                   <DetailRow label="Listing Status" value={listingStatusLabel}/>
                   <DetailRow label="Date Posted" value={datePosted ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"}/>
                 </div>
@@ -964,15 +964,15 @@ export function AdminApartmentDetail() {
                 </Card>)}
               {(customFeatures.length > 0 || Object.keys(verificationData).length > 0) && (<Card className="admin-apartment-detail-card-10">
                   <CardContent className="admin-apartment-detail-card-content-4">
-                    <h2 className="admin-apartment-detail-property-features">Property Features</h2>
+                    <h2 className="admin-apartment-detail-property-features">Apartment Features</h2>
                     {customFeatures.length > 0 && (<div className="admin-apartment-detail-row-20">
                         {customFeatures.map((feature, index) => (<Badge key={`${feature}-${index}`} variant="outline">
                             {feature}
                           </Badge>))}
                       </div>)}
                     {Object.keys(verificationData).length > 0 && (<div className="admin-apartment-detail-grid-9">
-                        <DetailRow label="Submitted Property Name" value={getText(verificationData, ["propertyName"])}/>
-                        <DetailRow label="Submitted Property Address" value={getText(verificationData, ["propertyAddress"])}/>
+                        <DetailRow label="Submitted Apartment Name" value={getText(verificationData, ["propertyName"])}/>
+                        <DetailRow label="Submitted Apartment Address" value={getText(verificationData, ["propertyAddress"])}/>
                         <DetailRow label="Submitted Business Permit" value={getText(verificationData, ["businessPermit"])}/>
                         <DetailRow label="Submitted TIN" value={getText(verificationData, ["tinNumber"])}/>
                       </div>)}
@@ -987,7 +987,7 @@ export function AdminApartmentDetail() {
                       <Home className="admin-apartment-detail-home-icon"/>
                     </div>
                     <div>
-                      <h2 className="admin-apartment-detail-room-details">Room Details</h2>
+                      <h2 className="admin-apartment-detail-room-details">Unit Details</h2>
                       <p className="admin-apartment-detail-submitted-room-s">{roomsForDisplay.length} submitted room(s)</p>
                     </div>
                   </div>
@@ -999,10 +999,10 @@ export function AdminApartmentDetail() {
                         <div className="admin-apartment-detail-row-23">
                           <div>
                             <h3 className="admin-apartment-detail-heading">
-                              {getText(room, ["room_name", "name"], `Room ${index + 1}`)}
+                              {getText(room, ["room_name", "name"], `Unit ${index + 1}`)}
                             </h3>
                             <p className="admin-apartment-detail-text-16">
-                              {getText(room, ["room_type", "type"], "Room type not specified")}
+                              {getText(room, ["room_type", "type"], "Unit type not specified")}
                             </p>
                             <p className="admin-apartment-detail-text-17">
                               ₱{getRecordNumber(room, ["price", "rent"]).toLocaleString()}/month
@@ -1036,13 +1036,13 @@ export function AdminApartmentDetail() {
                           </div>
                         </div>
                         <div className="admin-apartment-detail-grid-11">
-                          <DetailRow label="Room Availability Status" value={STATUS_LABEL[getRoomStatus(room)]}/>
-                          <DetailRow label="Room Description" value={getText(room, ["description", "room_description"], "No room description submitted")}/>
+                          <DetailRow label="Unit Availability Status" value={STATUS_LABEL[getRoomStatus(room)]}/>
+                          <DetailRow label="Unit Description" value={getText(room, ["description", "room_description"], "No unit description submitted")}/>
                         </div>
                         {getStringList(room.images ?? room.image_url ?? room.imageUrl).length > 0 && (<div className="admin-apartment-detail-panel-16">
-                            <p className="admin-apartment-detail-room-images">Room Images</p>
+                            <p className="admin-apartment-detail-room-images">Unit Images</p>
                             <div className="admin-apartment-detail-grid-12">
-                              {getStringList(room.images ?? room.image_url ?? room.imageUrl).map((src, imageIndex) => (<ImageTile key={`${src}-${imageIndex}`} src={src} label={`${getText(room, ["room_name", "name"], `Room ${index + 1}`)} image ${imageIndex + 1}`}/>))}
+                              {getStringList(room.images ?? room.image_url ?? room.imageUrl).map((src, imageIndex) => (<ImageTile key={`${src}-${imageIndex}`} src={src} label={`${getText(room, ["room_name", "name"], `Unit ${index + 1}`)} image ${imageIndex + 1}`}/>))}
                             </div>
                           </div>)}
                       </div>))}
@@ -1084,7 +1084,7 @@ export function AdminApartmentDetail() {
                   </div>
 
                   <div className="admin-apartment-detail-grid-14">
-                    <DetailRow label="Property Permit Number" value={getText(verificationData, ["businessPermit"], "Not provided for this property")}/>
+                    <DetailRow label="Apartment Permit Number" value={getText(verificationData, ["businessPermit"], "Not provided for this property")}/>
                     <DetailRow label="Landlord Verification" value={landlordVerificationStatus}/>
                     <DetailRow label="Documents Provided" value={`${verificationDocuments.length} of ${VERIFICATION_DOCUMENT_TYPES.length}`}/>
                   </div>
@@ -1327,7 +1327,7 @@ export function AdminApartmentDetail() {
                 </div>
 
                 <div className="admin-apartment-detail-grid-17">
-                  <DetailRow label="Property Permit Number" value={getText(verificationData, ["businessPermit"], "Not provided for this property")}/>
+                  <DetailRow label="Apartment Permit Number" value={getText(verificationData, ["businessPermit"], "Not provided for this property")}/>
                   <DetailRow label="Landlord Verification" value={landlordVerificationStatus}/>
                   <DetailRow label="Documents Provided" value={`${verificationDocuments.length} of ${VERIFICATION_DOCUMENT_TYPES.length}`}/>
                 </div>
@@ -1385,7 +1385,7 @@ export function AdminApartmentDetail() {
                   </div>
 
                   <div>
-                    <p className="admin-apartment-detail-rooms">Rooms</p>
+                    <p className="admin-apartment-detail-rooms">Units</p>
                     <p className="admin-apartment-detail-room-s">{roomsForDisplay.length || apartment.rooms?.length || 0} room(s)</p>
                   </div>
                 </div>
@@ -1421,7 +1421,7 @@ export function AdminApartmentDetail() {
                 <button onClick={() => setChangeLogOpen(false)} className="admin-apartment-detail-button-18"><X className="admin-apartment-detail-x-icon"/></button>
               </div>
               <div className="admin-apartment-detail-panel-28">
-                {changeLogLoading ? (<div className="admin-apartment-detail-loading-change-history">Loading change history...</div>) : changeLogs.length === 0 ? (<div className="admin-apartment-detail-card-25"><ClipboardList className="admin-apartment-detail-clipboard-list-icon-2"/><p className="admin-apartment-detail-no-listing-changes-recorded-yet">No listing changes recorded yet.</p><p className="admin-apartment-detail-text-28">Future property and room updates will appear here.</p></div>) : (<div className="admin-apartment-detail-panel-13">
+                {changeLogLoading ? (<div className="admin-apartment-detail-loading-change-history">Loading change history...</div>) : changeLogs.length === 0 ? (<div className="admin-apartment-detail-card-25"><ClipboardList className="admin-apartment-detail-clipboard-list-icon-2"/><p className="admin-apartment-detail-no-listing-changes-recorded-yet">No listing changes recorded yet.</p><p className="admin-apartment-detail-text-28">Future apartment and unit updates will appear here.</p></div>) : (<div className="admin-apartment-detail-panel-13">
                     {changeLogs.map((log) => {
                     const displayLog = formatAuditLogForDisplay(log);
                     const actorId = String(log.admin_id ?? log.details?.actor_id ?? "");

@@ -23,11 +23,11 @@ export function RoomDetails({ room, apartment, onClose }) {
 
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
         <DialogContent className="tenant-room-details" aria-describedby={undefined}>
-            <header className="tenant-room-heading"><DialogTitle>{safeRoom.name || "Room details"}</DialogTitle><span className={`tenant-room-status tenant-room-status-${status}`}>{statusLabel}</span></header>
+            <header className="tenant-room-heading"><DialogTitle>{safeRoom.name || "Unit details"}</DialogTitle><span className={`tenant-room-status tenant-room-status-${status}`}>{statusLabel}</span></header>
             <div className="tenant-room-layout">
                 <div className="tenant-room-visuals">
-                    <RoomImageGallery key={safeRoom.id || safeRoom.name || "room"} images={safeRoom.images || []} roomName={safeRoom.name || "Room"} compact />
-                    <section className="tenant-room-description"><h3>Description</h3><p>{safeRoom.description || "No room description provided."}</p></section>
+                    <RoomImageGallery key={safeRoom.id || safeRoom.name || "room"} images={safeRoom.images || []} roomName={safeRoom.name || "Unit"} compact />
+                    <section className="tenant-room-description"><h3>Description</h3><p>{safeRoom.description || "No unit description provided."}</p></section>
                 </div>
                 <div className="tenant-room-information">
                     <p className="tenant-room-price">{Number.isFinite(rent) && rent > 0 ? `₱ ${rent.toLocaleString("en-PH")}` : "Price not provided"}{Number.isFinite(rent) && rent > 0 && <span> / month</span>}</p>
@@ -39,7 +39,7 @@ export function RoomDetails({ room, apartment, onClose }) {
                     </dl>
                     <section><h3>Amenities</h3><div className="tenant-room-amenities">{amenities.map(amenity => <span key={amenity}>{amenity}</span>)}</div></section>
                     <section><h3>Additional Information</h3><dl className="tenant-room-additional">
-                        <div><dt>Property Type</dt><dd>{safeApartment.propertyType || safeRoom.type || "Not provided"}</dd></div>
+                        <div><dt>Apartment Type</dt><dd>{safeApartment.propertyType || safeRoom.type || "Not provided"}</dd></div>
                         <div><dt>Available Date</dt><dd>{dateLabel(safeApartment.availableDate)}</dd></div>
                         <div><dt>Utilities</dt><dd>{Array.isArray(safeApartment.utilities) && safeApartment.utilities.length ? safeApartment.utilities.join(", ") : "Not included"}</dd></div>
                         {safeRoom.sharedBathLocation && !safeRoom.hasPrivateBath && <div><dt>Shared Bathroom Location</dt><dd>{safeRoom.sharedBathLocation}</dd></div>}

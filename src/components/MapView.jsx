@@ -71,7 +71,7 @@ function buildPopup(apartment) {
     const availabilityClass = availableRooms > 0 ? "map-popup-badge-available" : "map-popup-badge-unavailable";
     const rentLabel = Number(apartment.price || 0) > 0
         ? `₱${Number(apartment.price || 0).toLocaleString("en-PH")}/mo`
-        : "Room prices";
+        : "Unit prices";
     const location = apartment.location || "Location not provided";
     return `
     <div class="map-popup-card">
@@ -116,7 +116,7 @@ function buildGroupPopup(apartments) {
         <div class="map-popup-list-content">
           <div class="map-popup-list-title">${escapeHtml(apartment.title)}</div>
           <div class="map-popup-list-location">${escapeHtml(apartment.location || "Location not provided")}</div>
-          <div class="map-popup-list-price">${Number(apartment.price || 0) > 0 ? `₱${Number(apartment.price || 0).toLocaleString("en-PH")}/mo` : "Room prices"}</div>
+          <div class="map-popup-list-price">${Number(apartment.price || 0) > 0 ? `₱${Number(apartment.price || 0).toLocaleString("en-PH")}/mo` : "Unit prices"}</div>
           <div class="map-popup-list-badges">
             ${verifiedBadge}
             <span class="map-popup-badge map-popup-badge-small ${availabilityClass}">${availableRooms} rooms</span>

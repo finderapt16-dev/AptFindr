@@ -93,7 +93,7 @@ function BusinessPermitInformation({ business }) {
         <span aria-live="polite">Page {currentPage + 1} of {records.length}</span>
         <button type="button" aria-label="Next business permit" disabled={currentPage === records.length - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight aria-hidden="true" /></button>
       </nav>
-    </> : <p>No business permits submitted. Upload a permit when creating or updating a property.</p>}
+    </> : <p>No business permits submitted. Upload a permit when creating or updating a apartment.</p>}
   </section>;
 }
 

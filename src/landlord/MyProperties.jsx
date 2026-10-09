@@ -417,7 +417,7 @@ export const MyProperties = ({
       <div className="properties-section-container">
         <div className="properties-loading-state">
           <Clock className="properties-loading-icon" />
-          <span>Loading your properties...</span>
+          <span>Loading your apartments...</span>
         </div>
       </div>
     );
@@ -433,10 +433,10 @@ export const MyProperties = ({
     return (
       <div className="properties-section-container properties-empty-page">
         <div className="properties-empty-heading">
-          <h2>Your Properties</h2>
+          <h2>Your Apartments</h2>
 
           <p>
-            Manage your apartments, rooms, and availability.
+            Manage your apartments, units, and availability.
           </p>
         </div>
 
@@ -446,7 +446,7 @@ export const MyProperties = ({
               <QuietStreetIllustration />
 
               <div className="properties-empty-text-stack">
-                <h2>Add your first property</h2>
+                <h2>Add your first apartment</h2>
 
                 <p>
                   Create an apartment listing to start
@@ -462,7 +462,7 @@ export const MyProperties = ({
             >
               <Button className="properties-empty-add-button">
                 <Plus className="properties-empty-plus-icon" />
-                <span>Add Property</span>
+                <span>Add Apartment</span>
               </Button>
             </Link>
           </div>
@@ -471,7 +471,7 @@ export const MyProperties = ({
             <Info className="properties-empty-info-icon" />
 
             <span>
-              Property listings are reviewed before publication.
+              Apartment listings are reviewed before publication.
             </span>
           </div>
         </div>
@@ -494,7 +494,7 @@ export const MyProperties = ({
 
           <div>
             <p className="properties-section-my-properties">
-              My Properties
+              My Apartments
             </p>
 
             <h1 className="properties-section-your-listings">
@@ -502,7 +502,7 @@ export const MyProperties = ({
             </h1>
 
             <p className="properties-section-text">
-              Manage rooms, publication, and listing performance.
+              Manage units, publication, and listing performance.
             </p>
           </div>
         </div>
@@ -510,7 +510,7 @@ export const MyProperties = ({
         <Link to="/add-apartment">
           <Button className="properties-section-add-property">
             <Plus className="properties-section-plus-icon" />
-            Add Property
+            Add Apartment
           </Button>
         </Link>
       </header>
@@ -622,7 +622,7 @@ export const MyProperties = ({
           <Search className="properties-section-search-icon" />
 
           <h2 className="properties-section-no-matching-properties">
-            No matching properties
+            No matching apartments
           </h2>
 
           <p className="properties-section-text">
@@ -674,7 +674,7 @@ export const MyProperties = ({
               safePropertyPage * propertiesPerPage,
               filteredApartments.length
             )}{" "}
-            of {filteredApartments.length} properties
+            of {filteredApartments.length} apartments
           </span>
 
           <div className="properties-section-row-5">
