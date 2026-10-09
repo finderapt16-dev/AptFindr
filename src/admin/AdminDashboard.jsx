@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateApartmentPublication } from "@/services/apartmentsService";
-import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchSupportTicketById, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
+import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
@@ -21,6 +21,25 @@ import { AdminLandlordVerificationReview } from './AdminLandlordVerificationRevi
 import { ArchiveEmpty, canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
+const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
+    if (account.role !== "landlord" || !account.id)
+        return account;
+    try {
+        // Match the record shown after clicking "View Verification",
+        // including any permit stored with a legacy property submission.
+        const details = await fetchLandlordWithDetails(account.id);
+        const profile = details?.profile;
+        return {
+            ...account,
+            business_permit_number: profile?.business_permit_number ?? account.business_permit_number,
+            permit_number: account.permit_number ?? account.permitNumber ?? profile?.permit_number ?? null,
+        };
+    }
+    catch (error) {
+        console.warn(`Unable to load permit number for landlord ${account.id}:`, error);
+        return account;
+    }
+}));
 export function AdminDashboard() {
     const { user, verifyLandlord, updateUser, refreshUsers, logout } = useAuth();
     const navigate = useNavigate();
@@ -520,7 +539,7 @@ export function AdminDashboard() {
                 setAppeals(loadedAppeals);
                 setArchivedReports(loadedArchivedReports);
                 setArchivedAppeals(loadedArchivedAppeals);
-                setLandlords(loadedUsers.filter((account) => account.role === "landlord"));
+                setLandlords(await attachLandlordPermitNumbers(loadedUsers.filter((account) => account.role === "landlord")));
                 setAdminAccounts(loadedUsers.filter((account) => account.role === "admin"));
             } catch (error) {
                 console.error("Unable to load admin dashboard data:", error);
@@ -558,8 +577,8 @@ export function AdminDashboard() {
             void fetchApartments().then((items) => setAllApartments(items));
         };
         const refreshUserData = () => {
-            void fetchUsers().then((users) => {
-                setLandlords(users.filter((account) => account.role === "landlord"));
+            void fetchUsers().then(async (users) => {
+                setLandlords(await attachLandlordPermitNumbers(users.filter((account) => account.role === "landlord")));
                 setAdminAccounts(users.filter((account) => account.role === "admin"));
             });
         };
@@ -674,7 +693,7 @@ export function AdminDashboard() {
     }, [selectedLandlord]);
     const loadLandlords = async () => {
         const users = await fetchUsers();
-        setLandlords(users.filter((x) => x.role === "landlord"));
+        setLandlords(await attachLandlordPermitNumbers(users.filter((account) => account.role === "landlord")));
     };
     const requestVerification = async (landlord, verify, rejection = false) => {
         if (!verify) {

@@ -232,6 +232,7 @@ function toUserRow(row) {
         bio: getStringValue(row.bio),
         permit_number: getStringValue(row.permit_number),
         permitNumber: getStringValue(row.permitNumber),
+        business_permit_number: getStringValue(row.business_permit_number),
         department: getStringValue(row.department),
         admin_level: getStringValue(row.admin_level),
         adminLevel: getStringValue(row.adminLevel),
@@ -579,6 +580,47 @@ function normalizeTenantPreferences(value, fallback = defaultTenantPreferences) 
         saveBudgetPreferences: getOptionalBooleanValue(source.saveBudgetPreferences, fallback.saveBudgetPreferences),
         emailNotifications: getOptionalBooleanValue(source.emailNotifications, fallback.emailNotifications),
         updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : fallback.updatedAt,
+    };
+}
+function tenantPreferenceRowToPreferences(row, fallback = defaultTenantPreferences) {
+    if (!row || typeof row !== "object")
+        return fallback;
+    return normalizeTenantPreferences({
+        ...fallback,
+        hasSavedPreferences: true,
+        preferredArea: row.preferred_area,
+        preferredLat: row.preferred_lat,
+        preferredLng: row.preferred_lng,
+        minBudget: row.min_budget,
+        maxBudget: row.max_budget,
+        minBedrooms: row.min_bedrooms,
+        roomCapacity: row.room_capacity,
+        petFriendly: row.pet_friendly,
+        parking: row.parking,
+        furnished: row.furnished,
+        ownBathroom: row.own_bathroom,
+        wifi: row.wifi,
+        ac: row.ac,
+        laundryArea: row.laundry_area,
+    }, fallback);
+}
+function tenantPreferencesToRow(userId, preferences) {
+    return {
+        user_id: userId,
+        preferred_area: preferences.preferredArea || null,
+        preferred_lat: preferences.preferredLat,
+        preferred_lng: preferences.preferredLng,
+        min_budget: preferences.minBudget,
+        max_budget: preferences.maxBudget,
+        min_bedrooms: preferences.minBedrooms,
+        room_capacity: preferences.roomCapacity,
+        pet_friendly: preferences.petFriendly,
+        parking: preferences.parking,
+        furnished: preferences.furnished,
+        own_bathroom: preferences.ownBathroom,
+        wifi: preferences.wifi,
+        ac: preferences.ac,
+        laundry_area: preferences.laundryArea,
     };
 }
 function isMissingTenantPreferencesColumn(error) {
@@ -1179,9 +1221,10 @@ export async function sendAdminMessageToLandlord(input) {
     return true;
 }
 export async function fetchUsers() {
-    const [{ data: userRows }, { data: publicLandlordRows }] = await Promise.all([
+    const [{ data: userRows }, { data: publicLandlordRows }, { data: landlordProfileRows }] = await Promise.all([
         supabase.from("app_users").select("*"),
         supabase.from("public_landlords").select("*"),
+        supabase.from("landlord_profiles").select("user_id, permit_number, business_permit_number"),
     ]);
     const usersById = new Map();
     [...(publicLandlordRows ?? []), ...(userRows ?? [])].forEach((row) => {
@@ -1189,7 +1232,21 @@ export async function fetchUsers() {
         if (normalizedUser.id)
             usersById.set(normalizedUser.id, normalizedUser);
     });
-    const normalized = [...usersById.values()];
+    const landlordProfilesByUserId = new Map((landlordProfileRows ?? [])
+        .map((profile) => [getStringValue(profile.user_id), profile])
+        .filter(([userId]) => Boolean(userId)));
+    const normalized = [...usersById.values()].map((user) => {
+        const profile = landlordProfilesByUserId.get(user.id);
+        if (!profile)
+            return user;
+        const businessPermitNumber = getStringValue(profile.business_permit_number);
+        const profilePermitNumber = getStringValue(profile.permit_number);
+        return {
+            ...user,
+            business_permit_number: businessPermitNumber ?? user.business_permit_number,
+            permit_number: user.permit_number ?? user.permitNumber ?? profilePermitNumber ?? businessPermitNumber,
+        };
+    });
     if (normalized.length > 0) {
         writeCachedValue("users", JSON.stringify(normalized));
         return normalized;
@@ -1248,21 +1305,25 @@ export async function fetchPublicLandlordFacebookLink(userId) {
 export async function fetchTenantPreferences(userId) {
     if (!userId)
         return null;
-    const { data, error } = await supabase.from("app_users").select("preferences").eq("id", userId).maybeSingle();
-    if (isMissingTenantPreferencesColumn(error)) {
-        throw new Error("Tenant preferences are unavailable because the database schema is not up to date.");
-    }
-    if (error) {
-        throw new Error(error.message || "Unable to load tenant preferences.");
-    }
-    if (!data) {
-        return defaultTenantPreferences;
-    }
-    const stored = data.preferences;
+    const [{ data: preferenceRow, error: preferenceError }, { data: userRow, error: userError }] = await Promise.all([
+        supabase.from("tenant_preferences").select("*").eq("user_id", userId).maybeSingle(),
+        supabase.from("app_users").select("preferences").eq("id", userId).maybeSingle(),
+    ]);
+    if (preferenceError)
+        throw new Error(preferenceError.message || "Unable to load tenant preferences.");
+    if (userError && !isMissingTenantPreferencesColumn(userError))
+        throw new Error(userError.message || "Unable to load tenant preferences.");
+    const stored = userRow?.preferences;
     const source = typeof stored === "object" && stored !== null && !Array.isArray(stored) && "tenant" in stored
         ? stored.tenant
         : stored;
-    return normalizeTenantPreferences(source, defaultTenantPreferences);
+    const legacyPreferences = normalizeTenantPreferences(source, defaultTenantPreferences);
+    // The JSON data only retains settings not represented by the relational
+    // table (sort choice and recommendation toggles). The table is the source
+    // of truth for all actual apartment-search preference fields.
+    return preferenceRow
+        ? tenantPreferenceRowToPreferences(preferenceRow, legacyPreferences)
+        : legacyPreferences;
 }
 export async function saveTenantPreferences(userId, preferences) {
     if (!userId)
@@ -1274,16 +1335,21 @@ export async function saveTenantPreferences(userId, preferences) {
         hasSavedPreferences: true,
         updatedAt: new Date().toISOString(),
     }, defaultTenantPreferences);
+    const { error: preferenceError } = await supabase
+        .from("tenant_preferences")
+        .upsert(tenantPreferencesToRow(userId, merged), { onConflict: "user_id" });
+    if (preferenceError)
+        throw new Error(preferenceError.message || "Unable to save tenant preferences.");
+    // Keep this mirror temporarily so account settings and older analytics
+    // queries continue working while tenant_preferences is the canonical store.
     const { data, error } = await supabase.rpc("fn_merge_user_preference_section", {
         p_user_id: userId,
         p_section: "tenant",
         p_value: merged,
     });
     if (error) {
-        if (isMissingTenantPreferencesColumn(error)) {
-            throw new Error("Tenant preferences cannot be saved because the database schema is not up to date.");
-        }
-        throw new Error(error.message || "Unable to save tenant preferences.");
+        console.warn("Tenant preferences were saved to tenant_preferences, but the legacy preferences mirror was not updated:", error.message);
+        return merged;
     }
     const savedRoot = typeof data === "object" && data !== null && !Array.isArray(data) ? data : {};
     const saved = normalizeTenantPreferences(savedRoot.tenant, merged);
@@ -1367,12 +1433,28 @@ async function syncRoleProfile(userId, role, payload) {
         assignIfProvided(profilePayload, "facebook_url", payload.facebook_url);
         assignIfProvided(profilePayload, "business_name", payload.business_name);
         assignIfProvided(profilePayload, "id_number", payload.id_number);
+        assignIfProvided(profilePayload, "permit_issued_at", payload.permit_issued_at);
         assignIfProvided(profilePayload, "permit_expiry", payload.permit_expiry);
         assignIfProvided(profilePayload, "years_active", toNullableInteger(payload.years_active));
         assignIfProvided(profilePayload, "total_units", toNullableInteger(payload.total_units));
-        const { error } = await supabase.from("landlord_profiles").upsert(profilePayload, { onConflict: "user_id" });
-        if (error) {
-            throw new Error(error.message || "Unable to save the landlord verification profile.");
+        // Landlord accounts normally receive this row at signup. Update that
+        // row first: some RLS configurations allow an owner to update its
+        // profile but reject an `upsert` because it is also treated as an
+        // insert. Insert only when an older account genuinely has no row.
+        const { data: updatedProfile, error: updateError } = await supabase
+            .from("landlord_profiles")
+            .update(profilePayload)
+            .eq("user_id", userId)
+            .select("user_id")
+            .maybeSingle();
+        if (updateError) {
+            throw new Error(updateError.message || "Unable to save the landlord verification profile.");
+        }
+        if (!updatedProfile) {
+            const { error: insertError } = await supabase.from("landlord_profiles").insert(profilePayload);
+            if (insertError) {
+                throw new Error(insertError.message || "Unable to create the landlord verification profile.");
+            }
         }
     }
     if (role === "admin") {
@@ -1765,6 +1847,7 @@ export async function fetchLandlordProfile(landlordId) {
         // fallback so the landlord and admin see the same verification record.
         const needsPropertyFallback = !profile.permit_number
             || !profile.business_permit_number
+            || !profile.permit_issued_at
             || !profile.permit_expiry
             || !profile.verification_document_url;
         let propertyVerification = null;
@@ -1800,6 +1883,7 @@ export async function fetchLandlordProfile(landlordId) {
             documentPath = getStringValue(permitDocument?.storage_path) ?? null;
         }
         const permitNumber = getStringValue(propertyVerification?.businessPermit);
+        const permitIssuedAt = getStringValue(propertyVerification?.issuedAt ?? propertyVerification?.dateIssued);
         const permitExpiry = getStringValue(propertyVerification?.permitExpiry);
         const signDocument = async (value) => {
             if (typeof value !== "string" || !value)
@@ -1817,6 +1901,7 @@ export async function fetchLandlordProfile(landlordId) {
             ...profile,
             permit_number: profile.permit_number || permitNumber || null,
             business_permit_number: profile.business_permit_number || profile.permit_number || permitNumber || null,
+            permit_issued_at: profile.permit_issued_at || permitIssuedAt || null,
             permit_expiry: profile.permit_expiry || permitExpiry || null,
             verification_document_url: verificationUrl,
             id_document_url: idUrl,

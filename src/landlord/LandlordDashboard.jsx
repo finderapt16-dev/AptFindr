@@ -1941,7 +1941,7 @@ export function LandlordDashboard() {
                 ),
           permitNumber: String(landlordRow?.business_permit_number ?? landlordRow?.permit_number ?? userRow?.permit_number ?? ""),
           permitExpiry: String(landlordRow?.permit_expiry ?? ""),
-          issuedAt: String(landlordRow?.issued_at ?? landlordRow?.created_at ?? ""),
+          issuedAt: String(landlordRow?.permit_issued_at ?? landlordRow?.issued_at ?? landlordRow?.created_at ?? ""),
           documentUrl: String(landlordRow?.verification_document_url ?? ""),
         };
 

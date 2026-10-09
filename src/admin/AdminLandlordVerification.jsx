@@ -46,9 +46,9 @@ const getContact = (landlord) =>
 
 const getPermitNumber = (landlord) =>
   String(
-    landlord?.permit_number ??
+    landlord?.business_permit_number ??
+      landlord?.permit_number ??
       landlord?.permitNumber ??
-      landlord?.business_permit_number ??
       "—"
   );
 

@@ -96,6 +96,7 @@ const INITIAL_FORM_DATA = {
 const INITIAL_VERIFICATION_DATA = {
     businessPermit: "",
     businessAccount: "",
+    permitIssuedAt: "",
     permitExpiry: "",
 };
 export function AddApartment() {
@@ -446,6 +447,8 @@ export function AddApartment() {
             errors.businessPermit = "Business permit number is required.";
         if (!String(verificationData.businessAccount).trim())
             errors.businessAccount = "Business account number is required.";
+        if (!String(verificationData.permitIssuedAt).trim())
+            errors.permitIssuedAt = "Permit issue date is required.";
         if (!String(verificationData.permitExpiry).trim())
             errors.permitExpiry = "Permit expiry date is required.";
         if (!contractDuration)
@@ -456,7 +459,7 @@ export function AddApartment() {
                 ? 2
                 : errors.contractDuration
                     ? 3
-                    : errors.businessPermit || errors.businessAccount || errors.permitExpiry
+                    : errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
                         ? 4
                         : currentStep;
         return { isValid: Object.keys(errors).length === 0, errors, firstStep };
@@ -471,7 +474,7 @@ export function AddApartment() {
             if (step === 3)
                 return field === "contractDuration";
             if (step === 4)
-                return ["businessPermit", "businessAccount", "permitExpiry"].includes(field);
+                return ["businessPermit", "businessAccount", "permitIssuedAt", "permitExpiry"].includes(field);
             return false;
         };
         const stepErrors = Object.fromEntries(Object.entries(errors).filter(([field]) => belongsToStep(field)));
@@ -597,6 +600,7 @@ export function AddApartment() {
                     propertyAddress: [persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", "),
                     businessPermit: verificationData.businessPermit,
                     businessAccount: verificationData.businessAccount,
+                    issuedAt: verificationData.permitIssuedAt,
                     permitExpiry: verificationData.permitExpiry,
                 },
             };
@@ -664,6 +668,7 @@ export function AddApartment() {
                 name: user.name,
                 permit_number: verificationData.businessAccount.trim(),
                 business_permit_number: verificationData.businessPermit.trim(),
+                permit_issued_at: verificationData.permitIssuedAt || null,
                 permit_expiry: verificationData.permitExpiry || null,
                 // Keep the storage path, not a short-lived signed URL. Settings and
                 // the admin review page each create their own signed viewing link.
@@ -1097,6 +1102,16 @@ export function AddApartment() {
                     clearValidationError("businessAccount");
             }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
                       <FieldError field="businessAccount"/>
+                    </div>
+
+                    <div className="add-apartment-panel-9">
+                      <Label>Permit Issue Date <span aria-hidden="true">*</span></Label>
+                      <Input type="date" value={verificationData.permitIssuedAt} onChange={(e) => {
+                setVerificationData({ ...verificationData, permitIssuedAt: e.target.value });
+                if (e.target.value)
+                    clearValidationError("permitIssuedAt");
+            }} aria-invalid={Boolean(validationErrors.permitIssuedAt)} className={fieldClass("permitIssuedAt")}/>
+                      <FieldError field="permitIssuedAt"/>
                     </div>
 
                     <div className="add-apartment-panel-9">

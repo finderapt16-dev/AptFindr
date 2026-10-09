@@ -2,7 +2,7 @@
 -- Safe to run in Supabase SQL Editor. This script does not alter any schema or data.
 --
 -- Expected retained columns only:
--- user_id, permit_number, business_permit_number, permit_expiry,
+-- user_id, permit_number, business_permit_number, permit_issued_at, permit_expiry,
 -- verification_document_url, id_document_url, is_verified, business_name,
 -- id_number, years_active, total_units, facebook_url, created_at, updated_at
 
@@ -12,17 +12,18 @@ with expected_columns(column_name, expected_position) as (
     ('user_id', 1),
     ('permit_number', 2),
     ('business_permit_number', 3),
-    ('permit_expiry', 4),
-    ('verification_document_url', 5),
-    ('id_document_url', 6),
-    ('is_verified', 7),
-    ('business_name', 8),
-    ('id_number', 9),
-    ('years_active', 10),
-    ('total_units', 11),
-    ('facebook_url', 12),
-    ('created_at', 13),
-    ('updated_at', 14)
+    ('permit_issued_at', 4),
+    ('permit_expiry', 5),
+    ('verification_document_url', 6),
+    ('id_document_url', 7),
+    ('is_verified', 8),
+    ('business_name', 9),
+    ('id_number', 10),
+    ('years_active', 11),
+    ('total_units', 12),
+    ('facebook_url', 13),
+    ('created_at', 14),
+    ('updated_at', 15)
 )
 select
   expected.expected_position,
@@ -54,6 +55,7 @@ where table_schema = 'public'
     'user_id',
     'permit_number',
     'business_permit_number',
+    'permit_issued_at',
     'permit_expiry',
     'verification_document_url',
     'id_document_url',

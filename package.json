@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npm run icons:pwa && vite build",
     "dev": "vite",
+    "test": "node --test tests/*.test.mjs",
     "migrate:supabase": "node scripts/database/migrateLocalToSupabase.mjs migrations",
     "icons:pwa": "node scripts/generate-pwa-icons.mjs"
   },

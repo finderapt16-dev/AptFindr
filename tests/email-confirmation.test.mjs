@@ -8,7 +8,7 @@ const { code } = await transformWithOxc(source.replace(/^import .*;\r?\n/gm, '')
     jsx: { runtime: 'classic' },
 });
 
-async function runCallback({ role = 'tenant', confirmed = true, profileAvailable = true, google = false, hash = '' } = {}) {
+async function runCallback({ role = 'tenant', confirmed = true, profileAvailable = true, google = false, flow = null, hash = '' } = {}) {
     let finish;
     const completed = new Promise(resolve => { finish = resolve; });
     const calls = { signouts: 0, hydrations: 0 };
@@ -29,9 +29,13 @@ async function runCallback({ role = 'tenant', confirmed = true, profileAvailable
         exchangeAuthCode: async () => ({ error: null }),
         getAuthUser: async () => ({ data: { user: { email_confirmed_at: confirmed ? '2026-10-05' : null } } }),
         getExistingProfileForAuthUser: async () => profileAvailable ? { role } : null,
+        getPendingGoogleOAuthFlow: () => flow,
         isGoogleAuthUser: () => google,
         isTenantRole: value => value === 'tenant',
-        signOutAuthSession: async () => { calls.signouts++; },
+        signOutAuthSession: async () => {
+            calls.signouts++;
+            return { error: null };
+        },
     };
     try {
         const bindings = Object.keys(globalThis[key]).join(', ');
@@ -45,21 +49,22 @@ async function runCallback({ role = 'tenant', confirmed = true, profileAvailable
 
 for (const role of ['tenant', 'landlord']) {
     test(`existing Google ${role} goes to their login destination`, async () => {
-        const { result, calls } = await runCallback({ role, google: true });
+        const { result, calls } = await runCallback({ role, google: true, flow: 'login' });
         assert.equal(result.path, role === 'landlord' ? '/landlord/dashboard' : '/browse');
         assert.equal(calls.signouts, 0);
     });
-    test(`confirmed ${role} keeps the session and opens Apartments`, async () => {
+    test(`confirmed ${role} must sign in after email confirmation`, async () => {
         const { result, calls } = await runCallback({ role });
-        assert.equal(result.path, '/browse');
+        assert.equal(result.path, '/login');
         assert.equal(result.replace, true);
-        assert.equal(calls.signouts, 0);
-        assert.equal(calls.hydrations, 1);
+        assert.match(result.state.message, /Email confirmed successfully/);
+        assert.equal(calls.signouts, 1);
+        assert.equal(calls.hydrations, 0);
     });
 }
 
 test('new Google user must choose a role and complete signup before dashboard access', async () => {
-    const { result, calls } = await runCallback({ google: true, profileAvailable: false });
+    const { result, calls } = await runCallback({ google: true, flow: 'signup', profileAvailable: false });
     assert.equal(result.path, '/signup?google=setup');
     assert.equal(calls.hydrations, 0);
     assert.equal(calls.signouts, 0);
@@ -72,10 +77,11 @@ test('unverified email cannot open a dashboard', async () => {
     assert.equal(result.path, undefined);
 });
 
-test('missing profile reports failure rather than successful dashboard entry', async () => {
-    const { result } = await runCallback({ profileAvailable: false });
+test('email confirmation does not hydrate an application profile', async () => {
+    const { result, calls } = await runCallback({ profileAvailable: false });
     assert.equal(result.path, '/login');
-    assert.match(result.state.error, /could not load your account/);
+    assert.match(result.state.message, /Email confirmed successfully/);
+    assert.equal(calls.hydrations, 0);
 });
 
 test('expired implicit confirmation link reports its error before loading a profile', async () => {
