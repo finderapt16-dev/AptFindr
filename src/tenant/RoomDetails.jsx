@@ -34,7 +34,7 @@ export function RoomDetails({ room, apartment, onClose }) {
                     <dl className="tenant-room-facts">
                         <div><dt>Capacity</dt><dd>{capacity > 0 ? `${capacity} ${capacity === 1 ? "person" : "people"}` : "Not provided"}</dd></div>
                         <div><dt>Floor Area</dt><dd>{Number(safeRoom.sqft) > 0 ? `${safeRoom.sqft} sq ft` : "Not provided"}</dd></div>
-                        <div><dt>Bathroom</dt><dd>{safeRoom.hasPrivateBath ? "Private" : "Shared"}</dd></div>
+                        <div><dt>Bedrooms</dt><dd>{safeRoom.bedrooms ?? "Not provided"}</dd></div>
                         <div><dt>Air Conditioning</dt><dd>{safeRoom.hasAC ? "Yes" : "No"}</dd></div>
                     </dl>
                     <section><h3>Amenities</h3><div className="tenant-room-amenities">{amenities.map(amenity => <span key={amenity}>{amenity}</span>)}</div></section>

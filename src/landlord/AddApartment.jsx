@@ -702,7 +702,7 @@ export function AddApartment() {
             await deletePropertyDraft(user.id);
             setDraftStatus("idle");
             toast.success("Apartment submitted successfully and is awaiting admin review.");
-            navigate("/landlord/dashboard?section=settings");
+            navigate("/landlord/dashboard?section=overview");
         }
         catch (error) {
             console.error("Failed to submit apartment:", error);

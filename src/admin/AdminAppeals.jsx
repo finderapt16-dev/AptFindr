@@ -1,4 +1,5 @@
 import "./AdminCaseList.css";
+import { ApprovedAppealDetail } from "./ApprovedAppealDetail";
 import { useEffect, useState } from "react";
 import "./AdminReports.css";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +73,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
             if (updated) {
                 toast.success(`Appeal marked as ${nextStatus.replace(/_/g, " ")}`);
                 setAppeals((prev) => prev.map((a) => (a.id === selectedAppeal.id ? updated : a)));
-                setSelectedAppeal(null);
+                setSelectedAppeal(nextStatus === "approved" ? updated : null);
                 setAppealResponse("");
                 setAppealStatus("under_review");
             }
@@ -95,7 +96,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
                 return null;
             const url = typeof doc === "string" ? doc : String(document?.file_url ?? document?.url ?? "");
             const name = String(document?.file_name ?? document?.name ?? `Supporting evidence ${index + 1}`);
-            return { url, name };
+            return { url, name, mimeType: String(document?.mime_type ?? document?.mimeType ?? ""), fileSize: Number(document?.file_size ?? document?.fileSize ?? 0) };
         }).filter((document) => Boolean(document));
         const relatedReportTitle = context.report ? String(context.report.issueType ?? context.report.issue_type ?? context.report.category ?? context.report.apartment_title ?? "Related report") : "Report unavailable";
         const statusClass = selectedAppeal.status === "approved" ? "admin-tone-success-badge admin-status-border-success" : selectedAppeal.status === "rejected" || selectedAppeal.status === "dismissed" ? "admin-tone-muted-icon admin-status-border-muted" : "admin-status-pending";
@@ -103,6 +104,9 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
         const headingClass = "admin-appeals-1-appeal-submitted-by";
         const apartment = context.apartment;
         const apartmentName = apartment?.title || String(context.source?.apartment_title ?? "Apartment unavailable");
+        if (selectedAppeal.status === "approved") {
+            return <ApprovedAppealDetail key={selectedAppeal.id} appeal={selectedAppeal} landlord={landlord} apartment={apartment} apartmentName={apartmentName} appealType={appealType} documents={evidenceDocuments} user={user} onBack={() => { setSelectedAppeal(null); setAppealResponse(""); setAppealStatus("under_review"); }} onViewListing={() => navigate(`${apartmentDetailBasePath}/${context.apartmentId}`, { state: { returnTo: `${portalBasePath}?section=appeals`, backLabel: "Back to Appeals" } })}/>;
+        }
         const apartmentLocation = apartment ? formatApartmentLocation(apartment) : String(context.source?.related_label ?? "Location not provided");
         const apartmentImages = [
             ...(Array.isArray(apartment?.apartment_images) ? apartment.apartment_images.map((image) => typeof image === "string" ? image : image?.url) : []),

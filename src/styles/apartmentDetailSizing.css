@@ -69,3 +69,7 @@
   .tenant-detail-colors .tenant-property-info-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tenant-detail-colors .tenant-property-info-panel h2 { font-size: 18px; }
 }
+.apartment-detail-page .apartment-detail-grid-6.apartment-detail-unit-information { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 480px) {
+  .apartment-detail-page .apartment-detail-grid-6.apartment-detail-unit-information { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

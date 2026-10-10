@@ -1,0 +1,44 @@
+.approved-appeal-page { width: 100%; max-width: 1622px; margin: 0 auto; padding: 23px 32px 40px; box-sizing: border-box; background: #fff; color: #111; border-radius: 10px; font-family: Inter, sans-serif; }
+.approved-appeal-back { display: flex; align-items: center; gap: 8px; color: #0ea5e9; border: 0; background: transparent; font-size: 14px; padding: 0; cursor: pointer; }
+.approved-appeal-back svg { width: 16px; height: 16px; }
+.approved-appeal-page header { margin: 25px 0 40px; }
+.approved-appeal-page h1 { font-size: 24px; line-height: 29px; font-weight: 600; margin: 0; }
+.approved-appeal-page header p { color: #475569; font-size: 14px; margin: 0; }
+.approved-appeal-columns { display: grid; grid-template-columns: minmax(0, 913fr) minmax(0, 599fr); gap: 20px; align-items: start; }
+.approved-appeal-main { display: grid; gap: 24px; min-width: 0; }
+.approved-appeal-page section, .approved-appeal-page aside { border: 1px solid #ccc; border-radius: 10px; padding: 24px 40px; min-width: 0; }
+.approved-appeal-page h2 { font-size: 24px; line-height: 29px; font-weight: 600; margin: 0 0 24px; }
+.approved-appeal-person { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.approved-appeal-person > span { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: #e0f2fe; color: #0ea5e9; font-size: 20px; }
+.approved-appeal-person strong { font-size: 20px; font-weight: 600; }
+.approved-appeal-person small { background: #dcfce7; color: #00ad3f; padding: 8px 14px; border-radius: 999px; font-size: 14px; }
+.approved-appeal-page dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 20px 24px; margin: 0; font-size: 16px; line-height: 22px; }
+.approved-appeal-page dt { color: #475569; display: flex; align-items: center; gap: 24px; }
+.approved-appeal-page dt svg { width: 20px; height: 20px; flex-shrink: 0; }
+.approved-appeal-page dd { margin: 0; overflow-wrap: anywhere; }
+.approved-appeal-status { display: inline-flex; justify-content: center; min-width: 140px; padding: 6px 20px; background: #dcfce7; color: #00ad3f; border-radius: 999px; font-size: 14px; }
+.approved-appeal-message { font-size: 16px; line-height: 20px; margin: 0; padding: 16px; border-radius: 10px; background: #f1f5f9; white-space: pre-wrap; }
+.approved-appeal-documents-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.approved-appeal-documents-heading button { padding: 0; border: 0; background: transparent; color: #0ea5e9; font-size: 16px; cursor: pointer; }
+.approved-appeal-documents { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+.approved-appeal-document { color: #111; text-decoration: none; min-width: 0; }
+.approved-appeal-document > span { display: grid; place-items: center; background: #edf0f4; color: #64748b; height: 114px; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.approved-appeal-document svg { width: 36px; height: 36px; }
+.approved-appeal-document img { width: 100%; height: 100%; object-fit: cover; }
+.approved-appeal-document strong, .approved-appeal-document small { display: block; font-size: 14px; line-height: 18px; font-weight: 400; overflow-wrap: anywhere; }
+.approved-appeal-document small { color: #475569; }
+.approved-appeal-banner { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 10px; color: #00ad3f; background: #dcfce7; margin-bottom: 32px; }
+.approved-appeal-banner > svg { width: 48px; height: 48px; flex-shrink: 0; }
+.approved-appeal-banner strong { font-size: 24px; font-weight: 500; }
+.approved-appeal-banner p { font-size: 14px; color: #475569; margin: 4px 0 0; }
+.approved-appeal-notes { display: grid; gap: 8px; font-size: 16px; color: #475569; margin-top: 24px; }
+.approved-appeal-notes textarea { box-sizing: border-box; width: 100%; min-height: 96px; font-size: 16px; line-height: 20px; color: #475569; background: #fff; padding: 16px; border: 1px solid #ccc; border-radius: 8px; resize: vertical; }
+.approved-appeal-view { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 26px; width: 100%; min-height: 60px; font-size: 16px; background: white; border: 1px solid #008cff; color: #008cff; border-radius: 10px; cursor: pointer; }
+.approved-appeal-view svg { width: 24px; height: 24px; }
+.approved-appeal-view:disabled { opacity: .5; cursor: default; }
+.approved-appeal-empty { color: #64748b; font-size: 14px; }
+.approved-appeal-documents-dialog { max-width: 900px; width: calc(100vw - 32px); max-height: 85vh; overflow-y: auto; }
+.approved-appeal-page :is(button, a, textarea):focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+@media (max-width: 1200px) { .approved-appeal-page { padding: 20px; } .approved-appeal-page section, .approved-appeal-page aside { padding: 24px; } .approved-appeal-page h2 { font-size: 20px; } .approved-appeal-page dl { font-size: 14px; gap: 16px; } .approved-appeal-documents { gap: 16px; } .approved-appeal-banner strong { font-size: 20px; } }
+@media (max-width: 850px) { .approved-appeal-columns { grid-template-columns: 1fr; } .approved-appeal-person strong { font-size: 18px; } }
+@media (max-width: 480px) { .approved-appeal-page, .approved-appeal-page section, .approved-appeal-page aside { padding: 16px; } .approved-appeal-documents { grid-template-columns: repeat(2, minmax(0, 1fr)); } .approved-appeal-page dt { gap: 8px; } }

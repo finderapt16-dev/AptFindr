@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { fetchLandlordBusinessPermits } from "@/services/verificationDocumentsService";
 import "./AdminLandlordVerificationReview.css";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock3, Eye, FileText, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
 
@@ -10,13 +12,27 @@ const formatDate = (value) => {
 };
 
 export function AdminLandlordVerificationReview({ landlord, details, isLoading, onApprove, onBack, onReject, onRequestChanges, onViewProperty }) {
+  const [permits, setPermits] = useState([]);
+  const [permitsLoading, setPermitsLoading] = useState(true);
+  const [permitsError, setPermitsError] = useState("");
+  useEffect(() => {
+    let active = true;
+    setPermits([]);
+    setPermitsLoading(true);
+    setPermitsError("");
+    fetchLandlordBusinessPermits(landlord.id)
+      .then(rows => { if (active) setPermits(rows); })
+      .catch(error => { if (active) setPermitsError(error.message || "Unable to load business permits."); })
+      .finally(() => { if (active) setPermitsLoading(false); });
+    return () => { active = false; };
+  }, [landlord.id]);
   const profile = details?.profile ?? {};
   const verified = landlord.isVerified === true || landlord.is_verified === true;
   const rejected = ["rejected", "denied", "declined"].includes(String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").toLowerCase());
   const status = verified ? "Verified" : rejected ? "Rejected" : "Pending Review";
   const permitNumber = profile.business_permit_number ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber;
   const permitDocumentUrl = profile.verification_document_url;
-  const isPermitPdf = /\.pdf(?:[?#]|$)/i.test(String(permitDocumentUrl ?? ""));
+  const displayedPermits = permits.length ? permits : [{ id: "account-permit", apartmentName: "Account Business Permit", permitNumber, documentUrl: permitDocumentUrl, issuedAt: profile.permit_issued_at ?? profile.issued_at, permitExpiry: profile.permit_expiry ?? profile.permit_expiry_date ?? profile.expiry_date }];
   const property = details?.properties?.[0] ?? null;
   const address = landlord.address ?? landlord.business_address ?? profile.address ?? profile.business_address ?? [landlord.barangay, landlord.city].filter(Boolean).join(", ");
   const phone = landlord.mobile ?? landlord.phone ?? landlord.contact ?? landlord.mobileNumber;
@@ -51,28 +67,33 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
           <section className="admin-landlord-review-card">
             <h2>Permit Document Review</h2>
             <p className="admin-landlord-review-intro">Review the landlord’s business permit and supporting documents.</p>
+            {permitsLoading && <p className="admin-landlord-review-loading">Loading submitted permits...</p>}
+            {permitsError && <p role="alert" className="admin-landlord-review-missing-document">{permitsError}</p>}
+            {displayedPermits.map((permit, index) => <article className="admin-landlord-review-permit-entry" key={permit.id}>
+              <h3>{permit.apartmentName || `Business Permit ${index + 1}`}</h3>
             <div className="admin-landlord-review-document">
-              {permitDocumentUrl && !isPermitPdf ? (
-                <a className="admin-landlord-review-document-preview admin-landlord-review-document-image" href={permitDocumentUrl} target="_blank" rel="noreferrer" aria-label="Open the submitted business permit image">
-                  <img src={permitDocumentUrl} alt="Submitted business permit" />
+              {permit.documentUrl && !/\.pdf(?:[?#]|$)/i.test(String(permit.documentUrl)) ? (
+                <a className="admin-landlord-review-document-preview admin-landlord-review-document-image" href={permit.documentUrl} target="_blank" rel="noreferrer" aria-label="Open the submitted business permit image">
+                  <img src={permit.documentUrl} alt="Submitted business permit" />
                   <span>Open full-size image</span>
                 </a>
               ) : (
                 <div className="admin-landlord-review-document-preview">
                   <FileText aria-hidden="true" />
                   <strong>Business Permit</strong>
-                  <span>{permitDocumentUrl ? "PDF document submitted" : "No document submitted"}</span>
+                  <span>{permit.documentUrl ? "PDF document submitted" : "No document submitted"}</span>
                 </div>
               )}
               <dl className="admin-landlord-review-document-details">
                 <div><dt>Document Type</dt><dd>Business Permit</dd></div>
-                <div><dt>Permit Number</dt><dd>{text(permitNumber)}</dd></div>
-                <div><dt>Date Issued</dt><dd>{formatDate(profile.permit_issued_at ?? profile.issued_at ?? profile.created_at)}</dd></div>
-                <div><dt>Expiry Date</dt><dd>{formatDate(profile.permit_expiry ?? profile.permit_expiry_date ?? profile.expiry_date)}</dd></div>
+                <div><dt>Permit Number</dt><dd>{text(permit.permitNumber)}</dd></div>
+                <div><dt>Date Issued</dt><dd>{formatDate(permit.issuedAt)}</dd></div>
+                <div><dt>Expiry Date</dt><dd>{formatDate(permit.permitExpiry)}</dd></div>
                 <div><dt>Issued By</dt><dd>{text(profile.permit_issued_by ?? profile.issued_by, "City licensing authority")}</dd></div>
               </dl>
             </div>
-            {permitDocumentUrl ? <a className="admin-landlord-review-document-link" href={permitDocumentUrl} target="_blank" rel="noreferrer"><Eye aria-hidden="true" />View Full Document</a> : <p className="admin-landlord-review-missing-document">No business permit document was uploaded.</p>}
+            {permit.documentUrl ? <a className="admin-landlord-review-document-link" href={permit.documentUrl} target="_blank" rel="noreferrer"><Eye aria-hidden="true" />View Full Document</a> : <p className="admin-landlord-review-missing-document">No business permit document was uploaded.</p>}
+            </article>)}
           </section>
         </div>
 
