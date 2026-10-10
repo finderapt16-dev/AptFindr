@@ -3552,3 +3552,22 @@
 .landlord-view-room:hover { background: #f8fafc; }
 .landlord-view-room > span:first-child { display: grid; gap: 5px; min-width: 0; }
 .landlord-view-room small { color: #64748b; }
+
+.apartment-detail-aside-about .apartment-detail-text-5 {
+  min-height: 80px;
+  margin: 8px 0 0;
+  padding: 8px;
+  border: 1px solid #d8d8d8;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+.apartment-detail-contract-duration .apartment-detail-house-rule-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.landlord-view-contract { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.landlord-view-contract span { min-height: 28px; display: grid; place-items: center; padding: 4px 7px; border: 1px solid #dce3ea; border-radius: 5px; color: #526171; font-size: 10px; text-align: center; }

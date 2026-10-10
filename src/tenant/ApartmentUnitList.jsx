@@ -1,3 +1,4 @@
+import { getUnitAmenities } from "./apartmentAmenities";
 import { DoorOpen } from "lucide-react";
 import { getRoomStatus } from "@/utils/roomAvailability";
 import { getImageUrl } from "@/utils/images";
@@ -9,8 +10,7 @@ export function ApartmentUnitList({ rooms, apartment, onSelect, tenantStyle = fa
       <header><div><h2>Unit Details</h2><p>Current unit availability in this apartment.</p></div><span className="market-unit-status market-unit-status-available">{available} Available</span></header>
       <div className="market-apartment-unit-list">{rooms.length ? rooms.map((room, index) => {
         const status = getRoomStatus(room);
-        const savedIncluded = apartment.features?.unitInclusions?.[room.id] ?? room.amenities ?? [];
-        const included = Array.isArray(savedIncluded) ? savedIncluded : [];
+        const included = getUnitAmenities(room, apartment);
         const unitName = room.name ? /^unit\b/i.test(room.name) ? room.name : `Unit ${room.name}` : `Unit ${index + 1}`;
         return <button type="button" key={room.id || index} className="market-apartment-unit" onClick={() => onSelect(room)}>
           <div className="market-apartment-unit-photo">{room.images?.[0] ? <img src={getImageUrl(room.images[0])} alt={room.name || `Unit ${index + 1}`}/> : <DoorOpen/>}</div>

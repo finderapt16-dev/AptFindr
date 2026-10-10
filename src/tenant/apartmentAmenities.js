@@ -27,3 +27,16 @@ export function getNormalizedApartmentAmenities(apartment) {
     }
     return result;
 }
+
+export function getUnitAmenities(room, apartment) {
+    const features = apartment.features && !Array.isArray(apartment.features) ? apartment.features : {};
+    const included = features.unitInclusions?.[room.id] ?? room.amenities ?? [];
+    return [...new Set([
+        ...(Array.isArray(included) ? included : []),
+        ...(Array.isArray(apartment.amenities) ? apartment.amenities : []),
+        ...(Array.isArray(features.customFeatures) ? features.customFeatures : []),
+        ...(apartment.petFriendly ? ["Pet Friendly"] : []),
+        ...(apartment.parking ? ["Parking"] : []),
+        ...(apartment.furnished ? ["Furnished"] : []),
+    ])];
+}

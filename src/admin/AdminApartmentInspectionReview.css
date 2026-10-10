@@ -81,3 +81,11 @@
   }
   .admin-inspection-review-dialog-close { padding: 8px; }
 }
+
+.admin-inspection-review-about h4 { margin: 0 0 8px; font-size: 13px; }
+.admin-inspection-review-about p { min-height: 80px; margin: 0; padding: 8px; border: 1px solid #d8d8d8; border-radius: 6px; color: #61728f; font-size: 12px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box; }
+.admin-inspection-review-contract span { border-color: #d8d8d8; border-radius: 6px; background: #fff; color: #172033; }
+.admin-inspection-review-unit-amenities { margin-top: 6px; min-width: 0; }
+.admin-inspection-review-unit-amenities > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.admin-inspection-review-unit-amenities span { padding: 4px 7px; border: 1px solid #d8d8d8; border-radius: 6px; color: #172033; overflow-wrap: anywhere; }
+.admin-inspection-review-unit-amenities small { color: #61728f; }

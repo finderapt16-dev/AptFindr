@@ -1,3 +1,4 @@
+import { getUnitAmenities } from "@/tenant/apartmentAmenities";
 import "./AdminApartmentInspectionReview.css";
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Check, Clock3, FileText, MapPin, Trash2, UserRound, X } from "lucide-react";
 import { MapView } from "@/components/MapView";
@@ -10,6 +11,7 @@ const amount = (value) => Number(value || 0).toLocaleString("en-PH");
 export function AdminApartmentInspectionReview({ apartment, images, rooms, landlord, propertyType, listingStatus, submittedOn, rules, utilities, onApprove, onBack, onReject, onRequestChanges, onSelectImage, selectedImageIndex, onViewLandlord }) {
   const [requestOpen, setRequestOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const contractDuration = apartment.features?.contractDuration || apartment.contractDuration || "Not specified";
   const isPublished = apartment.isPublished !== false;
   const statusLabel = isPublished ? "Published" : listingStatus || "Pending Review";
   const location = [apartment.address, apartment.barangay, apartment.city, apartment.state].filter(Boolean).join(", ") || "Location not provided";
@@ -46,14 +48,16 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
               <dl>
                 <div><dt>Apartment Type</dt><dd>{propertyType}</dd></div><div><dt>Total Units</dt><dd>{rooms.length || apartment.bedrooms || 0} rooms</dd></div>
                 <div><dt>Price Range</dt><dd>{lowestPrice ? `₱${amount(lowestPrice)}${highestPrice && highestPrice !== lowestPrice ? ` - ₱${amount(highestPrice)}` : ""} / month` : "Not set"}</dd></div>
-                <div><dt>Description</dt><dd>{apartment.description || "No description submitted."}</dd></div>
+
               </dl>
+              <section className="admin-inspection-review-about"><h4>About this apartment</h4><p>{apartment.description || "No description provided."}</p></section>
               <div className="admin-inspection-review-tags"><strong>House Rules & Policies</strong><div>{(rules.length ? rules : ["No rules specified"]).map((rule) => <span key={rule}>{rule}</span>)}</div></div>
+              <div className="admin-inspection-review-tags admin-inspection-review-contract"><strong>Contract Duration</strong><div><span>{contractDuration}</span></div></div>
               <div className="admin-inspection-review-tags"><strong>Utilities Included</strong><div>{(utilities.length ? utilities : ["No utilities specified"]).map((utility) => <span key={utility}>{utility}</span>)}</div></div>
             </div>
           </div>
         </section>
-        <section className="admin-inspection-review-card"><h2>Units Overview</h2><p className="admin-inspection-review-subtitle">Review the submitted units for this apartment.</p><div className="admin-inspection-review-rooms">{rooms.length ? rooms.map((room, index) => <article key={room.id ?? index}><ImageWithFallback src={list(room.images ?? room.image ?? room.image_url)[0]} alt={room.name || `Unit ${index + 1}`} /><strong>{room.name || `Unit ${index + 1}`}</strong><b>{room.price ? `₱${amount(room.price)} / month` : "Price not set"}</b><span>{room.bedrooms ?? 1} Bed | {room.bathrooms ?? 1} Bath</span><span>{room.maxOccupants ?? room.max_occupants ?? 1} Occupancy</span><em>{String(room.status || "available").replace(/\b\w/g, (letter) => letter.toUpperCase())}</em></article>) : <p>No units submitted for this apartment.</p>}</div></section>
+        <section className="admin-inspection-review-card"><h2>Units Overview</h2><p className="admin-inspection-review-subtitle">Review the submitted units for this apartment.</p><div className="admin-inspection-review-rooms">{rooms.length ? rooms.map((room, index) => <article key={room.id ?? index}><ImageWithFallback src={list(room.images ?? room.image ?? room.image_url)[0]} alt={room.name || `Unit ${index + 1}`} /><strong>{room.name || `Unit ${index + 1}`}</strong><b>{room.price ? `₱${amount(room.price)} / month` : "Price not set"}</b><span>{room.bedrooms ?? 1} Bed | {room.bathrooms ?? 1} Bath</span><span>{room.maxOccupants ?? room.max_occupants ?? 1} Occupancy</span><em>{String(room.status || "available").replace(/\b\w/g, (letter) => letter.toUpperCase())}</em><div className="admin-inspection-review-unit-amenities"><strong>Unit Amenities</strong><div>{getUnitAmenities(room, apartment).length ? getUnitAmenities(room, apartment).map(item => <span key={item}>{item}</span>) : <small>No amenities provided.</small>}</div></div></article>) : <p>No units submitted for this apartment.</p>}</div></section>
         <section className="admin-inspection-review-card"><h2>Location</h2><div className="admin-inspection-review-map">{Number.isFinite(Number(apartment.lat)) && Number.isFinite(Number(apartment.lng)) ? <MapView lat={Number(apartment.lat)} lng={Number(apartment.lng)} zoom={15} showSingleMarker /> : <div><MapPin aria-hidden="true" />Location coordinates have not been provided.</div>}</div></section>
       </div>
       <aside className="admin-inspection-review-side">

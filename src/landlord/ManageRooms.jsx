@@ -354,7 +354,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
             <div className="mr-reference-chips">{UNIT_INCLUSIONS.map(item => <button type="button" key={item} disabled={controlsLocked} aria-pressed={draft.included.includes(item)} onClick={() => toggleIncluded(item)} className={draft.included.includes(item) ? "is-selected" : ""}>{item}</button>)}</div>
             <label className="mr-unit-other-label" htmlFor="unit-other-included">Other included (optional)</label>
             <div className="mr-unit-other-row"><input id="unit-other-included" value={otherIncluded} onChange={event => setOtherIncluded(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addOtherIncluded(); } }} placeholder="Type an inclusion and press Enter" disabled={controlsLocked}/><Button type="button" onClick={addOtherIncluded} disabled={controlsLocked || !otherIncluded.trim()}>Add</Button></div>
-            <div className="mr-unit-custom-tags">{draft.included.filter(item => !UNIT_INCLUSIONS.includes(item)).map(item => <button type="button" key={item} disabled={controlsLocked} onClick={() => toggleIncluded(item)}>{item}<X/></button>)}</div>
+            <div className="mr-unit-custom-tags">{draft.included.map(item => <button type="button" key={item} disabled={controlsLocked} onClick={() => toggleIncluded(item)}>{item}<X/></button>)}</div>
           </section>
         </div>
         <aside className="mr-reference-side">

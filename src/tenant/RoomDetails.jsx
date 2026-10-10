@@ -1,3 +1,4 @@
+import { getUnitAmenities } from "./apartmentAmenities";
 import { getRoomStatus } from "@/utils/roomAvailability";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { RoomImageGallery } from "@/components/RoomImageGallery";
@@ -18,7 +19,7 @@ export function RoomDetails({ room, apartment, onClose }) {
     const amenities = [...new Set([
         safeRoom.hasPrivateBath ? "Private bathroom" : "Shared bathroom",
         ...(safeRoom.hasAC ? ["Air conditioning"] : []),
-        ...(Array.isArray(safeRoom.amenities) ? safeRoom.amenities : [])
+        ...getUnitAmenities(safeRoom, safeApartment)
     ])];
 
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>

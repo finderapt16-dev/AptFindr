@@ -1,6 +1,6 @@
 import { ApartmentUnitList } from "./ApartmentUnitList";
 import { getRoomStatus, sortRoomsByAvailability } from "@/utils/roomAvailability";
-import { Pencil, Building2, ChevronLeft, ChevronRight, Heart, MapPin, Star, AlertTriangle, ArrowLeft, Check, CheckCircle2, DoorOpen, Link as LinkIcon, Maximize, Phone, X } from "lucide-react";
+import { Pencil, Building2, ChevronLeft, ChevronRight, Heart, MapPin, Star, AlertTriangle, ArrowLeft, CheckCircle2, DoorOpen, Link as LinkIcon, Maximize, Phone, X } from "lucide-react";
 import { MultiImageUploader } from "@/components/MultiImageUploader";
 import { PropertyLocationPicker } from "@/landlord/PropertyLocationPicker";
 import { apartmentToFormValues } from "@/utils/apartmentMappers";
@@ -62,16 +62,13 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
     const featureRecord = !Array.isArray(apartment.features) && apartment.features
         ? apartment.features
         : {};
-    const propertyAmenities = [
+    const contractDuration = featureRecord.contractDuration || apartment.contractDuration || "Not specified";
+    const apartmentIncluded = [...new Map([
+        ...includedUtilities,
         ...listFromUnknown(apartment.amenities),
-        apartment.petFriendly && "Pet Friendly",
         apartment.parking && "Parking",
         apartment.furnished && "Furnished",
-        ...listFromUnknown(featureRecord.customFeatures),
-    ].filter(Boolean);
-    const displayedAmenities = [...new Map(
-        propertyAmenities.map((amenity) => [amenity.toLowerCase(), amenity])
-    ).values()];
+    ].filter(Boolean).map(item => [item.toLowerCase(), item])).values()];
     const formatRent = (price) => price > 0 ? `₱${price.toLocaleString("en-PH")}` : "Not specified";
     return <div className="landlord-property-view-shell landlord-shell">
             <aside className="app-shell-fixed-sidebar">
@@ -96,25 +93,16 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
             <div className="landlord-view-property-grid">
               <div className="landlord-view-left">
                 <section className="landlord-view-card landlord-view-gallery"><h2>Apartment Photos</h2><p>Last updated property photos</p><div className="landlord-view-main-photo">{images[imageIndex] ? <img src={images[imageIndex]} alt={`${apartment.title || "Property"} photo ${imageIndex + 1}`}/> : <Building2/>}{images.length > 1 && <><button type="button" aria-label="Previous property image" className="photo-navigation-arrow landlord-view-arrow is-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)}><ChevronLeft/></button><button type="button" aria-label="Next property image" className="photo-navigation-arrow landlord-view-arrow is-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)}><ChevronRight/></button></>}</div><div className="landlord-view-thumbnails">{Array.from({ length: Math.max(4, images.length) }, (_, index) => <button type="button" key={index} className={index === imageIndex ? "is-active" : ""} onClick={() => images[index] && setImageIndex(index)}>{images[index] ? <img src={images[index]} alt={`Property thumbnail ${index + 1}`}/> : null}</button>)}</div></section>
-                <section className="landlord-view-card">
-                  <h2>Rooms &amp; Availability</h2>
-                  <p>{roomsForDisplay.filter(room => roomStatus(room) === "available").length} available rooms</p>
-                  {roomsForDisplay.length ? <div className="landlord-view-room-list">{roomsForDisplay.map((room, index) =>
-                    <button type="button" className="landlord-view-room" key={room.id || index} onClick={() => setSelectedRoom(room)}>
-                      <span><strong>{room.name || `Room ${index + 1}`}</strong><small>{room.type || "Room"} ? ?{Number(room.price || 0).toLocaleString("en-PH")} / month ? {room.maxOccupants || "-"} pax</small><small>View room details</small></span>
-                      <Badge className={STATUS_STYLE[roomStatus(room)]}>{STATUS_LABEL[roomStatus(room)]}</Badge>
-                    </button>
-                  )}</div> : <p>No room information available.</p>}
-                </section>
+                
                 <section className="landlord-view-card landlord-view-location"><h2>Location</h2><p>Locate the apartment's location on the map.</p><div className="landlord-view-address"><label>Address<input value={apartment.address || "Not specified"} readOnly/></label><label>City / ZIP<input value={[apartment.city, apartment.zip].filter(Boolean).join(", ") || "Not specified"} readOnly/></label></div>{mapPinAvailable ? <div className="landlord-view-map"><MapView lat={apartment.lat} lng={apartment.lng} zoom={15} showSingleMarker/></div> : <div className="landlord-view-map-empty"><MapPin/><span>{locationText}</span></div>}</section>
               </div>
               <aside className="landlord-view-right">
-                <section className="landlord-view-card"><h2>Property Name</h2><input value={apartment.title || "Untitled property"} readOnly/></section>
+                <section className="landlord-view-card"><h2>Apartment Name</h2><input value={apartment.title || "Untitled property"} readOnly/></section>
                 <section className="landlord-view-card"><h2>About this apartment</h2><textarea value={apartment.description || "No description provided."} readOnly/></section>
-                <section className="landlord-view-card"><h2>Amenities</h2><div className="landlord-view-amenities">{(displayedAmenities.length ? displayedAmenities : ["No amenities provided."]).map((amenity) => <span key={amenity}>{amenity}</span>)}</div></section>
-                <section className="landlord-view-card"><h2>Price Range</h2><div className="landlord-view-prices"><label>Minimum Monthly Rent (₱)<input value={formatRent(minimumRent)} readOnly/></label><label>Maximum Monthly Rent (₱)<input value={formatRent(maximumRent)} readOnly/></label></div></section>
-                <section className="landlord-view-card"><h2>House Rules &amp; Policies</h2><div className="landlord-view-rules">{(rules.length ? rules : ["No rules specified."]).slice(0, 4).map((rule) => <span key={rule}>{rule}</span>)}</div></section>
-                <section className="landlord-view-card"><h2>Utilities Included</h2><div className="landlord-view-utilities">{(includedUtilities.length ? includedUtilities : ["No utilities included."]).map((utility) => <span key={utility}>{utility}</span>)}</div></section>
+                
+                <section className="landlord-view-card"><h2>House Rules</h2><div className="landlord-view-rules">{(rules.length ? rules : ["No rules specified."]).map((rule) => <span key={rule}>{rule}</span>)}</div></section>
+                <section className="landlord-view-card"><h2>Contract Duration</h2><div className="landlord-view-contract"><span>{contractDuration}</span></div></section>
+                <section className="landlord-view-card"><h2>Apartment Included</h2><div className="landlord-view-utilities">{(apartmentIncluded.length ? apartmentIncluded : ["No inclusions specified."]).map((item) => <span key={item}>{item}</span>)}</div></section>
               </aside>
             </div>
                 </main>
@@ -413,6 +401,7 @@ export function ApartmentDetails() {
     const roomsForDisplay = sortRoomsByAvailability(apartment.rooms ?? []);
     const featureRecord = !Array.isArray(apartment.features) && apartment.features ? apartment.features : {};
     const rules = listFromUnknown(featureRecord.safetyRules ?? featureRecord.houseRules);
+    const contractDuration = featureRecord.contractDuration || apartment.contractDuration || "Not specified";
     const propertyFeatures = [apartment.petFriendly && "Pet Friendly", apartment.parking && "Parking", apartment.furnished && "Furnished", ...listFromUnknown(featureRecord.customFeatures)].filter(Boolean);
     const includedUtilities = listFromUnknown(apartment.utilities);
     const landlordName = landlord?.name || "Not provided";
@@ -528,11 +517,7 @@ export function ApartmentDetails() {
             <section className="apartment-detail-section-3 apartment-detail-aside-about">
               <h2 className="apartment-detail-about-this-apartment">About this apartment</h2>
               <p className="apartment-detail-text-5">{apartment.description || "No description provided."}</p>
-              <div className="apartment-detail-row-8">
-                {[...apartment.amenities, ...propertyFeatures].length
-                  ? [...new Set([...apartment.amenities, ...propertyFeatures])].map((item) => <span key={item} className={`apartment-detail-span-7 ${landlordPortal ? "apartment-detail-span-8" : "apartment-detail-span-8"}`}><Check className={`apartment-detail-check-icon ${landlordPortal ? "apartment-detail-check-icon-2" : "apartment-detail-check-icon-3"}`}/>{item}</span>)
-                  : <p className="apartment-detail-no-amenities-provided">No amenities provided.</p>}
-              </div>
+
             </section>
           </InlinePropertyInfo>
           <InlinePropertyInfo label="Location" fields={[{"key":"address","label":"Complete address","type":"text","required":true},{"key":"city","label":"City","type":"text","required":true},{"key":"state","label":"Province","type":"text","required":true},{"key":"zip","label":"ZIP code","type":"text","required":true}]} apartment={editableApartment} enabled={editableInfo} onSave={savePropertyInfo} location><section className="apartment-detail-section-4 apartment-detail-aside-location"><h2 className="apartment-detail-location">Location</h2><div className={`apartment-detail-card ${landlordPortal ? "apartment-detail-panel-14" : "apartment-detail-panel-15"}`}><div className="apartment-detail-row-9"><MapPin className={`apartment-detail-map-pin-icon-3 ${landlordPortal ? "apartment-detail-map-pin-icon-2" : "apartment-detail-map-pin-icon-2"}`}/><div className="apartment-detail-panel-2"><h3 className="apartment-detail-location-details">Location Details</h3><p className="apartment-detail-text-9">{locationText}</p></div></div></div>{mapPinAvailable ? <div className="apartment-detail-panel-17 apartment-detail-map-wrap"><MapView lat={apartment.lat} lng={apartment.lng} zoom={15} showSingleMarker/><button type="button" className="apartment-detail-map-expand" onClick={() => setMapExpanded(true)} aria-label="Expand map" title="Expand map"><Maximize/></button></div> : <div className={`apartment-detail-card-2 ${landlordPortal ? "apartment-detail-panel-18" : "apartment-detail-panel-19"}`}><MapPin className={`apartment-detail-map-pin-icon-4 ${landlordPortal ? "apartment-detail-map-pin-icon-2" : "apartment-detail-map-pin-icon-2"}`}/><p className="apartment-detail-exact-map-pin-needed">Exact map pin needed</p><p className="apartment-detail-text-10">{mapPinMessage}</p></div>}</section></InlinePropertyInfo>
@@ -542,6 +527,7 @@ export function ApartmentDetails() {
               {rules.length ? <div className="apartment-detail-house-rule-list">{rules.map((rule) => <span key={rule}>{rule}</span>)}</div> : <p className="apartment-detail-no-safety-rules-provided">No house rules provided.</p>}
             </section>
           </InlinePropertyInfo>
+          <section className="apartment-detail-section-3 apartment-detail-contract-duration"><h2>Contract Duration</h2><div className="apartment-detail-house-rule-list"><span>{contractDuration}</span></div></section>
           <section className="apartment-detail-section-3"><h2 className="apartment-detail-utilities-title">Utilities Included</h2><div className="apartment-detail-utilities">{(includedUtilities.length ? includedUtilities : ["No utilities included."]).map((utility) => <span key={utility}>{utility}</span>)}</div></section>
           {renter && <section className="apartment-detail-section-5 tenant-apartment-rating-summary"><h2 className="apartment-detail-tenant-rating">Tenant Rating</h2><p className="apartment-detail-text-12">{ratings.length ? `★ ${averageRating.toFixed(1)} based on ${ratings.length} rating${ratings.length === 1 ? "" : "s"}` : "No ratings yet"}</p>{currentRating > 0 && <button type="button" disabled={ratingSaving} onClick={() => void clearTenantRating()} className="apartment-detail-remove-my-rating">Remove my rating</button>}</section>}
           {renter && <section className="apartment-detail-section-6"><div className="apartment-detail-row-9"><AlertTriangle className="apartment-detail-alert-triangle-icon-2"/><div className="apartment-detail-panel-2"><h2 className="apartment-detail-report-a-problem">Report a Problem</h2><p className="apartment-detail-text-13">Let us know about any issues you encountered with an apartment listing.</p></div></div><Button variant="outline" onClick={() => setReportOpen(true)} className="apartment-detail-report-a-problem-2">Report a Problem</Button></section>}

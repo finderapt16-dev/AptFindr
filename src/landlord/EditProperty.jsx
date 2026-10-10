@@ -28,8 +28,6 @@ const initialForm = (apartment) => ({
   zip: apartment.zip ?? "",
   lat: hasValidApartmentCoordinates(apartment.lat, apartment.lng) ? Number(apartment.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat,
   lng: hasValidApartmentCoordinates(apartment.lat, apartment.lng) ? Number(apartment.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng,
-  minPrice: String(Number(apartment.features?.priceRange?.min) || Number(apartment.price) || ""),
-  maxPrice: String(Number(apartment.features?.priceRange?.max) || Number(apartment.price) || ""),
   rules: toList(apartment.features?.houseRules ?? apartment.features?.safetyRules ?? apartment.features?.customFeatures),
   utilityItems: toList(apartment.utilities),
   amenityItems: toList(apartment.amenities),
@@ -108,19 +106,13 @@ export function EditProperty() {
       toast.error("Select a contract duration.");
       return;
     }
-    const minPrice = Number(form.minPrice);
-    const maxPrice = Number(form.maxPrice);
-    if (!Number.isFinite(minPrice) || minPrice < 0 || !Number.isFinite(maxPrice) || maxPrice < minPrice) {
-      toast.error("Enter a valid price range. The maximum rent must be at least the minimum rent.");
-      return;
-    }
     setSaving(true);
     try {
       const savedDetails = await updateApartment(apartment.id, {
         ...apartmentToFormValues({
           ...apartment,
           ...form,
-          features: { ...(apartment.features && !Array.isArray(apartment.features) ? apartment.features : {}), houseRules: form.rules, ...(apartment.features?.safetyRules ? { safetyRules: form.rules } : {}), contractDuration: form.contractDuration, priceRange: { min: minPrice, max: maxPrice } },
+          features: { ...(apartment.features && !Array.isArray(apartment.features) ? apartment.features : {}), houseRules: form.rules, ...(apartment.features?.safetyRules ? { safetyRules: form.rules } : {}), contractDuration: form.contractDuration },
           amenities: form.amenityItems,
           lat: form.lat,
           lng: form.lng,
@@ -160,7 +152,6 @@ export function EditProperty() {
           <small>Supported JPG, PNG, WEBP. Max 5 MB each.</small>
         </section>
         <section className="edit-property-card edit-property-name"><label htmlFor="edit-title">Apartment Name</label><input id="edit-title" value={form.title} onChange={event => setField("title", event.target.value)} required/></section>
-        <section className="edit-property-card"><h2>Price Range</h2><div className="edit-property-prices"><label>Minimum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.minPrice} onChange={event => setField("minPrice", event.target.value)} required/></label><label>Maximum Monthly Rent (₱)<input type="number" min="0" step="1" value={form.maxPrice} onChange={event => setField("maxPrice", event.target.value)} required/></label></div></section>
         <section className="edit-property-card"><label htmlFor="edit-description">About this apartment</label><p>Provide a clear description of your apartment (maximum 500 characters).</p><textarea id="edit-description" value={form.description} maxLength={Math.max(500, form.description.length)} onChange={event => setField("description", event.target.value)} placeholder="Add description..."/><small className="edit-property-character-count">{form.description.length} / 500</small></section>
         <section className="edit-property-card"><h2>Apartment Included <span>*</span></h2><p>Select which features are included in the base rent price for your apartment.</p>
           <div className="edit-property-choice-grid">{INCLUDED_CHOICES.map(item => <button type="button" key={item} aria-pressed={includedItems.includes(item)} className={includedItems.includes(item) ? "is-selected" : ""} onClick={() => toggleIncluded(item)}>{item}</button>)}</div>

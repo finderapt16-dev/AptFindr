@@ -1,4 +1,4 @@
-import { Bookmark, Building2, ChevronRight, Eye, Grid2X2, Heart, List, MapPin, Search } from "lucide-react";
+import { Bookmark, Building2, ChevronRight, Eye, Heart, MapPin, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -178,22 +178,7 @@ export function Favorites() {
               </div>
             </section>
 
-            <section className="favorites-section">
-              <select value={filter} onChange={(event) => setFilter(event.target.value)} className="favorites-select">
-                <option value="all">All Favorites ({favoriteCount})</option>
-                <option value="available">Available Only</option>
-              </select>
-              <div className="favorites-content-5">
-                <div className="favorites-grid-2">
-                  <button type="button" onClick={() => setViewMode("grid")} className={`favorites-grid-view ${viewMode === "grid" ? "favorites-grid-view-2" : "favorites-grid-view-3"}`} aria-label="Grid view" aria-pressed={viewMode === "grid"}>
-                    <Grid2X2 className="favorites-grid2-x2-icon"/>
-                  </button>
-                  <button type="button" onClick={() => setViewMode("list")} className={`favorites-list-view ${viewMode === "list" ? "favorites-list-view-2" : "favorites-list-view-3"}`} aria-label="List view" aria-pressed={viewMode === "list"}>
-                    <List className="favorites-list-icon"/>
-                  </button>
-                </div>
-              </div>
-            </section>
+            
 
             <section className="favorites-section-2">
               {isLoading ? (<div className="favorites-loading-favorites">
@@ -258,22 +243,7 @@ export const FavoritesOverview = ({ favoriteApartments, visibleFavoriteApartment
       </div>
     </section>
 
-    <section className="favorites-section-section-3">
-      <select value={favoriteFilter} onChange={(event) => setFavoriteFilter(event.target.value)} className="favorites-section-select">
-        <option value="all">All Favorites ({favoriteApartments.length})</option>
-        <option value="available">Available Only</option>
-      </select>
-      <div className="favorites-section-content-2">
-        <div className="favorites-section-grid">
-          <button onClick={() => setFavoriteView("grid")} className={`favorites-section-grid-view ${favoriteView === "grid" ? "favorites-section-grid-view-2" : "favorites-section-grid-view-3"}`} aria-label="Grid view">
-            <Grid2X2 className="favorites-section-grid2-x2-icon"/>
-          </button>
-          <button onClick={() => setFavoriteView("list")} className={`favorites-section-list-view ${favoriteView === "list" ? "favorites-section-list-view-2" : "favorites-section-list-view-3"}`} aria-label="List view">
-            <List className="favorites-section-list-icon"/>
-          </button>
-        </div>
-      </div>
-    </section>
+    
 
     {favoriteApartments.length === 0 ? (<EmptyState icon={Heart} message="No favorites yet. Browse apartments to save listings." actionLabel="Browse Apartments" action={() => navigate("/browse")}/>) : visibleFavoriteApartments.length === 0 ? (<div className="favorites-section-card-2">
         <Search className="favorites-section-search-icon"/>
