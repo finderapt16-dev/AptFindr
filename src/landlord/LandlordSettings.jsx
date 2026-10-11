@@ -146,14 +146,8 @@ export const LandlordSettings = ({
       </header>
 
       <div className="landlord-settings-profile-grid">
-        <ProfileField label="First Name" required>
-          <input value={profile.firstName} onChange={(event) => updateProfile((current) => ({ ...current, firstName: event.target.value }))} />
-        </ProfileField>
-        <ProfileField label="Middle Name (Optional)">
-          <input value={profile.middleInitial} onChange={(event) => updateProfile((current) => ({ ...current, middleInitial: event.target.value }))} />
-        </ProfileField>
-        <ProfileField label="Last Name" required>
-          <input value={profile.lastName} onChange={(event) => updateProfile((current) => ({ ...current, lastName: event.target.value }))} />
+        <ProfileField label="Full Name" required>
+          <input autoComplete="name" required value={profile.fullName} onChange={(event) => updateProfile((current) => ({ ...current, fullName: event.target.value }))} />
         </ProfileField>
         <ProfileField label="Facebook Link" required>
           <input type="url" required value={profile.facebookLink} onChange={(event) => updateProfile((current) => ({ ...current, facebookLink: event.target.value }))} placeholder="https://facebook.com" />

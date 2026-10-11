@@ -1,5 +1,5 @@
 export const ACCOUNT_REVIEW_FIELDS = ["email"];
-export const PERSONAL_REVIEW_FIELDS = ["firstName", "lastName", "middleInitial", "mobileNumber"];
+export const PERSONAL_REVIEW_FIELDS = ["fullName", "mobileNumber"];
 
 export const PASSWORD_REQUIREMENTS = "At least 8 characters with letters and numbers.";
 
@@ -28,12 +28,7 @@ export function validateAccountDetails(values, { includePassword = true } = {}) 
 
 export function validatePersonalInformation(values) {
   const errors = {};
-  if (!String(values.firstName ?? "").trim()) errors.firstName = "First name is required.";
-  if (!String(values.lastName ?? "").trim()) errors.lastName = "Last name is required.";
-  const initial = String(values.middleInitial ?? "").trim();
-  if (initial && !/^\p{L}\.?$/u.test(initial)) {
-    errors.middleInitial = "Enter one letter, or leave this optional field blank.";
-  }
+  if (!String(values.fullName ?? "").trim()) errors.fullName = "Full name is required.";
   const mobile = String(values.mobileNumber ?? "").trim();
   const digits = mobile.replace(/\D/g, "");
   if (!mobile) {

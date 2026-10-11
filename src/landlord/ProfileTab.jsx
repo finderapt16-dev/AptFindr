@@ -5,10 +5,10 @@ import { Camera, RotateCcw } from "lucide-react";
 export const ProfileTab = ({ profile, isUploadingProfilePhoto, profilePhotoInputRef, handleRemoveProfilePhoto, handleProfilePhoto, updateProfile, setProfile, savedProfile, handleUpdateProfile, isUpdatingProfile, }) => (<div className="profile-tab-grid">
     <div className="profile-tab-card">
       <div className="profile-tab-row">
-        {profile.avatar ? <img src={profile.avatar} alt={`${profile.firstName || "Landlord"} profile`} className="profile-tab-image"/> : (profile.firstName[0] || "L").toUpperCase()}
+        {profile.avatar ? <img src={profile.avatar} alt={`${profile.fullName || "Landlord"} profile`} className="profile-tab-image"/> : (profile.fullName[0] || "L").toUpperCase()}
       </div>
       <div className="profile-tab-panel">
-        <p className="profile-tab-text">{`${profile.firstName} ${profile.lastName}`.trim() || "Not provided"}</p>
+        <p className="profile-tab-text">{profile.fullName.trim() || "Not provided"}</p>
         <p className="profile-tab-text-2">{profile.email || "Email not provided"}</p>
       </div>
       <div className="profile-tab-row-2">
@@ -22,11 +22,8 @@ export const ProfileTab = ({ profile, isUploadingProfilePhoto, profilePhotoInput
     <div className="profile-tab-card-2">
       <SectionTitle title="Personal Information" subtitle="Your public-facing landlord profile"/>
       <div className="profile-tab-grid-2">
-        <Field label="First Name">
-          <SettingsInput value={profile.firstName} onChange={(e) => updateProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name"/>
-        </Field>
-        <Field label="Last Name">
-          <SettingsInput value={profile.lastName} onChange={(e) => updateProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name"/>
+        <Field label="Full Name">
+          <SettingsInput value={profile.fullName} onChange={(e) => updateProfile(p => ({ ...p, fullName: e.target.value }))} placeholder="Full name"/>
         </Field>
       </div>
       <Field label="Email Address" hint="Used for account login and notifications">

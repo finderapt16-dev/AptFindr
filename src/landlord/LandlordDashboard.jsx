@@ -1763,14 +1763,7 @@ export function LandlordDashboard() {
 
   const [profile, setProfile] =
     useState(() => ({
-      firstName:
-        user?.name?.split(" ")[0] ||
-        "",
-      lastName:
-        user?.name
-          ?.split(" ")
-          .slice(1)
-          .join(" ") || "",
+      fullName: user?.name?.trim() || "",
       email: user?.email || "",
       mobile:
         user?.mobileNumber || "",
@@ -1897,12 +1890,7 @@ export function LandlordDashboard() {
 
 
         const nextProfile = {
-          firstName:
-            fullName[0] || "",
-          lastName:
-            fullName
-              .slice(1)
-              .join(" "),
+          fullName: fullName.join(" "),
           email:
             userRow?.email ||
             user.email ||
@@ -2071,21 +2059,10 @@ export function LandlordDashboard() {
       }
 
 
-      if (!profile.firstName.trim()) {
-        toast.error(
-          "First name is required"
-        );
+      if (!profile.fullName.trim()) {
+        toast.error("Full name is required");
         return;
       }
-
-
-      if (!profile.lastName.trim()) {
-        toast.error(
-          "Last name is required"
-        );
-        return;
-      }
-
 
       if (!profile.email.trim()) {
         toast.error(
@@ -2138,7 +2115,7 @@ export function LandlordDashboard() {
         try {
           const updatedUser = {
             ...user,
-            name: [profile.firstName.trim(), profile.middleInitial.trim(), profile.lastName.trim()].filter(Boolean).join(" "),
+            name: profile.fullName.trim(),
             email:
               profile.email.trim(),
             mobileNumber:
@@ -2833,7 +2810,7 @@ export function LandlordDashboard() {
           await updateUserProfile({
             id: user.id,
             email: next.email,
-            name: `${next.firstName} ${next.lastName}`.trim(),
+            name: next.fullName.trim(),
             role: "landlord",
             avatar_url: avatar,
           });
@@ -2893,7 +2870,7 @@ export function LandlordDashboard() {
         await updateUserProfile({
           id: user.id,
           email: profile.email,
-          name: `${profile.firstName} ${profile.lastName}`.trim(),
+          name: profile.fullName.trim(),
           role: "landlord",
           avatar_url: "",
         });

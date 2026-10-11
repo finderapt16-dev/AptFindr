@@ -105,7 +105,7 @@ export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoad
           <p className="apartment-card-location">{locationText}</p>
           <ApartmentRatingSummary stats={ratingStats} isLoading={ratingsLoading} compact className="apartment-card-apartment-rating-summary"/>
           <p className="apartment-card-price">{priceLabel}</p>
-          <span className="apartment-card-details">View room details</span>
+          <span className="apartment-card-details">View apartment details</span>
         </CardContent>
       </Card>
     </Link>);

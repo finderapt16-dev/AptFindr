@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, isGoogleAuthUser, resendSignupVerification, signOutAuthSession, signupWithGoogle } from "@/services/authService";
 import { SignupAccountFields, SignupFullNameField, SignupPersonalFields } from "./SignupFields";
 import { SignupAgreement, SignupPolicyDialog } from "./SignupPolicyDialog";
-import { getSignupFullName, normalizeSignupValues, validateAccountDetails, validatePersonalInformation } from "./signupValidation";
+import { normalizeSignupValues, validateAccountDetails, validatePersonalInformation } from "./signupValidation";
 import { useSignupViewport } from "./useSignupViewport";
 
 const INITIAL_VALUES = {
@@ -196,12 +196,17 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     try {
       const input = {
         ...normalized,
+<<<<<<< HEAD
         name: isLandlord ? getSignupFullName(normalized) : normalized.fullName,
         username: "",
+=======
+        name: normalized.fullName,
+
+>>>>>>> e61d2d1 (redeploy updates)
         email: normalized.email,
         password: normalized.password,
         role: normalized.role,
-        middleInitial: isLandlord ? normalized.middleInitial : "",
+        middleInitial: "",
         address: "",
         mobileNumber: isLandlord ? normalized.mobileNumber : "",
         termsAccepted,

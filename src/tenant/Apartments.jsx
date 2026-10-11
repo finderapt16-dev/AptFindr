@@ -1333,7 +1333,7 @@ if (browseMode === "popular") {
                         >
                             <Eye className="apartment-browse-eye-icon-2" />
 
-                            View room details
+                            View apartment details
                         </Link>
                     </Button>
                 </div>

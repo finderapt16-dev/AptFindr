@@ -154,7 +154,7 @@ export function Favorites() {
             </div>
 
             <Button asChild variant="outline" className="apartment-browse-button-9">
-              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/favorites", backLabel: "Back to Favorites" }}><Eye className="apartment-browse-eye-icon-2"/>View room details</Link>
+              <Link to={`/apartment/${apartment.id}`} state={{ returnTo: "/favorites", backLabel: "Back to Favorites" }}><Eye className="apartment-browse-eye-icon-2"/>View apartment details</Link>
             </Button>
           </div>
         </article>);

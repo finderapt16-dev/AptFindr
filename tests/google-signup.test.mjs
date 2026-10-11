@@ -57,7 +57,7 @@ async function setup({ existing, confirmed = true, expired = false } = {}) {
 const input = {
   role: 'tenant', username: 'new_user', name: 'New User', email: 'untrusted@example.com',
   password: 'Strong123!', confirmPassword: 'Strong123!', termsAccepted: true,
-  firstName: 'New', lastName: 'User', mobileNumber: '09171234567', landlordVerificationAccepted: true,
+  fullName: 'New User', mobileNumber: '09171234567', landlordVerificationAccepted: true,
 };
 test('expired access token is refreshed before Google signup is completed', async () => {
   const { service } = await setup({ expired: true });
@@ -107,7 +107,7 @@ test('unverified Google email cannot create a profile', async () => {
 });
 test('missing terms, invalid role and incomplete landlord form are rejected', async () => {
   const { service, rows } = await setup();
-  for (const override of [{ termsAccepted: false }, { role: 'admin' }, { role: 'landlord', firstName: '' }]) {
+  for (const override of [{ termsAccepted: false }, { role: 'admin' }, { role: 'landlord', fullName: '' }]) {
     await assert.rejects(service.finalizeGoogleSignup(null, { ...input, ...override }));
   }
   assert.equal(rows.length, 0);

@@ -11,7 +11,7 @@
 
 .report-hero {
   border-radius: var(--radius-2xl, 1rem);
-  background-image: linear-gradient(to right in oklab, #f2f6fa 0%, #ffffff 100%);
+  background: #ffffff;
   min-height: 170px;
   padding: calc(var(--spacing, .25rem) * 6);
   border: 1px solid #d9d9d9;
