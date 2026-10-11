@@ -290,18 +290,6 @@ function TenantBrowse() {
 
 
     const [
-        currentPage,
-        setCurrentPage,
-    ] = useState(1);
-
-
-    const [
-        itemsPerPage,
-        setItemsPerPage,
-    ] = useState(9);
-
-
-    const [
         viewRows,
         setViewRows,
     ] = useState([]);
@@ -438,18 +426,6 @@ function TenantBrowse() {
             geocodeController.current?.abort(),
         []
     );
-
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [
-        searchQuery,
-        roomCapacity,
-        sortBy,
-        browseMode,
-        itemsPerPage,
-        savedPreferences,
-    ]);
 
 
     useEffect(() => {
@@ -985,36 +961,6 @@ if (browseMode === "popular") {
         savedPreferences,
         hasPersonalizationPreferences,
     ]);
-
-    const totalPages =
-        Math.max(
-            1,
-            Math.ceil(
-                filteredApartments.length /
-                    itemsPerPage
-            )
-        );
-
-
-    const safePage =
-        Math.min(
-            currentPage,
-            totalPages
-        );
-
-
-    const pageStart =
-        (safePage - 1) *
-        itemsPerPage;
-
-
-    const paginatedApartments =
-        filteredApartments.slice(
-            pageStart,
-            pageStart +
-                itemsPerPage
-        );
-
 
     const activeFilterCount = [
         savedPreferences.preferredArea?.trim(),
@@ -1720,7 +1666,7 @@ if (browseMode === "popular") {
                                   "grid" ? (
                                     <>
                                         <div className="apartment-browse-grid-11">
-                                            {paginatedApartments.map(
+                                            {filteredApartments.map(
                                                 (
                                                     apartment
                                                 ) => (
@@ -1735,33 +1681,6 @@ if (browseMode === "popular") {
                                                 )
                                             )}
                                         </div>
-
-                                        <Pagination
-                                            currentPage={
-                                                safePage
-                                            }
-                                            totalPages={
-                                                totalPages
-                                            }
-                                            totalItems={
-                                                filteredApartments.length
-                                            }
-                                            pageStart={
-                                                pageStart
-                                            }
-                                            pageCount={
-                                                paginatedApartments.length
-                                            }
-                                            itemsPerPage={
-                                                itemsPerPage
-                                            }
-                                            setCurrentPage={
-                                                setCurrentPage
-                                            }
-                                            setItemsPerPage={
-                                                setItemsPerPage
-                                            }
-                                        />
                                     </>
                                 ) : (
                                     <div className="apartment-browse-card-6">
@@ -1924,169 +1843,6 @@ function BrowseButton({
         >
             {label}
         </button>
-    );
-}
-
-
-function Pagination({
-    currentPage,
-    totalPages,
-    totalItems,
-    pageStart,
-    pageCount,
-    itemsPerPage,
-    setCurrentPage,
-    setItemsPerPage,
-}) {
-    const visiblePageCount =
-        Math.min(5, totalPages);
-
-    const firstVisiblePage =
-        Math.min(
-            Math.max(
-                1,
-                currentPage -
-                    Math.floor(
-                        visiblePageCount /
-                            2
-                    )
-            ),
-
-            Math.max(
-                1,
-                totalPages -
-                    visiblePageCount +
-                    1
-            )
-        );
-
-
-    const visiblePages =
-        Array.from(
-            {
-                length:
-                    visiblePageCount,
-            },
-            (_, index) =>
-                firstVisiblePage +
-                index
-        );
-
-
-    return (
-        <div className="apartment-browse-content-3">
-            <p className="apartment-browse-showing">
-                Showing{" "}
-                {totalItems === 0
-                    ? 0
-                    : pageStart +
-                      1}{" "}
-                to{" "}
-                {pageStart +
-                    pageCount}{" "}
-                of {totalItems} apartments
-            </p>
-
-            <div className="apartment-browse-row-14">
-                <button
-                    disabled={
-                        currentPage === 1
-                    }
-                    onClick={() =>
-                        setCurrentPage(
-                            Math.max(
-                                1,
-                                currentPage -
-                                    1
-                            )
-                        )
-                    }
-                    className="apartment-browse-button-13"
-                >
-                    <ChevronLeft className="apartment-browse-chevron-left-icon" />
-                </button>
-
-                {visiblePages.map(
-                    (page) => (
-                        <button
-                            key={
-                                page
-                            }
-                            onClick={() =>
-                                setCurrentPage(
-                                    page
-                                )
-                            }
-                            className={`apartment-browse-button-14 ${
-                                currentPage ===
-                                page
-                                    ? "apartment-browse-button-15"
-                                    : "apartment-browse-button-16"
-                            }`}
-                        >
-                            {
-                                page
-                            }
-                        </button>
-                    )
-                )}
-
-                <button
-                    disabled={
-                        currentPage ===
-                        totalPages
-                    }
-                    onClick={() =>
-                        setCurrentPage(
-                            Math.min(
-                                totalPages,
-                                currentPage +
-                                    1
-                            )
-                        )
-                    }
-                    className="apartment-browse-button-13"
-                >
-                    <ChevronRight className="apartment-browse-chevron-right-icon" />
-                </button>
-
-                <select
-                    value={
-                        itemsPerPage
-                    }
-                    onChange={(
-                        event
-                    ) =>
-                        setItemsPerPage(
-                            Number(
-                                event
-                                    .target
-                                    .value
-                            )
-                        )
-                    }
-                    className="apartment-browse-select"
-                >
-                    <option value={6}>
-                        Show:
-                        6 per
-                        page
-                    </option>
-
-                    <option value={9}>
-                        Show:
-                        9 per
-                        page
-                    </option>
-
-                    <option value={12}>
-                        Show:
-                        12 per
-                        page
-                    </option>
-                </select>
-            </div>
-        </div>
     );
 }
 

@@ -107,7 +107,7 @@ test('unverified Google email cannot create a profile', async () => {
 });
 test('missing terms, invalid role and incomplete landlord form are rejected', async () => {
   const { service, rows } = await setup();
-  for (const override of [{ termsAccepted: false }, { role: 'admin' }, { role: 'landlord', firstName: '' }, { username: '' }]) {
+  for (const override of [{ termsAccepted: false }, { role: 'admin' }, { role: 'landlord', firstName: '' }]) {
     await assert.rejects(service.finalizeGoogleSignup(null, { ...input, ...override }));
   }
   assert.equal(rows.length, 0);
@@ -148,3 +148,15 @@ test('immediate Google retry waits for closing reset and opens the account choos
     assert.equal(writes[1].oauth.options.queryParams.prompt, 'select_account');
   } finally { delete globalThis.window; }
 });
+
+for (const role of ['tenant', 'landlord']) {
+ test('Google '+role+' signup does not require a username', async () => {
+  const {service,rows}=await setup();
+  const {username,...values}=input;
+  const profile=await service.finalizeGoogleSignup(null,{...values,role});
+  assert.equal(profile.email,'verified@gmail.com');
+  assert.equal(profile.role,role);
+  assert.equal(rows.length,1);
+  assert.match(profile.username,/^usr_/);
+ });
+}

@@ -71,8 +71,8 @@ export function Login({
     ===================================================== */
 
     const [
-        username,
-        setUsername,
+        email,
+        setEmail,
     ] = useState("");
 
     const [
@@ -282,8 +282,8 @@ export function Login({
             try {
                 const result =
                     await login({
-                        username:
-                            username.trim(),
+                        email:
+                            email.trim(),
                         password,
                     });
 
@@ -292,7 +292,7 @@ export function Login({
                 ) {
                     setError(
                         result.error ||
-                            "Invalid username or password."
+                            "Invalid email or password."
                     );
 
                     return;
@@ -478,7 +478,7 @@ export function Login({
                 </h2>
 
                 <p className="login-subtitle">
-                    Enter your username and
+                    Enter your email and
                     password to continue.
                 </p>
 
@@ -563,16 +563,21 @@ export function Login({
 
                 <div className="login-form-fields">
 
-                    {/* USERNAME */}
+                    {/* EMAIL */}
 
                     <AuthField
-                        id="login-username"
-                        label="Username"
+                        id="login-email"
+                        label="Email Address"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         value={
-                            username
+                            email
                         }
                         onChange={
-                            setUsername
+                            setEmail
                         }
                         required
                     />

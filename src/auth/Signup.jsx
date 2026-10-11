@@ -1,3 +1,4 @@
+
 import "./signup.css";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -5,14 +6,14 @@ import { AlertCircle, ArrowRight, Building2, ChevronRight, Home, Info, Users } f
 import { AppLogo } from "@/components/AppLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, isGoogleAuthUser, resendSignupVerification, signOutAuthSession, signupWithGoogle } from "@/services/authService";
-import { SignupAccountFields, SignupPersonalFields } from "./SignupFields";
+import { SignupAccountFields, SignupFullNameField, SignupPersonalFields } from "./SignupFields";
 import { SignupAgreement, SignupPolicyDialog } from "./SignupPolicyDialog";
 import { getSignupFullName, normalizeSignupValues, validateAccountDetails, validatePersonalInformation } from "./signupValidation";
 import { useSignupViewport } from "./useSignupViewport";
 
 const INITIAL_VALUES = {
-  role: "", username: "", email: "", password: "", confirmPassword: "",
-  firstName: "", lastName: "", middleInitial: "", mobileNumber: "",
+  role: "", email: "", password: "", confirmPassword: "",
+  fullName: "", firstName: "", lastName: "", middleInitial: "", mobileNumber: "",
 };
 const LANDLORD_STEPS = ["Account Details", "Personal Information"];
 
@@ -25,23 +26,6 @@ function GoogleIcon() {
       <path fill="#EA4335" d="M12 5.93c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3 14.62 2.24 12 2.24a9.72 9.72 0 0 0-7.68 5.44l2.9 2.24c.76-2.29 2.9-3.99 5.42-3.99Z" />
     </svg>
   );
-}
-
-function getGoogleNameFields(authUser) {
-  const metadata = authUser?.user_metadata && typeof authUser.user_metadata === "object"
-    ? authUser.user_metadata
-    : {};
-  const firstName = typeof metadata.given_name === "string" ? metadata.given_name.trim() : "";
-  const lastName = typeof metadata.family_name === "string" ? metadata.family_name.trim() : "";
-  if (firstName || lastName) return { firstName, lastName };
-
-  const fullName = [metadata.full_name, metadata.name]
-    .find((value) => typeof value === "string" && value.trim())?.trim() ?? "";
-  const parts = fullName.split(/\s+/).filter(Boolean);
-  return {
-    firstName: parts[0] ?? "",
-    lastName: parts.slice(1).join(" "),
-  };
 }
 
 export function Signup({ embedded = false, redirect = null, onClose }) {
@@ -98,13 +82,13 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
         return;
       }
       setGoogleIdentity(data.user);
-      const googleName = getGoogleNameFields(data.user);
+
       setValues(current => ({
         ...current,
         role: current.role || googleSetupRole,
         email: data.user.email || current.email,
-        firstName: current.firstName || googleName.firstName,
-        lastName: current.lastName || googleName.lastName,
+        firstName: current.firstName,
+        lastName: current.lastName,
       }));
     }).catch(() => { if (active) setError("Unable to verify your Google session. Please sign in again."); });
     return () => { active = false; };
@@ -169,6 +153,11 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       showValidation(accountErrors, isLandlord ? 1 : undefined);
       return;
     }
+    if (!isLandlord) {
+      const nameErrors = {};
+      if (!normalized.fullName) nameErrors.fullName = "Full name is required.";
+      if (Object.keys(nameErrors).length) { showValidation(nameErrors); return; }
+    }
     if (isLandlord) {
       const personalErrors = validatePersonalInformation(normalized);
       if (Object.keys(personalErrors).length) {
@@ -189,8 +178,8 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     try {
       const input = {
         ...normalized,
-        name: isLandlord ? getSignupFullName(normalized) : normalized.username,
-        username: normalized.username,
+        name: isLandlord ? getSignupFullName(normalized) : normalized.fullName,
+
         email: normalized.email,
         password: normalized.password,
         role: normalized.role,
@@ -224,7 +213,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
           return;
         }
 
-        const message = result.signup?.profileSetupError || `Account created! Check ${normalized.email} for your confirmation link (including your spam folder). After confirming your email, sign in with the username and password you created.`;
+        const message = result.signup?.profileSetupError || `Account created! Check ${normalized.email} for your confirmation link (including your spam folder). After confirming your email, sign in with the email address and password you created.`;
         setPendingEmail(normalized.email);
         setVerificationMessage(message);
         setResendCooldown(60);
@@ -294,7 +283,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       <div className="auth-status-card">
         <h1 id="verification-title" className="auth-status-title">Check your email</h1>
         <p className="auth-status-description" role="status">{verificationMessage}</p>
-        <p className="auth-status-description">After confirming your email, sign in with the username and password you created.</p>
+        <p className="auth-status-description">After confirming your email, sign in with the email address and password you created.</p>
         {error && <p role="alert" className="signup-message">{error}</p>}
         <button type="button" className="signup-primary-button" disabled={loading || resendCooldown > 0} onClick={resendPendingEmail}>
           {busy === "resend" ? "Requesting email..." : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend confirmation email"}
@@ -327,7 +316,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               <div className="signup-google-setup-notice" role="status">
                 <Info aria-hidden="true" />
                 <p>
-                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Complete your tenant account and press <strong>Create Account</strong>. Your password also lets you sign in with your username.
+                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Complete your tenant account and press <strong>Create Account</strong>. Your password also lets you sign in with your email address.
                 </p>
               </div>
             )}
@@ -358,7 +347,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               )}
               {values.role === "tenant" && (
                 <>
-                  <div className="signup-tenant-simple-form"><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} /></div>
+                  <div className="signup-tenant-simple-form">{<SignupFullNameField values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant-name"/>}<SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} /></div>
                   {agreement}
                   {createButton}
                   {!googleSetup && <><div className="signup-social-divider" aria-hidden="true"><span /><b>or</b><span /></div>

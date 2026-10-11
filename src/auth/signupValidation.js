@@ -1,4 +1,4 @@
-export const ACCOUNT_REVIEW_FIELDS = ["username", "email"];
+export const ACCOUNT_REVIEW_FIELDS = ["email"];
 export const PERSONAL_REVIEW_FIELDS = ["firstName", "lastName", "middleInitial", "mobileNumber"];
 
 export const PASSWORD_REQUIREMENTS = "At least 8 characters with letters and numbers.";
@@ -12,9 +12,7 @@ export function validateSignupPassword(password = "") {
 
 export function validateAccountDetails(values, { includePassword = true } = {}) {
   const errors = {};
-  if (!/^[A-Za-z0-9_]{4,30}$/.test(String(values.username ?? "").trim())) {
-    errors.username = "Use 4–30 letters, numbers, or underscores, with no spaces.";
-  }
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.email ?? "").trim())) {
     errors.email = "Enter a valid email address.";
   }
@@ -48,7 +46,7 @@ export function validatePersonalInformation(values) {
 
 export function normalizeSignupValues(values) {
   const normalized = { ...values };
-  for (const field of [...ACCOUNT_REVIEW_FIELDS, ...PERSONAL_REVIEW_FIELDS]) {
+  for (const field of [...ACCOUNT_REVIEW_FIELDS, ...PERSONAL_REVIEW_FIELDS, "fullName"]) {
     if (typeof normalized[field] === "string") normalized[field] = normalized[field].trim();
   }
   if (typeof normalized.middleInitial === "string") {

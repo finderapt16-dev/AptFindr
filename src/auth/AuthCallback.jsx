@@ -10,7 +10,7 @@ function getOAuthErrorMessage(params) {
     // A confirmation link that has expired or was already used (mail scanners
     // often open links before the person does) is not a Google problem.
     if (/otp_expired|email link is invalid/i.test(error)) {
-        return "This confirmation link has expired or was already used. If you already confirmed your email, sign in with your username and password.";
+        return "This confirmation link has expired or was already used. If you already confirmed your email, sign in with your email address and password.";
     }
     if (/access_denied|cancel(?:led|ed)?/i.test(error)) {
         return "Google sign-in was cancelled. You can try again whenever you are ready.";

@@ -9,21 +9,10 @@ import { useState } from "react";
 
 const personalFields = [
     {
-        key: "firstName",
-        label: "First Name",
+        key: "fullName",
+        label: "Full Name",
         required: true,
-        autoComplete: "given-name",
-    },
-    {
-        key: "lastName",
-        label: "Last Name",
-        required: true,
-        autoComplete: "family-name",
-    },
-    {
-        key: "middleInitial",
-        label: "Middle Initial (Optional)",
-        autoComplete: "additional-name",
+        autoComplete: "name",
     },
     {
         key: "mobile",
@@ -219,12 +208,7 @@ export function Settings({
     const disabled = loading || busy;
 
     const profileName =
-        [
-            profile?.firstName,
-            profile?.lastName,
-        ]
-            .filter(Boolean)
-            .join(" ") ||
+        profile?.fullName?.trim() ||
         user?.name ||
         "Your profile";
 
@@ -234,7 +218,7 @@ export function Settings({
         "";
 
     const avatarLetter = (
-        profile?.firstName?.[0] ||
+        profile?.fullName?.[0] ||
         user?.name?.[0] ||
         "U"
     ).toUpperCase();
@@ -443,8 +427,7 @@ export function Settings({
                         onClick={() =>
                             setProfile((current) => ({
                                 ...current,
-                                firstName: "",
-                                lastName: "",
+                                fullName: "",
                                 middleInitial: "",
                                 mobile: "",
                                 email: "",

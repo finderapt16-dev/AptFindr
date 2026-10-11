@@ -17,13 +17,15 @@ test('pending email signup uses the entered email and does not write app profile
         source = source.replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.env.DEV', 'false');
         source = `const supabaseClient = globalThis.${key};
             const validateSignupPassword = () => null;
+            const safeRandomId = () => "0123456789abcdef0123456789abcdef";
             const window = { location: { origin: 'https://aptfindr.example' } };\n` + source;
         const service = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
         const result = await service.signupUser({
-            email: ' New.User@gmail.com ', username: 'new_user', name: 'New User',
+            email: ' New.User@gmail.com ', name: 'New User',
             password: 'Strong123!', role: 'tenant', termsAccepted: true,
         });
         assert.equal(submitted.email, 'new.user@gmail.com');
+        assert.match(submitted.options.data.username, /^usr_[a-z0-9]{26}$/);
         assert.equal(submitted.options.emailRedirectTo, 'https://aptfindr.example/auth/callback');
         assert.equal(result.requiresEmailVerification, true);
         assert.equal(result.profileCreated, false);

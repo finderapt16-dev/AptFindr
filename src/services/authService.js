@@ -558,7 +558,8 @@ function pendingSignupUser(input, authId, role) {
 }
 export async function signupUser(input) {
     const email = input.email.trim().toLowerCase();
-    const username = input.username.trim().toLowerCase();
+    const username = input.username?.trim().toLowerCase() || `usr_${safeRandomId().replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase()}`;
+    input = { ...input, username };
     const role = isTenantRole(input.role) ? 'tenant' : input.role;
     if (role !== 'tenant' && role !== 'landlord')
         throw new SignupFlowError('Public registration supports tenant and landlord accounts only.', 'validation', 'invalid_public_role');
@@ -566,8 +567,6 @@ export async function signupUser(input) {
         throw new SignupFlowError('You must agree to the Terms of Use and Privacy Policy to continue.', 'validation', 'terms_required');
     if (role === 'landlord' && input.landlordVerificationAccepted !== true)
         throw new SignupFlowError('You must agree to the Terms of Use and Landlord Verification Policy to continue.', 'validation', 'landlord_policy_required');
-    if (!/^[a-z0-9_]{4,30}$/.test(username))
-        throw new SignupFlowError('Username must be 4–30 characters using only letters, numbers, or underscores.', 'validation', 'invalid_username');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         throw new SignupFlowError('Enter a valid email address.', 'validation', 'invalid_email');
     const passwordError = validateSignupPassword(input.password);
@@ -674,12 +673,13 @@ export async function finalizeGoogleSignup(_authUser, input = {}) {
         ...(input.role === 'landlord' ? validatePersonalInformation(input) : {}),
     };
     if (Object.keys(errors).length) throw new Error(Object.values(errors)[0]);
+    const username = input.username?.trim().toLowerCase() || `usr_${authUser.id.replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase()}`;
     const placeholder = await fetchUserByAuthId(authUser.id);
     if (isUnfinishedGoogleProfile(authUser, placeholder)) {
         const { error: pendingError } = await supabaseClient.auth.updateUser({ data: { googleSignupCompleted: false } });
         if (pendingError) throw new Error(pendingError.message);
         const { error: profileError } = await supabaseClient.from(APP_USERS_TABLE).update({
-            username: input.username.trim().toLowerCase(), name: input.name,
+            username, name: input.name,
             role: input.role, mobile: input.mobileNumber || null,
             status: input.role === 'landlord' ? 'pending' : 'active',
             is_verified: input.role !== 'landlord',
@@ -690,7 +690,9 @@ export async function finalizeGoogleSignup(_authUser, input = {}) {
         password: input.password,
         data: {
             name: input.name,
-            username: input.username.trim().toLowerCase(),
+            given_name: input.firstName?.trim() || undefined,
+            family_name: input.lastName?.trim() || undefined,
+            username,
             role: input.role,
             mobile: input.mobileNumber,
             middleInitial: input.middleInitial,
@@ -763,29 +765,12 @@ export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
     }
 }
 export async function loginUser(credentials) {
-    const username = credentials.username?.trim().toLowerCase();
+    const email = credentials.email?.trim().toLowerCase();
     const password = credentials.password;
-    if (!username || !password) {
-        throw new Error('Username and password are required.');
-    }
-    // Resolve only the internal Supabase Auth email. Password verification still
-    // happens through Supabase Auth, and app_users remains protected by RLS.
-    const { data: resolvedEmail, error: resolveError } = await supabaseClient.rpc('fn_resolve_username_login', {
-        p_username: username,
-    });
-    if (resolveError) {
-        console.error('[AUTH] Username resolution failed', {
-            message: resolveError.message,
-            code: resolveError.code,
-            details: resolveError.details,
-        });
-        throw new Error('Username sign-in is temporarily unavailable. Please try again later.');
-    }
-    if (typeof resolvedEmail !== 'string' || !resolvedEmail.trim()) {
-        throw new Error('Invalid username or password.');
-    }
+    if (!email || !password) throw new Error('Email address and password are required.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
     const { data, error: signInError } = await supabaseClient.auth.signInWithPassword({
-        email: resolvedEmail.trim(),
+        email,
         password,
     });
     if (signInError || !data.user) {
@@ -801,7 +786,7 @@ export async function loginUser(credentials) {
         if (/email.*not.*confirm|confirm.*email|verify.*email/i.test(message)) {
             throw new Error('Please verify your account before signing in.');
         }
-        throw new Error('Invalid username or password.');
+        throw new Error('Invalid email address or password.');
     }
     if (requiresPendingEmailVerification(data.user)) {
         await supabaseClient.auth.signOut();
@@ -809,7 +794,7 @@ export async function loginUser(credentials) {
     }
     const profile = await ensureProfileForAuthUser(data.user);
     assertActiveAccount(profile);
-    await recordLogin(profile, data.user.id, true, { username });
+    await recordLogin(profile, data.user.id, true, { email });
     persistCurrentUser(profile);
     return profile;
 }

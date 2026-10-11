@@ -22,7 +22,6 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
 
   return (
     <>
-      <AuthField {...fieldProps("username")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={30} />
       {!hideEmail && <AuthField {...fieldProps("email")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>
@@ -55,4 +54,8 @@ export function SignupPersonalFields({ values, onChange, errors = {}, disabled =
       <AuthField {...fieldProps("mobileNumber")} label="Mobile Number" type="tel" required placeholder="Enter your mobile number" autoComplete="tel" inputMode="tel" />
     </>
   );
+}
+
+export function SignupFullNameField({ values, onChange, errors = {}, disabled = false, idPrefix = "signup-name" }) {
+  return <AuthField id={idPrefix + "-fullName"} name="fullName" label="Full Name" required placeholder="Enter your full name" value={values.fullName ?? ""} onChange={value => onChange("fullName", value)} error={errors.fullName} disabled={disabled} autoComplete="name" />;
 }

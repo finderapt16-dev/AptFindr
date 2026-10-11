@@ -30,13 +30,16 @@ const CardTitle = ({ icon: Icon, title, subtitle, tone = "settings-tone-brand" }
 function profileNameParts(user) {
     const name = String(user?.name ?? "").trim();
     const username = String(user?.username ?? "").trim();
-    // Tenant signup stores the username as a display name until a real name is saved.
+    // Generated account display names are not personal names.
+    const emailName = String(user?.email ?? "").trim().split("@")[0];
+    if (isTenantRole(user?.role) && emailName && name.toLowerCase() === emailName.toLowerCase()) return [];
     if (isTenantRole(user?.role) && username && name.toLowerCase() === username.toLowerCase()) return [];
     return name.split(/\s+/).filter(Boolean);
 }
 function profileStateFromUser(user) {
     const nameParts = profileNameParts(user);
     return {
+        fullName: nameParts.join(" "),
         firstName: nameParts[0] || "",
         lastName: nameParts.slice(1).join(" "),
         middleInitial: user?.middleInitial || "",
@@ -103,6 +106,7 @@ export function Settings({ embedded = false } = {}) {
                     : nameParts.slice(1).join(" ");
                 setProfile((current) => ({
                     ...current,
+                    fullName: nameParts.join(" "),
                     firstName: nameParts[0] ?? "",
                     lastName,
                     middleInitial,
@@ -139,7 +143,7 @@ export function Settings({ embedded = false } = {}) {
             setPreferencesLoading(false); });
         return () => { active = false; };
     }, [user?.id]);
-    const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+    const fullName = isTenantRole(user?.role) ? profile.fullName.trim() : `${profile.firstName} ${profile.lastName}`.trim();
     const roleLabel = user?.role === "admin" ? "Admin" : user?.role === "landlord" ? "Landlord" : "Tenant";
     const roleProfileLabel = user?.role === "landlord"
         ? "Landlord Account Information"
@@ -217,8 +221,8 @@ export function Settings({ embedded = false } = {}) {
     const handleUpdateProfile = async () => {
         if (!user)
             return;
-        if (!profile.firstName.trim() || !profile.lastName.trim()) {
-            toast.error("Please enter your first and last name.");
+        if (isTenantRole(user.role) ? !profile.fullName.trim() : (!profile.firstName.trim() || !profile.lastName.trim())) {
+            toast.error(isTenantRole(user.role) ? "Please enter your full name." : "Please enter your first and last name.");
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
@@ -226,7 +230,7 @@ export function Settings({ embedded = false } = {}) {
             return;
         }
         try {
-            const name = `${profile.firstName.trim()} ${profile.middleInitial.trim() ? `${profile.middleInitial.trim()}. ` : ""}${profile.lastName.trim()}`.trim();
+            const name = isTenantRole(user.role) ? profile.fullName.trim() : `${profile.firstName.trim()} ${profile.middleInitial.trim() ? `${profile.middleInitial.trim()}. ` : ""}${profile.lastName.trim()}`.trim();
             await updateUser(user.id, {
                 name,
                 email: profile.email.trim(),
@@ -259,6 +263,7 @@ export function Settings({ embedded = false } = {}) {
                         : nameParts.slice(1).join(" ");
                     setProfile((current) => ({
                         ...current,
+                        fullName: nameParts.join(" "),
                         firstName: nameParts[0] ?? "",
                         lastName,
                         middleInitial,
