@@ -12,7 +12,7 @@ export function validateSignupPassword(password = "") {
 
 export function validateAccountDetails(values, { includePassword = true } = {}) {
   const errors = {};
-  if (!/^[a-zA-Z0-9_]{3,30}$/.test(String(values.username ?? "").trim())) errors.username = "Use 3?30 letters, numbers, or underscores.";
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(String(values.username ?? "").trim())) errors.username = "Use 3 to 30 letters, numbers, or underscores.";
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.email ?? "").trim())) {
     errors.email = "Enter a valid email address.";

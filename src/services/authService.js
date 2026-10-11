@@ -65,28 +65,12 @@ function normalizeRoleValue(value) {
 function normalizeEmailAddress(email) {
     return String(email ?? '').trim().toLowerCase();
 }
-function shortStableHash(value) {
-    let hash = 0;
-    for (const character of value) {
-        hash = Math.imul(31, hash) + character.charCodeAt(0) | 0;
-    }
-    return Math.abs(hash).toString(36).padStart(6, '0').slice(0, 6);
-}
-function createProfileUsername(email) {
-    const normalizedEmail = normalizeEmailAddress(email);
-    const localPart = normalizedEmail.split('@')[0] || 'user';
-    const safeBase = localPart
-        .replace(/[^a-z0-9_]+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .replace(/_+/g, '_') || 'user';
-    const suffix = shortStableHash(normalizedEmail || safeBase);
-    return `${safeBase.slice(0, 23)}_${suffix}`.slice(0, 30);
-}
-function resolveProfileUsername(username, email) {
+function resolveProfileUsername(username) {
     const normalizedUsername = typeof username === 'string' ? username.trim().toLowerCase() : '';
-    return /^[a-z0-9_]{4,30}$/.test(normalizedUsername)
-        ? normalizedUsername
-        : createProfileUsername(email);
+    if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) {
+        throw new Error('Enter a username using 3 to 30 letters, numbers, or underscores.');
+    }
+    return normalizedUsername;
 }
 function getEmailDisplayName(email) {
     return normalizeEmailAddress(email).split('@')[0] || 'User';
@@ -434,7 +418,7 @@ async function ensureProfileForAuthUser(authUser) {
         auth_id: authUser.id,
         email,
         name,
-        username: resolveProfileUsername(authUser.user_metadata?.username, email),
+        username: resolveProfileUsername(authUser.user_metadata?.username),
         middle_initial: nonEmptyString(middleInitial),
         address: nonEmptyString(address),
         mobile: nonEmptyString(mobile),
@@ -579,7 +563,7 @@ function pendingSignupUser(input, authId, role) {
         authId,
         name: input.name,
         email,
-        username: resolveProfileUsername(input.username, email),
+        username: resolveProfileUsername(input.username),
         role,
         status: role === 'landlord' ? 'pending' : 'active',
         isVerified: role !== 'landlord',
@@ -587,9 +571,14 @@ function pendingSignupUser(input, authId, role) {
         mobileNumber: input.mobile ?? input.mobileNumber,
     };
 }
+async function assertUsernameAvailable(username) {
+    const { data, error } = await supabaseClient.rpc('is_username_available', { p_username: username });
+    if (error) throw new Error('Unable to check username availability. Please try again later.');
+    if (data !== true) throw new Error('This username is already taken. Please choose another.');
+}
 export async function signupUser(input) {
     const email = normalizeEmailAddress(input.email);
-    const username = resolveProfileUsername(input.username, email);
+    const username = resolveProfileUsername(input.username);
     const role = isTenantRole(input.role) ? 'tenant' : input.role;
     if (role !== 'tenant' && role !== 'landlord')
         throw new SignupFlowError('Public registration supports tenant and landlord accounts only.', 'validation', 'invalid_public_role');
@@ -601,6 +590,7 @@ export async function signupUser(input) {
         throw new SignupFlowError('Enter a valid email address.', 'validation', 'invalid_email');
     const passwordError = validateSignupPassword(input.password);
     if (passwordError) throw new SignupFlowError(passwordError, 'validation', 'weak_password');
+    await assertUsernameAvailable(username);
     signupLog('[AUTH] Signup started', { email, role });
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
         email,
@@ -703,7 +693,8 @@ export async function finalizeGoogleSignup(_authUser, input = {}) {
         ...(input.role === 'landlord' ? validatePersonalInformation(input) : {}),
     };
     if (Object.keys(errors).length) throw new Error(Object.values(errors)[0]);
-    const profileUsername = resolveProfileUsername(input.username, authUser.email);
+    const profileUsername = resolveProfileUsername(input.username);
+    await assertUsernameAvailable(profileUsername);
     const placeholder = await fetchUserByAuthId(authUser.id);
     if (isUnfinishedGoogleProfile(authUser, placeholder)) {
         const { error: pendingError } = await supabaseClient.auth.updateUser({ data: { googleSignupCompleted: false } });
