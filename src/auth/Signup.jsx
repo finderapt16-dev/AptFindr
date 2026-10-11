@@ -196,13 +196,6 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     try {
       const input = {
         ...normalized,
-<<<<<<< HEAD
-        name: isLandlord ? getSignupFullName(normalized) : normalized.fullName,
-        username: "",
-=======
-        name: normalized.fullName,
-
->>>>>>> e61d2d1 (redeploy updates)
         email: normalized.email,
         password: normalized.password,
         role: normalized.role,
