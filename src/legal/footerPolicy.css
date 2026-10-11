@@ -1,0 +1,14 @@
+.ui-dialog-content.apf-footer-policy-dialog { width: min(535px, calc(100% - 24px)); max-height: calc(100dvh - 32px); border-radius: 8px; font-family: inherit; }
+.apf-footer-policy-dialog .apf-policy-head { padding: 22px 56px 14px 24px; }
+.ui-dialog-content.apf-footer-policy-dialog .apf-policy-title { font-size: 20px; color: #000; line-height: 1.4; }
+.apf-footer-policy-dialog .apf-policy-scroll { margin: 0; padding: 0 24px 20px; border: 0; border-radius: 0; }
+.apf-footer-policy-dialog .apf-policy-section { padding-top: 14px; }
+.apf-footer-policy-dialog .apf-policy-section-title { margin-bottom: 4px; font-size: 16px; line-height: 1.3; }
+.apf-footer-policy-dialog .apf-policy-paragraph { margin: 0; color: #64748b; font-size: 13px; line-height: 1.2; }
+.apf-footer-policy-dialog .ui-dialog-close { top: 20px; right: 20px; color: #64748b; }
+@media (max-width: 640px) {
+ .apf-footer-policy-dialog .apf-policy-head { padding-left: 18px; }
+ .apf-footer-policy-dialog .apf-policy-scroll { padding: 0 18px 20px; }
+ .apf-footer-policy-dialog .apf-policy-paragraph { font-size: 14px; line-height: 1.5; }
+ .apf-footer-policy-dialog .ui-dialog-close { min-width: 44px; min-height: 44px; top: 12px; right: 8px; }
+}

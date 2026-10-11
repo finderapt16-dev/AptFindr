@@ -1,3 +1,4 @@
+import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 import { createContext, createElement, useContext, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
@@ -79,11 +80,9 @@ function useFavoritesState() {
         }
     }, [user?.id]);
     useEffect(() => {
-        const refreshWhenOnline = () => void loadFavorites();
-        void loadFavorites();
-        window.addEventListener('online', refreshWhenOnline);
-        return () => window.removeEventListener('online', refreshWhenOnline);
-    }, [loadFavorites]);
+        if (!user?.id) { void loadFavorites(); return undefined; }
+        return subscribeToLiveUpdates(user.id, "favorites", loadFavorites);
+    }, [loadFavorites, user?.id]);
     const toggleFavorite = useCallback(async (apartmentId) => {
         if (!isAuthenticated || !user?.id) {
             toast.error('Please sign in to save favorites.');

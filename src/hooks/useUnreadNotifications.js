@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchNotifications } from "@/services/dashboardSupabaseService";
-import { supabase } from "@/services/supabaseClient";
+import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 
 const isUnread = (notification) => !(notification.read ?? notification.is_read);
 
@@ -15,7 +15,7 @@ export function useUnreadNotifications(userId) {
 
     try {
       const notifications = await fetchNotifications(userId);
-      setUnreadCount(Array.isArray(notifications) ? notifications.filter(isUnread).length : 0);
+      setUnreadCount(Array.isArray(notifications) ? notifications.filter(item => item.is_deleted !== true && isUnread(item)).length : 0);
     } catch (error) {
       console.warn("Unable to load the unread notification count.", error);
       setUnreadCount(0);
@@ -23,25 +23,9 @@ export function useUnreadNotifications(userId) {
   }, [userId]);
 
   useEffect(() => {
-    void refresh();
-    if (!userId) return undefined;
-
-    const refreshWhenOnline = () => void refresh();
-    window.addEventListener("online", refreshWhenOnline);
-    let channel;
-    try {
-      channel = supabase
-        .channel(`menu-notifications-${userId}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, () => void refresh())
-        .subscribe();
-    } catch (error) {
-      console.warn("Unable to subscribe to notification updates.", error);
-    }
-
-    return () => {
-      window.removeEventListener("online", refreshWhenOnline);
-      if (channel) void supabase.removeChannel(channel);
-    };
+    if (!userId) { setUnreadCount(0); return undefined; }
+    setUnreadCount(null);
+    return subscribeToLiveUpdates(userId, "notifications", refresh);
   }, [refresh, userId]);
 
   return unreadCount;

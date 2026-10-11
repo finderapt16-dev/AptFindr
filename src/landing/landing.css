@@ -2211,11 +2211,18 @@
     .ui-dialog-content.landing-signup-modal { animation: none; }
 }
 
-/* The legal links in the footer navigate to the public documents
-   (/privacy-policy and /terms-of-service) - the same shareable URLs that are
-   submitted to Supabase - so they are real anchors, not buttons. They keep the
-   hover and focus treatment of the other footer links. */
+/* Footer policy buttons keep the same typography as the surrounding links. */
 .landing-footer-policy-link {
+  appearance: none;
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
   text-decoration: none;
   transition: color 120ms ease;
 }

@@ -1,3 +1,4 @@
+import { notifyNotificationsChanged } from "./liveUpdates";
 import { supabase } from "./supabaseClient";
 import { safeRandomId } from "../utils/safeRandomId";
 import { apartmentRowToApartment } from "../data/apartments";
@@ -448,6 +449,7 @@ export async function markNotificationRead(notificationId, userId) {
             writeCachedValue(`notifications:${userId}:all`, "");
         }
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return toNotificationRow(data);
     }
     catch (error) {
@@ -472,6 +474,7 @@ export async function markAllNotificationsRead(userId) {
         writeCachedValue(`notifications:${userId}`, "");
         writeCachedValue(`notifications:${userId}:all`, "");
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return data.length;
     }
     catch (error) {
@@ -502,6 +505,7 @@ export async function markNotificationUnread(notificationId, userId) {
             writeCachedValue(`notifications:${userId}:all`, "");
         }
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return toNotificationRow(data);
     }
     catch (error) {
@@ -532,6 +536,7 @@ export async function deleteNotification(notificationId, userId) {
             writeCachedValue(`notifications:${userId}:all`, "");
         }
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return true;
     }
     catch (error) {
@@ -645,6 +650,7 @@ export async function permanentlyDeleteNotification(notificationId, userId) {
             writeCachedValue(`notifications:${userId}:all`, "");
         }
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return true;
     }
     catch (error) {
@@ -672,6 +678,7 @@ export async function unarchiveNotification(notificationId, userId) {
             writeCachedValue(`notifications:${userId}:all`, "");
         }
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return true;
     }
     catch (error) {
@@ -698,6 +705,7 @@ export async function deleteAllNotifications(userId) {
         writeCachedValue(`notifications:${userId}`, "");
         writeCachedValue(`notifications:${userId}:all`, "");
         writeCachedValue("notifications", "");
+        notifyNotificationsChanged(userId);
         return data.length;
     }
     catch (error) {

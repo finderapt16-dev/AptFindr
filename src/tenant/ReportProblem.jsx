@@ -46,7 +46,7 @@ export const ReportProblem = ({ reportSubmitted, resetReport, reportForm, setRep
           <ReportStep step="4" title="Contact Information" description="We may contact you for more details if needed.">
             <div className="report-section-panel-3">
               <Mail className="report-section-mail-icon"/>
-              <input type="text" value={reportForm.contact} onChange={(e) => setReportForm((f) => ({ ...f, contact: e.target.value }))} placeholder={user?.email || "Enter your email address"} className="report-section-input"/>
+              <input type="email" inputMode="email" autoComplete="email" aria-label="Contact email address" value={reportForm.contact} onChange={(e) => setReportForm((f) => ({ ...f, contact: e.target.value }))} placeholder={user?.email || "Enter your email address"} className="report-section-input"/>
             </div>
           </ReportStep>
 

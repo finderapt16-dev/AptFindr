@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteNotification, fetchNotifications, markAllNotificationsRead, markNotificationRead, markNotificationUnread, } from "@/services/dashboardSupabaseService";
-import { supabase } from "@/services/supabaseClient";
+import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 export function useTenantNotifications(enabled = true) {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
@@ -18,19 +18,8 @@ export function useTenantNotifications(enabled = true) {
     }, [enabled, user?.id]);
     useEffect(() => {
         setLoading(true);
-        void refresh();
-        if (!enabled || !user?.id)
-            return;
-        const refreshWhenOnline = () => void refresh();
-        window.addEventListener("online", refreshWhenOnline);
-        const channel = supabase
-            .channel(`tenant-notifications-${user.id}`)
-            .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => void refresh())
-            .subscribe();
-        return () => {
-            window.removeEventListener("online", refreshWhenOnline);
-            void supabase.removeChannel(channel);
-        };
+        if (!enabled || !user?.id) { void refresh(); return undefined; }
+        return subscribeToLiveUpdates(user.id, "notifications", refresh);
     }, [enabled, refresh, user?.id]);
     const unreadCount = useMemo(() => notifications.filter((notification) => notification.read !== true).length, [notifications]);
     const markRead = useCallback(async (id) => {

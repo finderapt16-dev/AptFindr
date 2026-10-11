@@ -1,0 +1,32 @@
+/* Match the tenant mobile header cards and navigation clearance. */
+@media (max-width: 680px) {
+  .landlord-shell main.app-shell-content.app-shell-content-mobile-nav {
+    padding-top: max(4.25rem, calc(3.75rem + env(safe-area-inset-top))) !important;
+    padding-inline: max(1rem, env(safe-area-inset-left)) !important;
+  }
+  .landlord-shell .landlord-help-page,
+  .landlord-shell.landlord-market-trends .market-trends-page {
+    width: 100%; max-width: 1400px; margin: 0; padding: 0;
+  }
+  .landlord-shell :is(.ld-simple-heading, .landlord-notifications__header, .landlord-settings-page-header, .landlord-help-header, .market-trends-header) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 120px;
+    margin: 15px 0 24px;
+    padding: 24px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .landlord-shell :is(.ld-simple-heading, .landlord-notifications__header, .landlord-settings-page-header, .landlord-help-header, .market-trends-header) h1 {
+    margin: 0; color: #1f1f1f; font-size: 24px; line-height: 1.2; font-weight: 700; letter-spacing: normal;
+  }
+  .landlord-shell :is(.ld-simple-heading, .landlord-notifications__header, .landlord-settings-page-header, .landlord-help-header, .market-trends-header) p {
+    max-width: none; margin: 5px 0 0; color: #64748b; font-size: 14px; line-height: 20px; font-weight: 400;
+  }
+}

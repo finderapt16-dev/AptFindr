@@ -1,5 +1,5 @@
 import { LandingListingsSection } from "./LandingApartmentPreview";
-import { POLICY_ROUTES } from "@/legal/policyMeta";
+import { FooterPolicyLink } from "@/legal/FooterPolicyLink";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -1528,7 +1528,8 @@ export function Landing() {
                             <h4 className="landing-footer-heading">Support</h4>
                             <ul className="landing-footer-links">
                                 <li><span className="landing-footer-link">Contact Us</span></li>
-                                <li><Link to={POLICY_ROUTES.terms} className="landing-footer-link landing-footer-policy-link">Terms of Service</Link></li>
+                                <li><FooterPolicyLink kind="terms"/></li>
+                                <li><FooterPolicyLink kind="privacy"/></li>
                             </ul>
                         </div>
                     </div>

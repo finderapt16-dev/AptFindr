@@ -563,3 +563,21 @@
   .report-step-span
   { font-size: 11px; }
 }
+
+/* Keep the contact and actions comfortable on phones. */
+@media (max-width: 640px) {
+  .tenant-browse main .report-page .report-form { box-shadow: none; border-radius: 12px; }
+  .tenant-browse main .report-page .report-step { padding: 20px 16px; gap: 16px; background: #fff !important; }
+  .tenant-browse main .report-page .report-step-row-3 { flex-wrap: wrap; gap: 10px; }
+  .tenant-browse main .report-page .report-step-row-4 { flex-shrink: 0; }
+  .tenant-browse main .report-page .report-step-heading { font-weight: 700; line-height: 1.4; }
+  .tenant-browse main .report-page .report-step-text { font-size: 14px; line-height: 1.5; }
+  .tenant-browse main .report-page .report-section-input { box-sizing: border-box; width: 100%; min-width: 0; height: 48px; padding: 10px 12px 10px 42px; border-radius: 10px; font-size: 16px; font-weight: 400; }
+  .tenant-browse main .report-page .report-section-mail-icon { left: 14px; width: 18px; height: 18px; pointer-events: none; }
+  .tenant-browse main .report-page .report-section-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 18px 16px; background: #fff; border-top: 1px solid #e2e8f0; }
+  .tenant-browse main .report-page .report-section-clear-form,
+  .tenant-browse main .report-page .report-section-button { width: 100%; min-width: 0; min-height: 48px; height: auto; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+  .tenant-browse main .report-page .report-section-row-2 { justify-content: flex-start; align-items: flex-start; gap: 10px; text-align: left; font-size: 12px; line-height: 1.5; }
+  .tenant-browse main .report-page .report-section-row-3 { flex-shrink: 0; width: 30px; height: 30px; box-shadow: none; background: #fff; }
+  .tenant-browse main .report-page .report-section-row-2 > span:last-child { min-width: 0; }
+}

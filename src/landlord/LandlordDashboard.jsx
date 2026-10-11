@@ -3432,6 +3432,7 @@ export function LandlordDashboard() {
 
         {/* Mobile menu button */}
         <LandlordMenuTrigger
+          needsFacebookLink={!profile.facebookLink.trim()}
           expanded={sidebarOpen}
           iconClassName="landlord-dashboard-menu-icon"
           onClick={() => setSidebarOpen(true)}

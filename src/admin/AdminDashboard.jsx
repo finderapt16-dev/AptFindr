@@ -1,3 +1,4 @@
+import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 import { AdminOverview } from "./AdminOverview";
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
 import { getAdminListingState, getLowestRoomRent } from "@/admin/adminListingState";
@@ -997,6 +998,7 @@ export function AdminDashboard() {
     const getLandlordForApt = (apt) => landlords.find((l) => l.id === apt.landlordId) ?? null;
     const pendingReports = reports.filter((r) => r.status === "pending").length;
     const activeAppealsCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
+    useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
     const unreadNotifsCount = adminNotifs.filter((n) => {
         const category = getNotificationCategory(n);
         return category !== "reports" && category !== "appeals" && !n.is_deleted && !isNotificationRead(n);
@@ -1672,8 +1674,9 @@ export function AdminDashboard() {
           </button>
           {PortalSidebarContent({ onNavigate: () => setSidebarOpen(false) })}
         </aside>}
-        {!isFocusedAppealReview && <button aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        {!isFocusedAppealReview && <button aria-label={`Open navigation, ${unreadNotifsCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="admin-dashboard-menu-icon"/>
+          {unreadNotifsCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + pendingReports + activeAppealsCount}</span>}
         </button>}
         <div className="app-shell-main">
           <main className="app-shell-content app-shell-content-mobile-nav">

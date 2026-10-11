@@ -815,7 +815,7 @@
 
   /* Reserve space for the fixed mobile navigation trigger. */
   .landlord-shell .app-shell-content-mobile-nav {
-    padding-top: 72px !important;
+    padding-top: max(4.25rem, calc(3.75rem + env(safe-area-inset-top))) !important;
   }
 
   .ld-simple-dashboard {
@@ -1079,8 +1079,8 @@
    browsers report a wider CSS viewport than their visible screen, so keeping
    the former two-column layout until 480px still made the card overlap there. */
 @media (max-width: 680px) {
-  main.app-shell-content.app-shell-content-mobile-nav {
-    padding-top: max(6rem, calc(5rem + env(safe-area-inset-top))) !important;
+  .landlord-shell main.app-shell-content.app-shell-content-mobile-nav {
+    padding-top: max(4.25rem, calc(3.75rem + env(safe-area-inset-top))) !important;
   }
 
   /* The shared mobile shell already provides the Notifications page's 16px

@@ -149,7 +149,7 @@
 .tenant-browse form:first-of-type button { border-color: var(--tenant-border) !important; color: var(--tenant-ink) !important; background: #fff !important; box-shadow: none !important; }
 .tenant-browse form:first-of-type button svg { color: var(--tenant-accent); }
 
-.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) {
+.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) {
   min-height: 220px;
   margin-top: 24px !important;
   border: 1px solid #f2f6fa;
@@ -159,13 +159,13 @@
 .tenant-browse main .tenant-profile-settings > section.tenant-profile-summary {
   background: #fff !important;
 }
-.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) > div:first-child { max-width: 58%; }
-.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) > div:first-child > div:first-child {
+.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) > div:first-child { max-width: 58%; }
+.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) > div:first-child > div:first-child {
   border-color: var(--tenant-border) !important;
   border-radius: 999px !important;
   color: var(--tenant-accent) !important;
 }
-.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) p { color: var(--tenant-muted) !important; font-size: 16px !important; }
+.tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) p { color: var(--tenant-muted) !important; font-size: 16px !important; }
 
 .tenant-browse {
   z-index: 50;
@@ -183,8 +183,8 @@
 .tenant-summary-available { background:#059669; color:#fff; }
 
 @media (max-width: 767px) {
-  .tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) { min-height: 0; }
-  .tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section) > div:first-child { max-width: 100%; }
+  .tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) { min-height: 0; }
+  .tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) > div:first-child { max-width: 100%; }
 }
 
 .tenant-sidebar-apt-findr,
@@ -449,4 +449,88 @@
     margin: 0 !important;
     border-right: 0 !important;
   }
+}
+
+/* Match the Apartments header on tenant phones. */
+@media (max-width: 640px) {
+  .tenant-browse .tenant-settings .settings-style-77,
+  .tenant-browse main .report-page { width: 100%; max-width: 1400px; }
+  .tenant-browse main .tenant-settings .settings-hero,
+  .tenant-browse main .report-page .report-hero {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1400px;
+    min-height: 120px;
+    height: auto;
+    margin: 15px auto 24px !important;
+    padding: 24px !important;
+    border: 1px solid #d9d9d9 !important;
+    border-radius: 6px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+  }
+  .tenant-browse main .tenant-settings .settings-hero-copy,
+  .tenant-browse main .report-page .report-section-panel { width: 100%; max-width: none; }
+  .tenant-browse main .tenant-settings .settings-hero h1,
+  .tenant-browse main .report-page .report-hero h2 {
+    margin: 0 !important;
+    color: #1f1f1f;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: normal;
+  }
+  .tenant-browse main .tenant-settings .settings-hero p,
+  .tenant-browse main .report-page .report-hero p {
+    margin: 5px 0 0 !important;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+  .tenant-browse main .report-page,
+  .tenant-browse main .report-page .report-form,
+  .tenant-browse main .report-page .report-success,
+  .tenant-browse main .report-page .report-step {
+    background: #fff !important;
+    background-image: none !important;
+  }
+}
+
+/* The profile Settings screen shares the Notifications header dimensions. */
+@media (max-width: 760px) {
+  .tenant-browse main .tenant-profile-settings {
+    width: 100%;
+    max-width: 1400px;
+    margin: 15px auto 40px;
+    gap: 24px;
+  }
+  .tenant-browse main .tenant-profile-heading {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 130px;
+    padding: 40px 64px;
+    flex-direction: row;
+    align-items: center;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .tenant-browse main .tenant-profile-heading h1 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: normal;
+  }
+  .tenant-browse main .tenant-profile-heading p {
+    margin: 5px 0 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+@media (max-width: 640px) {
+  .tenant-browse main .tenant-profile-heading { min-height: 120px; padding: 24px; }
 }
