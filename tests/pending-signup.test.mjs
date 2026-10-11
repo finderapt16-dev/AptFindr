@@ -25,7 +25,8 @@ test('pending email signup uses the entered email and does not write app profile
             password: 'Strong123!', role: 'tenant', termsAccepted: true,
         });
         assert.equal(submitted.email, 'new.user@gmail.com');
-        assert.match(submitted.options.data.username, /^usr_[a-z0-9]{26}$/);
+        assert.match(submitted.options.data.username, /^[a-z0-9_]{4,30}$/);
+        assert.ok(submitted.options.data.username.startsWith('new_user_'));
         assert.equal(submitted.options.emailRedirectTo, 'https://aptfindr.example/auth/callback');
         assert.equal(result.requiresEmailVerification, true);
         assert.equal(result.profileCreated, false);

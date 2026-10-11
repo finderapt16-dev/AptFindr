@@ -157,6 +157,7 @@ for (const role of ['tenant', 'landlord']) {
   assert.equal(profile.email,'verified@gmail.com');
   assert.equal(profile.role,role);
   assert.equal(rows.length,1);
-  assert.match(profile.username,/^usr_/);
+  assert.match(profile.username,/^[a-z0-9_]{4,30}$/);
+  assert.notEqual(profile.username, username);
  });
 }

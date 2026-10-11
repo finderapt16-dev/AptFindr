@@ -569,16 +569,17 @@ export function Login({
                         id="login-email"
                         label="Email Address"
                         type="email"
-                        inputMode="email"
-                        autoComplete="email"
-                        autoCapitalize="none"
-                        spellCheck={false}
                         value={
                             email
                         }
                         onChange={
                             setEmail
                         }
+                        placeholder="Enter your email address"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        inputMode="email"
                         required
                     />
 

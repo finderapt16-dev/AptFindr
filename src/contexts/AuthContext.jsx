@@ -154,7 +154,7 @@ export function AuthProvider({ children }) {
             return { success: true, user };
         }
         catch (error) {
-            return { success: false, error: getErrorMessage(error, 'Invalid email address or password.') };
+            return { success: false, error: getErrorMessage(error, 'Invalid email or password.') };
         }
         finally {
             if (requestId === authRequestIdRef.current) {
