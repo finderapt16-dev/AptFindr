@@ -14,8 +14,8 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
     const unreadNotificationCount = Math.max(0, Number(unreadCount) || 0);
     const navigationCount = unreadNotificationCount + favorites.length;
     const navigationBadge = navigationCount > 99 ? "99+" : navigationCount;
-    const portalLabel = "Tenant Portal";
-    const displayName = user?.name?.trim();
+    const portalLabel = user?.email ?? "";
+    const displayName = user?.username?.trim();
     useEffect(() => {
         if (!open)
             return;
@@ -71,10 +71,10 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
               <div className="tenant-mobile-navigation-panel">
                 <div className="app-sidebar-profile">
                   <div className="tenant-mobile-navigation-row-2">
-                    {user?.avatar ? <img src={user.avatar} alt="Profile" className="tenant-mobile-navigation-image-2"/> : user?.name?.[0]?.toUpperCase() ?? "U"}
+                    {user?.avatar ? <img src={user.avatar} alt="Profile" className="tenant-mobile-navigation-image-2"/> : user?.username?.[0]?.toUpperCase() ?? "U"}
                   </div>
                   <div className="tenant-mobile-navigation-panel-2">
-                    <p className="tenant-mobile-navigation-text">{displayName || "Welcome"}</p>
+                    <p className="tenant-mobile-navigation-text">{displayName || "Username unavailable"}</p>
                     <p className="tenant-mobile-navigation-text-2">{portalLabel}</p>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ export function LogoutConfirmation({ children, onConfirm }) {
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
       <AlertDialogContent className="logout-dialog">
         <AlertDialogHeader>
-          <AlertDialogTitle className="logout-dialog-title">Log out of Rentiloilo?</AlertDialogTitle>
+          <AlertDialogTitle className="logout-dialog-title">Log out?</AlertDialogTitle>
           <AlertDialogDescription>
             You will need to sign in again to access your account.
           </AlertDialogDescription>

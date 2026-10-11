@@ -1,9 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { AuthField } from "./AuthField";
+import { supabase } from "@/services/supabaseClient";
 import { PASSWORD_REQUIREMENTS } from "./signupValidation";
 
 export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, emailReadOnly = false, emailLabel = "Email Address", hideEmail = false }) {
+  const username = String(values.username ?? "").trim().toLowerCase();
+  const [usernameCheck, setUsernameCheck] = useState({ username: "", error: "" });
+  useEffect(() => {
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('is_username_available', { p_username: username });
+        if (active) setUsernameCheck({ username, error: error || typeof data !== 'boolean'
+          ? 'Unable to check username availability. Please try again.'
+          : data ? '' : 'This username is already taken. Please choose another.' });
+      } catch {
+        if (active) setUsernameCheck({ username, error: 'Unable to check username availability. Please try again.' });
+      }
+    }, 350);
+    return () => { active = false; clearTimeout(timer); };
+  }, [username]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fieldProps = (name) => ({
@@ -22,7 +40,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
 
   return (
     <>
-      <AuthField {...fieldProps("username")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} />
+      <AuthField {...fieldProps("username")} error={errors.username || (usernameCheck.username === username ? usernameCheck.error : "")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} />
       {!hideEmail && <AuthField {...fieldProps("email")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>

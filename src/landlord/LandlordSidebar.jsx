@@ -53,8 +53,8 @@ export function LandlordSidebar({ user, activeSection, unreadNotifications, need
 
     <div className="landlord-sidebar-profile-wrap">
       <div className="app-sidebar-profile landlord-sidebar-profile">
-        <span className="landlord-sidebar-avatar">{user?.avatar ? <img src={user.avatar} alt="Profile" /> : (user?.name?.[0]?.toUpperCase() ?? "L")}</span>
-        <span className="landlord-sidebar-profile-copy"><strong>{user?.name || "Name unavailable"}</strong><small>{user?.email ?? ""}</small></span>
+        <span className="landlord-sidebar-avatar">{user?.avatar ? <img src={user.avatar} alt="Profile" /> : (user?.username?.[0]?.toUpperCase() ?? "L")}</span>
+        <span className="landlord-sidebar-profile-copy"><strong>{user?.username || "Username unavailable"}</strong><small>{user?.email ?? ""}</small></span>
       </div>
     </div>
 

@@ -13,7 +13,7 @@
 
 .landing-header {
   z-index: 50;
-  transition-property: all;
+  transition-property: background-color, border-color;
   transition-duration: .3s;
   transition-timing-function: cubic-bezier(.4, 0, .2, 1);
   position: fixed;
@@ -2359,4 +2359,28 @@
   .landing-footer-copyright { font-size: 10px; }
   .landing-footer-heading { font-size: 10px; }
   .landing-footer-links { font-size: 10px; }
+}
+
+/* Keep mobile scrolling light and avoid sticky touch-hover animations. */
+@media (max-width: 767px) {
+  .landing-page { min-height: 100svh; }
+  .landing-header-top, .landing-header-scrolled {
+    background-color: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .landing-cta-glow-top, .landing-cta-glow-bottom {
+    filter: none;
+    background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+  }
+  .landing-page button, .landing-page a { touch-action: manipulation; }
+}
+@media (max-width: 767px) and (hover: none) {
+  .landing-page .apartment-card:hover { transform: none; }
+  .landing-preview-skeleton { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-header, .landing-page .apartment-card,
+  .landing-page button, .landing-page a { transition: none; }
+  .landing-preview-skeleton { animation: none; }
 }

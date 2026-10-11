@@ -44,7 +44,7 @@ export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifica
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const { favorites } = useFavorites();
-    const resolvedDisplayName = displayName?.trim() || user?.name?.trim() || "Welcome";
+    const resolvedDisplayName = user?.username?.trim() || "Username unavailable";
     const resolvedUnreadCount = tenantNotifications?.unreadCount ?? unreadCount;
     const resolvedFavoriteCount = favoriteIds?.length ?? favorites.length;
     const currentSection = mode === "dashboard"
@@ -108,7 +108,7 @@ export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifica
       <div className="tenant-sidebar-panel">
         <div className="app-sidebar-profile">
           <div className="tenant-sidebar-row-2">
-            {user?.avatar ? (<img src={user.avatar} alt="Profile" className="tenant-sidebar-image"/>) : (user?.name?.[0]?.toUpperCase() ?? "U")}
+            {user?.avatar ? (<img src={user.avatar} alt="Profile" className="tenant-sidebar-image"/>) : (user?.username?.[0]?.toUpperCase() ?? "U")}
           </div>
 
           <div className="tenant-sidebar-panel-2">

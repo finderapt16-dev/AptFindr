@@ -563,26 +563,24 @@ export function Landing() {
     ===================================================== */
 
     useEffect(() => {
-        const onScroll =
-            () => {
-                setScrolled(
-                    window.scrollY >
-                        20
-                );
-            };
-
-
-        window.addEventListener(
-            "scroll",
-            onScroll
-        );
-
-
+        let frame = 0;
+        let previous = window.scrollY > 20;
+        setScrolled(previous);
+        const onScroll = () => {
+            if (frame) return;
+            frame = window.requestAnimationFrame(() => {
+                frame = 0;
+                const next = window.scrollY > 20;
+                if (next !== previous) {
+                    previous = next;
+                    setScrolled(next);
+                }
+            });
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
         return () => {
-            window.removeEventListener(
-                "scroll",
-                onScroll
-            );
+            window.removeEventListener("scroll", onScroll);
+            window.cancelAnimationFrame(frame);
         };
     }, []);
 
