@@ -22,6 +22,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
 
   return (
     <>
+      <AuthField {...fieldProps("username")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} />
       {!hideEmail && <AuthField {...fieldProps("email")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>

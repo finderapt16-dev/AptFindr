@@ -1,4 +1,4 @@
-export const ACCOUNT_REVIEW_FIELDS = ["email"];
+export const ACCOUNT_REVIEW_FIELDS = ["username", "email"];
 export const PERSONAL_REVIEW_FIELDS = ["fullName", "mobileNumber"];
 
 export const PASSWORD_REQUIREMENTS = "At least 8 characters with letters and numbers.";
@@ -12,6 +12,7 @@ export function validateSignupPassword(password = "") {
 
 export function validateAccountDetails(values, { includePassword = true } = {}) {
   const errors = {};
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(String(values.username ?? "").trim())) errors.username = "Use 3?30 letters, numbers, or underscores.";
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.email ?? "").trim())) {
     errors.email = "Enter a valid email address.";

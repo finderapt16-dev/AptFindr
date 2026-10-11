@@ -795,10 +795,22 @@ export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
     }
 }
 export async function loginUser(credentials) {
-    const email = String(credentials.email ?? '').trim().toLowerCase();
+    const identifier = String(credentials.email ?? credentials.username ?? '').trim().toLowerCase();
+    let email = identifier;
+    if (identifier && !identifier.includes('@')) {
+        const { data: result, error } = await supabaseClient.functions.invoke('username-login', { body: { username: identifier, password: credentials.password } });
+        if (error || !result?.session) throw new Error(result?.error || 'Unable to sign in with username. Check your credentials or use your email.');
+        const { data, error: sessionError } = await supabaseClient.auth.setSession(result.session);
+        if (sessionError || !data.user) throw new Error('Unable to start your session.');
+        const profile = await ensureProfileForAuthUser(data.user);
+        assertActiveAccount(profile);
+        await recordLogin(profile, data.user.id, true, { loginMethod: 'username' });
+        persistCurrentUser(profile);
+        return profile;
+    }
     const password = credentials.password;
     if (!email || !password) {
-        throw new Error('Email address and password are required.');
+        throw new Error('Username or email and password are required.');
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new Error('Enter a valid email address.');

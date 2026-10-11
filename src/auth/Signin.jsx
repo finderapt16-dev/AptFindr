@@ -478,7 +478,7 @@ export function Login({
                 </h2>
 
                 <p className="login-subtitle">
-                    Enter your email and
+                    Enter your username or email and
                     password to continue.
                 </p>
 
@@ -567,19 +567,19 @@ export function Login({
 
                     <AuthField
                         id="login-email"
-                        label="Email Address"
-                        type="email"
+                        label="Username or Email"
+                        type="text"
                         value={
                             email
                         }
                         onChange={
                             setEmail
                         }
-                        placeholder="Enter your email address"
-                        autoComplete="email"
+                        placeholder="Enter your username or email"
+                        autoComplete="username"
                         autoCapitalize="none"
                         spellCheck={false}
-                        inputMode="email"
+                        inputMode="text"
                         required
                     />
 

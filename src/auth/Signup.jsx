@@ -12,7 +12,7 @@ import { useSignupViewport } from "./useSignupViewport";
 
 const INITIAL_VALUES = {
   role: "", email: "", password: "", confirmPassword: "",
-  fullName: "", firstName: "", lastName: "", middleInitial: "", mobileNumber: "",
+  username: "", fullName: "", firstName: "", lastName: "", middleInitial: "", mobileNumber: "",
 };
 const LANDLORD_STEPS = ["Account Details", "Personal Information"];
 
