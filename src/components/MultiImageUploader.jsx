@@ -1,4 +1,4 @@
-import { Camera, ChevronLeft, ChevronRight, Image as ImageIcon, Star, Upload, X, } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, Image as ImageIcon, Upload, X, } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
@@ -93,7 +93,7 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
         const reordered = [...images];
         const [moved] = reordered.splice(fromIndex, 1);
         reordered.splice(toIndex, 0, moved);
-        onImagesChange(reordered.map((image, index) => ({ ...image, sortOrder: index })));
+        onImagesChange(reordered.map((image, index) => ({ ...image, sortOrder: index, isPrimary: index === 0 })));
         setDraggedImageId(null);
         setPreviewIndex(toIndex);
     };
@@ -136,19 +136,12 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
         const reordered = updated.map((img, idx) => ({
             ...img,
             sortOrder: idx,
-            isPrimary: idx === 0 ? true : img.isPrimary,
+            isPrimary: idx === 0,
         }));
         onImagesChange(reordered);
         toast.success("Image removed");
     };
-    const setPrimary = (id) => {
-        const updated = images.map((img) => ({
-            ...img,
-            isPrimary: img.id === id,
-        }));
-        onImagesChange(updated);
-        toast.success("Primary image updated");
-    };
+
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -196,7 +189,6 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
       {images.map((img, index) => <div key={img.id} className={`edit-property-photo-tile ${img.isPrimary ? "is-primary" : ""}`} draggable={!disabled} onDragStart={() => setDraggedImageId(img.id)} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); event.stopPropagation(); reorderImage(img.id); }} onDragEnd={() => setDraggedImageId(null)}>
         <img src={img.url} alt={`Apartment image ${index + 1}`}/>
         <button type="button" className="edit-property-photo-remove" aria-label={`Remove image ${index + 1}`} onClick={() => removeImage(img.id)} disabled={disabled}><X/></button>
-        <button type="button" className="edit-property-photo-cover" aria-label={`Set image ${index + 1} as cover`} aria-pressed={img.isPrimary} onClick={() => setPrimary(img.id)} disabled={disabled}><Star fill={img.isPrimary ? "currentColor" : "none"}/></button>
       </div>)}
       {images.length < maxImages && <button type="button" className="edit-property-photo-upload" onClick={() => fileInputRef.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { if (disabled) { event.preventDefault(); return; } handleDrop(event); }} disabled={disabled}><Upload/><span>Upload Images</span></button>}
     </div>;
@@ -268,7 +260,6 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
                     </button>
                   </>)}
                 {previewImage.isPrimary && (<div className="multi-image-uploader-style-33">
-                    <Star className="multi-image-uploader-style-34"/>
                     Cover Photo
                   </div>)}
               </div>
@@ -282,30 +273,13 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
               {images.map((img, idx) => (<div key={img.id} draggable={!disabled} onDragStart={() => setDraggedImageId(img.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => reorderImage(img.id)} onDragEnd={() => setDraggedImageId(null)} className={`multi-image-thumbnail ${img.isPrimary ? "multi-image-thumbnail-primary" : "multi-image-thumbnail-standard"}`}>
                   <img src={img.url} alt={`Image ${idx + 1}`} className="multi-image-uploader-style-38" onClick={() => setPreviewIndex(idx)}/>
 
-                  <div className="multi-image-uploader-style-39">
-                    <button type="button" title="Set as primary" onClick={(e) => {
-                    e.preventDefault();
-                    setPrimary(img.id);
-                }} className="multi-image-uploader-style-40">
-                      <Star className="multi-image-uploader-style-41"/>
-                    </button>
-                    <button type="button" title="Delete" onClick={(e) => {
-                    e.preventDefault();
-                    removeImage(img.id);
-                }} className="multi-image-uploader-style-42">
-                      <X className="multi-image-uploader-style-43"/>
-                    </button>
-                  </div>
-
-                  {img.isPrimary && (<div className="multi-image-uploader-style-44">
-                      <Star className="multi-image-uploader-style-45"/>
-                    </div>)}
+                  <button type="button" className="multi-image-thumbnail-remove" aria-label={`Remove image ${idx + 1}`} title="Remove image" disabled={disabled} onClick={(event) => { event.preventDefault(); event.stopPropagation(); removeImage(img.id); }}><X aria-hidden="true"/></button>
                 </div>))}
             </div>
           </div>
 
           {images.length > 1 && (<div className="multi-image-uploader-style-46">
-              Drag thumbnails to reorder them. The selected cover photo is saved first.
+              Drag thumbnails to reorder them. The first photo is the cover photo.
             </div>)}
         </div>)}
 

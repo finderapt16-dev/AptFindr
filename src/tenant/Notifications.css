@@ -737,3 +737,14 @@
 .tenant-notifications-article.is-menu-open { z-index: 2; }
 .tenant-notifications-article:first-child { border-top-left-radius: 5px; border-top-right-radius: 5px; }
 .tenant-notifications-article:last-child { border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; }
+
+.tenant-notifications-notification-filter [role="tab"] { white-space: nowrap; flex-shrink: 0; }
+
+.tenant-notifications-mark-all-as-read { margin-left: auto; }
+@media (max-width: 640px) {
+  .tenant-notifications-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 12px 10px; }
+  .tenant-notifications-row .tenant-notifications-notification-filter { width: auto; gap: 4px; }
+  .tenant-notifications-row .tenant-notifications-button { min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 12px; }
+  .tenant-notifications-row .tenant-notifications-mark-all-as-read { justify-self: end; min-width: 0; min-height: 44px; height: auto; padding: 8px; font-size: 12px; white-space: normal; text-align: center; }
+  .tenant-notifications-mark-all-as-read svg { flex-shrink: 0; }
+}

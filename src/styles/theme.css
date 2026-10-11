@@ -330,3 +330,7 @@
   .stagger-item:nth-child(5) { animation-delay: 0.5s; }
   .stagger-item:nth-child(6) { animation-delay: 0.6s; }
 }
+
+/* Uppercase native date hints such as DD/MM/YYYY. */
+input[type="date"] { text-transform: uppercase; }
+input[type="date"]::-webkit-datetime-edit { text-transform: uppercase; }

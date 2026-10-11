@@ -426,3 +426,17 @@
 @media (min-width: 1024px) {
   .landlord-notification time { font-size: 10px; }
 }
+
+/* Keep the unread count beside its label at every viewport width. */
+.landlord-notifications__tabs button { white-space: nowrap; flex-shrink: 0; }
+.landlord-notifications__toolbar { flex-wrap: wrap; }
+
+/* Keep tabs on the left and mark-all on the right, including phones. */
+.landlord-notifications__mark-read { margin-left: auto; }
+@media (max-width: 640px) {
+  .landlord-notifications__toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 12px 10px; }
+  .landlord-notifications__tabs { gap: 4px; }
+  .landlord-notifications__tabs button { min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 12px; }
+  .landlord-notifications__mark-read { justify-self: end; justify-content: center; min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; white-space: normal; text-align: center; }
+  .landlord-notifications__mark-read svg { flex-shrink: 0; }
+}

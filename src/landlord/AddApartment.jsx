@@ -795,7 +795,7 @@ export function AddApartment() {
                 : currentStep > step.number
                     ? "add-apartment-button-8"
                     : "add-apartment-button-9"}`}>
-                  <span>{step.number === 4 ? "Amenities & House Rules" : step.title}</span>
+                  <span>{step.number === 4 ? "HOUSE RULES & INCLUDED" : step.title}</span>
                 </button>
               </div>))}
           </div>
@@ -834,7 +834,7 @@ export function AddApartment() {
                     <Label className="add-apartment-property-name-2">
                       <Building2 className="add-apartment-building2-icon-2"/> Apartment Name
                     </Label>
-                    <Input value={String(formData.title ?? "")} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} placeholder="Luna" className="add-apartment-input-3"/>
+                    <Input value={String(formData.title ?? "")} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} placeholder="e.g., Luna" className="add-apartment-input-3"/>
                     <p className="add-apartment-text-5">Carried from Apartment Information. Go back to step 1 to edit this name.</p>
                   </div>
 
@@ -842,7 +842,7 @@ export function AddApartment() {
                     <Label className="add-apartment-property-address">
                       <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address
                     </Label>
-                    <Input value={formData.address} onChange={(event) => { setFormData((current) => ({ ...current, address: event.target.value })); setLocationPinned(false); setManualAddressEdited(true); }} placeholder="Luna, La Paz, Iloilo City, 5000" className="add-apartment-input-3"/>
+                    <Input value={formData.address} onChange={(event) => { setFormData((current) => ({ ...current, address: event.target.value })); setLocationPinned(false); setManualAddressEdited(true); }} placeholder="e.g., Luna, La Paz, Iloilo City, 5000" className="add-apartment-input-3"/>
                     <p className="add-apartment-text-5">Carried from Location. Go back to step 2 to change this address.</p>
                   </div>
 
@@ -942,7 +942,7 @@ export function AddApartment() {
                 setFormData({ ...formData, sqft: Number(e.target.value) });
                 if (Number(e.target.value) > 0)
                     clearValidationError("sqft");
-            }} required aria-invalid={Boolean(validationErrors.sqft)} className={`${fieldClass("sqft")} hide-number-spinners`}/>
+            }} placeholder="e.g., 120" required aria-invalid={Boolean(validationErrors.sqft)} className={`${fieldClass("sqft")} hide-number-spinners`}/>
                       <FieldError field="sqft"/>
                     </div>
 
@@ -952,7 +952,7 @@ export function AddApartment() {
                 setFormData({ ...formData, description: e.target.value });
                 if (e.target.value.trim())
                     clearValidationError("description");
-            }} rows={4} required aria-invalid={Boolean(validationErrors.description)} placeholder="Describe the apartment, surrounding area, accessibility, and other important details." className={`${fieldClass("description")} add-apartment-textarea`}/>
+            }} rows={4} required aria-invalid={Boolean(validationErrors.description)} placeholder="e.g., A quiet apartment near schools and public transport." className={`${fieldClass("description")} add-apartment-textarea`}/>
                       <FieldError field="description"/>
                     </div>
 
@@ -980,22 +980,22 @@ export function AddApartment() {
                 setManualAddressEdited(locationPinned);
                 if (e.target.value.trim())
                     clearValidationError("address");
-            }} placeholder="House number, street, subdivision" required aria-invalid={Boolean(validationErrors.address)} className={fieldClass("address")}/>
+            }} placeholder="e.g., 123 Luna Street" required aria-invalid={Boolean(validationErrors.address)} className={fieldClass("address")}/>
                       <FieldError field="address"/>
                     </div>
                   </div>
                   <div className="add-apartment-grid-3 add-apartment-location-fields">
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-district-area">District / Area</Label>
-                      <Input value={formData.city} readOnly placeholder="La Paz" className="add-apartment-input"/>
+                      <Input value={formData.city} readOnly placeholder="e.g., La Paz" className="add-apartment-input"/>
                     </div>
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-city">City</Label>
-                      <Input value={formData.state} readOnly placeholder="Iloilo City" className="add-apartment-input"/>
+                      <Input value={formData.state} readOnly placeholder="e.g., Iloilo City" className="add-apartment-input"/>
                     </div>
                     <div className="add-apartment-panel-9">
                       <Label className="add-apartment-zip-code">ZIP Code</Label>
-                      <Input value={formData.zip} readOnly placeholder="5000" className="add-apartment-input"/>
+                      <Input value={formData.zip} readOnly placeholder="e.g., 5000" className="add-apartment-input"/>
                     </div>
                   </div>
 
@@ -1048,21 +1048,6 @@ export function AddApartment() {
               {currentStep === 4 && (<>
                   <div className="add-apartment-step-three-reference">
                     <section className="add-apartment-step-section">
-                      <h3 className="add-apartment-section-title">Included Features <span aria-hidden="true">*</span></h3>
-                      <p className="add-apartment-section-description">Select the amenities and utilities included in the base rent price.</p>
-                      <div className="add-apartment-choice-grid add-apartment-included-features-grid">
-                        {INCLUDED_FEATURES.map((feature) => {
-                const selected = includedFeatureIsSelected(feature);
-                return <button key={feature.label} type="button" aria-pressed={selected} onClick={() => toggleIncludedFeature(feature)} className={`add-apartment-choice ${selected ? "is-selected" : ""}`}>{feature.label}</button>;
-            })}
-                      </div>
-                      <p className="add-apartment-other-label">Other included feature <span>(optional)</span></p>
-                      <div className="add-apartment-add-choice"><Input value={customAmenityInput} onChange={(event) => setCustomAmenityInput(event.target.value)} placeholder="Type a feature and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput))}/><Button type="button" onClick={() => appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput)}>Add</Button></div>
-                      <AddedChoiceTags values={getCustomChoiceValues(amenitiesInput, INCLUDED_AMENITIES)} label="included feature" onRemove={(value) => removeCommaValue(setAmenitiesInput, value)}/>
-                      <AddedChoiceTags values={getCustomChoiceValues(utilitiesInput, INCLUDED_UTILITIES)} label="included utility" onRemove={(value) => removeCommaValue(setUtilitiesInput, value)}/>
-                    </section>
-
-                    <section className="add-apartment-step-section">
                       <h3 className="add-apartment-section-title">House Rules <span aria-hidden="true">*</span></h3>
                       <p className="add-apartment-section-description">Specify the rules and restrictions for tenants.</p>
                       <div className="add-apartment-choice-grid add-apartment-house-rules-grid">
@@ -1072,7 +1057,7 @@ export function AddApartment() {
             })}
                       </div>
                       <p className="add-apartment-other-label">Other rule <span>(optional)</span></p>
-                      <div className="add-apartment-add-choice"><Input value={customRuleInput} onChange={(event) => setCustomRuleInput(event.target.value)} placeholder="Type a rule and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addCustomHouseRule())}/><Button type="button" onClick={addCustomHouseRule}>Add</Button></div>
+                      <div className="add-apartment-add-choice"><Input value={customRuleInput} onChange={(event) => setCustomRuleInput(event.target.value)} placeholder="e.g., No smoking indoors" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addCustomHouseRule())}/><Button type="button" onClick={addCustomHouseRule}>Add</Button></div>
                       <AddedChoiceTags values={houseRules.filter((rule) => !DISPLAY_HOUSE_RULES.some((suggested) => suggested.toLowerCase() === rule.toLowerCase()))} label="rule" onRemove={(value) => setHouseRules((current) => current.filter((rule) => rule.toLowerCase() !== value.toLowerCase()))}/>
                     </section>
 
@@ -1083,6 +1068,21 @@ export function AddApartment() {
                         {CONTRACT_DURATIONS.map((duration) => <button key={duration} type="button" aria-pressed={contractDuration === duration} onClick={() => { setContractDuration(duration); clearValidationError("contractDuration"); }} className={`add-apartment-choice ${contractDuration === duration ? "is-selected" : ""}`}>{duration}</button>)}
                       </div>
                       <FieldError field="contractDuration"/>
+                    </section>
+
+                    <section className="add-apartment-step-section">
+                      <h3 className="add-apartment-section-title">Apartment Included <span aria-hidden="true">*</span></h3>
+                      <p className="add-apartment-section-description">Select the amenities and utilities included in the base rent price.</p>
+                      <div className="add-apartment-choice-grid add-apartment-included-features-grid">
+                        {INCLUDED_FEATURES.map((feature) => {
+                const selected = includedFeatureIsSelected(feature);
+                return <button key={feature.label} type="button" aria-pressed={selected} onClick={() => toggleIncludedFeature(feature)} className={`add-apartment-choice ${selected ? "is-selected" : ""}`}>{feature.label}</button>;
+            })}
+                      </div>
+                      <p className="add-apartment-other-label">Other included feature <span>(optional)</span></p>
+                      <div className="add-apartment-add-choice"><Input value={customAmenityInput} onChange={(event) => setCustomAmenityInput(event.target.value)} placeholder="e.g., Laundry Area" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput))}/><Button type="button" onClick={() => appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput)}>Add</Button></div>
+                      <AddedChoiceTags values={getCustomChoiceValues(amenitiesInput, INCLUDED_AMENITIES)} label="included feature" onRemove={(value) => removeCommaValue(setAmenitiesInput, value)}/>
+                      <AddedChoiceTags values={getCustomChoiceValues(utilitiesInput, INCLUDED_UTILITIES)} label="included utility" onRemove={(value) => removeCommaValue(setUtilitiesInput, value)}/>
                     </section>
                   </div>
                   <section className="add-apartment-panel-8 add-apartment-choice-section">
@@ -1095,7 +1095,7 @@ export function AddApartment() {
             })}
                     </div>
                     <p className="add-apartment-other-label">Other amenity (optional)</p>
-                    <div className="add-apartment-add-choice"><Input value={customAmenityInput} onChange={(event) => setCustomAmenityInput(event.target.value)} placeholder="Type an amenity and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput))}/><Button type="button" onClick={() => appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput)}>Add</Button></div>
+                    <div className="add-apartment-add-choice"><Input value={customAmenityInput} onChange={(event) => setCustomAmenityInput(event.target.value)} placeholder="e.g., Balcony" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput))}/><Button type="button" onClick={() => appendCommaValue(setAmenitiesInput, customAmenityInput, setCustomAmenityInput)}>Add</Button></div>
                     <AddedChoiceTags values={getCustomChoiceValues(amenitiesInput, SUGGESTED_AMENITIES)} label="amenity" onRemove={(value) => removeCommaValue(setAmenitiesInput, value)}/>
                     <FieldError field="amenities"/>
                   </section>
@@ -1110,7 +1110,7 @@ export function AddApartment() {
             })}
                     </div>
                     <p className="add-apartment-other-label">Other utility (optional)</p>
-                    <div className="add-apartment-add-choice"><Input value={customUtilityInput} onChange={(event) => setCustomUtilityInput(event.target.value)} placeholder="Type a utility and press Enter" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setUtilitiesInput, customUtilityInput, setCustomUtilityInput))}/><Button type="button" onClick={() => appendCommaValue(setUtilitiesInput, customUtilityInput, setCustomUtilityInput)}>Add</Button></div>
+                    <div className="add-apartment-add-choice"><Input value={customUtilityInput} onChange={(event) => setCustomUtilityInput(event.target.value)} placeholder="e.g., Water" onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), appendCommaValue(setUtilitiesInput, customUtilityInput, setCustomUtilityInput))}/><Button type="button" onClick={() => appendCommaValue(setUtilitiesInput, customUtilityInput, setCustomUtilityInput)}>Add</Button></div>
                     <AddedChoiceTags values={getCustomChoiceValues(utilitiesInput, ["Water", "Electricity", "Internet", "Gas", "Other"])} label="utility" onRemove={(value) => removeCommaValue(setUtilitiesInput, value)}/>
                   </section>
 
@@ -1124,7 +1124,7 @@ export function AddApartment() {
             })}
                     </div>
                     <p className="add-apartment-other-label">Other rule (optional)</p>
-                    <div className="add-apartment-add-choice"><Input value={customRuleInput} onChange={(event) => setCustomRuleInput(event.target.value)} placeholder="Type a rule and press Enter" onKeyDown={(event) => {
+                    <div className="add-apartment-add-choice"><Input value={customRuleInput} onChange={(event) => setCustomRuleInput(event.target.value)} placeholder="e.g., No smoking indoors" onKeyDown={(event) => {
                 if (event.key === "Enter") {
                     event.preventDefault();
                     addCustomHouseRule();

@@ -1,7 +1,7 @@
 import "./ManageRooms.css";
 import { AddUnitDialog } from "./AddUnitDialog";
 import { getRoomStatus, sortRoomsByAvailability } from "@/utils/roomAvailability";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, DoorOpen, ImagePlus, MoreVertical, Pencil, Plus, Star, Upload, Users, Wrench, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, DoorOpen, ImagePlus, Loader2, MoreVertical, Pencil, Plus, Star, Upload, Users, Wrench, X } from "lucide-react";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { LandlordMenuTrigger } from "@/landlord/LandlordMenuTrigger";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -184,6 +184,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
     const nameInputRef = useRef(null);
     const menuRef = useRef(null);
     const mountedRef = useRef(true);
+    const saveInFlightRef = useRef(false);
     const imagesRef = useRef(images);
     imagesRef.current = images;
 
@@ -300,6 +301,8 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
         setDraft((current) => ({ ...current, status: next }));
     };
     const handleSave = async () => {
+        if (saveInFlightRef.current || controlsLocked || (!isNew && !isDirty)) return;
+        saveInFlightRef.current = true;
         setIsSaving(true);
         try {
             const saved = await onSave(room, draft, images, setUploadProgress);
@@ -312,6 +315,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
             }
         }
         finally {
+            saveInFlightRef.current = false;
             if (mountedRef.current) {
                 setIsSaving(false);
                 setUploadProgress(null);
@@ -363,7 +367,7 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
           </section>
         </aside>
       </div>
-      <footer className="mr-reference-footer"><Button type="button" variant="outline" onClick={onCancelNew} disabled={isSaving}>Cancel</Button><Button type="button" onClick={() => void handleSave()} disabled={isSaving || busy || (!isNew && !isDirty)}>{isSaving ? "Saving..." : "Save Changes"}</Button></footer>
+      <footer className="mr-reference-footer"><Button type="button" variant="outline" onClick={onCancelNew} disabled={isSaving}>Cancel</Button><Button type="button" className={`mr-unit-save-button${isSaving ? " is-saving" : ""}`} onClick={() => void handleSave()} disabled={isSaving || busy || (!isNew && !isDirty)} aria-busy={isSaving}><span className="mr-unit-save-content" role="status" aria-live="polite">{isSaving && <Loader2 className="mr-unit-save-spinner" aria-hidden="true"/>}<span>{isSaving ? uploadProgress !== null && uploadProgress < 100 ? `Uploading ${Math.round(uploadProgress)}%` : "Saving..." : "Save Changes"}</span></span></Button></footer>
     </article>);
 
 
@@ -486,16 +490,17 @@ export function ManageRooms({ propertyId }) {
             if (existing) {
                 saved = await updateApartmentRoom(id, existing.id, payload, user.id);
                 setRooms((current) => current.map((item) => item.id === existing.id ? saved : item));
-                toast.success("Unit updated");
+
             }
             else {
                 saved = await createApartmentRoom(id, payload, user.id);
                 setRooms((current) => [...current, saved]);
-                toast.success("Unit added");
+
             }
             const latestProperty = await fetchApartmentWithImages(id);
             const savedProperty = await updateApartment(id, apartmentToFormValues({ ...latestProperty, features: { ...latestProperty.features, unitInclusions: { ...latestProperty.features?.unitInclusions, [saved.id]: form.included } } }), user.id);
             setProperty(savedProperty);
+            toast.success(existing ? "Unit updated" : "Unit added");
             try {
                 await refreshApartments();
             }

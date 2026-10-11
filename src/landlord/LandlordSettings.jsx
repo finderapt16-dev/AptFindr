@@ -149,17 +149,17 @@ export const LandlordSettings = ({
         <ProfileField label="First Name" required>
           <input value={profile.firstName} onChange={(event) => updateProfile((current) => ({ ...current, firstName: event.target.value }))} />
         </ProfileField>
-        <ProfileField label="Facebook Link" required>
-          <input type="url" required value={profile.facebookLink} onChange={(event) => updateProfile((current) => ({ ...current, facebookLink: event.target.value }))} placeholder="https://facebook.com" />
-        </ProfileField>
-        <ProfileField label="Middle Initial (Optional)">
-          <input value={profile.middleInitial} maxLength={3} onChange={(event) => updateProfile((current) => ({ ...current, middleInitial: event.target.value }))} />
-        </ProfileField>
-        <ProfileField label="Mobile Number" required>
-          <input type="tel" value={profile.mobile} onChange={(event) => updateProfile((current) => ({ ...current, mobile: event.target.value }))} placeholder="09XX-XXX-XXXX" />
+        <ProfileField label="Middle Name (Optional)">
+          <input value={profile.middleInitial} onChange={(event) => updateProfile((current) => ({ ...current, middleInitial: event.target.value }))} />
         </ProfileField>
         <ProfileField label="Last Name" required>
           <input value={profile.lastName} onChange={(event) => updateProfile((current) => ({ ...current, lastName: event.target.value }))} />
+        </ProfileField>
+        <ProfileField label="Facebook Link" required>
+          <input type="url" required value={profile.facebookLink} onChange={(event) => updateProfile((current) => ({ ...current, facebookLink: event.target.value }))} placeholder="https://facebook.com" />
+        </ProfileField>
+        <ProfileField label="Mobile Number" required>
+          <input type="tel" value={profile.mobile} onChange={(event) => updateProfile((current) => ({ ...current, mobile: event.target.value }))} placeholder="09XX-XXX-XXXX" />
         </ProfileField>
         <ProfileField label="Email Address" required hint="Managed securely through your authenticated account.">
           <input type="email" value={profile.email} readOnly aria-readonly="true" />

@@ -30,11 +30,11 @@ export function AddUnitDialog({ apartmentName, open, onClose, onSave }) {
         <DialogTitle>Add New Unit for {apartmentName || "Apartment"}</DialogTitle>
         <form onSubmit={submit}>
           <fieldset disabled={saving} className="add-unit-fields">
-            <label>Unit Number<input autoFocus value={form.name} onChange={field("name")} placeholder="Room 103" required/></label>
-            <label>Bedroom<input type="number" min="0" step="1" value={form.bedrooms} onChange={field("bedrooms")} placeholder="3" required/></label>
-            <label>Monthly Rent (₱)<input type="number" min="0" step="0.01" value={form.price} onChange={field("price")} placeholder="16,000" required/></label>
+            <label>Unit Number<input autoFocus value={form.name} onChange={field("name")} placeholder="e.g., Room 103" required/></label>
+            <label>Bedroom<input type="number" min="0" step="1" value={form.bedrooms} onChange={field("bedrooms")} placeholder="e.g., 3" required/></label>
+            <label>Monthly Rent (₱)<input type="number" min="0" step="0.01" value={form.price} onChange={field("price")} placeholder="e.g., 16,000" required/></label>
             <label>Capacity<select value={form.capacity} onChange={field("capacity")} required><option value="" disabled>Select capacity</option>{Array.from({ length: 30 }, (_, index) => index + 1).map(value => <option value={value} key={value}>{value} pax</option>)}</select></label>
-            <label>Floor Area (sqm)<input type="number" min="0" step="1" value={form.area} onChange={field("area")} placeholder="60 sqm" required/></label>
+            <label>Floor Area (sqm)<input type="number" min="0" step="1" value={form.area} onChange={field("area")} placeholder="e.g., 60 sqm" required/></label>
             <label className="add-unit-status">Status<select value={form.status} onChange={field("status")}><option value="available">Available</option><option value="occupied">Occupied</option><option value="maintenance">Under Maintenance</option></select></label>
           </fieldset>
           <footer><button type="button" onClick={onClose} disabled={saving}>Cancel</button><button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Unit"}</button></footer>

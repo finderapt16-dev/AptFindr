@@ -2138,7 +2138,7 @@ export function LandlordDashboard() {
         try {
           const updatedUser = {
             ...user,
-            name: `${profile.firstName.trim()}${profile.middleInitial.trim() ? ` ${profile.middleInitial.trim().replace(/\.$/, "")}.` : ""} ${profile.lastName.trim()}`,
+            name: [profile.firstName.trim(), profile.middleInitial.trim(), profile.lastName.trim()].filter(Boolean).join(" "),
             email:
               profile.email.trim(),
             mobileNumber:

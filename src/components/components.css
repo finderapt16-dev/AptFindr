@@ -210,3 +210,15 @@
 .settings-page,
 .not-found-page { min-height: 100vh; min-height: 100dvh; }
 .runtime-config-panel { min-height: calc(100vh - 5rem); min-height: calc(100dvh - 5rem); }
+
+/* Photo removal matches the small black corner control in the reference. */
+.multi-image-thumbnail .multi-image-thumbnail-remove {
+ position: absolute; top: 6px; right: 6px; z-index: 2;
+ display: flex; align-items: center; justify-content: center;
+ width: 26px; height: 26px; padding: 4px; border: 0; border-radius: 50%;
+ background: #000; color: #fff; cursor: pointer;
+}
+.multi-image-thumbnail-remove svg { width: 16px; height: 16px; }
+.multi-image-thumbnail-remove:disabled { opacity: .5; cursor: default; }
+.multi-image-thumbnail-remove:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+@media (hover: none) { .multi-image-thumbnail .multi-image-thumbnail-remove { width: 30px; height: 30px; } }
