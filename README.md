@@ -16,7 +16,6 @@ Never commit `.env`, service-role keys, passwords, or other secrets.
 - `npm run typecheck` — run TypeScript checks
 - `npm run lint` — run strict TypeScript unused-code checks
 - `npm run build` — create the production build
-- `npm run migrate:supabase -- <folder>` — import supported local JSON data using the database utility script
 
 ## Project map
 
