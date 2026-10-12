@@ -66,8 +66,8 @@ function normalizeEmailAddress(email) {
     return String(email ?? '').trim().toLowerCase();
 }
 function resolveProfileUsername(username) {
-    const normalizedUsername = typeof username === 'string' ? username.trim().toLowerCase() : '';
-    if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) {
+    const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(normalizedUsername)) {
         throw new Error('Enter a username using 3 to 30 letters, numbers, or underscores.');
     }
     return normalizedUsername;
@@ -786,8 +786,8 @@ export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
     }
 }
 export async function loginUser(credentials) {
-    const identifier = String(credentials.email ?? credentials.username ?? '').trim().toLowerCase();
-    let email = identifier;
+    const identifier = String(credentials.email ?? credentials.username ?? '').trim();
+    let email = identifier.toLowerCase();
     if (identifier && !identifier.includes('@')) {
         const { data: result, error } = await supabaseClient.functions.invoke('username-login', { body: { username: identifier, password: credentials.password } });
         if (error || !result?.session) throw new Error(result?.error || 'Unable to sign in with username. Check your credentials or use your email.');

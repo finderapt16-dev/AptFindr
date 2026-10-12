@@ -8,7 +8,7 @@ Deno.serve(async (request) => {
     if (typeof username !== 'string' || typeof password !== 'string' || !password || username.length > 100) return respond({ error: 'Invalid username or password.' });
     const url = Deno.env.get('SUPABASE_URL')!;
     const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-    const { data: profile, error: lookupError } = await admin.from('app_users').select('email').eq('username', username.trim().toLowerCase()).maybeSingle();
+    const { data: profile, error: lookupError } = await admin.from('app_users').select('email').eq('username', username.trim()).maybeSingle();
     if (lookupError || !profile?.email) return respond({ error: 'Invalid username or password.' });
     const auth = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false } });
     const { data, error } = await auth.auth.signInWithPassword({ email: profile.email, password });
