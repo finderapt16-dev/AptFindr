@@ -1802,6 +1802,7 @@ if (browseMode === "popular") {
                                                 })
                                             )}
                                             emptyMessage="No apartments found on the map. Try another search."
+                                            enableLiveLocation
                                         />
                                     </div>
                                 )}

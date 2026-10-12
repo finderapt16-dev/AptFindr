@@ -461,7 +461,7 @@ const DashboardOverview = ({ tenantGreeting, dashboardSubtitle, favoriteIds, ava
         <Button variant="outline" onClick={() => navigate("/browse")}>Open full map</Button>
       </div>
       <div className="tenant-dashboard-map-canvas">
-        <MapView lat={DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={DEFAULT_LA_PAZ_MAP_CENTER.lng} zoom={12} apartments={availableApartments} emptyMessage="No available apartments have an exact map pin yet."/>
+        <MapView lat={DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={DEFAULT_LA_PAZ_MAP_CENTER.lng} zoom={12} apartments={availableApartments} enableLiveLocation emptyMessage="No available apartments have an exact map pin yet."/>
       </div>
     </section>
 
