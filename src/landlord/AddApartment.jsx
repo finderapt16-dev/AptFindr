@@ -17,9 +17,10 @@ import { apartmentFormValuesFromApartment, createApartment, deleteApartment, fet
 import { BUSINESS_PERMIT_DOCUMENT_TYPE, uploadVerificationDocuments, } from "@/services/verificationDocumentsService";
 import { notifyAdminsOfPropertySubmission, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { deletePropertyDraft, fetchPropertyDraft, savePropertyDraft, } from "@/services/propertyDraftService";
+import { reverseGeocodeAddPropertyLocationWithinLaPaz } from "@/services/geocodingService";
 import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates, } from "@/utils/mapCoordinates";
 import { supabase } from "@/services/supabaseClient";
-import { AlertCircle, ArrowLeft, ArrowRight, Building2, Camera, Check, Cloud, CloudUpload, FileText, MapPin, RotateCcw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, Camera, Check, Cloud, CloudUpload, FileText, LocateFixed, MapPin, RotateCcw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -121,6 +122,7 @@ export function AddApartment() {
     const [locationLookupRequest, setLocationLookupRequest] = useState(0);
     const [locationPinned, setLocationPinned] = useState(false);
     const [locationResolving, setLocationResolving] = useState(false);
+    const [locatingLiveLocation, setLocatingLiveLocation] = useState(false);
     const [barangayUnverified, setBarangayUnverified] = useState(false);
     const [coverageUnverified, setCoverageUnverified] = useState(false);
     const [manualAddressEdited, setManualAddressEdited] = useState(false);
@@ -409,6 +411,60 @@ export function AddApartment() {
             delete next[field];
             return next;
         });
+    };
+    const useLiveLocation = () => {
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+            toast.error("Live location is not supported by this browser. Use a supported browser on HTTPS.");
+            return;
+        }
+        if (locatingLiveLocation)
+            return;
+        setLocatingLiveLocation(true);
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            setFormData((current) => ({ ...current, lat, lng }));
+            setLocationPinned(false);
+            setLocationResolving(true);
+            try {
+                const detectedAddress = await reverseGeocodeAddPropertyLocationWithinLaPaz(lat, lng);
+                setFormData((current) => ({
+                    ...current,
+                    lat,
+                    lng,
+                    address: detectedAddress.street,
+                    barangay: detectedAddress.barangay || detectedAddress.barangayCandidate || "",
+                    city: detectedAddress.district,
+                    state: detectedAddress.city,
+                    zip: detectedAddress.zip,
+                }));
+                setLocationPinned(!detectedAddress.unresolved);
+                setBarangayUnverified(!detectedAddress.unresolved && !detectedAddress.barangayVerified);
+                setCoverageUnverified(!detectedAddress.unresolved && !detectedAddress.coverageVerified);
+                setManualAddressEdited(false);
+                lastAutoGeocodedAddressRef.current = [detectedAddress.street, detectedAddress.barangay || detectedAddress.barangayCandidate, detectedAddress.district, detectedAddress.city, detectedAddress.zip, "Philippines"].filter(Boolean).join(", ").trim().replace(/\s+/g, " ").toLowerCase();
+                clearValidationError("address");
+                clearValidationError("barangay");
+                clearValidationError("mapLocation");
+                toast.success("Live location added to the map.");
+            }
+            catch (error) {
+                setLocationPinned(false);
+                toast.error(error instanceof Error ? error.message : "We could not identify your live location. Move the map pin manually.");
+            }
+            finally {
+                setLocationResolving(false);
+                setLocatingLiveLocation(false);
+            }
+        }, (error) => {
+            const message = error?.code === 1
+                ? "Location permission was denied. Allow location access and try again."
+                : error?.code === 3
+                    ? "Finding your location took too long. Please try again."
+                    : "Unable to get your live location. Check your device location settings.";
+            toast.error(message);
+            setLocatingLiveLocation(false);
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
     };
     const FieldError = ({ field }) => validationErrors[field] ? <p className="add-apartment-text">{validationErrors[field]}</p> : null;
     const persistedStreetAddress = useMemo(() => [formData.address, formData.barangay].filter(Boolean).join(", "), [formData.address, formData.barangay]);
@@ -996,7 +1052,12 @@ export function AddApartment() {
                   </div>
 
                   <div className="add-apartment-panel-9">
-                    <Label className="add-apartment-map-location">Map Location</Label>
+                    <div className="add-apartment-map-heading">
+                      <Label className="add-apartment-map-location">Map Location</Label>
+                      <Button type="button" variant="outline" className="add-apartment-live-location" onClick={useLiveLocation} disabled={locatingLiveLocation || locationResolving}>
+                        <LocateFixed aria-hidden="true"/>{locatingLiveLocation ? "Finding location..." : "Use my live location"}
+                      </Button>
+                    </div>
                     <p className="add-apartment-text-6">Click or drag the map pin to select your apartment's exact location. The address details will update based on your selected point.</p>
                     <div className="add-apartment-card-7">
                       <PropertyLocationPicker lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {

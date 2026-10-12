@@ -24,6 +24,7 @@ import { AdminLandlordVerification } from './AdminLandlordVerification';
 import { AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
 import { AdminApartmentVerification } from './AdminApartmentVerification';
 import { AdminVerificationDocumentViewer } from './AdminVerificationDocumentViewer';
+import { AdminRequestChangesDialog } from './AdminRequestChangesDialog';
 import { ArchiveEmpty, canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
@@ -124,6 +125,8 @@ export function AdminDashboard() {
     const [nMessage, setNMessage] = useState("");
     const [vExpirationDays, setVExpirationDays] = useState(90);
     const [isIssuingViolation, setIsIssuingViolation] = useState(false);
+    const [requestChangesModal, setRequestChangesModal] = useState(null);
+    const [isSendingRequestChanges, setIsSendingRequestChanges] = useState(false);
     // violation edit modal
     const [editViolationModal, setEditViolationModal] = useState(null);
     const [editVMessage, setEditVMessage] = useState("");
@@ -1008,6 +1011,35 @@ export function AdminDashboard() {
             setIsIssuingViolation(false);
         }
     };
+    const sendApartmentChangeRequest = async ({ requestType, message }) => {
+        if (!requestChangesModal || !user?.id || isSendingRequestChanges)
+            return;
+        setIsSendingRequestChanges(true);
+        try {
+            const created = await createViolation({
+                landlord_id: requestChangesModal.landlordId,
+                admin_id: user.id,
+                mode: "notice",
+                type: requestType,
+                message,
+                issued_at: new Date().toISOString(),
+                apartment_id: requestChangesModal.apartmentId,
+                active: true,
+            });
+            if (!created)
+                throw new Error("The change request could not be sent. Please try again.");
+            setViolations(await fetchViolations());
+            setRequestChangesModal(null);
+            toast.success("Change request sent to the landlord.");
+        }
+        catch (error) {
+            console.error("Unable to send apartment change request:", error);
+            toast.error(error instanceof Error ? error.message : "Unable to send the change request.");
+        }
+        finally {
+            setIsSendingRequestChanges(false);
+        }
+    };
     // ── Password Change ───────────────────────────────────────────────────────
     const handleChangePassword = async () => {
         if (!user) {
@@ -1702,10 +1734,10 @@ export function AdminDashboard() {
           isLoading={isLoadingLandlordPropertyDetails}
           isApproving={publishingApartmentId === selectedLandlordProperty.id}
           hasUnits={(selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0}
-          onBack={() => { setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
+          onBack={() => { setRequestChangesModal(null); setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
           onViewDocument={() => setIsViewingLandlordDocument(true)}
           onApprove={() => void ((selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0 ? handleApproveAndPublishApartment(selectedLandlordProperty) : handleVerifyApartmentWithoutUnits(selectedLandlordProperty))}
-          onRequestChanges={() => openViolationModal("notice", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
+          onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
           onReject={() => openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
           onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
         />;
@@ -1794,6 +1826,13 @@ export function AdminDashboard() {
           </main>
         </div>
       </div>
+
+      <AdminRequestChangesDialog
+        open={Boolean(requestChangesModal)}
+        onClose={() => { if (!isSendingRequestChanges) setRequestChangesModal(null); }}
+        onSubmit={sendApartmentChangeRequest}
+        isSending={isSendingRequestChanges}
+      />
 
       <AlertDialog open={!!verifyAction} onOpenChange={() => setVerifyAction(null)}>
         <AlertDialogContent className="admin-dashboard-card-12">
