@@ -47,3 +47,5 @@ scripts/database/
 database/
 .env.local
 node_modules/
+
+supabase/.temp/

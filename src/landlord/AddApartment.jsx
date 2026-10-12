@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
@@ -107,6 +108,7 @@ export function AddApartment() {
     const { refreshApartments } = useApartmentsContext();
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [savedApartmentId, setSavedApartmentId] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
     const totalSteps = 4;
     const stepConfig = [
@@ -433,8 +435,6 @@ export function AddApartment() {
         const errors = {};
         if (!String(formData.title ?? "").trim())
             errors.title = "Apartment name is required.";
-        if (!Number(formData.sqft))
-            errors.sqft = "Total apartment area is required.";
         if (!String(formData.description ?? "").trim())
             errors.description = "Apartment description is required.";
         if (uploadedImages.length === 0)
@@ -459,7 +459,7 @@ export function AddApartment() {
             errors.contractDuration = "Select a contract duration.";
         const firstStep = errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
             ? 1
-            : errors.title || errors.sqft || errors.description || errors.images
+            : errors.title || errors.description || errors.images
                 ? 2
                 : errors.address || errors.barangay || errors.mapLocation
                     ? 3
@@ -474,7 +474,7 @@ export function AddApartment() {
             if (step === 1)
                 return ["businessPermit", "businessAccount", "permitIssuedAt", "permitExpiry"].includes(field);
             if (step === 2)
-                return ["title", "sqft", "description", "images"].includes(field);
+                return ["title", "description", "images"].includes(field);
             if (step === 3)
                 return ["address", "barangay", "mapLocation"].includes(field);
             if (step === 4)
@@ -529,7 +529,7 @@ export function AddApartment() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         // Prevent duplicate submissions while async operation is in flight
-        if (isSubmitting) {
+        if (isSubmitting || submissionCompleteRef.current) {
             toast.error("Please wait for your submission to complete...");
             return;
         }
@@ -702,7 +702,7 @@ export function AddApartment() {
             await deletePropertyDraft(user.id);
             setDraftStatus("idle");
             toast.success("Apartment submitted successfully and is awaiting admin review.");
-            navigate("/landlord/dashboard?section=overview");
+            setSavedApartmentId(created.id);
         }
         catch (error) {
             console.error("Failed to submit apartment:", error);
@@ -832,18 +832,16 @@ export function AddApartment() {
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-property-name-2">
-                      <Building2 className="add-apartment-building2-icon-2"/> Apartment Name
+                      <Building2 className="add-apartment-building2-icon-2"/> Apartment Name <span aria-hidden="true">*</span>
                     </Label>
-                    <Input value={String(formData.title ?? "")} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} placeholder="e.g., Luna" className="add-apartment-input-3"/>
-                    <p className="add-apartment-text-5">Carried from Apartment Information. Go back to step 1 to edit this name.</p>
+                    <Input required value={String(formData.title ?? "")} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} placeholder="e.g., Luna" className="add-apartment-input-3"/>
                   </div>
 
                   <div className="add-apartment-panel-9">
                     <Label className="add-apartment-property-address">
-                      <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address
+                      <MapPin className="add-apartment-map-pin-icon-2"/> Apartment Address <span aria-hidden="true">*</span>
                     </Label>
-                    <Input value={formData.address} onChange={(event) => { setFormData((current) => ({ ...current, address: event.target.value })); setLocationPinned(false); setManualAddressEdited(true); }} placeholder="e.g., Luna, La Paz, Iloilo City, 5000" className="add-apartment-input-3"/>
-                    <p className="add-apartment-text-5">Carried from Location. Go back to step 2 to change this address.</p>
+                    <Input required value={formData.address} onChange={(event) => { setFormData((current) => ({ ...current, address: event.target.value })); setLocationPinned(false); setManualAddressEdited(true); }} placeholder="e.g., Luna, La Paz, Iloilo City, 5000" className="add-apartment-input-3"/>
                   </div>
 
                   <div className="add-apartment-grid-4">
@@ -927,7 +925,7 @@ export function AddApartment() {
                     </div>
 
                     <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-property-name">Apartment Name *</Label>
+                      <Label className="add-apartment-property-name">Apartment Name <span aria-hidden="true">*</span></Label>
                       <Input value={formData.title} onChange={(e) => {
                 setFormData({ ...formData, title: e.target.value });
                 if (e.target.value.trim())
@@ -936,18 +934,8 @@ export function AddApartment() {
                       <FieldError field="title"/>
                     </div>
 
-                    <div className="add-apartment-panel-9 add-apartment-property-basics-grid">
-                      <Label className="add-apartment-total-property-area-sq-ft">Total Apartment Floor Area *</Label>
-                      <Input type="number" value={formData.sqft || ""} onChange={(e) => {
-                setFormData({ ...formData, sqft: Number(e.target.value) });
-                if (Number(e.target.value) > 0)
-                    clearValidationError("sqft");
-            }} placeholder="e.g., 120" required aria-invalid={Boolean(validationErrors.sqft)} className={`${fieldClass("sqft")} hide-number-spinners`}/>
-                      <FieldError field="sqft"/>
-                    </div>
-
                     <div className="add-apartment-panel-9 add-apartment-description-panel">
-                      <Label className="add-apartment-description">Description *</Label>
+                      <Label className="add-apartment-description">Description <span aria-hidden="true">*</span></Label>
                       <Textarea value={formData.description} onChange={(e) => {
                 setFormData({ ...formData, description: e.target.value });
                 if (e.target.value.trim())
@@ -964,7 +952,7 @@ export function AddApartment() {
                   <p className="add-apartment-location-section-label">Address</p>
                   <div className="add-apartment-location-primary-grid">
                     <div className="add-apartment-panel-9">
-                      <Label>Barangay *</Label>
+                      <Label>Barangay <span aria-hidden="true">*</span></Label>
                       <Input value={formData.barangay} onChange={(e) => {
                 setFormData((current) => ({ ...current, barangay: e.target.value }));
                 setManualAddressEdited(locationPinned);
@@ -974,7 +962,7 @@ export function AddApartment() {
                       <FieldError field="barangay"/>
                     </div>
                     <div className="add-apartment-panel-9">
-                      <Label className="add-apartment-detailed-address-street-address">Street *</Label>
+                      <Label className="add-apartment-detailed-address-street-address">Street <span aria-hidden="true">*</span></Label>
                       <Input value={formData.address} onChange={(e) => {
                 setFormData((current) => ({ ...current, address: e.target.value }));
                 setManualAddressEdited(locationPinned);
@@ -1152,6 +1140,23 @@ export function AddApartment() {
         </Card>
       </div>
 
+      <Dialog open={savedApartmentId !== null} onOpenChange={(open) => {
+          if (!open) navigate("/landlord/dashboard?section=overview");
+      }}>
+        <DialogContent className="add-apartment-unit-prompt" overlayClassName="add-apartment-unit-prompt-overlay" onInteractOutside={(event) => event.preventDefault()}>
+          <div className="add-apartment-unit-prompt-icon"><Building2 aria-hidden="true" /></div>
+          <DialogTitle className="add-apartment-unit-prompt-title">Add Unit Now?</DialogTitle>
+          <DialogDescription className="add-apartment-unit-prompt-description">
+            Your apartment information has been saved successfully.<br />
+            Would you like to add unit details now?<br />
+            You can add one or more units while your apartment awaits admin review.
+          </DialogDescription>
+          <div className="add-apartment-unit-prompt-actions">
+            <Button type="button" variant="outline" onClick={() => navigate("/landlord/dashboard?section=overview")}>Later</Button>
+            <Button type="button" onClick={() => navigate(`/landlord/properties/${savedApartmentId}/rooms`)}>Add Unit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {pendingDraft && (<div className="add-apartment-overlay" role="dialog" aria-modal="true" aria-labelledby="draft-dialog-title">
           <div className="add-apartment-card-10">
             <div className="add-apartment-row-11">

@@ -5,10 +5,10 @@ import { supabase } from "@/services/supabaseClient";
 import { PASSWORD_REQUIREMENTS } from "./signupValidation";
 
 export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, emailReadOnly = false, emailLabel = "Email Address", hideEmail = false }) {
-  const username = String(values.username ?? "").trim().toLowerCase();
+  const username = String(values.username ?? "").trim();
   const [usernameCheck, setUsernameCheck] = useState({ username: "", error: "" });
   useEffect(() => {
-    if (!/^[a-z0-9_]{3,30}$/.test(username)) return;
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) return;
     let active = true;
     const timer = setTimeout(async () => {
       try {
