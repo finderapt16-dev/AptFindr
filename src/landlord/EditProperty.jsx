@@ -125,10 +125,20 @@ export function EditProperty() {
         contractDuration: form.contractDuration,
         houseRules: form.rules,
       }, user?.id);
-      await persistApartmentImages(apartment.id, images, user?.id);
+      // `persistApartmentImages` reloads and returns the complete saved listing.
+      // Carry it to the details screen so mobile does not flash a blank loading
+      // page while the same listing is fetched again.
+      const savedApartment = await persistApartmentImages(apartment.id, images, user?.id);
       toast.success("Apartment details saved.");
       hasNavigated = true;
-      navigate(`/apartment/${apartment.id}`, { replace: true, state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Apartments" } });
+      navigate(`/apartment/${apartment.id}`, {
+        replace: true,
+        state: {
+          returnTo: "/landlord/dashboard",
+          backLabel: "Back to My Apartments",
+          apartment: savedApartment,
+        },
+      });
 
       // Let the new screen paint before the shared listing data refreshes.
       // This prevents the edit form (and its Leaflet map) from re-rendering

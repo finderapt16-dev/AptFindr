@@ -166,10 +166,16 @@ export function ApartmentDetails() {
     const { unreadCount } = useTenantNotifications(tenantAccount);
     const { isFavorite, toggleFavorite } = useFavorites();
     const { apartments: contextApartments, refreshApartments: refreshPropertyListings } = useApartmentsContext();
-    const [apartment, setApartment] = useState(null);
+    // The landlord edit flow supplies the just-saved listing in navigation
+    // state. Rendering it immediately prevents a mobile white/loading flash
+    // while this page quietly checks for the newest server data.
+    const routeApartment = routeLocation.state?.apartment?.id === id
+        ? routeLocation.state.apartment
+        : null;
+    const [apartment, setApartment] = useState(() => routeApartment);
     const [landlord, setLandlord] = useState(null);
     const [verified, setVerified] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !routeApartment);
     const [accessState, setAccessState] = useState(null);
     const [imageIndex, setImageIndex] = useState(0);
     const [mapExpanded, setMapExpanded] = useState(false);

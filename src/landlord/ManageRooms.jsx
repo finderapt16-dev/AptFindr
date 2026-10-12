@@ -683,7 +683,7 @@ export function ManageRooms({ propertyId }) {
           </aside>
         </div>) : null}
 
-      {(addingUnit || roomId === "new") && <AddUnitDialog open apartmentName={property.title} onClose={() => { setAddingUnit(false); if (roomId === "new") returnToRooms(); }} onSave={async details => {
+      {(addingUnit || roomId === "new") && <AddUnitDialog open apartmentId={id} apartmentName={property.title} onClose={() => { setAddingUnit(false); if (roomId === "new") returnToRooms(); }} onSave={async details => {
         if (!canManage) throw new Error("You do not have permission to add units to this apartment.");
         const draft = { ...emptyRoomForm(), ...details, description: "" };
         const saved = await createApartmentRoom(id, buildRoomPayload(draft, [], details.status), user.id);
