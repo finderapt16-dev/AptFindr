@@ -1,0 +1,672 @@
+/* =========================================================
+   APTFINDR — REUSABLE LOGIN FORM
+========================================================= */
+
+.login-form-shell {
+  --login-accent: #16a5e1;
+  --login-accent-hover: #0e93ca;
+  --login-text: #111111;
+  --login-subtext: #666666;
+  --login-muted: #8a8a8a;
+  --login-border: #d9d9d9;
+
+  width: 100%;
+}
+
+
+/* =========================================================
+   HEADING
+========================================================= */
+
+.login-form-heading {
+  margin-bottom: 1.5rem;
+}
+
+.login-title {
+  margin: 0;
+
+  color: var(--login-text);
+
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.login-subtitle {
+  margin: 0.5rem 0 0;
+
+  color: var(--login-subtext);
+
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.login-form-shell .auth-field-control {
+  height: 44px;
+  border: 1px solid #a3a3a3;
+  border-radius: 6px;
+}
+
+.login-form-shell .auth-field-control:focus-within {
+  border-color: var(--login-accent);
+  box-shadow: 0 0 0 2px rgb(22 165 225 / 14%);
+}
+
+
+/* =========================================================
+   PASSWORD
+========================================================= */
+
+.login-password-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+  padding: 0;
+
+  color: var(--login-subtext);
+
+  background: transparent;
+  border: 0;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-password-toggle:hover,
+.login-password-toggle:focus-visible {
+  color: var(--login-text);
+}
+
+.login-password-toggle:focus-visible {
+  outline: 2px solid var(--login-accent);
+  outline-offset: -3px;
+  border-radius: 0.375rem;
+}
+
+.login-password-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Edge adds its own password reveal button; the custom toggle above is the
+   single, consistent control used by this form. */
+.login-form-shell input[type="password"]::-ms-reveal,
+.login-form-shell input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* =========================================================
+   FORGOT PASSWORD
+========================================================= */
+
+.login-recovery-link-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.login-recovery-link {
+  padding: 0;
+
+  color: var(--login-accent);
+
+  background: transparent;
+  border: 0;
+
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-recovery-link:hover {
+  color: var(--login-accent-hover);
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   SUCCESS / ERROR MESSAGES
+========================================================= */
+
+.login-message {
+  margin-bottom: 1rem;
+}
+
+
+/* SUCCESS */
+
+.login-success-alert {
+  padding: 0.75rem;
+
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-radius: 0.625rem;
+}
+
+.login-success-icon {
+  width: 1rem;
+  height: 1rem;
+
+  color: #16a34a;
+}
+
+.login-success-text {
+  color: #166534;
+
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+
+/* ERROR */
+
+.login-error-alert {
+  padding: 0.75rem;
+
+  background: #fff1f2;
+  border-color: #fecdd3;
+  border-radius: 0.625rem;
+}
+
+.login-error-icon {
+  width: 1rem;
+  height: 1rem;
+
+  color: #e11d48;
+}
+
+.login-error-text {
+  color: #be123c;
+
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   RESEND VERIFICATION
+========================================================= */
+
+.login-resend-link {
+  margin-top: 0.5rem;
+  padding: 0;
+
+  color: var(--login-accent);
+
+  background: transparent;
+  border: 0;
+
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-resend-link:hover:not(:disabled) {
+  color: var(--login-accent-hover);
+  text-decoration: underline;
+}
+
+.login-resend-link:disabled {
+  color: var(--login-muted);
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   SIGN IN BUTTON
+========================================================= */
+
+.login-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 0.5rem;
+
+  width: 100%;
+  height: 3rem;
+
+  color: #ffffff;
+
+  background: var(--login-accent);
+  border: 0;
+  border-radius: 0.625rem;
+
+  font-size: 0.9375rem;
+  font-weight: 600;
+
+  box-shadow: none;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.login-submit-button:hover:not(:disabled) {
+  background: var(--login-accent-hover);
+}
+
+.login-submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   GOOGLE SIGN IN
+========================================================= */
+
+.login-social-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  color: var(--login-muted);
+
+  font-size: 0.75rem;
+}
+
+.login-social-divider span {
+  flex: 1;
+  height: 1px;
+
+  background: var(--login-border);
+}
+
+.login-social-divider b {
+  font-weight: 500;
+}
+
+.login-google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  width: 100%;
+  height: 3rem;
+
+  color: var(--login-text);
+
+  background: #ffffff;
+  border: 1px solid var(--login-border);
+  border-radius: 0.625rem;
+
+  font-size: 0.875rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.login-google-button:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.login-google-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-google-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+
+/* =========================================================
+   GOOGLE ACCOUNT THAT STILL NEEDS REGISTRATION
+
+   Shown when Google signed somebody in whose account AptFindr has never
+   seen. The notice explains why sign-in stopped and finishes the account
+   with one click, because the Google session is already live.
+========================================================= */
+
+.login-google-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem 1rem;
+
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 0.625rem;
+}
+
+.login-google-setup-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.login-google-setup-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.125rem;
+
+  flex-shrink: 0;
+
+  color: #0369a1;
+}
+
+.login-google-setup-copy {
+  min-width: 0;
+}
+
+.login-google-setup-title {
+  margin: 0;
+
+  color: #0c4a6e;
+
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.login-google-setup-text {
+  margin: 0.25rem 0 0;
+
+  color: #075985;
+
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.login-google-setup-email {
+  color: #0c4a6e;
+
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.login-google-setup-hint {
+  margin: 0.25rem 0 0;
+
+  color: var(--login-subtext);
+
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.login-google-setup-agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  color: #0c4a6e;
+
+  font-size: 0.75rem;
+  line-height: 1.5;
+
+  cursor: pointer;
+}
+
+.login-google-setup-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.0625rem 0 0;
+
+  flex-shrink: 0;
+
+  accent-color: var(--login-accent);
+
+  cursor: pointer;
+}
+
+.login-google-setup-policy {
+  padding: 0;
+
+  color: var(--login-accent);
+
+  background: transparent;
+  border: 0;
+
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-google-setup-policy:hover:not(:disabled) {
+  color: var(--login-accent-hover);
+}
+
+.login-google-setup-policy:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+.login-google-setup-create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+
+  color: #ffffff;
+
+  background: var(--login-accent);
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.login-google-setup-create:hover:not(:disabled) {
+  background: var(--login-accent-hover);
+}
+
+.login-google-setup-create:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+.login-google-setup-create-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.login-google-setup-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.login-google-setup-switch {
+  padding: 0;
+
+  color: var(--login-accent);
+
+  background: transparent;
+  border: 0;
+
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-google-setup-switch:hover:not(:disabled) {
+  color: var(--login-accent-hover);
+  text-decoration: underline;
+}
+
+.login-google-setup-switch:disabled {
+  color: var(--login-muted);
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   LOADING SPINNER
+========================================================= */
+
+.login-spinner {
+  width: 1rem;
+  height: 1rem;
+
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+
+  animation: login-spin 0.7s linear infinite;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   CREATE ACCOUNT
+========================================================= */
+
+.login-signup-prompt {
+  margin: 0;
+
+  color: var(--login-subtext);
+
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  text-align: center;
+}
+
+.login-create-link {
+  padding: 0;
+
+  color: var(--login-accent);
+
+  background: transparent;
+  border: 0;
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.login-create-link:hover {
+  color: var(--login-accent-hover);
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  .login-form-heading {
+    margin-bottom: 1.25rem;
+  }
+
+  .login-title {
+    font-size: 1.375rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.8125rem;
+  }
+
+  .login-form {
+    gap: 1rem;
+  }
+
+  .login-form-fields {
+    gap: 1rem;
+  }
+
+  .login-google-setup {
+    gap: 0.625rem;
+
+    padding: 0.75rem;
+  }
+
+  .login-google-setup-text {
+    font-size: 0.8125rem;
+  }
+
+  /* Keep the consent row and its action comfortably tappable. */
+  .login-google-setup-agreement {
+    font-size: 0.8125rem;
+  }
+
+  .login-google-setup-create {
+    min-height: 2.75rem;
+    height: auto;
+  }
+
+  .login-google-setup-switch {
+    min-height: 2.25rem;
+    font-size: 0.875rem;
+  }
+}

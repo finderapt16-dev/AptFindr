@@ -1,0 +1,67 @@
+/* Single-column Edit Apartment form, sized from the supplied Figma export. */
+.edit-property-page { min-height: 100dvh; background: #fff; color: #1f2937; }
+.edit-property-content { box-sizing: border-box; width: min(945px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 max(40px, env(safe-area-inset-bottom)); }
+.edit-property-header { margin-bottom: 24px; }
+.edit-property-back { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #0ea5e9; font-size: 14px; cursor: pointer; }
+.edit-property-back svg { width: 16px; height: 16px; }
+.edit-property-header h1 { margin: 14px 0 5px; color: #111; font-size: 24px; line-height: 29px; font-weight: 700; }
+.edit-property-header p { margin: 0; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-fields { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.edit-property-card { box-sizing: border-box; min-width: 0; padding: 16px 24px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; }
+.edit-property-card h2, .edit-property-name > label, .edit-property-card > label:first-child { display: block; margin: 0 0 8px; color: #1f2937; font-size: 16px; font-weight: 600; line-height: 19px; }
+.edit-property-card h2 > span, .edit-property-address-fields label > span { color: #0ea5e9; }
+.edit-property-card > p, .edit-property-map-heading p { margin: -4px 0 12px; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-card input, .edit-property-card textarea, .edit-property-coordinate-fields input { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #334155; font: inherit; font-size: 14px; }
+.edit-property-card input, .edit-property-coordinate-fields input { height: 40px; padding: 8px 14px; }
+.edit-property-card textarea { display: block; min-height: 76px; padding: 12px 14px; resize: vertical; line-height: 20px; }
+.edit-property-card input:focus-visible, .edit-property-card textarea:focus-visible, .edit-property-coordinate-fields input:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.edit-property-prices, .edit-property-coordinate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.edit-property-prices label, .edit-property-address-fields label, .edit-property-coordinate-fields label { display: grid; gap: 6px; color: #64748b; font-size: 14px; line-height: 17px; }
+.edit-property-character-count { display: block; margin-top: 6px; text-align: right; color: #64748b; font-size: 12px; }
+.edit-property-choice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px 34px; }
+.edit-property-choice-grid button { box-sizing: border-box; min-height: 40px; padding: 8px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 10px; background: #fff; color: #0f172a; font: inherit; font-size: 14px; font-weight: 500; line-height: 17px; cursor: pointer; }
+.edit-property-choice-grid button.is-selected { border-color: #0ea5e9; background: #f0f9ff; color: #0284c7; }
+.edit-property-choice-grid button:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.edit-property-other-label { display: block; margin: 14px 0 6px; font-size: 14px; font-weight: 600; }
+.edit-property-add-row { display: flex; gap: 12px; }
+.edit-property-add-row > input { flex: 1; }
+.edit-property-add-row > button { width: 100px; height: 40px; border-radius: 8px; background: #0ea5e9; color: #fff; }
+.edit-property-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.edit-property-tags:empty { display: none; }
+.edit-property-tags > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid #bae6fd; border-radius: 5px; background: #e0f2fe; color: #0284c7; font-size: 12px; }
+.edit-property-tags button { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.edit-property-tags svg { width: 12px; height: 12px; }
+.edit-property-address-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.edit-property-address-full { grid-column: 1 / -1; }
+.edit-property-map-card { padding: 24px 30px; }
+.edit-property-map-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.edit-property-map-heading button { height: 32px; padding: 4px 10px; font-size: 12px; }
+.edit-property-map-card .location-picker-panel > label, .edit-property-map-card .location-picker-grid { display: none; }
+.edit-property-map-card .location-picker-card { height: 270px; border-radius: 10px; }
+.edit-property-map-card .location-picker-text { font-size: 12px; }
+.edit-property-footer { display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px; }
+.edit-property-footer button { min-width: 100px; height: 44px; border-radius: 8px; }
+.edit-property-footer button[type=submit] { background: #0ea5e9; color: #fff; }
+.edit-property-photo-card { min-height: 227px; padding: 12px 16px; }
+.edit-property-photo-card > small { display: block; margin-top: 10px; color: #64748b; font-size: 12px; }
+.edit-property-photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.edit-property-photo-tile, .edit-property-photo-upload { position: relative; height: 120px; overflow: hidden; border-radius: 8px; background: #cbd5e1; }
+.edit-property-photo-tile > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.edit-property-photo-tile.is-primary { outline: 2px solid #0ea5e9; outline-offset: -2px; }
+.edit-property-photo-remove, .edit-property-photo-cover { position: absolute; display: grid; place-items: center; width: 24px; height: 24px; padding: 4px; border: 0; border-radius: 50%; cursor: pointer; }
+.edit-property-photo-remove { top: 6px; right: 6px; background: #0f172a; color: #fff; }
+.edit-property-photo-cover { bottom: 6px; left: 6px; background: #fff; color: #0284c7; }
+.edit-property-photo-remove svg, .edit-property-photo-cover svg { width: 14px; height: 14px; }
+.edit-property-photo-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid #93c5fd; background: #eff6ff; color: #2563eb; font: inherit; font-size: 14px; cursor: pointer; }
+.edit-property-photo-upload svg { width: 24px; height: 24px; }
+.edit-property-status { display: grid; min-height: 100dvh; place-items: center; color: #64748b; }
+@media (max-width: 640px) {
+ .edit-property-content { width: calc(100% - 24px); padding-top: 20px; }
+ .edit-property-card { padding: 14px; }
+ .edit-property-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+ .edit-property-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+ .edit-property-prices, .edit-property-coordinate-fields { gap: 12px; }
+ .edit-property-address-fields { grid-template-columns: 1fr; }
+ .edit-property-card input, .edit-property-card textarea, .edit-property-coordinate-fields input { font-size: 16px; }
+ .edit-property-map-card .location-picker-card { height: 230px; }
+}

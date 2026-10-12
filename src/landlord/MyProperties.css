@@ -1,0 +1,871 @@
+/* ============================================================
+   MY PROPERTIES
+   Figma-aligned styling for the Landlord Dashboard
+   ============================================================ */
+
+.properties-section-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 40px 40px;
+  color: #111827;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.properties-section-header {
+  width: 100%;
+  min-height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 0 24px;
+}
+
+.properties-section-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.properties-section-row-2 {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: #0ea5e9;
+  background: #eff8fd;
+}
+
+.properties-section-building2-icon {
+  width: 25px;
+  height: 25px;
+  stroke-width: 2;
+}
+
+.properties-section-header-copy {
+  min-width: 0;
+}
+
+.properties-section-my-properties {
+  margin: 0 0 2px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.properties-section-your-listings {
+  margin: 0;
+  color: #111827;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.properties-section-text {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+
+.properties-section-add-property-link,
+.properties-section-first-property-link {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.properties-section-add-property {
+  min-width: 184px;
+  width: 184px;
+  height: 42px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #14ace8;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.properties-section-add-property:hover {
+  background: #079bd5;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.18);
+}
+
+.properties-section-add-property:active {
+  transform: translateY(1px);
+}
+
+.properties-section-plus-icon {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  stroke-width: 2.5;
+}
+
+/* Empty listings state uses the same primary action as the page header. */
+.properties-empty-add-link {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.properties-empty-add-button {
+  width: 184px;
+  height: 42px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #14ace8;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.properties-empty-add-button:hover {
+  background: #079bd5;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.18);
+}
+
+.properties-empty-add-button:active {
+  transform: translateY(1px);
+}
+
+.properties-empty-plus-icon {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  stroke-width: 2.5;
+}
+
+/* ============================================================
+   FILTER / SORT TOOLBAR
+   ============================================================ */
+
+.properties-section-section {
+  width: 100%;
+  min-height: 70px;
+  margin-bottom: 24px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.properties-section-row-3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.properties-section-all-units,
+.properties-section-available {
+  height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.properties-section-all-units:hover,
+.properties-section-available:hover {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.properties-section-all-units-2,
+.properties-section-available-2 {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.2);
+}
+
+.properties-section-all-units-2:hover,
+.properties-section-available-2:hover {
+  border-color: #0284c7;
+  background: #0284c7;
+}
+
+.properties-section-layout-grid-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.properties-section-span {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 800;
+}
+
+.properties-section-span-2 {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.properties-section-span-3 {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.properties-section-available-4 {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
+.properties-section-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ============================================================
+   SORT
+   ============================================================ */
+
+.properties-section-label {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.properties-section-sort-by {
+  flex-shrink: 0;
+}
+
+.properties-section-select {
+  min-width: 112px;
+  height: 32px;
+  padding: 0 20px 0 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #1e293b;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ============================================================
+   GRID / LIST TOGGLE
+   ============================================================ */
+
+.properties-section-card {
+  min-height: 40px;
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.properties-section-button {
+  width: 38px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.properties-section-button:hover {
+  color: #334155;
+  background: #ffffff;
+}
+
+.properties-section-button-2 {
+  color: #ffffff;
+  background: #0ea5e9;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.2);
+}
+
+.properties-section-button-2:hover {
+  color: #ffffff;
+  background: #0284c7;
+}
+
+.properties-section-button-3 {
+  color: #64748b;
+}
+
+.properties-section-layout-grid-icon-2,
+.properties-section-list-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.properties-section-card-2 {
+  width: 100%;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.properties-section-clock-icon {
+  width: 30px;
+  height: 30px;
+  color: #0ea5e9;
+  animation: properties-section-pulse 1.8s ease-in-out infinite;
+}
+
+.properties-section-loading-text {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   EMPTY STATE — NO PROPERTIES
+   ============================================================ */
+
+.properties-section-card-3 {
+  width: 100%;
+  min-height: 360px;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed #dbe3ec;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.properties-section-row-4 {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  color: #0ea5e9;
+  background: #eff8fd;
+}
+
+.properties-section-building2-icon-2 {
+  width: 31px;
+  height: 31px;
+}
+
+.properties-section-no-properties-yet {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+}
+
+.properties-section-text-2 {
+  max-width: 420px;
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.properties-section-add-your-first-property {
+  min-width: 172px;
+  height: 44px;
+  margin-top: 22px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #0ea5e9;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.properties-section-add-your-first-property:hover {
+  background: #0284c7;
+}
+
+/* ============================================================
+   EMPTY STATE — NO MATCHING PROPERTIES
+   ============================================================ */
+
+.properties-section-card-4 {
+  width: 100%;
+  min-height: 300px;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed #dbe3ec;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.properties-section-empty-search-icon {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.properties-section-search-icon {
+  width: 25px;
+  height: 25px;
+  color: #94a3b8;
+}
+
+.properties-section-no-matching-properties {
+  margin: 0;
+  color: #1e293b;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 700;
+}
+
+.properties-section-show-all-units {
+  height: 40px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border: 1px solid #dbe3ec;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.properties-section-show-all-units:hover {
+  background: #f8fafc;
+}
+
+/* ============================================================
+   PROPERTY GRID
+   ============================================================ */
+
+.properties-section-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* ============================================================
+   PROPERTY LIST
+   ============================================================ */
+
+.properties-section-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ============================================================
+   PAGINATION
+   ============================================================ */
+
+.properties-section-footer {
+  width: 100%;
+  min-height: 68px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.properties-section-pagination-summary {
+  white-space: nowrap;
+}
+
+.properties-section-row-5 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.properties-section-button-4 {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.properties-section-button-4:hover:not(:disabled) {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.properties-section-button-4:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.properties-section-row-6 {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: #ffffff;
+  background: #0ea5e9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.properties-section-chevron-right-icon,
+.properties-section-chevron-right-icon-2 {
+  width: 16px;
+  height: 16px;
+}
+
+.properties-section-chevron-right-icon {
+  transform: rotate(180deg);
+}
+
+.properties-section-label-2 {
+  height: 36px;
+  margin-left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.properties-section-select-2 {
+  height: 36px;
+  min-width: 58px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  outline: none;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ============================================================
+   FOCUS STATES
+   ============================================================ */
+
+.properties-section-container button:focus-visible,
+.properties-section-container select:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.35);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   ANIMATION
+   ============================================================ */
+
+@keyframes properties-section-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.96);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — TABLET
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .properties-section-container {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .properties-section-header {
+    min-height: 100px;
+  }
+
+  .properties-section-your-listings {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .properties-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .properties-section-container {
+    padding: 0 20px 30px;
+  }
+
+  .properties-section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 24px;
+    padding-bottom: 20px;
+  }
+
+  .properties-section-add-property-link,
+  .properties-section-add-property {
+    width: 100%;
+  }
+
+  .properties-section-add-property {
+    min-width: 0;
+  }
+
+  .properties-section-section {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .properties-section-content {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .properties-section-label {
+    flex: 1 1 auto;
+  }
+
+  .properties-section-select {
+    flex: 1;
+  }
+
+  .properties-section-card {
+    flex-shrink: 0;
+  }
+
+  .properties-section-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .properties-section-pagination-summary {
+    white-space: normal;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .properties-section-container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .properties-section-row {
+    align-items: flex-start;
+  }
+
+  .properties-section-row-2 {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .properties-section-building2-icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .properties-section-your-listings {
+    font-size: 21px;
+    line-height: 27px;
+  }
+
+  .properties-section-text {
+    font-size: 12px;
+  }
+
+  .properties-section-row-3 {
+    width: 100%;
+  }
+
+  .properties-section-all-units,
+  .properties-section-available {
+    flex: 1;
+  }
+
+  .properties-section-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .properties-section-label {
+    width: 100%;
+  }
+
+  .properties-section-card {
+    align-self: flex-end;
+  }
+
+  .properties-section-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .properties-section-footer {
+    padding: 12px;
+  }
+
+  .properties-section-row-5 {
+    width: 100%;
+  }
+
+  .properties-section-label-2 {
+    margin-left: auto;
+  }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .properties-section-span
+  { font-size: 11px; }
+}
+
+/* Tablet range floor: anything still under 11px between 641px and 1023px
+   (tablet portrait / small laptop) is raised to the same readable minimum. */
+@media (max-width: 1023px) {
+  .properties-section-span
+  { font-size: 11px; }
+}

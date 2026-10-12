@@ -1,0 +1,71 @@
+/* Listing cards follow the compact photo-first reference. */
+.map-listing-popup-shell .leaflet-popup-content { margin: 0; width: 278px !important; }
+.map-listing-popup-shell .leaflet-popup-content-wrapper { padding: 0; border-radius: 10px; overflow: hidden; }
+.map-listing-popup-shell .leaflet-popup-close-button { z-index: 2; background: white; border-radius: 50%; }
+.map-listing-popup { max-height: 420px; overflow-y: auto; }
+.map-listing-popup .apartment-card-link + .apartment-card-link { margin-top: 10px; }
+.map-listing-popup .apartment-card-panel { position: relative; }
+.map-listing-popup p { margin: 0; }
+.apartment-browse-article,
+.apartment-card-enter {
+  display: block;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #d5d5d5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: none;
+  color: #252525;
+}
+.apartment-card-link { display: block; color: inherit; text-decoration: none; }
+.apartment-browse-panel-5,
+.apartment-card-panel { aspect-ratio: 278 / 145; overflow: hidden; }
+.apartment-browse-image-with-fallback,
+.apartment-card-image-with-fallback { display: block; width: 100%; height: 100%; object-fit: cover; }
+.apartment-browse-content-2,
+.apartment-card-badges-enter { position: absolute; top: 18px; left: 24px; display: flex; }
+.apartment-browse-content-2 > :not(.apartment-browse-badge-2) { display: none; }
+.apartment-browse-badge-2,
+.apartment-card-badge-4 { border: 0; border-radius: 999px; padding: 4px 19px; font-size: 12px; line-height: 17px; font-weight: 700; box-shadow: none; }
+.apartment-browse-badge-3,
+.apartment-card-badge { background: #dcfce7; color: #15803d; }
+.apartment-browse-button-6,
+.apartment-card-button { top: 16px; right: 16px; width: 32px; height: 32px; padding: 4px; border: 0; background: transparent; color: #fff; box-shadow: none; backdrop-filter: none; }
+.apartment-browse-button-6:hover,
+.apartment-card-button:hover { background: transparent; }
+.apartment-browse-button-7,
+.apartment-card-button-2 { color: #f43f5e; }
+.apartment-browse-heart-icon,
+.apartment-card-heart-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px #0004); }
+.apartment-browse-panel-6,
+.apartment-card-card-content { padding: 5px 8px 8px; background: #fff; }
+.apartment-browse-row-7 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; }
+.apartment-browse-panel-7,
+.apartment-browse-panel-8 { display: contents; }
+.apartment-browse-heading { grid-column: 1; grid-row: 1; }
+.apartment-browse-text-4 { grid-column: 2; grid-row: 1; align-self: center; white-space: nowrap; }
+.apartment-browse-text-3 { grid-column: 1 / -1; grid-row: 2; }
+.apartment-browse-apartment-rating-summary { grid-column: 1 / -1; grid-row: 3; }
+.apartment-browse-view-room-prices { grid-column: 1 / -1; grid-row: 4; }
+.apartment-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.apartment-browse-heading,
+.apartment-card-heading { margin: 0; color: #252525; font-size: 16px; line-height: 22px; font-weight: 700; }
+.apartment-card-heading { min-width: 0; }
+.apartment-browse-text-3,
+.apartment-browse-text-4,
+.apartment-card-location,
+.apartment-card-views { margin: 0; color: #4b5d78; font-size: 14px; line-height: 20px; font-weight: 400; }
+.apartment-card-views { flex-shrink: 0; }
+.apartment-browse-text-3 svg,
+.apartment-browse-text-4 svg,
+.apartment-browse-button-9 svg { display: none; }
+.apartment-browse-apartment-rating-summary,
+.apartment-card-apartment-rating-summary { display: inline-flex; align-items: center; gap: 6px; margin: 3px 0; color: #4b5d78; font-size: 14px; line-height: 20px; font-weight: 400; }
+.apartment-browse-apartment-rating-summary .apartment-rating-star,
+.apartment-card-apartment-rating-summary .apartment-rating-star { width: 14px; height: 14px; color: #f59e0b; fill: #f59e0b; }
+.apartment-browse-view-room-prices,
+.apartment-card-price { margin: 0; color: #252525; font-size: 16px; line-height: 24px; font-weight: 700; text-align: left; }
+.apartment-browse-button-9,
+.apartment-card-details { display: inline-flex; justify-content: flex-start; width: auto; height: auto; min-height: 0; margin: 3px 0 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: #00a5ed; font-size: 14px; line-height: 20px; font-weight: 700; text-decoration: underline; box-shadow: none; }
+.apartment-browse-button-9:hover { background: transparent; color: #008ac7; }

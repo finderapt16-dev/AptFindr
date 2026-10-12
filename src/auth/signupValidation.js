@@ -1,0 +1,60 @@
+export const ACCOUNT_REVIEW_FIELDS = ["username", "email"];
+export const PERSONAL_REVIEW_FIELDS = ["fullName", "mobileNumber"];
+
+export const PASSWORD_REQUIREMENTS = "At least 8 characters with letters and numbers.";
+
+export function validateSignupPassword(password = "") {
+  if (password.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Za-z]/.test(password)) return "Include at least one letter in your password.";
+  if (!/[0-9]/.test(password)) return "Include a number in your password.";
+  return "";
+}
+
+export function validateAccountDetails(values, { includePassword = true } = {}) {
+  const errors = {};
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(String(values.username ?? "").trim())) errors.username = "Use 3 to 30 letters, numbers, or underscores.";
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.email ?? "").trim())) {
+    errors.email = "Enter a valid email address.";
+  }
+  if (includePassword) {
+    const passwordError = validateSignupPassword(values.password);
+    if (passwordError) errors.password = passwordError;
+    if (!values.confirmPassword || values.password !== values.confirmPassword) {
+      errors.confirmPassword = "Passwords must match.";
+    }
+  }
+  return errors;
+}
+
+export function validatePersonalInformation(values) {
+  const errors = {};
+  if (!String(values.fullName ?? "").trim()) errors.fullName = "Full name is required.";
+  const mobile = String(values.mobileNumber ?? "").trim();
+  const digits = mobile.replace(/\D/g, "");
+  if (!mobile) {
+    errors.mobileNumber = "Mobile number is required.";
+  } else if (!/^\+?[\d\s().-]+$/.test(mobile) || digits.length < 10 || digits.length > 15) {
+    errors.mobileNumber = "Enter a valid mobile number, e.g. 0917 123 4567 or +63 917 123 4567.";
+  }
+  return errors;
+}
+
+export function normalizeSignupValues(values) {
+  const normalized = { ...values };
+  for (const field of [...ACCOUNT_REVIEW_FIELDS, ...PERSONAL_REVIEW_FIELDS, "fullName"]) {
+    if (typeof normalized[field] === "string") normalized[field] = normalized[field].trim();
+  }
+  if (typeof normalized.middleInitial === "string") {
+    normalized.middleInitial = normalized.middleInitial.replace(/\.$/, "").toLocaleUpperCase("en-PH");
+  }
+  // Never trim passwords: spaces may be intentional characters.
+  return normalized;
+}
+
+export function getSignupFullName(values) {
+  const normalized = normalizeSignupValues(values);
+  return [normalized.firstName, normalized.middleInitial ? `${normalized.middleInitial}.` : "", normalized.lastName]
+    .filter(Boolean)
+    .join(" ");
+}

@@ -1,0 +1,42 @@
+.market-apartment-detail .app-shell-content { max-width: 1500px; margin-inline: auto; background: #fff; }
+.market-apartment-detail .apartment-detail-row-2:empty { display: none; }
+.market-apartment-price-line { margin: 8px 0 0; color: #475569; font-size: 14px; font-weight: 600; line-height: 20px; }
+.market-apartment-unit-section { padding: 24px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; }
+.market-apartment-unit-section > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.market-apartment-unit-section h2 { margin: 0; color: #111; font-size: 18px; line-height: 22px; font-weight: 700; }
+.market-apartment-unit-section > header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.market-apartment-unit-list { display: grid; gap: 12px; }
+.market-apartment-unit { display: grid; grid-template-columns: minmax(140px, .43fr) minmax(0, 1fr); gap: 16px; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: #111; font: inherit; text-align: left; cursor: pointer; }
+.market-apartment-unit:hover { border-color: #7dd3fc; }
+.market-apartment-unit-photo { display: grid; min-height: 170px; place-items: center; overflow: hidden; border-radius: 6px; background: #f1f5f9; }
+.market-apartment-unit-photo img { width: 100%; height: 100%; object-fit: cover; }
+.market-apartment-unit-photo svg { width: 32px; height: 32px; color: #94a3b8; }
+.market-apartment-unit-information { min-width: 0; }
+.market-apartment-unit-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.market-apartment-unit-heading h3 { margin: 0; font-size: 16px; line-height: 20px; font-weight: 700; }
+.market-unit-status { display: inline-flex; align-items: center; justify-content: center; padding: 4px 9px; border-radius: 6px; font-size: 10px; line-height: 14px; font-weight: 600; white-space: nowrap; }
+.market-unit-status-available { background: #dcfce7; color: #15803d; }
+.market-unit-status-occupied { background: #fee2e2; color: #dc2626; }
+.market-unit-status-maintenance { background: #fff7ed; color: #c2410c; }
+.market-apartment-unit-rent { margin: 5px 0; color: #0284c7; font-size: 16px; line-height: 20px; font-weight: 700; }
+.market-apartment-unit-facts { display: flex; flex-wrap: wrap; gap: 20px; color: #475569; font-size: 12px; }
+.market-apartment-unit-included { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; font-size: 10px; }
+.market-apartment-unit-included span { padding: 4px 7px; border: 1px solid #d1d5db; border-radius: 5px; color: #475569; }
+.market-apartment-unit-description { margin-top: 10px; padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 5px; background: #f8fafc; font-size: 11px; }
+.market-apartment-unit-description p { margin: 3px 0 0; color: #64748b; font-size: 11px; line-height: 15px; }
+@media (min-width: 900px) {
+  .market-apartment-detail .apartment-detail-container { display: grid; grid-template-columns: minmax(0, 834fr) minmax(0, 548fr); grid-template-rows: auto auto min-content minmax(0, 1fr); gap: 24px; align-items: start; }
+  .market-apartment-detail .apartment-detail-content,
+  .market-apartment-detail .apartment-detail-header { grid-column: 1 / -1; margin: 0; }
+  .market-apartment-detail .apartment-property-image-card { grid-column: 1; grid-row: 3; min-height: 0; }
+  .market-apartment-detail .apartment-detail-grid-3 { display: contents; }
+  .market-apartment-detail .apartment-detail-panel-11 { grid-column: 1; grid-row: 4; }
+  .market-apartment-detail .apartment-detail-aside { grid-column: 2; grid-row: 3 / span 2; }
+}
+@media (max-width: 640px) {
+  .market-apartment-unit-section { padding: 14px; }
+  .market-apartment-unit { grid-template-columns: 100px minmax(0, 1fr); gap: 10px; padding: 8px; }
+  .market-apartment-unit-photo { min-height: 130px; }
+  .market-apartment-unit-heading { flex-wrap: wrap; }
+  .market-apartment-unit-rent { font-size: 14px; }
+}

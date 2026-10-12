@@ -1,0 +1,152 @@
+import { supabase } from "@/services/supabaseClient";
+export const VERIFICATION_DOCUMENT_TYPES = [
+    { key: "proof_of_ownership", label: "Proof of Ownership or Authority" },
+    { key: "business_registration", label: "Business Registration" },
+    { key: "barangay_clearance", label: "Barangay Clearance" },
+    { key: "mayors_business_permit", label: "Mayor’s / Business Permit" },
+    { key: "bir_registration", label: "BIR Registration" },
+    { key: "fire_safety_certificate", label: "Fire Safety Inspection Certificate" },
+    { key: "occupancy_permit", label: "Occupancy Permit" },
+    { key: "building_permit", label: "Building Permit" },
+    { key: "sanitary_permit", label: "Sanitary Permit" },
+    { key: "environmental_compliance", label: "Environmental / Waste Management Compliance" },
+    { key: "rental_documents", label: "Rental Documents" },
+    { key: "safety_requirements", label: "Safety Requirements" },
+    { key: "additional_supporting_documents", label: "Additional Supporting Documents" },
+];
+export const BUSINESS_PERMIT_DOCUMENT_TYPE = "mayors_business_permit";
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+export function validateVerificationFile(file) {
+    if (!ALLOWED_TYPES.has(file.type))
+        return "Use a JPG, JPEG, PNG, WebP, or PDF file.";
+    if (file.size > MAX_FILE_SIZE)
+        return "The file must be 10 MB or smaller.";
+    return null;
+}
+const safeExtension = (file) => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension && ["jpg", "jpeg", "png", "webp", "pdf"].includes(extension))
+        return extension;
+    return file.type === "application/pdf" ? "pdf" : "jpg";
+};
+export async function uploadVerificationDocuments(apartmentId, landlordId, documents) {
+    const uploadedDocuments = [];
+    for (const document of documents) {
+        const validationError = validateVerificationFile(document.file);
+        if (validationError)
+            throw new Error(`${document.file.name}: ${validationError}`);
+        const { data: previousRow } = await supabase
+            .from("apartment_verification_documents")
+            .select("storage_path")
+            .eq("apartment_id", apartmentId)
+            .eq("document_type", document.type)
+            .maybeSingle();
+        const previousPath = typeof previousRow?.storage_path === "string" ? previousRow.storage_path : null;
+        const path = `${landlordId}/${apartmentId}/${document.type}-${Date.now()}.${safeExtension(document.file)}`;
+        const { error: uploadError } = await supabase.storage.from("verification-documents").upload(path, document.file, {
+            cacheControl: "3600",
+            contentType: document.file.type,
+            upsert: false,
+        });
+        if (uploadError)
+            throw new Error(uploadError.message || "Unable to upload a verification document.");
+        const { error: rowError } = await supabase.from("apartment_verification_documents").upsert({
+            apartment_id: apartmentId,
+            landlord_id: landlordId,
+            document_type: document.type,
+            file_name: document.file.name,
+            mime_type: document.file.type,
+            storage_path: path,
+            updated_at: new Date().toISOString(),
+        }, { onConflict: "apartment_id,document_type" });
+        if (rowError) {
+            await supabase.storage.from("verification-documents").remove([path]);
+            throw new Error(rowError.message || "Unable to save verification document details.");
+        }
+        if (previousPath && previousPath !== path) {
+            await supabase.storage.from("verification-documents").remove([previousPath]);
+        }
+        uploadedDocuments.push({
+            apartmentId: String(apartmentId),
+            landlordId: String(landlordId),
+            documentType: document.type,
+            fileName: document.file.name,
+            mimeType: document.file.type,
+            storagePath: path,
+        });
+    }
+    return uploadedDocuments;
+}
+export async function fetchApartmentVerificationDocuments(apartmentId) {
+    const { data, error } = await supabase
+        .from("apartment_verification_documents")
+        .select("*")
+        .eq("apartment_id", apartmentId)
+        .order("created_at", { ascending: true });
+    if (error)
+        throw new Error(error.message || "Unable to load verification documents.");
+    return Promise.all((data ?? []).map(async (row) => {
+        const { data: signed } = await supabase.storage
+            .from("verification-documents")
+            .createSignedUrl(String(row.storage_path), 15 * 60);
+        return {
+            id: String(row.id),
+            apartmentId: String(row.apartment_id),
+            landlordId: String(row.landlord_id),
+            documentType: row.document_type,
+            fileName: String(row.file_name),
+            mimeType: String(row.mime_type),
+            storagePath: String(row.storage_path),
+            previewUrl: signed?.signedUrl ?? "",
+            createdAt: row.created_at ? String(row.created_at) : undefined,
+            updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+        };
+    }));
+}
+export async function removeVerificationDocument(document) {
+    const { error: deleteError } = await supabase
+        .from("apartment_verification_documents")
+        .delete()
+        .eq("id", document.id);
+    if (deleteError)
+        throw new Error(deleteError.message || "Unable to remove the document.");
+    const { error: storageError } = await supabase.storage.from("verification-documents").remove([document.storagePath]);
+    if (storageError)
+        throw new Error(storageError.message || "Unable to remove the stored file.");
+}
+
+export async function fetchLandlordBusinessPermits(landlordId) {
+    const [propertiesResult, documentsResult] = await Promise.all([
+        supabase.from("apartments").select("id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
+        supabase.from("apartment_verification_documents").select("*").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
+    ]);
+    if (propertiesResult.error) throw new Error(propertiesResult.error.message);
+    if (documentsResult.error) throw new Error(documentsResult.error.message);
+    const properties = propertiesResult.data ?? [];
+    const documents = documentsResult.data ?? [];
+    const entries = properties.flatMap(property => {
+        const verification = property.features?.verification ?? {};
+        const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id));
+        if (!propertyDocuments.length && !verification.businessPermit) return [];
+        return (propertyDocuments.length ? propertyDocuments : [null]).map(document => ({
+            id: String(document?.id ?? property.id),
+            apartmentId: String(property.id),
+            businessName: verification.businessName || verification.propertyName || property.title || "",
+            apartmentName: property.title || verification.propertyName || "",
+            businessAccount: verification.businessAccount || "",
+            permitNumber: verification.businessPermit || "",
+            issuedAt: verification.dateIssued || verification.issuedAt || "",
+            permitExpiry: verification.permitExpiry || "",
+            fileName: document?.file_name || "",
+            fileSize: document?.file_size ?? document?.size_bytes ?? null,
+            storagePath: document?.storage_path || "",
+        }));
+    });
+    return Promise.all(entries.map(async entry => {
+        if (!entry.storagePath) return { ...entry, documentUrl: "" };
+        const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(entry.storagePath, 15 * 60);
+        if (error) throw new Error(error.message || "Unable to open business permit.");
+        return { ...entry, documentUrl: data?.signedUrl ?? "" };
+    }));
+}

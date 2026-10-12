@@ -1,0 +1,242 @@
+/* ==========================================================================
+   PUBLIC POLICY PAGES  (/privacy-policy and /terms-of-service)
+
+   These are the linkable documents required by Supabase's
+   "Application privacy policy link" / "Application terms of service link"
+   settings, so they must read well on their own, without the app chrome and
+   without an account. The document body reuses the `apf-policy-*` classes
+   from legal.css so the wording and structure match the in-app popup exactly.
+   ========================================================================== */
+
+.apf-legal-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    background: #f2f6fa;
+    color: #293548;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ------------------------------ top bar ---------------------------------- */
+
+.apf-legal-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.apf-legal-topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(100% - 2rem, 860px);
+    margin: 0 auto;
+    padding: 14px 0;
+}
+
+.apf-legal-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.apf-legal-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.apf-legal-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.apf-legal-back:hover {
+    background: #f2f6fa;
+    border-color: #cbd5e1;
+    color: #0e93ca;
+}
+
+.apf-legal-back:focus-visible {
+    outline: 3px solid rgb(0 166 247 / 28%);
+    outline-offset: 2px;
+}
+
+/* -------------------------------- body ----------------------------------- */
+
+.apf-legal-main {
+    flex: 1 1 auto;
+    width: min(100% - 2rem, 860px);
+    margin: 0 auto;
+    padding: 32px 0 48px;
+}
+
+.apf-legal-card {
+    box-sizing: border-box;
+    padding: 34px 40px 36px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 18px 44px -28px rgb(15 23 42 / 35%);
+}
+
+.apf-legal-title {
+    margin: 0 0 6px;
+    color: #1e293b;
+    font-size: clamp(26px, 5vw, 34px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+/* ------------------------- audience switcher ----------------------------- */
+
+.apf-legal-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 26px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.apf-legal-switch-link {
+    padding: 9px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.apf-legal-switch-link:hover {
+    border-color: #00a6f7;
+    color: #0e93ca;
+}
+
+.apf-legal-switch-link.is-active {
+    border-color: #00a6f7;
+    background: #00a6f7;
+    color: #ffffff;
+}
+
+.apf-legal-switch-link:focus-visible {
+    outline: 3px solid rgb(0 166 247 / 28%);
+    outline-offset: 2px;
+}
+
+/* ------------------------- document typography --------------------------- */
+
+/* The body is a static page, not a scroll region: undo the popup's inner
+   scrolling so the whole document grows with the page. */
+.apf-legal-body.apf-policy-scroll-reset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+.apf-legal-body .apf-policy-section {
+    padding-top: 24px;
+}
+
+.apf-legal-body .apf-policy-section-title {
+    margin: 0 0 8px;
+    color: #1e293b;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.apf-legal-body .apf-policy-paragraph,
+.apf-legal-body .apf-policy-list-item {
+    color: #475569;
+    font-size: 15.5px;
+    line-height: 1.75;
+}
+
+.apf-legal-body .apf-policy-paragraph {
+    margin: 0 0 10px;
+}
+
+.apf-legal-error {
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.apf-legal-error a {
+    color: #991b1b;
+    font-weight: 700;
+}
+
+/* ------------------------------- footer ---------------------------------- */
+
+.apf-legal-footer {
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.apf-legal-footer-note {
+    width: min(100% - 2rem, 860px);
+    margin: 0 auto;
+    padding: 22px 0 26px;
+    color: #8a8a8a;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ------------------------------ responsive -------------------------------- */
+
+@media (max-width: 640px) {
+    .apf-legal-main {
+        padding: 18px 0 32px;
+    }
+
+    .apf-legal-card {
+        padding: 24px 20px 26px;
+        border-radius: 14px;
+    }
+
+    .apf-legal-topbar-inner {
+        padding: 11px 0;
+    }
+
+    .apf-legal-back span {
+        display: none;
+    }
+
+    .apf-legal-back {
+        padding: 9px 11px;
+    }
+
+    .apf-legal-body .apf-policy-paragraph,
+    .apf-legal-body .apf-policy-list-item {
+        font-size: 15px;
+    }
+}

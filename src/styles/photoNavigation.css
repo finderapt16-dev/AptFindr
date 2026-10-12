@@ -1,0 +1,40 @@
+/* Shared photo controls for tenant, landlord, and admin galleries. */
+button.photo-navigation-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: #475569;
+  color: #f8fafc;
+  opacity: 1;
+  visibility: visible;
+  box-shadow: 0 1px 5px rgb(15 23 42 / 25%);
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+button.photo-navigation-arrow svg {
+  width: 22px;
+  height: 22px;
+  color: inherit;
+  stroke-width: 2.25;
+}
+button.photo-navigation-arrow:hover { background: #334155; color: #fff; }
+button.photo-navigation-arrow:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #334155;
+}
+.admin-inspection-review-main-photo { position: relative; }
+.admin-inspection-photo-prev { left: 8px; }
+.admin-inspection-photo-next { right: 8px; }
+@media (pointer: coarse) {
+  button.photo-navigation-arrow { width: 44px; height: 44px; }
+}
