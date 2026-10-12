@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { AlertOctagon, BedDouble, Bell, BellRing, Building2, Calendar, Car, CheckCheck, CheckCircle2, Clock, Eye, FileText, Flag, MapPin, PawPrint, Search, ShieldCheck, Sofa, Wifi, X, XCircle } from "lucide-react";
 import { canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, OverviewEmpty, text } from './adminDashboardHelpers';
+const canInspectApartment = (apartment) => apartment?.isPublished === true
+    || apartment?.is_published === true
+    || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
 export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, aptStatusFilter, setAptStatusFilter, aptPropertyTypeFilter, setAptPropertyTypeFilter, aptSort, setAptSort, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, setSelectedLandlord, resolveReport, dismissReport, handleApproveAndPublishApartment, publishingApartmentId, }) {
     const reportedCount = allApartments.filter((a) => getApartmentReportCount(a.id) > 0).length;
     const availableCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "published").length;
@@ -56,6 +59,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                 const availability = getAdminAvailabilityLabel(apartment);
                 const lowestRoomRent = getLowestRoomRent(apartment);
                 const location = formatApartmentLocation(apartment);
+                const canInspect = canInspectApartment(apartment);
                 const roomCount = apartment.rooms?.length || apartment.bedrooms || 0;
                 return (<article key={apartment.id} onClick={() => setSelectedApt(apartment)} className="admin-apartments-article">
                   <div className="admin-apartments-panel-2">
@@ -76,7 +80,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                     <div><p className="admin-apartments-listing-status">Listing Status</p><span className="admin-apartments-card-4"><ShieldCheck className="admin-apartments-shield-check-icon"/>{status}</span>{reportCount > 0 && <p className="admin-apartments-text-3"><Flag className="admin-apartments-flag-icon"/>{reportCount} {reportCount === 1 ? "report" : "reports"}</p>}</div>
                   </div>
                   <div className="admin-apartments-row-9">
-                    <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
+                    <Button variant="outline" size="sm" disabled={!canInspect} title={canInspect ? "Inspect apartment" : "Verify the apartment before inspection"} onClick={(event) => { event.stopPropagation(); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
                   </div>
                 </article>);
             })}
@@ -181,6 +185,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             const landlord = getLandlordForApt(selectedApt);
             const landlordVerificationStatus = getLandlordVerificationStatus(landlord);
             const landlordCanPublish = canPublishForLandlord(landlord);
+            const canInspect = canInspectApartment(selectedApt);
             const publicationBlockedByLandlord = selectedApt.isPublished === false && !landlordCanPublish;
             const aptViolations = violations.filter((v) => v.apartment_id === selectedApt.id || (!v.apartment_id && v.apartmentTitle === selectedApt.title));
             const aptReports = reports.filter((r) => r.apartmentId === selectedApt.id && r.status === "pending");
@@ -359,7 +364,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                     <CheckCircle2 className="admin-apartments-check-circle2-icon-4"/>
                     {publishingApartmentId === selectedApt.id ? "Publishing..." : "Approve & Publish"}
                   </Button>)}
-                <Button onClick={() => navigate(`${apartmentDetailBasePath}/${selectedApt.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } })} className="admin-apartments-full-inspection">
+                <Button disabled={!canInspect} title={canInspect ? "Open full inspection" : "Verify the apartment before inspection"} onClick={() => navigate(`${apartmentDetailBasePath}/${selectedApt.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } })} className="admin-apartments-full-inspection">
                   <Eye className="admin-apartments-eye-icon-3"/>Full Inspection
                 </Button>
                 <Button onClick={() => { setSelectedApt(null); openViolationModal("violation", text(landlord.id), text(landlord.name, "Landlord"), selectedApt.title, undefined, selectedApt.id); }} className="admin-apartments-issue-violation">

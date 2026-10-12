@@ -90,20 +90,28 @@
 .landlord-notification.is-unread { background: #eaf7fe; }
 .landlord-notification.is-unread:hover { background: #e1f4fd; }
 .landlord-notification__open {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 34px minmax(0, 1fr) 64px;
-  align-items: center;
-  column-gap: 12px;
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   padding: 0;
   color: inherit;
   background: transparent;
-  text-align: left;
+  cursor: pointer;
 }
 .landlord-notification__open:focus-visible {
   outline: 2px solid #18a8e5;
-  outline-offset: 4px;
+  outline-offset: -4px;
   border-radius: 3px;
+}
+.landlord-notification__content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  align-items: center;
+  column-gap: 12px;
+  pointer-events: none;
 }
 .landlord-notification__avatar {
   width: 30px;
@@ -141,7 +149,7 @@
   white-space: nowrap;
 }
 .landlord-notification time { color: #9ca5ad; font-size: 8px; text-align: right; white-space: nowrap; }
-.landlord-notification__actions { position: relative; display: grid; place-items: center; }
+.landlord-notification__actions { position: relative; z-index: 2; display: grid; place-items: center; }
 .landlord-notification__more { display: grid; place-items: center; padding: 2px; color: #a5adb5; background: transparent; }
 .landlord-notification__more svg { width: 15px; height: 15px; }
 .landlord-notification__more:hover { color: #178fc5; }
@@ -197,8 +205,8 @@
   .landlord-notifications__toolbar { align-items: flex-start; flex-direction: column; }
   .landlord-notifications__mark-read { align-self: flex-end; }
   .landlord-notification { grid-template-columns: minmax(0, 1fr) 16px; row-gap: 7px; }
-  .landlord-notification__open { grid-template-columns: 32px minmax(0, 1fr); row-gap: 7px; }
-  .landlord-notification time { grid-column: 2; text-align: left; }
+  .landlord-notification__content { grid-template-columns: minmax(0, 1fr) 70px; }
+  .landlord-notification time { text-align: left; }
   .landlord-notification__more { grid-column: 2; grid-row: 1; }
   .landlord-notification__actions { grid-column: 2; grid-row: 1; }
   .landlord-notification__menu { right: -3px; }
@@ -277,7 +285,7 @@
 
 .landlord-notification:last-child { border-bottom: 0; }
 
-.landlord-notification__open {
+.landlord-notification__content {
   grid-template-columns: minmax(0, 1fr) 78px;
   column-gap: 12px;
 }
@@ -306,7 +314,7 @@
   }
   .landlord-notifications__toolbar { flex-direction: row; align-items: center; gap: 8px; }
   .landlord-notifications__mark-read { align-self: auto; }
-  .landlord-notification__open { grid-template-columns: minmax(0, 1fr) 70px; }
+  .landlord-notification__content { grid-template-columns: minmax(0, 1fr) 70px; }
 }
 
 @media (min-width: 768px) {

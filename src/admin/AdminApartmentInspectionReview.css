@@ -89,3 +89,16 @@
 .admin-inspection-review-unit-amenities > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .admin-inspection-review-unit-amenities span { padding: 4px 7px; border: 1px solid #d8d8d8; border-radius: 6px; color: #172033; overflow-wrap: anywhere; }
 .admin-inspection-review-unit-amenities small { color: #61728f; }
+
+/* Property Inspection reference layout */
+@media (min-width: 1001px) {
+  .admin-inspection-review { width: min(100%, 1400px); }
+  .admin-inspection-review-heading { margin-bottom: 25px; }
+  .admin-inspection-review-layout { grid-template-columns: minmax(0, 913px) minmax(400px, 440px); gap: 47px; }
+  .admin-inspection-review-main, .admin-inspection-review-side { gap: 25px; }
+  .admin-inspection-review-card { padding: 17px 12px; border-color: rgb(0 0 0 / 20%); }
+  .admin-inspection-review-side .admin-inspection-review-card { padding: 24px 32px; }
+  .admin-inspection-review-property { grid-template-columns: minmax(0, 470px) minmax(300px, 1fr); gap: 20px; margin-top: 23px; }
+  .admin-inspection-review-cover, .admin-inspection-review-no-image { height: 288px; border-radius: 10px; }
+  .admin-inspection-review-thumbnails button { height: 90px; border-radius: 10px; }
+}

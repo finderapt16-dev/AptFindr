@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { updateApartmentPublication } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, updateApartmentPublication, verifyApartmentWithoutPublishing } from "@/services/apartmentsService";
+import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
@@ -19,9 +20,10 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AdminApartments } from './AdminApartments';
 import { AdminAppeals } from './AdminAppeals';
-import { AdminBusinessPermits } from './AdminBusinessPermits';
 import { AdminLandlordVerification } from './AdminLandlordVerification';
 import { AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
+import { AdminApartmentVerification } from './AdminApartmentVerification';
+import { AdminVerificationDocumentViewer } from './AdminVerificationDocumentViewer';
 import { ArchiveEmpty, canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
@@ -345,6 +347,11 @@ export function AdminDashboard() {
     // landlord details modal
     const [selectedLandlord, setSelectedLandlord] = useState(null);
     const [selectedLandlordDetails, setSelectedLandlordDetails] = useState(null);
+    const [selectedLandlordProperty, setSelectedLandlordProperty] = useState(null);
+    const [selectedLandlordPropertyDetails, setSelectedLandlordPropertyDetails] = useState(null);
+    const [selectedLandlordPropertyDocuments, setSelectedLandlordPropertyDocuments] = useState([]);
+    const [isViewingLandlordDocument, setIsViewingLandlordDocument] = useState(false);
+    const [isLoadingLandlordPropertyDetails, setIsLoadingLandlordPropertyDetails] = useState(false);
     const [isLoadingLandlordDetails, setIsLoadingLandlordDetails] = useState(false);
     const [allApartments, setAllApartments] = useState([]);
     const [adminProfile, setAdminProfile] = useState(() => toAdminProfileState(user));
@@ -461,6 +468,43 @@ export function AdminDashboard() {
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
+        }
+        finally {
+            setPublishingApartmentId(null);
+        }
+    };
+    const handleVerifyApartmentWithoutUnits = async (apartment) => {
+        if (!apartment?.id || !user?.id || publishingApartmentId)
+            return;
+        setPublishingApartmentId(apartment.id);
+        try {
+            await verifyApartmentWithoutPublishing(apartment.id, user.id);
+            const updatedApartment = {
+                ...apartment,
+                isPublished: false,
+                is_published: false,
+                approvalStatus: "approved",
+                approval_status: "approved",
+                publishedAt: undefined,
+                published_at: null,
+                publishedBy: undefined,
+                published_by: null,
+            };
+            setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
+            setSelectedLandlordProperty((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
+            setSelectedLandlordDetails((current) => current ? {
+                ...current,
+                properties: current.properties.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item),
+            } : current);
+            setSelectedLandlordPropertyDetails((current) => current?.apartment?.id === apartment.id ? {
+                ...current,
+                apartment: { ...current.apartment, ...updatedApartment },
+                rawApartment: current.rawApartment ? { ...current.rawApartment, ...updatedApartment } : current.rawApartment,
+            } : current);
+            toast.success("Apartment verified. Add units before publishing it to tenants.");
+        }
+        catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to verify this apartment.");
         }
         finally {
             setPublishingApartmentId(null);
@@ -657,6 +701,10 @@ export function AdminDashboard() {
     useEffect(() => {
         if (!selectedLandlord?.id) {
             setSelectedLandlordDetails(null);
+            setSelectedLandlordProperty(null);
+            setSelectedLandlordPropertyDetails(null);
+            setSelectedLandlordPropertyDocuments([]);
+            setIsViewingLandlordDocument(false);
             setIsLoadingLandlordDetails(false);
             return;
         }
@@ -695,6 +743,37 @@ export function AdminDashboard() {
             active = false;
         };
     }, [selectedLandlord]);
+    // The landlord overview only loads the apartment list. Load the complete
+    // Add Apartment submission (image rows, rooms, form features, and permit
+    // documents) when an administrator opens a specific verification review.
+    useEffect(() => {
+        if (!selectedLandlordProperty?.id) {
+            setSelectedLandlordPropertyDetails(null);
+            setSelectedLandlordPropertyDocuments([]);
+            setIsLoadingLandlordPropertyDetails(false);
+            return;
+        }
+        let active = true;
+        setSelectedLandlordPropertyDetails(null);
+        setSelectedLandlordPropertyDocuments([]);
+        setIsLoadingLandlordPropertyDetails(true);
+        void Promise.all([
+            fetchApartmentInspectionDetails(selectedLandlordProperty.id),
+            fetchApartmentVerificationDocuments(selectedLandlordProperty.id),
+        ]).then(([details, documents]) => {
+            if (!active) return;
+            setSelectedLandlordPropertyDetails(details);
+            setSelectedLandlordPropertyDocuments(documents);
+        }).catch((error) => {
+            console.error("Unable to load the apartment verification submission:", error);
+            if (active) toast.error("Some apartment submission details could not be loaded.");
+        }).finally(() => {
+            if (active) setIsLoadingLandlordPropertyDetails(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, [selectedLandlordProperty?.id]);
     const loadLandlords = async () => {
         const users = await fetchUsers();
         setLandlords(await attachLandlordPermitNumbers(users.filter((account) => account.role === "landlord")));
@@ -1301,19 +1380,7 @@ export function AdminDashboard() {
       </div>);
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
-    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} onViewVerification={setSelectedLandlord}/>);
-    const renderBusinessPermits = () => (<AdminBusinessPermits
-      onViewLandlord={(landlordId) => {
-          const landlord = landlords.find((item) => item.id === landlordId);
-          if (!landlord) {
-              toast.error("The linked landlord could not be loaded.");
-              return;
-          }
-          setSelectedLandlord(landlord);
-          handleSectionChange("landlords");
-      }}
-      onViewApartment={(apartmentId) => navigate(`${apartmentDetailBasePath}/${apartmentId}`, { state: { returnTo: `${portalBasePath}?section=permits`, backLabel: "Back to Business Permits" } })}
-    />);
+    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport} handleApproveAndPublishApartment={handleApproveAndPublishApartment} publishingApartmentId={publishingApartmentId}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
@@ -1619,13 +1686,37 @@ export function AdminDashboard() {
           landlord={selectedLandlord}
           details={selectedLandlordDetails}
           isLoading={isLoadingLandlordDetails}
-          onBack={() => setSelectedLandlord(null)}
-          onApprove={() => void requestVerification(selectedLandlord, true)}
-          onRequestChanges={() => openViolationModal("notice", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), "Verification documents")}
-          onReject={() => void requestVerification(selectedLandlord, false, true)}
-          onViewProperty={(propertyId) => navigate(`${apartmentDetailBasePath}/${propertyId}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Verification" } })}
+          onBack={() => { setSelectedLandlordProperty(null); setSelectedLandlord(null); }}
+          onViewProperty={(propertyId) => setSelectedLandlordProperty(selectedLandlordDetails.properties.find((property) => text(property.id) === text(propertyId)) ?? null)}
         />;
     };
+    const renderApartmentVerification = () => {
+        if (!selectedLandlord || !selectedLandlordDetails || !selectedLandlordProperty)
+            return renderLandlordDetails();
+        return <AdminApartmentVerification
+          landlord={selectedLandlord}
+          profile={selectedLandlordDetails.profile}
+          property={selectedLandlordProperty}
+          inspection={selectedLandlordPropertyDetails}
+          documents={selectedLandlordPropertyDocuments}
+          isLoading={isLoadingLandlordPropertyDetails}
+          isApproving={publishingApartmentId === selectedLandlordProperty.id}
+          hasUnits={(selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0}
+          onBack={() => { setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
+          onViewDocument={() => setIsViewingLandlordDocument(true)}
+          onApprove={() => void ((selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0 ? handleApproveAndPublishApartment(selectedLandlordProperty) : handleVerifyApartmentWithoutUnits(selectedLandlordProperty))}
+          onRequestChanges={() => openViolationModal("notice", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
+          onReject={() => openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
+          onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
+        />;
+    };
+    const renderLandlordDocument = () => <AdminVerificationDocumentViewer
+      landlord={selectedLandlord}
+      profile={selectedLandlordDetails?.profile}
+      property={selectedLandlordProperty}
+      documents={selectedLandlordPropertyDocuments}
+      onBack={() => setIsViewingLandlordDocument(false)}
+    />;
     const renderAdministrativeAction = () => {
         if (!violationModal?.open)
             return renderLandlords();
@@ -1667,7 +1758,6 @@ export function AdminDashboard() {
         notifications: renderNotifications,
         support: renderNotifications,
         landlords: renderLandlords,
-        permits: renderBusinessPermits,
         apartments: renderApartments,
         reports: renderReports,
         appeals: renderAppeals,
@@ -1675,20 +1765,22 @@ export function AdminDashboard() {
         admininfo: renderAdminInfo,
     };
     const isFocusedAppealReview = activeSection === "appeals" && Boolean(selectedAppeal);
+    const isFocusedApartmentVerification = activeSection === "landlords" && Boolean(selectedLandlordProperty);
+    const isFocusedWorkspace = isFocusedAppealReview || isFocusedApartmentVerification;
     // ── Render ────────────────────────────────────────────────────────────────
-    return (<div className={`admin-portal-shell app-shell ${isFocusedAppealReview ? "admin-appeal-review-shell" : ""}`}>
+    return (<div className={`admin-portal-shell app-shell ${isFocusedAppealReview ? "admin-appeal-review-shell" : ""} ${isFocusedApartmentVerification ? "admin-apartment-verification-shell" : ""}`}>
       <div className="app-shell-frame">
-        {!isFocusedAppealReview && <aside className="app-shell-sidebar">
+        {!isFocusedWorkspace && <aside className="app-shell-sidebar">
           {PortalSidebarContent()}
         </aside>}
-        {!isFocusedAppealReview && sidebarOpen && <div className="app-sidebar-overlay" onClick={() => setSidebarOpen(false)}/>}
-        {!isFocusedAppealReview && <aside className={`app-sidebar-drawer ${sidebarOpen ? "is-open" : ""}`}>
+        {!isFocusedWorkspace && sidebarOpen && <div className="app-sidebar-overlay" onClick={() => setSidebarOpen(false)}/>}
+        {!isFocusedWorkspace && <aside className={`app-sidebar-drawer ${sidebarOpen ? "is-open" : ""}`}>
           <button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="app-sidebar-close">
             <X className="admin-dashboard-x-icon"/>
           </button>
           {PortalSidebarContent({ onNavigate: () => setSidebarOpen(false) })}
         </aside>}
-        {!isFocusedAppealReview && <button aria-label={`Open navigation, ${unreadNotifsCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        {!isFocusedWorkspace && <button aria-label={`Open navigation, ${unreadNotifsCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="admin-dashboard-menu-icon"/>
           {unreadNotifsCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + pendingReports + activeAppealsCount}</span>}
         </button>}
@@ -1697,7 +1789,7 @@ export function AdminDashboard() {
             {violationModal?.open && violationModal.sourceModule === activeSection
             ? renderAdministrativeAction()
             : activeSection === "landlords" && selectedLandlord && selectedLandlordDetails
-                ? renderLandlordDetails()
+                ? selectedLandlordProperty ? isViewingLandlordDocument ? renderLandlordDocument() : renderApartmentVerification() : renderLandlordDetails()
                 : (sectionMap[activeSection] ?? renderLandlords)()}
           </main>
         </div>

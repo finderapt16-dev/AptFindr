@@ -82,6 +82,9 @@ const getLandlordVerificationStatus = (landlord) => {
     return "Incomplete";
 };
 const canPublishForLandlord = (landlord) => (landlord?.is_verified ?? landlord?.isVerified) === true && !["pending", "unverified", "rejected", "suspended", "disabled"].includes(String(landlord?.landlord_status ?? landlord?.verification_status ?? landlord?.status ?? "").trim().toLowerCase());
+const canInspectApartment = (apartment) => apartment?.isPublished === true
+    || apartment?.is_published === true
+    || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
 const getRoomStatus = (room) => {
     return getAdminRoomState(room);
 };
@@ -235,6 +238,11 @@ export function AdminApartmentDetail() {
                 if (!active)
                     return;
                 const loaded = details?.apartment ?? null;
+                if (loaded && !canInspectApartment(loaded)) {
+                    toast.error("Verify this apartment before opening its inspection page.");
+                    navigate(`${portalBasePath}?section=landlords`, { replace: true });
+                    return;
+                }
                 setInspectionDetails(details);
                 setApartment(loaded);
                 setVerificationDocuments(submittedDocuments);

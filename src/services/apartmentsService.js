@@ -384,6 +384,38 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
     }
     await writeApartmentAudit(id, actorUserId, 'apartment_publication_updated', buildAuditChanges(before, after, ['is_published', 'approval_status', 'is_archived', 'deleted_at', 'status', 'published_at', 'published_by']));
 };
+// Verification and tenant publication are deliberately separate. A landlord
+// may submit their property for review before creating individual units.
+export const verifyApartmentWithoutPublishing = async (id, actorUserId) => {
+    if (!id) {
+        throw new Error('Missing apartment ID. Please refresh and try again.');
+    }
+    const { data: before, error: beforeError } = await supabase
+        .from('apartments')
+        .select('is_published, approval_status, is_archived, deleted_at, status, published_at, published_by')
+        .eq('id', id)
+        .maybeSingle();
+    if (beforeError) {
+        throw new Error(unwrapErrorMessage(beforeError, 'Unable to load the apartment for verification.'));
+    }
+    if (!before) {
+        throw new Error('Apartment not found.');
+    }
+    const { data: after, error } = await supabase
+        .from('apartments')
+        .update({ approval_status: 'approved', is_published: false, published_at: null, published_by: null })
+        .eq('id', id)
+        .select('is_published, approval_status, is_archived, deleted_at, status, published_at, published_by')
+        .single();
+    if (error) {
+        throw new Error(unwrapErrorMessage(error, 'Unable to verify this apartment.'));
+    }
+    if (!isRecord(after) || after.approval_status !== 'approved' || after.is_published !== false) {
+        throw new Error('The apartment could not be verified without publishing. Please refresh and try again.');
+    }
+    await writeApartmentAudit(id, actorUserId, 'apartment_verified_without_units', buildAuditChanges(before, after, ['is_published', 'approval_status', 'published_at', 'published_by']));
+    return after;
+};
 export const updateApartmentStatus = async (id, status = 'available', actorUserId) => {
     const { data: before } = await supabase.from('apartments').select('status').eq('id', id).maybeSingle();
     const { error } = await supabase.from('apartments').update({ status }).eq('id', id);

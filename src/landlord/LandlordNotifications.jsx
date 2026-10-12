@@ -72,10 +72,11 @@ export const LandlordNotifications = ({
                     className="landlord-notification__open"
                     aria-label={`Open notification: ${notification.title || notification.type || "Notification"}`}
                     onClick={() => void handleNotificationClick(notification)}
-                  >
+                  />
+                  <div className="landlord-notification__content">
                     <span className="landlord-notification__body"><span>{notification.title || notification.type || "Notification"}</span><span>{notification.message || "You have a new account update."}</span></span>
                     <time dateTime={notification.created_at ?? notification.createdAt}>{relativeTime(notification.created_at ?? notification.createdAt)}</time>
-                  </button>
+                  </div>
                   {notification.id ? (
                     <div className="landlord-notification__actions">
                       <NotificationActionsMenu open={Boolean(menuIsOpen)} onOpenChange={(open) => setOpenNotifMenuId(open ? notification.id : null)} triggerClassName="landlord-notification__more" menuClassName="landlord-notification__menu">

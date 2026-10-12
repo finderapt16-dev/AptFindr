@@ -3273,3 +3273,38 @@
     color: #667085;
   }
 }
+
+/* Phone interaction: leave the form clear of the fixed menu and make every
+   control react immediately without stealing a vertical scroll gesture. */
+@media (max-width: 640px) {
+  .landlord-add-property-shell .add-apartment-page-content {
+    padding-top: calc(96px + env(safe-area-inset-top)) !important;
+  }
+
+  .landlord-add-property-shell .app-sidebar-trigger {
+    width: 48px;
+    height: 48px;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .landlord-add-property .add-apartment-form {
+    touch-action: pan-y;
+  }
+
+  .landlord-add-property .add-apartment-choice,
+  .landlord-add-property .add-apartment-add-choice button,
+  .landlord-add-property .add-apartment-close-wizard,
+  .landlord-add-property .add-apartment-row-10 > button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .landlord-add-property .add-apartment-choice:active,
+  .landlord-add-property .add-apartment-add-choice button:active,
+  .landlord-add-property .add-apartment-row-10 > button:active {
+    transform: scale(.98);
+  }
+}

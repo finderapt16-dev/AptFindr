@@ -2,7 +2,6 @@ import { LogoutConfirmation } from "@/components/LogoutConfirmation";
 import {
   Bell,
   Building2,
-  FileText,
   Flag,
   Gavel,
   LayoutDashboard,
@@ -15,7 +14,6 @@ const MAIN_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", section: "overview" },
   { icon: UserRound, label: "Landlord", section: "landlords" },
   { icon: Building2, label: "Apartments", section: "apartments" },
-  { icon: FileText, label: "Permits", section: "permits" },
   { icon: Bell, label: "Notifications", section: "notifications" },
 ];
 

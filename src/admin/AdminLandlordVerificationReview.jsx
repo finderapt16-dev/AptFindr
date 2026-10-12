@@ -1,126 +1,82 @@
-import { useEffect, useState } from "react";
-import { fetchLandlordBusinessPermits } from "@/services/verificationDocumentsService";
 import "./AdminLandlordVerificationReview.css";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock3, Eye, FileText, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Mail, MapPin, Phone, UserRound } from "lucide-react";
 
-const text = (value, fallback = "Not provided") => String(value ?? "").trim() || fallback;
+const value = (input, fallback = "Not provided") => String(input ?? "").trim() || fallback;
 
-const formatDate = (value) => {
-  if (!value) return "Not provided";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not provided" : date.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" });
+const formatDate = (input) => {
+  if (!input) return "Not provided";
+  const date = new Date(input);
+  return Number.isNaN(date.getTime())
+    ? "Not provided"
+    : date.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" });
 };
 
-export function AdminLandlordVerificationReview({ landlord, details, isLoading, onApprove, onBack, onReject, onRequestChanges, onViewProperty }) {
-  const [permits, setPermits] = useState([]);
-  const [permitsLoading, setPermitsLoading] = useState(true);
-  const [permitsError, setPermitsError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setPermits([]);
-    setPermitsLoading(true);
-    setPermitsError("");
-    fetchLandlordBusinessPermits(landlord.id)
-      .then(rows => { if (active) setPermits(rows); })
-      .catch(error => { if (active) setPermitsError(error.message || "Unable to load business permits."); })
-      .finally(() => { if (active) setPermitsLoading(false); });
-    return () => { active = false; };
-  }, [landlord.id]);
+const propertyLocation = (property) => {
+  const parts = [property.address, property.barangay, property.city].filter(Boolean);
+  return parts.length ? [...new Set(parts)].join(", ") : "Location not provided";
+};
+
+const propertyStatus = (property) => {
+  const status = String(property.verificationStatus ?? property.verification_status ?? property.approvalStatus ?? property.status ?? "").toLowerCase();
+  if (property.isVerified === true || property.is_verified === true || property.isPublished === true || property.is_published === true || status === "approved" || status === "verified") return "verified";
+  if (["rejected", "denied", "declined"].includes(status)) return "rejected";
+  return "pending";
+};
+
+export function AdminLandlordVerificationReview({ landlord, details, isLoading, onBack, onViewProperty }) {
   const profile = details?.profile ?? {};
-  const verified = landlord.isVerified === true || landlord.is_verified === true;
-  const rejected = ["rejected", "denied", "declined"].includes(String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").toLowerCase());
-  const status = verified ? "Verified" : rejected ? "Rejected" : "Pending Review";
-  const permitNumber = profile.business_permit_number ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber;
-  const permitDocumentUrl = profile.verification_document_url;
-  const displayedPermits = permits.length ? permits : [{ id: "account-permit", apartmentName: "Account Business Permit", permitNumber, documentUrl: permitDocumentUrl, issuedAt: profile.permit_issued_at ?? profile.issued_at, permitExpiry: profile.permit_expiry ?? profile.permit_expiry_date ?? profile.expiry_date }];
-  const property = details?.properties?.[0] ?? null;
+  const properties = details?.properties ?? [];
+  const landlordIsVerified = landlord.isVerified === true || landlord.is_verified === true || profile.is_verified === true;
   const address = landlord.address ?? landlord.business_address ?? profile.address ?? profile.business_address ?? [landlord.barangay, landlord.city].filter(Boolean).join(", ");
   const phone = landlord.mobile ?? landlord.phone ?? landlord.contact ?? landlord.mobileNumber;
+  const rows = properties.map((property) => {
+    const verification = property.features?.verification && typeof property.features.verification === "object" ? property.features.verification : {};
+    return {
+      property,
+      permitNumber: verification.businessPermit ?? profile.business_permit_number ?? profile.permit_number ?? landlord.business_permit_number ?? landlord.permit_number ?? landlord.permitNumber,
+      businessAccount: verification.businessAccount ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber,
+      issuedAt: verification.issuedAt ?? property.createdAt ?? property.created_at,
+      status: propertyStatus(property),
+    };
+  });
 
   return (
-    <div className="admin-landlord-review">
-      <button type="button" className="admin-landlord-review-back" onClick={onBack}><ArrowLeft aria-hidden="true" />Back to landlords overview</button>
-      <header className="admin-landlord-review-heading">
-        <h1>Landlord Verification Review</h1>
-        <p>Review landlord account information and submitted business permit documents.</p>
+    <div className="admin-landlord-profile-listing">
+      <button type="button" className="admin-landlord-profile-listing__back" onClick={onBack}><ArrowLeft aria-hidden="true" />Back to landlords overview</button>
+      <header className="admin-landlord-profile-listing__heading">
+        <h1>Landlord Profile &amp; Listing</h1>
+        <p>Review landlord information, apartment listings, and business permits.</p>
       </header>
+      {isLoading && <p className="admin-landlord-profile-listing__loading">Loading the latest landlord information...</p>}
 
-      {isLoading && <p className="admin-landlord-review-loading">Loading the latest landlord information…</p>}
+      <section className="admin-landlord-profile-listing__information">
+        <h2>Landlord Information</h2>
+        <dl>
+          <div><dt><span><UserRound aria-hidden="true" /></span>Full Name</dt><dd>{value(landlord.name ?? landlord.full_name)} {landlordIsVerified && <em>Verified Landlord</em>}</dd></div>
+          <div><dt><span><Mail aria-hidden="true" /></span>Email</dt><dd>{value(landlord.email)}</dd></div>
+          <div><dt><span><Phone aria-hidden="true" /></span>Contact Number</dt><dd>{value(phone)}</dd></div>
+          <div><dt><span><MapPin aria-hidden="true" /></span>Address</dt><dd>{value(address)}</dd></div>
+          <div><dt><span><CalendarDays aria-hidden="true" /></span>Date Registered</dt><dd>{formatDate(landlord.created_at ?? landlord.createdAt)}</dd></div>
+        </dl>
+      </section>
 
-      <div className="admin-landlord-review-layout">
-        <div className="admin-landlord-review-main">
-          <section className="admin-landlord-review-card">
-            <h2>Account Information</h2>
-            <div className="admin-landlord-review-profile">
-              <span aria-hidden="true" className="admin-landlord-review-avatar">{text(landlord.name, "L").charAt(0).toUpperCase()}</span>
-              <div><strong>{text(landlord.name, "Unnamed landlord")}</strong><span>Apartment Owner</span><span>Member since {formatDate(landlord.created_at ?? landlord.createdAt)}</span></div>
-            </div>
-            <dl className="admin-landlord-review-details">
-              <div><dt><UserRound aria-hidden="true" />Full Name</dt><dd>{text(landlord.name)}</dd></div>
-              <div><dt><Mail aria-hidden="true" />Email</dt><dd>{text(landlord.email)}</dd></div>
-              <div><dt><Phone aria-hidden="true" />Contact Number</dt><dd>{text(phone)}</dd></div>
-              <div><dt><MapPin aria-hidden="true" />Address</dt><dd>{text(address)}</dd></div>
-              <div><dt><Clock3 aria-hidden="true" />Date Registered</dt><dd>{formatDate(landlord.created_at ?? landlord.createdAt)}</dd></div>
-            </dl>
-          </section>
-
-          <section className="admin-landlord-review-card">
-            <h2>Permit Document Review</h2>
-            <p className="admin-landlord-review-intro">Review the landlord’s business permit and supporting documents.</p>
-            {permitsLoading && <p className="admin-landlord-review-loading">Loading submitted permits...</p>}
-            {permitsError && <p role="alert" className="admin-landlord-review-missing-document">{permitsError}</p>}
-            {displayedPermits.map((permit, index) => <article className="admin-landlord-review-permit-entry" key={permit.id}>
-              <h3>{permit.apartmentName || `Business Permit ${index + 1}`}</h3>
-            <div className="admin-landlord-review-document">
-              {permit.documentUrl && !/\.pdf(?:[?#]|$)/i.test(String(permit.documentUrl)) ? (
-                <a className="admin-landlord-review-document-preview admin-landlord-review-document-image" href={permit.documentUrl} target="_blank" rel="noreferrer" aria-label="Open the submitted business permit image">
-                  <img src={permit.documentUrl} alt="Submitted business permit" />
-                  <span>Open full-size image</span>
-                </a>
-              ) : (
-                <div className="admin-landlord-review-document-preview">
-                  <FileText aria-hidden="true" />
-                  <strong>Business Permit</strong>
-                  <span>{permit.documentUrl ? "PDF document submitted" : "No document submitted"}</span>
-                </div>
-              )}
-              <dl className="admin-landlord-review-document-details">
-                <div><dt>Document Type</dt><dd>Business Permit</dd></div>
-                <div><dt>Permit Number</dt><dd>{text(permit.permitNumber)}</dd></div>
-                <div><dt>Date Issued</dt><dd>{formatDate(permit.issuedAt)}</dd></div>
-                <div><dt>Expiry Date</dt><dd>{formatDate(permit.permitExpiry)}</dd></div>
-                <div><dt>Issued By</dt><dd>{text(profile.permit_issued_by ?? profile.issued_by, "City licensing authority")}</dd></div>
-              </dl>
-            </div>
-            {permit.documentUrl ? <a className="admin-landlord-review-document-link" href={permit.documentUrl} target="_blank" rel="noreferrer"><Eye aria-hidden="true" />View Full Document</a> : <p className="admin-landlord-review-missing-document">No business permit document was uploaded.</p>}
-            </article>)}
-          </section>
+      <section className="admin-landlord-profile-listing__properties" aria-labelledby="landlord-properties-heading">
+        <h2 id="landlord-properties-heading" className="sr-only">Apartment listings</h2>
+        <div className="admin-landlord-profile-listing__table-scroll">
+          <table>
+            <thead><tr><th>Apartment Name</th><th>Permit Number</th><th>Business Account Number</th><th>Date Issued</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>{rows.map(({ property, permitNumber, businessAccount, issuedAt, status }) => (
+              <tr key={property.id}>
+                <td><strong>{value(property.title, "Untitled apartment")}</strong><small><MapPin aria-hidden="true" />{propertyLocation(property)}</small></td>
+                <td>{value(permitNumber, "—")}</td><td>{value(businessAccount, "—")}</td><td>{formatDate(issuedAt)}</td>
+                <td><span className={`admin-landlord-profile-listing__status ${status}`}>{status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Pending"}</span></td>
+                <td><button type="button" onClick={() => onViewProperty(property.id)}>View Details</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
         </div>
-
-        <aside className="admin-landlord-review-side">
-          <section className="admin-landlord-review-card admin-landlord-review-status-card">
-            <h2>Verification Status</h2>
-            <p>Submitted on {formatDate(profile.created_at ?? landlord.created_at ?? landlord.createdAt)}</p>
-            <span className={`admin-landlord-review-status ${verified ? "verified" : rejected ? "rejected" : "pending"}`}>{verified ? <CheckCircle2 aria-hidden="true" /> : rejected ? <X aria-hidden="true" /> : <Clock3 aria-hidden="true" />}{status}</span>
-          </section>
-
-          <section className="admin-landlord-review-card">
-            <h2>Apartment Review</h2>
-            <p>Review the apartment information submitted by this landlord.</p>
-            <button type="button" className="admin-landlord-review-secondary-action" disabled={!property} onClick={() => property && onViewProperty(property.id)}><span>View Apartment Details</span><ArrowRight aria-hidden="true" /></button>
-          </section>
-
-          <section className="admin-landlord-review-card">
-            <h2>Admin Actions</h2>
-            <p>Verify the landlord’s business permit and account information.</p>
-            <div className="admin-landlord-review-actions">
-              <button type="button" className="admin-landlord-review-approve" disabled={verified} onClick={onApprove}><Check aria-hidden="true" />{verified ? "Verification Approved" : "Approve Verification"}</button>
-              <button type="button" className="admin-landlord-review-secondary-action" onClick={onRequestChanges}><FileText aria-hidden="true" /><span>Request Changes</span></button>
-              <button type="button" className="admin-landlord-review-reject" disabled={!verified && rejected} onClick={onReject}><X aria-hidden="true" />Reject Verification</button>
-            </div>
-          </section>
-        </aside>
-      </div>
+        {!rows.length && <p className="admin-landlord-profile-listing__empty">This landlord has no apartment listings yet.</p>}
+      </section>
     </div>
   );
 }

@@ -204,7 +204,7 @@ export function AdminLandlordVerification({
                         onClick={() => onViewVerification(landlord)}
                         type="button"
                       >
-                        View Verification
+                        View Details
                       </button>
                     </td>
                   </tr>

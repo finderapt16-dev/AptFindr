@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apartmentToFormValues } from "@/utils/apartmentMappers";
 import { fetchApartmentWithImages, persistApartmentImages, updateApartment } from "@/data/apartments";
 import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates } from "@/utils/mapCoordinates";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -50,6 +50,7 @@ export function EditProperty() {
   const [loading, setLoading] = useState(true);
   const [locationLookup, setLocationLookup] = useState(0);
   const [resolvingLocation, setResolvingLocation] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -93,7 +94,7 @@ export function EditProperty() {
   const toggleRule = (rule) => setField("rules", form.rules.includes(rule) ? form.rules.filter(item => item !== rule) : [...form.rules, rule]);
   const save = async (event) => {
     event.preventDefault();
-    if (!apartment || !canEdit || saving) return;
+    if (!apartment || !canEdit || savingRef.current) return;
     if (!form.title.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim()) {
       toast.error("Please complete the apartment name and location fields.");
       return;
@@ -106,9 +107,11 @@ export function EditProperty() {
       toast.error("Select a contract duration.");
       return;
     }
+    savingRef.current = true;
     setSaving(true);
+    let hasNavigated = false;
     try {
-      const savedDetails = await updateApartment(apartment.id, {
+      await updateApartment(apartment.id, {
         ...apartmentToFormValues({
           ...apartment,
           ...form,
@@ -122,15 +125,21 @@ export function EditProperty() {
         contractDuration: form.contractDuration,
         houseRules: form.rules,
       }, user?.id);
-      const saved = await persistApartmentImages(apartment.id, images, user?.id);
-      setApartment(saved ?? savedDetails);
-      await refreshApartments();
+      await persistApartmentImages(apartment.id, images, user?.id);
       toast.success("Apartment details saved.");
-      navigate(`/apartment/${apartment.id}`, { state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Apartments" } });
+      hasNavigated = true;
+      navigate(`/apartment/${apartment.id}`, { replace: true, state: { returnTo: "/landlord/dashboard", backLabel: "Back to My Apartments" } });
+
+      // Let the new screen paint before the shared listing data refreshes.
+      // This prevents the edit form (and its Leaflet map) from re-rendering
+      // several times while a save is completing on mobile devices.
+      window.setTimeout(() => { void refreshApartments(); }, 0);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save changes.");
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      if (!hasNavigated)
+        setSaving(false);
     }
   };
 

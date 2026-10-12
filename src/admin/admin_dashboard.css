@@ -40,6 +40,18 @@
   padding: 16px 20px;
 }
 
+/* Apartment verification is a focused review workspace: it uses the full
+   viewport and intentionally has no portal navigation. */
+.admin-portal-shell.admin-apartment-verification-shell .app-shell-main {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-portal-shell.admin-apartment-verification-shell .app-shell-content {
+  max-width: none;
+  padding: 28px clamp(24px, 5vw, 80px);
+}
+
 .admin-portal-shell.app-shell {
   background: #f8fafc !important;
 }
@@ -1385,6 +1397,10 @@
   .admin-portal-shell .app-shell-content.app-shell-content-mobile-nav {
     padding-top: max(88px, calc(72px + env(safe-area-inset-top)));
     padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+
+  .admin-portal-shell.admin-apartment-verification-shell .app-shell-content.app-shell-content-mobile-nav {
+    padding-top: max(20px, env(safe-area-inset-top));
   }
 
   .admin-portal-shell .app-sidebar-drawer {

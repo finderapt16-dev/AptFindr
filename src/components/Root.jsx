@@ -31,7 +31,12 @@ function RootContent() {
       <main key={location.pathname}>
         {maintenance?.status === "maintenance" ? <div className="maintenance-page"><section className="maintenance-card"><div className="maintenance-icon">🛠</div><h1 className="maintenance-title">{maintenance.title || "AptFindr is temporarily under maintenance"}</h1><p className="maintenance-message">{maintenance.message || "We're performing system updates to improve platform reliability. Please try again later."}</p>{maintenance.expected_end_at && <p className="maintenance-time">Expected availability: {new Date(maintenance.expected_end_at).toLocaleString("en-PH")}</p>}</section></div> : outlet}
       </main>
-      <Toaster />
+      <Toaster
+        position="top-center"
+        closeButton
+        duration={3500}
+        mobileOffset={{ top: "calc(76px + env(safe-area-inset-top))", right: "12px", left: "12px" }}
+      />
     </div>);
 }
 export function Root() {
