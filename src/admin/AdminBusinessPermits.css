@@ -1,0 +1,326 @@
+.admin-permits-page {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.admin-permits-header,
+.admin-permits-toolbar,
+.admin-permits-section-heading,
+.admin-permits-renewal-actions > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-permits-header h1,
+.admin-permits-section-heading h2,
+.admin-permits-renewal h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.admin-permits-header p,
+.admin-permits-section-heading p,
+.admin-permits-renewal p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-permits-refresh svg,
+.admin-permits-loading svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-permits-refresh .is-spinning,
+.admin-permits-loading svg {
+  animation: admin-permits-spin 900ms linear infinite;
+}
+
+@keyframes admin-permits-spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-permits-loading,
+.admin-permits-error,
+.admin-permits-empty {
+  padding: 18px;
+  border: 1px solid #dbe3ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+}
+
+.admin-permits-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-permits-error {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.admin-permits-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-permits-stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  min-height: 92px;
+  padding: 16px;
+  border: 1px solid #dbe3ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-permits-stat span {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.admin-permits-stat.expired span { background: #fee2e2; color: #dc2626; }
+.admin-permits-stat.pending span,
+.admin-permits-stat.soon span { background: #fef3c7; color: #d97706; }
+.admin-permits-stat.valid span { background: #dcfce7; color: #16a34a; }
+
+.admin-permits-stat svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-permits-stat strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.admin-permits-stat small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-permits-panel {
+  overflow: hidden;
+  border: 1px solid #dbe3ea;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-permits-toolbar,
+.admin-permits-section-heading {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5edf3;
+}
+
+.admin-permits-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(360px, 100%);
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  color: #64748b;
+}
+
+.admin-permits-search input,
+.admin-permits-toolbar select,
+.admin-permits-renewal textarea {
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+
+.admin-permits-search input {
+  width: 100%;
+  outline: none;
+}
+
+.admin-permits-toolbar select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+}
+
+.admin-permits-table-scroll {
+  overflow-x: auto;
+}
+
+.admin-permits-table-scroll table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.admin-permits-table-scroll th,
+.admin-permits-table-scroll td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #edf2f7;
+  color: #334155;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-permits-table-scroll th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-permits-table-scroll td strong,
+.admin-permits-table-scroll td small {
+  display: block;
+}
+
+.admin-permits-table-scroll td small {
+  margin-top: 3px;
+  color: #64748b;
+}
+
+.admin-permits-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-permits-badge.valid,
+.admin-permits-badge.renewed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-permits-badge.pending-renewal,
+.admin-permits-badge.expiring-soon {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.admin-permits-badge.expired {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-permits-renewal-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.admin-permits-renewal {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.admin-permits-renewal dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-permits-renewal dt {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.admin-permits-renewal dd {
+  margin: 2px 0 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-permits-renewal-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-permits-renewal-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0284c7;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-permits-renewal-actions textarea {
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.admin-permits-renewal-actions button svg,
+.admin-permits-table-scroll button svg,
+.admin-permits-renewal-actions a svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 980px) {
+  .admin-permits-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-permits-toolbar,
+  .admin-permits-header,
+  .admin-permits-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-permits-renewal dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-permits-page {
+    padding: 16px;
+  }
+
+  .admin-permits-summary,
+  .admin-permits-renewal dl {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-permits-renewal-actions > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
