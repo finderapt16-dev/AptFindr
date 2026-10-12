@@ -389,8 +389,10 @@ export function AddApartment() {
             setDraftStatus("idle");
             return;
         }
-        setDraftStatus("saving");
-        autoSaveTimerRef.current = setTimeout(() => void persistDraft(), 700);
+        autoSaveTimerRef.current = setTimeout(() => {
+            setDraftStatus("saving");
+            void persistDraft();
+        }, 700);
         return () => {
             if (autoSaveTimerRef.current)
                 clearTimeout(autoSaveTimerRef.current);
@@ -485,30 +487,36 @@ export function AddApartment() {
         setValidationErrors(stepErrors);
         return Object.keys(stepErrors).length === 0;
     };
+    const scrollContainerRef = useRef(null);
+    const scrollToFormTop = () => {
+        requestAnimationFrame(() => scrollContainerRef.current?.scrollTo({
+            top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        }));
+    };
     const handleStepClick = (targetStep) => {
         if (targetStep === currentStep || isSubmitting)
             return;
         if (targetStep < currentStep) {
             setCurrentStep(targetStep);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            scrollToFormTop();
             return;
         }
         for (let step = currentStep; step < targetStep; step += 1) {
             if (!validateStep(step)) {
                 setCurrentStep(step);
                 toast.error(`Complete ${stepConfig[step - 1].title} before continuing.`);
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                scrollToFormTop();
                 return;
             }
         }
         setCurrentStep(targetStep);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        scrollToFormTop();
     };
     const handleNextStep = () => {
         if (validateStep(currentStep)) {
             if (currentStep < totalSteps) {
                 setCurrentStep(currentStep + 1);
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                scrollToFormTop();
             }
         }
         else {
@@ -523,7 +531,7 @@ export function AddApartment() {
     const handlePrevStep = () => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            scrollToFormTop();
         }
     };
     const handleSubmit = async (e) => {
@@ -550,7 +558,7 @@ export function AddApartment() {
         if (!validation.isValid) {
             setCurrentStep(validation.firstStep);
             toast.error("Please complete all required fields before submitting.");
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            scrollToFormTop();
             return;
         }
         const submittedAmenities = getSubmittedAmenities();
@@ -747,7 +755,7 @@ export function AddApartment() {
         </aside>
         <LandlordMenuTrigger expanded={sidebarOpen} className="landlord-add-property-trigger" onClick={() => setSidebarOpen(true)} />
 
-        <main className="app-shell-main landlord-add-property-main">
+        <main ref={scrollContainerRef} className="app-shell-main landlord-add-property-main">
           <div className={`landlord-add-property add-apartment-page ${currentStep === 1 ? "verification-reference" : ""}`}>
             <div className="app-shell-content add-apartment-page-content add-apartment-flow-container">
         <div className="add-apartment-panel-4">

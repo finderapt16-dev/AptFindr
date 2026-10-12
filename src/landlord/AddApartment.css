@@ -3206,3 +3206,70 @@
   .add-apartment-unit-prompt-actions { gap: 16px; }
 }
 .landlord-add-property label span[aria-hidden="true"] { color: #e5484d; }
+
+/* Autosave status changes must not move the controls while the user taps. */
+.landlord-add-property .add-apartment-row-3 {
+  min-height: 44px;
+}
+.landlord-add-property .add-apartment-card-3 {
+  flex: 0 0 190px;
+  width: 190px;
+  min-height: 36px;
+  box-sizing: border-box;
+  justify-content: center;
+}
+.landlord-add-property .add-apartment-card-3 svg {
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .landlord-add-property .add-apartment-row-3 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .landlord-add-property .add-apartment-discard-draft {
+    justify-self: start;
+    min-height: 44px;
+  }
+}
+
+/* Keep the mobile navigation clear of the form and scroll within the shell. */
+@media (max-width: 1023px) {
+  .landlord-add-property-shell { height: 100dvh; }
+  .landlord-add-property-main {
+    min-height: 0;
+    overflow-anchor: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  .landlord-add-property-shell .add-apartment-page-content {
+    padding-top: calc(72px + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+  .landlord-add-property-drawer:not(.is-open) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .landlord-add-property-shell button {
+    touch-action: manipulation;
+  }
+  .landlord-add-property .add-apartment-stepper {
+    --add-property-step-circle: 44px;
+  }
+  .landlord-add-property .add-apartment-step-item .add-apartment-button-6,
+  .landlord-add-property .add-apartment-row-10 > button,
+  .landlord-add-property .add-apartment-close-wizard,
+  .landlord-add-property .add-apartment-added-choice-tag button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .landlord-add-property .add-apartment-add-choice input {
+    min-width: 0;
+    width: 100%;
+  }
+  .landlord-add-property .add-apartment-choice:not(.is-selected):hover {
+    border-color: #d9e1ea;
+    background: #fff;
+    color: #667085;
+  }
+}

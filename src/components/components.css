@@ -114,7 +114,29 @@
 @media (min-width:640px){ .multi-image-thumbnail-grid{grid-template-columns:repeat(6,minmax(0,1fr));} }
 
 /* Map */
+.map-view-shell { position: relative; width: 100%; height: 100%; min-height: 0; }
 .map-view-container { width: 100%; height: 100%; border-radius: 0.5rem; z-index: 0; }
+.map-live-location-controls { position: absolute; top: 12px; right: 12px; z-index: 1100; display: grid; justify-items: end; gap: 8px; max-width: min(320px, calc(100% - 24px)); pointer-events: none; }
+.map-live-location-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; pointer-events: auto; }
+.map-location-toggle, .map-location-recenter { min-height: 40px; border: 1px solid #dbe3ee; border-radius: 10px; background: #fff; color: #1e293b; box-shadow: 0 4px 14px rgba(15, 23, 42, .18); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.map-location-toggle { padding: 0 13px; white-space: nowrap; }
+.map-location-toggle:hover, .map-location-recenter:hover { background: #f8fafc; }
+.map-location-toggle.is-tracking { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+.map-location-toggle svg, .map-location-recenter svg { width: 17px; height: 17px; flex: 0 0 auto; }
+.map-location-recenter { width: 40px; padding: 0; }
+.map-tracking-indicator { width: 9px; height: 9px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, .14); flex: 0 0 auto; }
+.map-location-toggle.is-tracking .map-tracking-indicator { background: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .14); }
+.map-location-status, .map-location-error { max-width: 100%; padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 9px; background: rgba(255, 255, 255, .96); color: #334155; box-shadow: 0 4px 14px rgba(15, 23, 42, .14); font-size: 12px; line-height: 1.4; }
+.map-location-status { display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.map-location-error { border-color: #fecaca; color: #991b1b; pointer-events: auto; }
+.leaflet-marker-icon.tenant-location-icon { display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; }
+.tenant-location-dot { display: block; width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%; background: #2563eb; box-shadow: 0 1px 5px rgba(15, 23, 42, .65), 0 0 0 1px rgba(29, 78, 216, .55); }
+@media (max-width: 480px) {
+  .map-live-location-controls { top: 8px; right: 8px; max-width: calc(100% - 16px); }
+  .map-location-toggle { min-height: 38px; padding: 0 10px; font-size: 12px; }
+  .map-location-recenter { width: 38px; min-height: 38px; }
+  .map-location-status, .map-location-error { max-width: min(260px, calc(100vw - 32px)); font-size: 11px; }
+}
 .renti-map-marker { position: relative; }
 .map-marker { width: 34px; height: 34px; border-radius: 9999px 9999px 9999px 4px; transform: rotate(-45deg); border: 3px solid #fff; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.28); display: grid; place-items: center; }
 .map-marker-available { background: #2563eb; }
