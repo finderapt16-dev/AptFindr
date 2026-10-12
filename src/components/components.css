@@ -244,4 +244,3 @@
 .multi-image-thumbnail-remove:disabled { opacity: .5; cursor: default; }
 .multi-image-thumbnail-remove:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
 @media (hover: none) { .multi-image-thumbnail .multi-image-thumbnail-remove { width: 30px; height: 30px; } }
-

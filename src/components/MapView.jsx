@@ -176,7 +176,7 @@ export function MapView({ lat, lng, zoom = 13, apartments = [], showSingleMarker
         if (apartments.length === 0 || apartments.filter((apartment) => hasValidApartmentCoordinates(apartment.lat, apartment.lng)).length === 0) {
             emptyPopup = L.popup({ closeButton: false, closeOnClick: false, autoClose: false })
                 .setLatLng([lat, lng])
-                .setContent(<div class="map-popup-empty">${escapeHtml(emptyMessage)}</div>)
+                .setContent(`<div class="map-popup-empty">${escapeHtml(emptyMessage)}</div>`)
                 .openOn(map);
         }
         else {
