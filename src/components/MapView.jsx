@@ -12,7 +12,7 @@ function createMarkerIcon(tone, count = 1) {
       <div class="map-marker map-marker-${tone}">
         <div class="map-marker-center"></div>
       </div>
-      ${count > 1 ? <div class="map-marker-count">${count}</div> : ""}
+      ${count > 1 ? `<div class="map-marker-count">${count}</div>` : ""}
     `,
         iconSize: [34, 34],
         iconAnchor: [17, 34],
@@ -54,7 +54,7 @@ function getGroupTone(apartments) {
 function groupByCoordinates(apartments) {
     const groups = new globalThis.Map();
     apartments.forEach((apartment) => {
-        const key = '${apartment.lat.toFixed(6)},${apartment.lng.toFixed(6)}';
+        const key = `${apartment.lat.toFixed(6)},${apartment.lng.toFixed(6)}`;
         groups.set(key, [...(groups.get(key) ?? []), apartment]);
     });
     return Array.from(groups.entries()).map(([key, listings]) => {

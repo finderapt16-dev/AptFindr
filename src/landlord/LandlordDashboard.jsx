@@ -1232,6 +1232,16 @@ export function LandlordDashboard() {
   const handleNotificationClick = async (
     notification
   ) => {
+    const showAccountMessage = ![
+      "admin_message", "property_reported", "violation_issued",
+      "notice_issued", "appeal_status_updated",
+    ].includes(String(notification.type)) && !(
+      notification.payload?.apartment_id &&
+      propertyIds.has(String(notification.payload.apartment_id))
+    );
+    if (showAccountMessage) {
+      setSelectedNotificationDetail({ notification, violation: null, appeal: null });
+    }
     if (
       !(notification.read ??
         notification.is_read) &&
@@ -1268,6 +1278,8 @@ export function LandlordDashboard() {
       }
     }
 
+
+    if (showAccountMessage) return;
 
     const payload =
       notification.payload;
