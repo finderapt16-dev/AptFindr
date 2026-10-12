@@ -17,8 +17,27 @@ const formatPermitDate = (value) => {
     month: "long",
     day: "numeric",
     year: "numeric",
-    timeZone: "Asia/Shanghai",
+    timeZone: "Asia/Manila",
   }).format(date);
+};
+
+const formatPermitDateTime = (value) => {
+  if (!value) return "Not provided";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Manila",
+  }).format(date);
+};
+
+const renewalStatusLabel = (value) => {
+  const normalized = String(value || "").replace(/_/g, " ").trim();
+  return normalized ? normalized.replace(/\b\w/g, character => character.toUpperCase()) : "No renewal submitted";
 };
 
 const permitFileName = (url) => {
@@ -58,7 +77,7 @@ function BusinessPermitInformation({ business }) {
   useEffect(() => {
     let active = true;
     if (!user?.id) return;
-    void supabase.from("landlord_permit_renewals").select("status, expires_at").eq("landlord_id", user.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
+    void supabase.from("landlord_permit_renewals").select("status, expires_at, permit_year").eq("landlord_id", user.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
       if (active) { setRenewalStatus(data?.status || ""); setRenewalExpiry(data?.status === "approved" ? data.expires_at || "" : ""); }
     });
     return () => { active = false; };
@@ -83,27 +102,27 @@ function BusinessPermitInformation({ business }) {
   const size = Number(permit?.fileSize);
   const expiry = renewalExpiry || permit?.permitExpiry || business?.permitExpiry;
   const expiryTimestamp = expiry ? Date.parse(String(expiry).includes("T") ? expiry : `${String(expiry).slice(0, 10)}T00:00:00+08:00`) : NaN;
-  const renewalDue = renewalStatus !== "pending_review" && (
-    ["expired", "requires_changes", "rejected"].includes(renewalStatus)
-    || Date.now() >= expiryTimestamp
-  );
+  const renewalBlocked = renewalStatus === "pending_review";
+  const renewalDue = !renewalBlocked && (["expired", "requires_changes", "rejected"].includes(renewalStatus) || Date.now() >= expiryTimestamp);
+  const canSubmitRenewal = !renewalBlocked;
   return <section className="landlord-settings-card landlord-settings-business-card">
     <header className="landlord-settings-card-header landlord-settings-business-header">
       <div><h2>Business Information</h2><p>Manage your business verification and permit details.</p></div>
-      <span className="landlord-settings-read-only"><LockKeyhole aria-hidden="true" strokeWidth={1.6} />{renewalStatus === "pending_review" ? "UNDER REVIEW" : renewalDue ? "UPDATE AVAILABLE" : "READ-ONLY"}</span>
+      <span className="landlord-settings-read-only"><LockKeyhole aria-hidden="true" strokeWidth={1.6} />{renewalBlocked ? "UNDER REVIEW" : renewalDue ? "UPDATE AVAILABLE" : "RENEWAL READY"}</span>
     </header>
     {loading ? <p role="status">Loading business permits...</p> : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : permit ? <>
       <div className="landlord-settings-business-record">
         <dl className="landlord-settings-permit-details">
           <div><dt>Apartment Name</dt><dd>{permit.apartmentName || permit.businessName || "Not provided"}</dd></div>
           <div><dt>Permit Number</dt><dd>{permit.permitNumber || "Not provided"}</dd></div>
-          <div><dt>Business Account Number</dt><dd>{permit.businessAccount || "Not provided"}</dd></div>
+          <div><dt>Annual Expiration</dt><dd>{formatPermitDateTime(expiry)}</dd></div>
           <div><dt>Issued Date</dt><dd>{formatPermitDate(permit.issuedAt)}</dd></div>
+          <div><dt>Renewal Status</dt><dd>{renewalStatusLabel(renewalStatus || permit.renewalStatus)}</dd></div>
         </dl>
         <div className="landlord-settings-permit-file">
           <span className="landlord-settings-file-icon"><FileText aria-hidden="true" /></span>
           <div>
-            {renewalDue ? <button type="button" className="landlord-settings-permit-update-link" onClick={() => setUpdatePermit(permit)}>{permit.fileName || "Update business permit"}</button> : permit.documentUrl ? <a href={permit.documentUrl} target="_blank" rel="noreferrer">{permit.fileName || permitFileName(permit.documentUrl)}</a> : <strong>No business permit uploaded</strong>}
+            {canSubmitRenewal ? <button type="button" className="landlord-settings-permit-update-link" onClick={() => setUpdatePermit({ ...permit, permitExpiry: expiry })}>{renewalDue ? "Update business permit" : "Renew business permit"}</button> : permit.documentUrl ? <a href={permit.documentUrl} target="_blank" rel="noreferrer">{permit.fileName || permitFileName(permit.documentUrl)}</a> : <strong>Renewal pending review</strong>}
             <small>{size > 0 ? size >= 1024 * 1024 ? `${(size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB` : "Size not provided"}</small>
           </div>
         </div>
@@ -146,8 +165,14 @@ export const LandlordSettings = ({
       </header>
 
       <div className="landlord-settings-profile-grid">
-        <ProfileField label="Full Name" required>
-          <input autoComplete="name" required value={profile.fullName} onChange={(event) => updateProfile((current) => ({ ...current, fullName: event.target.value }))} />
+        <ProfileField label="First Name" required>
+          <input value={profile.firstName} onChange={(event) => updateProfile((current) => ({ ...current, firstName: event.target.value }))} />
+        </ProfileField>
+        <ProfileField label="Middle Name (Optional)">
+          <input value={profile.middleInitial} onChange={(event) => updateProfile((current) => ({ ...current, middleInitial: event.target.value }))} />
+        </ProfileField>
+        <ProfileField label="Last Name" required>
+          <input value={profile.lastName} onChange={(event) => updateProfile((current) => ({ ...current, lastName: event.target.value }))} />
         </ProfileField>
         <ProfileField label="Facebook Link" required>
           <input type="url" required value={profile.facebookLink} onChange={(event) => updateProfile((current) => ({ ...current, facebookLink: event.target.value }))} placeholder="https://facebook.com" />

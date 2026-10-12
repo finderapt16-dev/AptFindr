@@ -117,14 +117,37 @@ export async function removeVerificationDocument(document) {
 }
 
 export async function fetchLandlordBusinessPermits(landlordId) {
-    const [propertiesResult, documentsResult] = await Promise.all([
+    const [propertiesResult, documentsResult, renewalsResult] = await Promise.all([
         supabase.from("apartments").select("id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
         supabase.from("apartment_verification_documents").select("*").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
+        supabase.from("landlord_permit_renewals").select("*").eq("landlord_id", landlordId).order("submitted_at", { ascending: false }),
     ]);
     if (propertiesResult.error) throw new Error(propertiesResult.error.message);
     if (documentsResult.error) throw new Error(documentsResult.error.message);
+    if (renewalsResult.error && !["42P01", "PGRST205"].includes(renewalsResult.error.code)) throw new Error(renewalsResult.error.message);
     const properties = propertiesResult.data ?? [];
     const documents = documentsResult.data ?? [];
+    const renewalEntries = await Promise.all((renewalsResult.data ?? []).map(async renewal => {
+        const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(String(renewal.document_path), 15 * 60);
+        if (error) throw new Error(error.message || "Unable to open business permit.");
+        return {
+            id: String(renewal.id),
+            apartmentId: "",
+            businessName: "Business Permit Renewal",
+            apartmentName: `Permit Year ${renewal.permit_year}`,
+            businessAccount: "",
+            permitNumber: renewal.permit_number || "",
+            permitYear: renewal.permit_year,
+            renewalStatus: renewal.status,
+            issuedAt: renewal.permit_issued_at || "",
+            permitExpiry: renewal.expires_at || "",
+            fileName: renewal.document_name || "",
+            fileSize: null,
+            storagePath: renewal.document_path || "",
+            documentUrl: data?.signedUrl ?? "",
+            submittedAt: renewal.submitted_at || "",
+        };
+    }));
     const entries = properties.flatMap(property => {
         const verification = property.features?.verification ?? {};
         const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id));
@@ -143,10 +166,11 @@ export async function fetchLandlordBusinessPermits(landlordId) {
             storagePath: document?.storage_path || "",
         }));
     });
-    return Promise.all(entries.map(async entry => {
+    const propertyEntries = await Promise.all(entries.map(async entry => {
         if (!entry.storagePath) return { ...entry, documentUrl: "" };
         const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(entry.storagePath, 15 * 60);
         if (error) throw new Error(error.message || "Unable to open business permit.");
         return { ...entry, documentUrl: data?.signedUrl ?? "" };
     }));
+    return [...renewalEntries, ...propertyEntries];
 }

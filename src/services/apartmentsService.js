@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { apartmentFormValuesToInsertRow, apartmentFormValuesToUpdateRow, apartmentRowToApartment, } from '../data/apartments';
 import { isTenantRole } from './authService';
+import { hasValidBusinessPermit } from './businessPermitRenewalService';
 import { optimizeImageForUpload } from '../utils/imageUpload';
 import { isTenantVisibleApartment } from '../utils/listingVisibility';
 const APARTMENT_SELECT = '*, apartment_images(url, is_primary, sort_order), apartment_rooms(*)';
@@ -345,6 +346,10 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
         const blockedStatus = normalizedStatuses.some((status) => ['pending', 'unverified', 'rejected', 'suspended', 'disabled'].includes(status));
         if (!landlordRecord || landlordRecord.is_verified !== true || blockedStatus) {
             throw new Error('This apartment cannot be published because the landlord has not been verified.');
+        }
+        const validBusinessPermit = await hasValidBusinessPermit(landlordId);
+        if (!validBusinessPermit) {
+            throw new Error('This apartment cannot be published because the landlord does not have a valid approved business permit for the current permit year.');
         }
     }
     const { error } = await supabase.rpc('fn_set_apartment_publication', {

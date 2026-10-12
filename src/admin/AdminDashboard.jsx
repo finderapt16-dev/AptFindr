@@ -19,6 +19,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AdminApartments } from './AdminApartments';
 import { AdminAppeals } from './AdminAppeals';
+import { AdminBusinessPermits } from './AdminBusinessPermits';
 import { AdminLandlordVerification } from './AdminLandlordVerification';
 import { AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
 import { ArchiveEmpty, canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
@@ -1301,6 +1302,18 @@ export function AdminDashboard() {
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
     const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} onViewVerification={setSelectedLandlord}/>);
+    const renderBusinessPermits = () => (<AdminBusinessPermits
+      onViewLandlord={(landlordId) => {
+          const landlord = landlords.find((item) => item.id === landlordId);
+          if (!landlord) {
+              toast.error("The linked landlord could not be loaded.");
+              return;
+          }
+          setSelectedLandlord(landlord);
+          handleSectionChange("landlords");
+      }}
+      onViewApartment={(apartmentId) => navigate(`${apartmentDetailBasePath}/${apartmentId}`, { state: { returnTo: `${portalBasePath}?section=permits`, backLabel: "Back to Business Permits" } })}
+    />);
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport} handleApproveAndPublishApartment={handleApproveAndPublishApartment} publishingApartmentId={publishingApartmentId}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
@@ -1654,6 +1667,7 @@ export function AdminDashboard() {
         notifications: renderNotifications,
         support: renderNotifications,
         landlords: renderLandlords,
+        permits: renderBusinessPermits,
         apartments: renderApartments,
         reports: renderReports,
         appeals: renderAppeals,
