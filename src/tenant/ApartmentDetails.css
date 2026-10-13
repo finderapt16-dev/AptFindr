@@ -1388,10 +1388,11 @@
 
 .apartment-detail-landlord-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
   min-width: 0;
+  flex-wrap: wrap;
   margin-top: 14px;
 }
 
@@ -1403,6 +1404,7 @@
   min-width: 0;
   padding: 0;
   display: flex;
+  flex: 1 1 210px;
 }
 
 @supports (color: lab(0% 0 0)) {
@@ -1446,6 +1448,7 @@
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  flex: 1 1 240px;
 }
 
 :where(.apartment-detail-panel-20 > :not(:last-child)) {
@@ -1504,6 +1507,25 @@
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .apartment-detail-landlord-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .apartment-detail-row-10,
+  .apartment-detail-panel-20 {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .apartment-detail-panel-20 {
+    padding-top: 14px;
+    border-top: 1px solid #e5edf3;
+  }
 }
 
 .apartment-detail-mail-icon, .apartment-detail-phone-icon {
