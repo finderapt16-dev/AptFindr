@@ -1,4 +1,4 @@
-const VERSION = "v26";
+const VERSION = "v27";
 const SHELL_CACHE = `aptfindr-shell-${VERSION}`;
 const RUNTIME_CACHE = `aptfindr-runtime-${VERSION}`;
 const APP_SHELL = [
