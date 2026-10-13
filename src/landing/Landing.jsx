@@ -1496,7 +1496,7 @@ export function Landing() {
                                                 onFocus={() => setSearchFocused(true)}
                                                 onBlur={() => window.setTimeout(() => setSearchFocused(false), 150)}
                                                 onKeyDown={handleSearchKeyDown}
-                                                placeholder="Search apartments or try near ISAT U"
+                                                placeholder="Search by area, address, or apartment name"
                                                 className="landing-search-input"
                                                 aria-label="Search apartments"
                                                 aria-controls="landing-search-suggestions"

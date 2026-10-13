@@ -154,14 +154,14 @@ export function calculateDemandScores(entries = []) {
     // WEIGHTED DEMAND FORMULA
     //
     // Views     = 40%
-    // Favorites = 40%
-    // Rating    = 20%
+    // Favorites = 20%
+    // Rating    = 40%
     // =========================================
 
     const demandScore =
       normalizedViews * 0.4 +
-      normalizedFavorites * 0.4 +
-      normalizedRating * 0.2;
+      normalizedFavorites * 0.2 +
+      normalizedRating * 0.4;
 
     const finalDemandScore =
       Math.round(demandScore * 1000) / 1000;

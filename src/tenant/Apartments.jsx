@@ -1395,7 +1395,7 @@ if (browseMode === "popular") {
                                 event.target.value
                             )
                         }
-                        placeholder="Search apartments or try near ISAT U"
+                        placeholder="Search by area, address, or apartment name"
                         className="apartment-browse-input-2"
                     />
                 </div>

@@ -377,14 +377,6 @@ export function LandingApartmentPreview({
 
             <div className="landing-section-container">
 
-                {searchQuery.trim() && (
-                    <p className="landing-search-results-summary" role="status">
-                        {activeNearbySearch
-                            ? `${displayedApartments.length} apartments within 800 m of ${activeNearbySearch.target} · nearest first`
-                            : `${displayedApartments.length} matching apartments`}
-                    </p>
-                )}
-
                 <div className="landing-listings-grid">
 
                     {displayedApartments.map(
