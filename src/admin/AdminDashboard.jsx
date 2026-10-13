@@ -47,6 +47,7 @@ const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map
         return account;
     }
 }));
+const ADMIN_DASHBOARD_REFRESH_DELAY_MS = 1500;
 export function AdminDashboard() {
     const { user, verifyLandlord, updateUser, refreshUsers, logout } = useAuth();
     const navigate = useNavigate();
@@ -618,6 +619,7 @@ export function AdminDashboard() {
         if (user?.role !== "admin")
             return;
         let apartmentRefreshTimer = null;
+        let visibleRefreshTimer = null;
         const openApartmentId = text(selectedLandlordProperty?.id);
         const refreshOpenApartment = (apartmentId) => {
             if (!apartmentId || apartmentId !== openApartmentId)
@@ -655,7 +657,7 @@ export function AdminDashboard() {
                     } : current);
                 }).catch((error) => console.warn("Unable to refresh apartments in real time:", error));
                 refreshOpenApartment(changedApartmentId);
-            }, 100);
+            }, ADMIN_DASHBOARD_REFRESH_DELAY_MS);
         };
         const refreshUserData = () => {
             void fetchUsers().then(async (users) => {
@@ -673,28 +675,27 @@ export function AdminDashboard() {
             void fetchArchivedAppeals().then(setArchivedAppeals);
             void loadAdminNotifications();
         };
+        const scheduleVisibleRefresh = () => {
+            if (visibleRefreshTimer)
+                window.clearTimeout(visibleRefreshTimer);
+            visibleRefreshTimer = window.setTimeout(refreshVisibleData, ADMIN_DASHBOARD_REFRESH_DELAY_MS);
+        };
         const channel = supabase
             .channel(`admin-dashboard-${user.id}`)
-            .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, () => {
-            void fetchAdminReports().then(setReports);
-            void fetchArchivedReports().then(setArchivedReports);
-        })
-            .on("postgres_changes", { event: "*", schema: "public", table: "violations" }, () => { void fetchViolations().then(setViolations); })
-            .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => { void loadAdminNotifications(); })
-            .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, () => {
-            void fetchPendingAppeals().then(setAppeals);
-            void fetchArchivedAppeals().then(setArchivedAppeals);
-        })
+            .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, scheduleVisibleRefresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "violations" }, scheduleVisibleRefresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, scheduleVisibleRefresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "appeals" }, scheduleVisibleRefresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartments" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_verification_documents" }, refreshApartmentData)
-            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_users" }, refreshUserData)
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_users" }, scheduleVisibleRefresh)
             .subscribe();
-        const refreshOnFocus = () => refreshVisibleData();
+        const refreshOnFocus = () => scheduleVisibleRefresh();
         const refreshOnVisibility = () => {
             if (document.visibilityState === "visible")
-                refreshVisibleData();
+                scheduleVisibleRefresh();
         };
         window.addEventListener("focus", refreshOnFocus);
         window.addEventListener("online", refreshOnFocus);
@@ -702,6 +703,8 @@ export function AdminDashboard() {
         return () => {
             if (apartmentRefreshTimer)
                 window.clearTimeout(apartmentRefreshTimer);
+            if (visibleRefreshTimer)
+                window.clearTimeout(visibleRefreshTimer);
             window.removeEventListener("focus", refreshOnFocus);
             window.removeEventListener("online", refreshOnFocus);
             document.removeEventListener("visibilitychange", refreshOnVisibility);

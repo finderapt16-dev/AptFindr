@@ -9,6 +9,7 @@ function getErrorMessage(error, fallback) {
     return fallback;
 }
 export const AuthContext = createContext(undefined);
+const AUTH_REFRESH_DELAY_MS = 1500;
 export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [users, setUsers] = useState([]);
@@ -106,7 +107,13 @@ export function AuthProvider({ children }) {
         });
     }, []);
     useEffect(() => {
-        const refreshOnFocus = () => void refreshUsers().catch(() => undefined);
+        let refreshTimer = null;
+        const scheduleRefresh = () => {
+            if (refreshTimer)
+                clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => void refreshUsers().catch(() => undefined), AUTH_REFRESH_DELAY_MS);
+        };
+        const refreshOnFocus = () => scheduleRefresh();
         const refreshWhenVisible = () => {
             if (document.visibilityState === 'visible')
                 refreshOnFocus();
@@ -114,6 +121,8 @@ export function AuthProvider({ children }) {
         window.addEventListener('focus', refreshOnFocus);
         document.addEventListener('visibilitychange', refreshWhenVisible);
         return () => {
+            if (refreshTimer)
+                clearTimeout(refreshTimer);
             window.removeEventListener('focus', refreshOnFocus);
             document.removeEventListener('visibilitychange', refreshWhenVisible);
         };
@@ -123,7 +132,7 @@ export function AuthProvider({ children }) {
         const scheduleRefresh = () => {
             if (refreshTimer)
                 clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(() => void refreshUsers().catch(() => undefined), 100);
+            refreshTimer = setTimeout(() => void refreshUsers().catch(() => undefined), AUTH_REFRESH_DELAY_MS);
         };
         const channel = supabase
             .channel('auth-verification-sync')

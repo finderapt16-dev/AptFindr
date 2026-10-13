@@ -20,6 +20,7 @@ import { AlertTriangle, ArrowLeft, Bell, Building2, CalendarCheck, Check, CheckC
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+const DETAIL_REFRESH_DELAY_MS = 1500;
 const toFiniteNumber = (value, fallback = 0) => {
     if (typeof value === "number" && Number.isFinite(value)) {
         return value;
@@ -312,7 +313,8 @@ export function AdminApartmentDetail() {
         if (!id)
             return;
         let active = true;
-        const refreshInspection = () => {
+        let refreshTimer = null;
+        const runRefreshInspection = () => {
             void Promise.all([
                 fetchApartmentInspectionDetails(id),
                 fetchApartmentVerificationDocuments(id),
@@ -324,6 +326,11 @@ export function AdminApartmentDetail() {
             }).catch((error) => {
                 console.error("Unable to refresh admin apartment details:", error);
             });
+        };
+        const refreshInspection = () => {
+            if (refreshTimer)
+                window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(runRefreshInspection, DETAIL_REFRESH_DELAY_MS);
         };
         const channel = supabase
             .channel(`admin-apartment-detail-${id}`)
@@ -344,6 +351,8 @@ export function AdminApartmentDetail() {
         document.addEventListener("visibilitychange", refreshOnVisibility);
         return () => {
             active = false;
+            if (refreshTimer)
+                window.clearTimeout(refreshTimer);
             window.removeEventListener("focus", refreshOnFocus);
             window.removeEventListener("online", refreshOnFocus);
             document.removeEventListener("visibilitychange", refreshOnVisibility);

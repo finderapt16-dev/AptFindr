@@ -3,6 +3,7 @@ import { supabase } from '../services/supabaseClient';
 import { fetchApartments } from '../data/apartments';
 import { useAuth } from './AuthContext';
 const ApartmentsContext = createContext(undefined);
+const LIVE_REFRESH_DELAY_MS = 1500;
 export function ApartmentsProvider({ children }) {
     const { user, isLoading: authIsLoading } = useAuth();
     const [apartments, setApartments] = useState([]);
@@ -14,17 +15,21 @@ export function ApartmentsProvider({ children }) {
     const isMountedRef = useRef(true);
     const activeRefreshRef = useRef(false);
     const queuedRefreshRef = useRef(false);
+    const queuedSilentRefreshRef = useRef(true);
     const apartmentsRef = useRef([]);
-    const refreshApartments = useCallback(async () => {
+    const refreshApartments = useCallback(async (options = {}) => {
+        const silent = options.silent === true;
         if (activeRefreshRef.current) {
             queuedRefreshRef.current = true;
+            queuedSilentRefreshRef.current = queuedSilentRefreshRef.current && silent;
             return;
         }
         activeRefreshRef.current = true;
         const requestId = ++requestIdRef.current;
         const hasExistingApartments = apartmentsRef.current.length > 0;
         if (hasExistingApartments) {
-            setIsRefreshing(true);
+            if (!silent)
+                setIsRefreshing(true);
         }
         else {
             setIsLoading(true);
@@ -53,8 +58,10 @@ export function ApartmentsProvider({ children }) {
             }
             activeRefreshRef.current = false;
             if (queuedRefreshRef.current) {
+                const queuedSilent = queuedSilentRefreshRef.current;
                 queuedRefreshRef.current = false;
-                void refreshApartments();
+                queuedSilentRefreshRef.current = true;
+                void refreshApartments({ silent: queuedSilent });
             }
         }
     }, []);
@@ -81,7 +88,7 @@ export function ApartmentsProvider({ children }) {
         const scheduleRefresh = () => {
             if (refreshTimer)
                 clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(() => void refreshApartments(), 100);
+            refreshTimer = setTimeout(() => void refreshApartments({ silent: true }), LIVE_REFRESH_DELAY_MS);
         };
         const channel = supabase
             .channel('apartments-context-sync')

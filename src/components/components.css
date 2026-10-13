@@ -178,7 +178,7 @@
 .map-popup-empty { max-width: 240px; font-weight: 800; color: #475569; }
 
 .image-with-fallback-dynamic-1 { text-align: center; vertical-align: middle; }
-.image-with-fallback-style-2 { animation: image-placeholder-pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
+.image-with-fallback-style-2 { animation: none; }
 .image-loaded { opacity: 1; }
 .image-loading { opacity: 0; }
 @keyframes image-placeholder-pulse { 50% { opacity: .5; } }

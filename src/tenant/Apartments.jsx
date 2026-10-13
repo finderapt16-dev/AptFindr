@@ -177,30 +177,202 @@ const getApartmentPriceLabel = (apartment) => {
 };
 
 
-const shuffleApartments = (items) => {
-    const shuffled = [...items];
+const shuffleApartments = (items, seed = 0) => {
+    const stableHash = (value) => {
+        let hash = 2166136261;
+        for (let index = 0; index < value.length; index += 1) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+    };
 
-    for (
-        let i = shuffled.length - 1;
-        i > 0;
-        i--
-    ) {
-        const randomIndex =
-            Math.floor(
-                Math.random() * (i + 1)
-            );
-
-        [
-            shuffled[i],
-            shuffled[randomIndex],
-        ] = [
-            shuffled[randomIndex],
-            shuffled[i],
-        ];
-    }
-
-    return shuffled;
+    return [...items].sort((left, right) => {
+        const leftKey = stableHash(`${seed}:${left.id ?? left.title ?? ""}:${left.updatedAt ?? ""}`);
+        const rightKey = stableHash(`${seed}:${right.id ?? right.title ?? ""}:${right.updatedAt ?? ""}`);
+        return leftKey - rightKey || String(left.id ?? "").localeCompare(String(right.id ?? ""));
+    });
 };
+
+
+function ApartmentBrowseCard({
+    apartment,
+    activeNearbySearch,
+    browseMode,
+    favorite,
+    favoriteUpdating,
+    imageUrl,
+    isVerified,
+    locationText,
+    ratingStats,
+    ratingsLoading,
+    viewCount,
+    onToggleFavorite,
+}) {
+    const status =
+        apartment.status ??
+        "available";
+
+    const viewLabel = `${viewCount.toLocaleString()} ${
+        viewCount === 1
+            ? "view"
+            : "views"
+    }`;
+
+    return (
+        <article className="apartment-browse-article">
+            <div className="apartment-browse-panel-5">
+                {imageUrl ? (
+                    <ImageWithFallback
+                        src={imageUrl}
+                        alt={apartment.title}
+                        className="apartment-browse-image-with-fallback"
+                    />
+                ) : (
+                    <div className="apartment-browse-row-6">
+                        <Building2 className="apartment-browse-building2-icon" />
+                    </div>
+                )}
+
+                <div className="apartment-browse-content-2">
+                    {activeNearbySearch &&
+                        apartment.distanceMeters !==
+                            undefined && (
+                            <Badge className="apartment-browse-badge">
+                                {formatDistance(
+                                    apartment.distanceMeters
+                                )}
+                            </Badge>
+                        )}
+
+                    <Badge
+                        className={`apartment-browse-badge-2 ${
+                            STATUS_CLASS[
+                                status
+                            ] ??
+                            STATUS_CLASS.available
+                        }`}
+                    >
+                        {STATUS_LABEL[
+                            status
+                        ] ??
+                            "Available"}
+                    </Badge>
+
+                    {isVerified && (
+                        <VerifiedBadge
+                            label="Verified Listing"
+                            className="apartment-browse-verified-badge"
+                        />
+                    )}
+
+                    {apartment.petFriendly && (
+                        <Badge className="apartment-browse-pet-friendly">
+                            Pet
+                            Friendly
+                        </Badge>
+                    )}
+
+                    {browseMode === "suggested" &&
+                        Number.isFinite(apartment.matchScore) && (
+                            <Badge
+                                className="apartment-browse-badge"
+                                style={{
+                                    backgroundColor: "#1d4ed8",
+                                    color: "#fff",
+                                }}
+                            >
+                                {apartment.matchScore.toFixed(2)}% Match
+                            </Badge>
+                        )}
+                </div>
+
+                <button
+                    type="button"
+                    title={
+                        favorite
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                    }
+                    disabled={favoriteUpdating}
+                    onClick={() =>
+                        void onToggleFavorite(
+                            apartment.id
+                        )
+                    }
+                    className={`apartment-browse-button-6 ${
+                        favorite
+                            ? "apartment-browse-button-7"
+                            : "apartment-browse-button-8"
+                    }`}
+                >
+                    {favoriteUpdating ? (
+                        <RefreshCw className="apartment-browse-refresh-cw-icon" />
+                    ) : (
+                        <Heart
+                            className="apartment-browse-heart-icon"
+                            fill={
+                                favorite
+                                    ? "currentColor"
+                                    : "currentColor"
+                            }
+                        />
+                    )}
+                </button>
+            </div>
+
+            <div className="apartment-browse-panel-6">
+                <div className="apartment-browse-row-7">
+                    <div className="apartment-browse-panel-7">
+                        <h2 className="apartment-browse-heading">
+                            {apartment.title}
+                        </h2>
+
+                        <ApartmentRatingSummary compact
+                            stats={ratingStats}
+                            isLoading={ratingsLoading}
+                            className="apartment-browse-apartment-rating-summary"
+                        />
+
+                        <p className="apartment-browse-text-3">
+                            <MapPin className="apartment-browse-map-pin-icon" />
+
+                            {locationText}
+                        </p>
+                    </div>
+
+                    <div className="apartment-browse-panel-8">
+                        <p className="apartment-browse-view-room-prices">
+                            {getApartmentPriceLabel(
+                                apartment
+                            )}
+                        </p>
+
+                        <p className="apartment-browse-text-4">
+                            <Eye className="apartment-browse-eye-icon" />
+
+                            {viewLabel}
+                        </p>
+                    </div>
+                </div>
+
+                <Button
+                    asChild
+                    variant="outline"
+                    className="apartment-browse-button-9"
+                >
+                    <Link
+                        to={`/apartment/${apartment.id}`}
+                    >
+                        <Eye className="apartment-browse-eye-icon-2" />
+
+                        View apartment details
+                    </Link>
+                </Button>
+            </div>
+        </article>
+    );
+}
 
 
 function BrowseContent() {
@@ -763,7 +935,8 @@ function TenantBrowse() {
         useMemo(
             () =>
                 shuffleApartments(
-                    allApartments
+                    allApartments,
+                    shuffleVersion
                 ),
             [
                 allApartments,
@@ -1143,218 +1316,6 @@ if (browseMode === "popular") {
         );
 
 
-    const ApartmentsCard = ({
-        apartment,
-    }) => {
-        const status =
-            apartment.status ??
-            "available";
-
-        const availableRooms =
-            getAvailableRooms(
-                apartment
-            );
-
-        const locationText =
-            formatApartmentLocation(
-                apartment
-            );
-
-        const favorite =
-            isFavorite(
-                apartment.id
-            );
-
-        const favoriteUpdating =
-            updatingFavoriteIds.includes(
-                apartment.id
-            );
-
-        const imageUrl =
-            getApartmentImageUrl(
-                apartment
-            );
-
-        const viewCount =
-            getViewCount(
-                apartment.id
-            );
-
-
-        return (
-            <article className="apartment-browse-article">
-                <div className="apartment-browse-panel-5">
-                    {imageUrl ? (
-                        <ImageWithFallback
-                            src={
-                                imageUrl
-                            }
-                            alt={
-                                apartment.title
-                            }
-                            className="apartment-browse-image-with-fallback"
-                        />
-                    ) : (
-                        <div className="apartment-browse-row-6">
-                            <Building2 className="apartment-browse-building2-icon" />
-                        </div>
-                    )}
-
-                    <div className="apartment-browse-content-2">
-                        {activeNearbySearch &&
-                            apartment.distanceMeters !==
-                                undefined && (
-                                <Badge className="apartment-browse-badge">
-                                    {formatDistance(
-                                        apartment.distanceMeters
-                                    )}
-                                </Badge>
-                            )}
-
-                        <Badge
-                            className={`apartment-browse-badge-2 ${
-                                STATUS_CLASS[
-                                    status
-                                ] ??
-                                STATUS_CLASS.available
-                            }`}
-                        >
-                            {STATUS_LABEL[
-                                status
-                            ] ??
-                                "Available"}
-                        </Badge>
-
-                        {isVerifiedListing(
-                            apartment
-                        ) && (
-                            <VerifiedBadge
-                                label="Verified Listing"
-                                className="apartment-browse-verified-badge"
-                            />
-                        )}
-
-                        {apartment.petFriendly && (
-                            <Badge className="apartment-browse-pet-friendly">
-                                Pet
-                                Friendly
-                            </Badge>
-                        )}
-
-                        {browseMode === "suggested" &&
-                            Number.isFinite(apartment.matchScore) && (
-                                <Badge
-                                    className="apartment-browse-badge"
-                                    style={{
-                                        backgroundColor: "#1d4ed8",
-                                        color: "#fff",
-                                    }}
-                                >
-                                    {apartment.matchScore.toFixed(2)}% Match
-                                </Badge>
-                            )}
-                    </div>
-
-                    <button
-                        type="button"
-                        title={
-                            favorite
-                                ? "Remove from favorites"
-                                : "Add to favorites"
-                        }
-                        disabled={
-                            favoriteUpdating
-                        }
-                        onClick={() =>
-                            void toggleFavorite(
-                                apartment.id
-                            )
-                        }
-                        className={`apartment-browse-button-6 ${
-                            favorite
-                                ? "apartment-browse-button-7"
-                                : "apartment-browse-button-8"
-                        }`}
-                    >
-                        {favoriteUpdating ? (
-                            <RefreshCw className="apartment-browse-refresh-cw-icon" />
-                        ) : (
-                            <Heart
-                                className="apartment-browse-heart-icon"
-                                fill={
-                                    favorite
-                                        ? "currentColor"
-                                        : "currentColor"
-                                }
-                            />
-                        )}
-                    </button>
-                </div>
-
-                <div className="apartment-browse-panel-6">
-                    <div className="apartment-browse-row-7">
-                        <div className="apartment-browse-panel-7">
-                            <h2 className="apartment-browse-heading">
-                                {
-                                    apartment.title
-                                }
-                            </h2>
-
-                            <ApartmentRatingSummary compact
-                                stats={ratingSummary.byApartment.get(
-                                    apartment.id
-                                )}
-                                isLoading={
-                                    ratingsLoading
-                                }
-                                className="apartment-browse-apartment-rating-summary"
-                            />
-
-                            <p className="apartment-browse-text-3">
-                                <MapPin className="apartment-browse-map-pin-icon" />
-
-                                {
-                                    locationText
-                                }
-                            </p>
-                        </div>
-
-                        <div className="apartment-browse-panel-8">
-                            <p className="apartment-browse-view-room-prices">
-                                {getApartmentPriceLabel(
-                                    apartment
-                                )}
-                            </p>
-
-                            <p className="apartment-browse-text-4">
-                                <Eye className="apartment-browse-eye-icon" />
-
-                                {viewLabel(
-                                    viewCount
-                                )}
-                            </p>
-                        </div>
-                    </div>
-
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="apartment-browse-button-9"
-                    >
-                        <Link
-                            to={`/apartment/${apartment.id}`}
-                        >
-                            <Eye className="apartment-browse-eye-icon-2" />
-
-                            View apartment details
-                        </Link>
-                    </Button>
-                </div>
-            </article>
-        );
-    };
-
-
     return (
         <Dialog
             open={preferencesOpen}
@@ -1683,12 +1644,59 @@ if (browseMode === "popular") {
                                                 (
                                                     apartment
                                                 ) => (
-                                                    <ApartmentsCard
+                                                    <ApartmentBrowseCard
                                                         key={
                                                             apartment.id
                                                         }
                                                         apartment={
                                                             apartment
+                                                        }
+                                                        activeNearbySearch={
+                                                            activeNearbySearch
+                                                        }
+                                                        browseMode={
+                                                            browseMode
+                                                        }
+                                                        favorite={
+                                                            isFavorite(
+                                                                apartment.id
+                                                            )
+                                                        }
+                                                        favoriteUpdating={
+                                                            updatingFavoriteIds.includes(
+                                                                apartment.id
+                                                            )
+                                                        }
+                                                        imageUrl={
+                                                            getApartmentImageUrl(
+                                                                apartment
+                                                            )
+                                                        }
+                                                        isVerified={
+                                                            isVerifiedListing(
+                                                                apartment
+                                                            )
+                                                        }
+                                                        locationText={
+                                                            formatApartmentLocation(
+                                                                apartment
+                                                            )
+                                                        }
+                                                        ratingStats={
+                                                            ratingSummary.byApartment.get(
+                                                                apartment.id
+                                                            )
+                                                        }
+                                                        ratingsLoading={
+                                                            ratingsLoading
+                                                        }
+                                                        viewCount={
+                                                            getViewCount(
+                                                                apartment.id
+                                                            )
+                                                        }
+                                                        onToggleFavorite={
+                                                            toggleFavorite
                                                         }
                                                     />
                                                 )

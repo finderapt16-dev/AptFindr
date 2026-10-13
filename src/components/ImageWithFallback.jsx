@@ -4,6 +4,7 @@ export function ImageWithFallback({ src, alt, className, fallbackClassName, onLo
     const [didError, setDidError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const imgRef = useRef(null);
+    const loadedSrcRef = useRef("");
     const fallbackId = useId();
     const syncCachedImageState = useCallback(() => {
         const img = imgRef.current;
@@ -22,16 +23,18 @@ export function ImageWithFallback({ src, alt, className, fallbackClassName, onLo
             if (img.naturalWidth > 0) {
                 setDidError(false);
                 setIsLoaded(true);
+                loadedSrcRef.current = src || "";
             }
             else {
                 setDidError(true);
                 setIsLoaded(true);
+                loadedSrcRef.current = "";
             }
         }
     }, [src]);
     useEffect(() => {
         setDidError(false);
-        setIsLoaded(false);
+        setIsLoaded(Boolean(loadedSrcRef.current));
         // Check immediately after src changes.
         const frame = requestAnimationFrame(syncCachedImageState);
         return () => {
@@ -41,11 +44,13 @@ export function ImageWithFallback({ src, alt, className, fallbackClassName, onLo
     const handleLoad = (event) => {
         setDidError(false);
         setIsLoaded(true);
+        loadedSrcRef.current = src || "";
         onLoad?.(event);
     };
     const handleError = (event) => {
         setDidError(true);
         setIsLoaded(true);
+        loadedSrcRef.current = "";
         onError?.(event);
     };
     if (!src || didError) {
