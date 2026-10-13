@@ -22,7 +22,7 @@ const money = (amount) => {
   return Number.isFinite(number) && number > 0 ? `\u20B1${number.toLocaleString("en-PH")}` : null;
 };
 
-export function AdminApartmentVerification({ landlord, profile, property, inspection, documents = [], isLoading, hasUnits, onBack, onViewDocument, onApprove, onRequestChanges, onReject, onViewApartment, isApproving }) {
+export function AdminApartmentVerification({ landlord, profile, property, inspection, documents = [], isLoading, hasAvailableUnit, onBack, onViewDocument, onApprove, onRequestChanges, onReject, onViewApartment, isApproving }) {
   const submittedApartment = inspection?.apartment ?? {};
   const rawApartment = inspection?.rawApartment ?? {};
   const apartment = {
@@ -44,8 +44,9 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
   const duration = apartment.features?.contractDuration ?? apartment.contractDuration ?? apartment.contract_duration ?? "Not specified";
   const statusValue = String(apartment.verificationStatus ?? apartment.verification_status ?? apartment.approvalStatus ?? apartment.approval_status ?? apartment.status ?? "").toLowerCase();
   const isRejected = ["rejected", "denied", "declined"].includes(statusValue);
-  const isApproved = !isRejected && (apartment.isPublished === true || apartment.is_published === true || apartment.isVerified === true || apartment.is_verified === true || ["approved", "verified", "published"].includes(statusValue));
-  const statusLabel = isRejected ? "Rejected" : isApproved ? "Approved" : "Pending Review";
+  const isPublished = apartment.isPublished === true || apartment.is_published === true;
+  const isApproved = !isRejected && (isPublished || apartment.isVerified === true || apartment.is_verified === true || ["approved", "verified", "published"].includes(statusValue));
+  const statusLabel = isRejected ? "Rejected" : isPublished ? "Published" : isApproved ? "Approved" : "Pending Review";
   const permitNumber = verification.businessPermit ?? profile?.business_permit_number ?? profile?.permit_number ?? landlord?.business_permit_number ?? landlord?.permit_number ?? landlord?.permitNumber;
   const accountNumber = verification.businessAccount ?? profile?.business_account_number ?? profile?.account_number ?? "Not provided";
   const businessPermitDocument = documents.find((document) => document.documentType === "mayors_business_permit") ?? documents.find((document) => document.documentType === "proof_of_ownership");
@@ -117,9 +118,10 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
         </section>
         <section className="admin-apartment-verification__card admin-apartment-verification__actions">
           <h2>Admin Actions</h2>
-          <p>Verify the business permit and apartment details, then publish the apartment when it has units.</p>
-          <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || isApproved}><Check aria-hidden="true" />{isApproving ? (hasUnits ? "Verifying & publishing..." : "Verifying...") : isApproved ? (apartment.isPublished || apartment.is_published ? "Apartment Verified & Published" : "Apartment Verified") : hasUnits ? "Verify & Publish Apartment" : "Verify Apartment"}</button>
-          {!hasUnits && !isApproved && <small className="admin-apartment-verification__publish-note">Verification is allowed now. Add an available unit before publishing to tenants.</small>}
+          <p>Verify the business permit and apartment details, then publish the listing for tenants.</p>
+          {!isPublished && <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || !hasAvailableUnit} title={hasAvailableUnit ? "Verify and publish listing" : "Add an available unit before publishing"}><Check aria-hidden="true" />{isApproving ? "Verifying & publishing..." : "Verify & Publish Listing"}</button>}
+          {!isPublished && !hasAvailableUnit && <small className="admin-apartment-verification__publish-note">Add at least one available unit before this listing can be verified and published.</small>}
+          {isPublished && <small className="admin-apartment-verification__publish-note">This listing is already published. Use the apartment inspection page to unpublish it if needed.</small>}
           <button type="button" className="admin-apartment-verification__outline-action" onClick={onRequestChanges}><FileText aria-hidden="true" />Request Changes</button>
           <button type="button" className="admin-apartment-verification__reject" onClick={onReject}><X aria-hidden="true" />Reject Listing</button>
         </section>

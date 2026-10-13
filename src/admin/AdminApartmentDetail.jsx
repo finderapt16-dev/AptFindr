@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLandlordVerification, updateApartmentPublication, } from "@/data/apartments";
-import { fetchApartmentInspectionDetails, } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, verifyAndPublishApartment } from "@/services/apartmentsService";
 import { createViolation, fetchPendingAppeals, fetchAdminReports, fetchApartmentChangeLogs, fetchLandlordProfile, fetchUserById, sendAdminMessageToLandlord, updateReportStatus, } from "@/services/dashboardSupabaseService";
 import { VERIFICATION_DOCUMENT_TYPES, fetchApartmentVerificationDocuments, } from "@/services/verificationDocumentsService";
 import { formatAuditLogForDisplay } from "@/utils/auditLogDisplay";
@@ -421,23 +421,33 @@ export function AdminApartmentDetail() {
     const handlePublicationReview = async () => {
         if (!apartment?.id || !user?.id || isUpdatingPublication)
             return;
-        const nextPublished = apartment.isPublished === false;
+        const isPublished = apartment.isPublished === true || apartment.is_published === true;
+        const nextPublished = !isPublished;
         if (nextPublished && !canPublishForLandlord(landlord)) {
             toast.error("This apartment cannot be published because the landlord has not been verified.");
             scrollToFirstVisibleSection(["admin-verification-rail", "admin-verification"]);
             return;
         }
+        if (nextPublished && typeof window !== "undefined" && !window.confirm("Verify and publish this listing? It will become visible to tenants."))
+            return;
         setIsUpdatingPublication(true);
         try {
-            await updateApartmentPublication(apartment.id, nextPublished, user.id);
+            if (nextPublished) {
+                await verifyAndPublishApartment(apartment.id, user.id);
+            }
+            else {
+                await updateApartmentPublication(apartment.id, false, user.id);
+            }
             setApartment((current) => current ? {
                 ...current,
                 isPublished: nextPublished,
-                approvalStatus: nextPublished ? "approved" : "pending",
+                is_published: nextPublished,
+                approvalStatus: nextPublished ? "approved" : current.approvalStatus,
+                approval_status: nextPublished ? "approved" : current.approval_status,
                 isArchived: nextPublished ? false : current.isArchived,
                 deletedAt: nextPublished ? undefined : current.deletedAt,
             } : current);
-            toast.success(nextPublished ? "Apartment approved and published" : "Apartment unpublished");
+            toast.success(nextPublished ? "Listing verified and published successfully." : "Listing unpublished successfully.");
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to update publication status.");
@@ -693,7 +703,7 @@ export function AdminApartmentDetail() {
     const averageRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + getRecordNumber(rating, ["rating"], 0), 0) / ratings.length : 0;
     const landlordVerificationStatus = getLandlordVerificationStatus(landlord);
     const landlordCanPublish = canPublishForLandlord(landlord);
-    const publicationBlockedByLandlord = apartment.isPublished === false && !landlordCanPublish;
+    const publicationBlockedByLandlord = apartment.isPublished !== true && apartment.is_published !== true && !landlordCanPublish;
     const formattedDatePosted = datePosted
         ? new Date(datePosted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
         : "—";
@@ -721,6 +731,7 @@ export function AdminApartmentDetail() {
           utilities={getStringList(rawFeatures.utilities ?? rawFeatures.utilitiesIncluded ?? apartment.utilities)}
           onBack={handleBack}
           onApprove={() => void handlePublicationReview()}
+          isUpdating={isUpdatingPublication}
           onReject={() => void handleRejectListing()}
           onRequestChanges={handleRequestChanges}
           selectedImageIndex={currentImageIndex}
@@ -1261,7 +1272,7 @@ export function AdminApartmentDetail() {
                   <div className={`admin-apartment-detail-card-20 ${apartment.isPublished === false ? "admin-apartment-detail-panel-23" : "admin-apartment-detail-panel-24"}`}>
                     {apartment.isPublished === false ? (publicationBlockedByLandlord ? "Publication is blocked until the landlord verification requirement is complete." : "This apartment is ready for an administrative publishing decision.") : "This apartment is published and visible to tenants."}
                   </div>
-                  <Button onClick={() => void handlePublicationReview()} disabled={isUpdatingPublication || publicationBlockedByLandlord} variant="outline" className={apartment.isPublished === false ? "admin-apartment-detail-button-12" : "admin-apartment-detail-button-13"}>{apartment.isPublished === false ? <Eye className="admin-apartment-detail-eye-icon"/> : <EyeOff className="admin-apartment-detail-eye-off-icon"/>}{isUpdatingPublication ? "Updating..." : apartment.isPublished === false ? "Approve & Publish" : "Unpublish Listing"}</Button>
+                  <Button onClick={() => void handlePublicationReview()} disabled={isUpdatingPublication || publicationBlockedByLandlord} variant="outline" className={apartment.isPublished === false ? "admin-apartment-detail-button-12" : "admin-apartment-detail-button-13"}>{apartment.isPublished === false ? <Eye className="admin-apartment-detail-eye-icon"/> : <EyeOff className="admin-apartment-detail-eye-off-icon"/>}{isUpdatingPublication ? "Updating..." : apartment.isPublished === false ? "Verify & Publish Listing" : "Unpublish Listing"}</Button>
                   <Button onClick={handleViewListingDetails} variant="outline" className="admin-apartment-detail-preview-tenant-view-2">
                     <Eye className="admin-apartment-detail-eye-icon-2"/>
                     Preview Tenant View

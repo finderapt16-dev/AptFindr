@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchApartmentInspectionDetails, verifyAndPublishApartment, verifyApartmentWithoutPublishing } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, verifyAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
@@ -454,6 +454,8 @@ export function AdminDashboard() {
     const handleApproveAndPublishApartment = async (apartment) => {
         if (!apartment.id || !user?.id || publishingApartmentId)
             return;
+        if (typeof window !== "undefined" && !window.confirm("Verify and publish this listing? It will become visible to tenants."))
+            return;
         setPublishingApartmentId(apartment.id);
         try {
             await verifyAndPublishApartment(apartment.id, user.id);
@@ -481,48 +483,10 @@ export function AdminDashboard() {
                 rawApartment: current.rawApartment ? { ...current.rawApartment, ...updatedApartment } : current.rawApartment,
             } : current);
             void refreshVerifiedApartment(apartment.id).catch((refreshError) => console.warn("Unable to refresh the verified apartment:", refreshError));
-            toast.success("Apartment verified and published.");
+            toast.success("Listing verified and published successfully.");
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
-        }
-        finally {
-            setPublishingApartmentId(null);
-        }
-    };
-    const handleVerifyApartmentWithoutUnits = async (apartment) => {
-        if (!apartment?.id || !user?.id || publishingApartmentId)
-            return;
-        setPublishingApartmentId(apartment.id);
-        try {
-            await verifyApartmentWithoutPublishing(apartment.id, user.id);
-            const updatedApartment = {
-                ...apartment,
-                isPublished: false,
-                is_published: false,
-                approvalStatus: "approved",
-                approval_status: "approved",
-                publishedAt: undefined,
-                published_at: null,
-                publishedBy: undefined,
-                published_by: null,
-            };
-            setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
-            setSelectedLandlordProperty((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
-            setSelectedLandlordDetails((current) => current ? {
-                ...current,
-                properties: current.properties.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item),
-            } : current);
-            setSelectedLandlordPropertyDetails((current) => current?.apartment?.id === apartment.id ? {
-                ...current,
-                apartment: { ...current.apartment, ...updatedApartment },
-                rawApartment: current.rawApartment ? { ...current.rawApartment, ...updatedApartment } : current.rawApartment,
-            } : current);
-            void refreshVerifiedApartment(apartment.id).catch((refreshError) => console.warn("Unable to refresh the verified apartment:", refreshError));
-            toast.success("Apartment verified. Add units before publishing it to tenants.");
-        }
-        catch (error) {
-            toast.error(error instanceof Error ? error.message : "Unable to verify this apartment.");
         }
         finally {
             setPublishingApartmentId(null);
@@ -1779,6 +1743,11 @@ export function AdminDashboard() {
     const renderApartmentVerification = () => {
         if (!selectedLandlord || !selectedLandlordDetails || !selectedLandlordProperty)
             return renderLandlordDetails();
+        const verificationRooms = selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? [];
+        const hasAvailableUnit = verificationRooms.some((room) => {
+            const status = String(room?.status ?? (room?.is_occupied ? "occupied" : "available")).trim().toLowerCase();
+            return status === "available" && room?.is_occupied !== true;
+        });
         return <AdminApartmentVerification
           landlord={selectedLandlord}
           profile={selectedLandlordDetails.profile}
@@ -1787,10 +1756,10 @@ export function AdminDashboard() {
           documents={selectedLandlordPropertyDocuments}
           isLoading={isLoadingLandlordPropertyDetails}
           isApproving={publishingApartmentId === selectedLandlordProperty.id}
-          hasUnits={(selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0}
+          hasAvailableUnit={hasAvailableUnit}
           onBack={() => { setRequestChangesModal(null); setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
           onViewDocument={() => setIsViewingLandlordDocument(true)}
-          onApprove={() => void ((selectedLandlordPropertyDetails?.rooms ?? selectedLandlordProperty.rooms ?? []).length > 0 ? handleApproveAndPublishApartment(selectedLandlordProperty) : handleVerifyApartmentWithoutUnits(selectedLandlordProperty))}
+          onApprove={() => void handleApproveAndPublishApartment(selectedLandlordProperty)}
           onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
           onReject={() => openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
           onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
