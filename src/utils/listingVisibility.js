@@ -11,17 +11,13 @@ export const getLowestAvailableRoomPrice = (apartment) => {
     return prices.length > 0 ? Math.min(...prices) : null;
 };
 /**
- * Shared client-side listing rule. Landlord verification is enforced by
- * database RLS, so tenant clients never receive published rows belonging to
- * an unverified landlord.
- *
  * Tenant discovery is intentionally stricter than internal Admin/Landlord
- * management. A listing must be fully approved, active, published, live, and
- * backed by at least one real available room before tenants can see it.
+ * management. The apartment's submitted permit is reviewed on its own
+ * verification page, so a listing must be fully apartment-approved, active,
+ * published, live, and backed by at least one real available room before
+ * tenants can see it.
  */
 export const isTenantVisibleApartment = (apartment) => {
-    if (apartment.landlordVerified !== true)
-        return false;
     if (apartment.isPublished !== true)
         return false;
     if (apartment.approvalStatus !== "approved")

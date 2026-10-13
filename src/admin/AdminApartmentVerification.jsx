@@ -117,8 +117,8 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
         </section>
         <section className="admin-apartment-verification__card admin-apartment-verification__actions">
           <h2>Admin Actions</h2>
-          <p>Verify the business permit and apartment details before approval.</p>
-          <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || isApproved}><Check aria-hidden="true" />{isApproving ? "Verifying..." : isApproved ? (apartment.isPublished || apartment.is_published ? "Listing Approved" : "Apartment Verified") : hasUnits ? "Approve Listing" : "Verify Apartment"}</button>
+          <p>Verify the business permit and apartment details, then publish the apartment when it has units.</p>
+          <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || isApproved}><Check aria-hidden="true" />{isApproving ? (hasUnits ? "Verifying & publishing..." : "Verifying...") : isApproved ? (apartment.isPublished || apartment.is_published ? "Apartment Verified & Published" : "Apartment Verified") : hasUnits ? "Verify & Publish Apartment" : "Verify Apartment"}</button>
           {!hasUnits && !isApproved && <small className="admin-apartment-verification__publish-note">Verification is allowed now. Add an available unit before publishing to tenants.</small>}
           <button type="button" className="admin-apartment-verification__outline-action" onClick={onRequestChanges}><FileText aria-hidden="true" />Request Changes</button>
           <button type="button" className="admin-apartment-verification__reject" onClick={onReject}><X aria-hidden="true" />Reject Listing</button>

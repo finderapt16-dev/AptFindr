@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchApartmentInspectionDetails, updateApartmentPublication, verifyApartmentWithoutPublishing } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, verifyAndPublishApartment, verifyApartmentWithoutPublishing } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
@@ -25,7 +25,7 @@ import { AdminLandlordVerificationReview } from './AdminLandlordVerificationRevi
 import { AdminApartmentVerification } from './AdminApartmentVerification';
 import { AdminVerificationDocumentViewer } from './AdminVerificationDocumentViewer';
 import { AdminRequestChangesDialog } from './AdminRequestChangesDialog';
-import { ArchiveEmpty, canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
+import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
 const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
@@ -443,17 +443,20 @@ export function AdminDashboard() {
             return 0;
         return reports.filter((r) => r.apartmentId === apartmentId && r.status === "pending").length;
     };
+    const refreshVerifiedApartment = async (apartmentId) => {
+        const [details, documents] = await Promise.all([
+            fetchApartmentInspectionDetails(apartmentId),
+            fetchApartmentVerificationDocuments(apartmentId),
+        ]);
+        setSelectedLandlordPropertyDetails((current) => current?.apartment?.id === apartmentId ? details : current);
+        setSelectedLandlordPropertyDocuments((current) => selectedLandlordProperty?.id === apartmentId ? documents : current);
+    };
     const handleApproveAndPublishApartment = async (apartment) => {
         if (!apartment.id || !user?.id || publishingApartmentId)
             return;
-        const landlord = getLandlordForApt(apartment);
-        if (!canPublishForLandlord(landlord)) {
-            toast.error("This apartment cannot be published because the landlord has not been verified.");
-            return;
-        }
         setPublishingApartmentId(apartment.id);
         try {
-            await updateApartmentPublication(apartment.id, true, user.id);
+            await verifyAndPublishApartment(apartment.id, user.id);
             const updatedApartment = {
                 ...apartment,
                 isPublished: true,
@@ -467,7 +470,18 @@ export function AdminDashboard() {
             };
             setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
             setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
-            toast.success("Apartment approved and published");
+            setSelectedLandlordProperty((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
+            setSelectedLandlordDetails((current) => current ? {
+                ...current,
+                properties: current.properties.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item),
+            } : current);
+            setSelectedLandlordPropertyDetails((current) => current?.apartment?.id === apartment.id ? {
+                ...current,
+                apartment: { ...current.apartment, ...updatedApartment },
+                rawApartment: current.rawApartment ? { ...current.rawApartment, ...updatedApartment } : current.rawApartment,
+            } : current);
+            void refreshVerifiedApartment(apartment.id).catch((refreshError) => console.warn("Unable to refresh the verified apartment:", refreshError));
+            toast.success("Apartment verified and published.");
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to approve and publish this apartment.");
@@ -504,6 +518,7 @@ export function AdminDashboard() {
                 apartment: { ...current.apartment, ...updatedApartment },
                 rawApartment: current.rawApartment ? { ...current.rawApartment, ...updatedApartment } : current.rawApartment,
             } : current);
+            void refreshVerifiedApartment(apartment.id).catch((refreshError) => console.warn("Unable to refresh the verified apartment:", refreshError));
             toast.success("Apartment verified. Add units before publishing it to tenants.");
         }
         catch (error) {
@@ -624,8 +639,45 @@ export function AdminDashboard() {
     useEffect(() => {
         if (user?.role !== "admin")
             return;
-        const refreshApartmentData = () => {
-            void fetchApartments().then((items) => setAllApartments(items));
+        let apartmentRefreshTimer = null;
+        const openApartmentId = text(selectedLandlordProperty?.id);
+        const refreshOpenApartment = (apartmentId) => {
+            if (!apartmentId || apartmentId !== openApartmentId)
+                return;
+            // Re-fetch the inspection record as well as the list row. The
+            // inspection page combines both sources, so this keeps its status,
+            // units, images, and documents current without a page refresh.
+            void Promise.all([
+                fetchApartmentInspectionDetails(apartmentId),
+                fetchApartmentVerificationDocuments(apartmentId),
+            ]).then(([details, documents]) => {
+                setSelectedLandlordPropertyDetails(details);
+                setSelectedLandlordPropertyDocuments(documents);
+            }).catch((error) => {
+                console.warn("Unable to refresh the open apartment verification:", error);
+            });
+        };
+        const refreshApartmentData = (event) => {
+            const changedApartmentId = text(event?.new?.id ?? event?.old?.id ?? event?.new?.apartment_id ?? event?.old?.apartment_id);
+            if (apartmentRefreshTimer)
+                window.clearTimeout(apartmentRefreshTimer);
+            apartmentRefreshTimer = window.setTimeout(() => {
+                void fetchApartments().then((items) => {
+                    setAllApartments(items);
+                    const refreshedApartment = changedApartmentId
+                        ? items.find((item) => text(item.id) === changedApartmentId)
+                        : null;
+                    if (!refreshedApartment)
+                        return;
+                    setSelectedApt((current) => current?.id === refreshedApartment.id ? { ...current, ...refreshedApartment } : current);
+                    setSelectedLandlordProperty((current) => current?.id === refreshedApartment.id ? { ...current, ...refreshedApartment } : current);
+                    setSelectedLandlordDetails((current) => current ? {
+                        ...current,
+                        properties: current.properties.map((item) => item.id === refreshedApartment.id ? { ...item, ...refreshedApartment } : item),
+                    } : current);
+                }).catch((error) => console.warn("Unable to refresh apartments in real time:", error));
+                refreshOpenApartment(changedApartmentId);
+            }, 100);
         };
         const refreshUserData = () => {
             void fetchUsers().then(async (users) => {
@@ -670,12 +722,14 @@ export function AdminDashboard() {
         window.addEventListener("online", refreshOnFocus);
         document.addEventListener("visibilitychange", refreshOnVisibility);
         return () => {
+            if (apartmentRefreshTimer)
+                window.clearTimeout(apartmentRefreshTimer);
             window.removeEventListener("focus", refreshOnFocus);
             window.removeEventListener("online", refreshOnFocus);
             document.removeEventListener("visibilitychange", refreshOnVisibility);
             void supabase.removeChannel(channel);
         };
-    }, [loadAdminNotifications, user?.id, user?.role]);
+    }, [loadAdminNotifications, selectedLandlordProperty?.id, user?.id, user?.role]);
     // Fetch full report details when a report is selected
     useEffect(() => {
         let active = true;
@@ -1414,7 +1468,7 @@ export function AdminDashboard() {
     // ── Section: Landlords ────────────────────────────────────────────────────
     const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
-    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport} handleApproveAndPublishApartment={handleApproveAndPublishApartment} publishingApartmentId={publishingApartmentId}/>);
+    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────

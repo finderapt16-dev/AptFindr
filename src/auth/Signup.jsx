@@ -219,7 +219,9 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       if (!result.success) {
         setError(result.error || "Signup failed.");
       } else if (result.signup?.existingAccount) {
+        setFieldErrors({ email: "This email address is already in use. Please use another or sign in." });
         setError("An account may already exist for this email. Sign in, resend verification, or reset your password instead of registering again.");
+        focusField("email");
       } else {
         if (!result.signup?.requiresEmailVerification) {
           // Manual AptFindr registration requires Supabase Confirm Email. Do

@@ -416,6 +416,61 @@ export const verifyApartmentWithoutPublishing = async (id, actorUserId) => {
     await writeApartmentAudit(id, actorUserId, 'apartment_verified_without_units', buildAuditChanges(before, after, ['is_published', 'approval_status', 'published_at', 'published_by']));
     return after;
 };
+// Apartment verification is performed from the admin's submitted-property review.
+// A valid available unit is still required for tenant publication, but the
+// apartment's own reviewed permit is the approval source for this workflow.
+export const verifyAndPublishApartment = async (id, actorUserId) => {
+    if (!id) {
+        throw new Error('Missing apartment ID. Please refresh and try again.');
+    }
+    const { data: before, error: beforeError } = await supabase
+        .from('apartments')
+        .select('is_published, approval_status, is_archived, deleted_at, status, published_at, published_by')
+        .eq('id', id)
+        .maybeSingle();
+    if (beforeError) {
+        throw new Error(unwrapErrorMessage(beforeError, 'Unable to load the apartment for verification.'));
+    }
+    if (!before) {
+        throw new Error('Apartment not found.');
+    }
+    const { data: roomRows, error: roomError } = await supabase
+        .from('apartment_rooms')
+        .select('id, status, is_occupied')
+        .eq('apartment_id', id);
+    if (roomError) {
+        throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available units before publishing.'));
+    }
+    const hasAvailableRoom = (roomRows ?? []).some((room) => {
+        const roomStatus = room.status ?? (room.is_occupied ? 'occupied' : 'available');
+        return roomStatus === 'available' && room.is_occupied !== true;
+    });
+    if (!hasAvailableRoom) {
+        throw new Error('Add at least one available unit before publishing this apartment.');
+    }
+    const { data: after, error } = await supabase
+        .from('apartments')
+        .update({
+        is_published: true,
+        approval_status: 'approved',
+        is_archived: false,
+        deleted_at: null,
+        status: 'available',
+        published_at: new Date().toISOString(),
+        published_by: actorUserId,
+    })
+        .eq('id', id)
+        .select('is_published, approval_status, is_archived, deleted_at, status, published_at, published_by')
+        .single();
+    if (error) {
+        throw new Error(unwrapErrorMessage(error, 'Unable to verify and publish this apartment.'));
+    }
+    if (!isRecord(after) || after.is_published !== true || after.approval_status !== 'approved') {
+        throw new Error('The apartment could not be verified and published. Please refresh and try again.');
+    }
+    await writeApartmentAudit(id, actorUserId, 'apartment_verified_and_published', buildAuditChanges(before, after, ['is_published', 'approval_status', 'is_archived', 'deleted_at', 'status', 'published_at', 'published_by']));
+    return after;
+};
 export const updateApartmentStatus = async (id, status = 'available', actorUserId) => {
     const { data: before } = await supabase.from('apartments').select('status').eq('id', id).maybeSingle();
     const { error } = await supabase.from('apartments').update({ status }).eq('id', id);
