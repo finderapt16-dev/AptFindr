@@ -16,6 +16,7 @@ export class SignupFlowError extends Error {
 }
 const APP_USERS_TABLE = 'app_users';
 const VALID_ROLES = new Set(['tenant', 'landlord', 'admin', 'super_admin']);
+const ADMIN_ROLES = new Set(['admin', 'super_admin']);
 const GOOGLE_OAUTH_FLOW_STORAGE_KEY = 'aptfindr.google-oauth-flow';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let latestAuthProfileRequestId = 0;
@@ -58,13 +59,9 @@ function normalizeStatus(row) {
     return 'active';
 }
 function normalizeRoleValue(value) {
-    const normalized = typeof value === 'string'
-        ? value.trim().toLowerCase().replace(/[\s-]+/g, '_').replace(/_+/g, '_')
-        : '';
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
     // Keep legacy accounts usable while exposing only the current tenant role.
-    if (normalized === 'student' || normalized === 'employee') return 'tenant';
-    if (normalized === 'superadmin') return 'super_admin';
-    return normalized;
+    return normalized === 'student' || normalized === 'employee' ? 'tenant' : normalized;
 }
 function normalizeEmailAddress(email) {
     return String(email ?? '').trim().toLowerCase();
@@ -81,6 +78,20 @@ function getEmailDisplayName(email) {
 }
 export function isTenantRole(role) {
     return normalizeRoleValue(role) === 'tenant';
+}
+export function isSuperAdminRole(role) {
+    return normalizeRoleValue(role) === 'super_admin';
+}
+export function isAdminRole(role) {
+    return ADMIN_ROLES.has(normalizeRoleValue(role));
+}
+export function dashboardPathForRole(role) {
+    const normalizedRole = normalizeRoleValue(role);
+    if (normalizedRole === 'super_admin')
+        return '/super-admin';
+    if (normalizedRole === 'admin')
+        return '/admin';
+    return normalizedRole === 'landlord' ? '/landlord/dashboard' : '/browse';
 }
 // The marker has to survive the whole provider round trip. Mobile browsers and
 // installed PWAs frequently hand Google's redirect back in a *new* tab, where
@@ -262,8 +273,10 @@ async function ensureRoleProfile(userId, role, input) {
         if (typeof input.isVerified === 'boolean')
             payload.is_verified = input.isVerified;
     }
-    if (role === 'admin' || role === 'super_admin') {
+    if (isAdminRole(role)) {
         table = 'admin_profiles';
+        if (role === 'super_admin' && typeof input.adminLevel !== 'string')
+            payload.admin_level = 'super_admin';
         if (typeof input.adminLevel === 'string')
             payload.admin_level = input.adminLevel;
         if (typeof input.department === 'string')

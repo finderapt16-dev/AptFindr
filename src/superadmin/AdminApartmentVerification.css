@@ -1,0 +1,54 @@
+.admin-apartment-verification { width: min(100%, 1260px); margin: 0 auto; color: #101828; }
+.admin-apartment-verification__back { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: transparent; color: #0096e6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.admin-apartment-verification__back svg { width: 18px; height: 18px; }
+.admin-apartment-verification__heading { margin: 20px 0 28px; }
+.admin-apartment-verification__heading h1 { margin: 0; color: #111827; font-size: clamp(26px, 3vw, 34px); line-height: 1.15; letter-spacing: -.025em; }
+.admin-apartment-verification__heading p { margin: 5px 0 0; color: #50617e; font-size: 15px; }
+.admin-apartment-verification__loading { margin: -14px 0 18px; color: #008ff0; font-size: 14px; }
+.admin-apartment-verification__layout { display: grid; grid-template-columns: minmax(0, 1.58fr) minmax(310px, .82fr); gap: 42px; align-items: start; }
+.admin-apartment-verification__main, .admin-apartment-verification__side { display: grid; gap: 16px; }
+.admin-apartment-verification__card { box-sizing: border-box; padding: 22px; border: 1px solid #d0d5dd; border-radius: 12px; background: #fff; }
+.admin-apartment-verification__card h2 { margin: 0 0 18px; color: #111; font-size: 21px; line-height: 1.2; }
+.admin-apartment-verification__landlord-info { display: grid; gap: 18px; margin: 0; }
+.admin-apartment-verification__landlord-info > div { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 1fr); gap: 16px; }
+.admin-apartment-verification__landlord-info dt { display: flex; align-items: center; gap: 28px; color: #50617e; font-size: 15px; }
+.admin-apartment-verification__landlord-info dt svg { flex: 0 0 auto; width: 22px; height: 22px; color: #344a6c; }
+.admin-apartment-verification__landlord-info dd, .admin-apartment-verification__property-details dd, .admin-apartment-verification__document-info dd { margin: 0; color: #141b2d; font-size: 15px; overflow-wrap: anywhere; }
+.admin-apartment-verification__property { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.admin-apartment-verification__gallery { display: grid; gap: 8px; }
+.admin-apartment-verification__main-image, .admin-apartment-verification__main-image img, .admin-apartment-verification__no-image { display: block; width: 100%; height: 196px; border-radius: 10px; object-fit: cover; overflow: hidden; }
+.admin-apartment-verification__no-image { display: grid; place-items: center; padding: 16px; box-sizing: border-box; background: #eef2f6; color: #667085; text-align: center; }
+.admin-apartment-verification__thumbnails { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.admin-apartment-verification__thumbnails > span, .admin-apartment-verification__thumbnails img { display: block; width: 100%; height: 58px; border-radius: 8px; object-fit: cover; overflow: hidden; }
+.admin-apartment-verification__property-details h3 { margin: 1px 0 15px; font-size: 17px; }
+.admin-apartment-verification__property-details dl, .admin-apartment-verification__document-info { display: grid; gap: 13px; margin: 0; }
+.admin-apartment-verification__property-details dl > div, .admin-apartment-verification__document-info > div { display: grid; grid-template-columns: minmax(128px, .75fr) minmax(0, 1fr); gap: 12px; }
+.admin-apartment-verification__property-details dt, .admin-apartment-verification__document-info dt { color: #5c6e8e; font-size: 14px; }
+.admin-apartment-verification__outline-action, .admin-apartment-verification__approve, .admin-apartment-verification__reject { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 45px; padding: 10px 16px; border: 1px solid #079cf0; border-radius: 9px; background: #fff; color: #008ff0; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 150ms ease, background-color 150ms ease, color 150ms ease; }
+.admin-apartment-verification__outline-action { margin-top: 16px; }
+.admin-apartment-verification__outline-action:disabled { cursor: not-allowed; opacity: .55; }
+.admin-apartment-verification__inspection-note { display: block; margin-top: 8px; color: #667085; font-size: 12px; line-height: 1.4; }
+.admin-apartment-verification__outline-action svg, .admin-apartment-verification__approve svg, .admin-apartment-verification__reject svg { width: 19px; height: 19px; }
+.admin-apartment-verification__approve { width: 100%; border-color: #078bf0; background: #078bf0; color: #fff; }
+.admin-apartment-verification__actions .admin-apartment-verification__outline-action, .admin-apartment-verification__actions .admin-apartment-verification__reject { width: 100%; margin-top: 8px; }
+.admin-apartment-verification__publish-note { display: block; margin: 10px 0 0; color: #667085; font-size: 12px; line-height: 1.4; text-align: center; }
+.admin-apartment-verification__reject { border-color: #ff3232; background: #fff; color: #f21b1b; }
+.admin-apartment-verification__approve:disabled { opacity: .65; cursor: wait; }
+.admin-apartment-verification__outline-action:hover:not(:disabled) { background: #eaf7ff; }
+.admin-apartment-verification__approve:hover:not(:disabled) { background: #0079d1; }
+.admin-apartment-verification__reject:hover { background: #fff0f0; }
+.admin-apartment-verification__outline-action:active, .admin-apartment-verification__approve:active, .admin-apartment-verification__reject:active { transform: scale(.985); }
+.admin-apartment-verification__documents { display: grid; grid-template-columns: minmax(200px, .7fr) minmax(0, 1.1fr); gap: 22px; align-items: start; }
+.admin-apartment-verification__document-preview { display: grid; gap: 10px; }
+.admin-apartment-verification__document-preview > span:first-child, .admin-apartment-verification__document-preview > svg { display: grid; width: 100%; height: 182px; place-items: center; box-sizing: border-box; border-radius: 9px; background: #eef1f5; color: #778195; }
+.admin-apartment-verification__document-preview > svg { padding: 54px; }
+.admin-apartment-verification__document-preview img { display: block; width: 100%; height: 182px; border-radius: 9px; object-fit: cover; }
+.admin-apartment-verification__document-preview button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 38px; border: 1px solid #079cf0; border-radius: 8px; background: #fff; color: #008ff0; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.admin-apartment-verification__side .admin-apartment-verification__card > p { margin: -8px 0 16px; color: #60708c; font-size: 15px; }
+.admin-apartment-verification__status { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 50px; border: 1px solid #f5a200; border-radius: 999px; background: #fff9ef; color: #e88e00; font-size: 16px; font-weight: 600; }
+.admin-apartment-verification__status svg { width: 20px; height: 20px; }
+.admin-apartment-verification__status.approved { border-color: #3bb878; background: #effdf4; color: #16803c; }
+.admin-apartment-verification__status.rejected { border-color: #f87171; background: #fff1f2; color: #dc2626; }
+.admin-apartment-verification__back:focus-visible, .admin-apartment-verification button:focus-visible, .admin-apartment-verification a:focus-visible { outline: 3px solid rgb(0 150 230 / 30%); outline-offset: 3px; }
+@media (max-width: 900px) { .admin-apartment-verification__layout { grid-template-columns: 1fr; gap: 16px; } .admin-apartment-verification__side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .admin-apartment-verification__heading { margin-bottom: 20px; } .admin-apartment-verification__heading p { font-size: 14px; line-height: 1.45; } .admin-apartment-verification__card { padding: 17px; border-radius: 10px; } .admin-apartment-verification__card h2 { font-size: 19px; } .admin-apartment-verification__side, .admin-apartment-verification__property, .admin-apartment-verification__documents { grid-template-columns: 1fr; } .admin-apartment-verification__landlord-info > div, .admin-apartment-verification__property-details dl > div, .admin-apartment-verification__document-info > div { grid-template-columns: 1fr; gap: 5px; } .admin-apartment-verification__landlord-info { gap: 14px; } .admin-apartment-verification__landlord-info dt { gap: 12px; } .admin-apartment-verification__main-image, .admin-apartment-verification__main-image img, .admin-apartment-verification__no-image { height: 210px; } .admin-apartment-verification__outline-action, .admin-apartment-verification__approve, .admin-apartment-verification__reject { min-height: 48px; } }

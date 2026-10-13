@@ -1,0 +1,38 @@
+.admin-verification-document-viewer { width: min(100%, 1350px); margin: 0 auto; color: #121a2d; }
+.admin-verification-document-viewer__header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 82px; padding: 0 26px; border: 1px solid #d0d5dd; border-radius: 11px; background: #fff; }
+.admin-verification-document-viewer__header button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 8px 0; border: 0; background: transparent; color: #008fe6; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.admin-verification-document-viewer__header button svg { width: 16px; height: 16px; }
+.admin-verification-document-viewer__header div { text-align: center; }
+.admin-verification-document-viewer__header h1 { margin: 0; font-size: 25px; line-height: 1.2; }
+.admin-verification-document-viewer__header p { margin: 4px 0 0; color: #60708c; font-size: 14px; }
+.admin-verification-document-viewer__toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 55px; margin-top: 16px; padding: 0 24px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; color: #172033; font-size: 14px; }
+.admin-verification-document-viewer__toolbar > div { display: flex; align-items: center; gap: 9px; }
+.admin-verification-document-viewer__toolbar button { display: grid; width: 70px; height: 33px; place-items: center; border: 1px solid #c7ccd4; border-radius: 10px; background: #fff; color: #172033; cursor: pointer; }
+.admin-verification-document-viewer__toolbar button:disabled { cursor: not-allowed; opacity: .45; }
+.admin-verification-document-viewer__toolbar svg { width: 16px; height: 16px; }
+.admin-verification-document-viewer__toolbar output { width: 48px; color: #60708c; text-align: center; }
+.admin-verification-document-viewer__canvas { display: grid; justify-items: center; min-height: 720px; margin-top: 16px; padding: 24px; overflow: auto; border-radius: 10px; background: #eef3f7; }
+.admin-verification-document-viewer__actual-image-frame { max-width: 100%; transform: scale(var(--document-zoom, 1)); transform-origin: top center; }
+.admin-verification-document-viewer__actual-image, .admin-verification-document-viewer__actual-image img { display: block; width: auto; max-width: min(100%, 850px); height: auto; max-height: 650px; border: 1px solid #c9cdd2; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); object-fit: contain; }
+.admin-verification-document-viewer__actual-pdf { width: min(850px, 100%); height: 650px; transform: scale(var(--document-zoom, 1)); transform-origin: top center; border: 1px solid #c9cdd2; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.admin-verification-document-viewer__permit { position: relative; width: 500px; min-height: 650px; box-sizing: border-box; padding: 24px 54px 46px; transform: scale(var(--document-zoom)); transform-origin: top center; border: 1px solid #c9cdd2; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.admin-verification-document-viewer__seal { width: 56px; height: 56px; margin: 0 auto 14px; border: 1px solid #c9cdd2; border-radius: 50%; }
+.admin-verification-document-viewer__city { margin: 0; color: #172033; font-size: 14px; font-weight: 800; text-align: center; }
+.admin-verification-document-viewer__permit h2 { margin: 9px 0 24px; font-size: 24px; text-align: center; }
+.admin-verification-document-viewer__permit hr { border: 0; border-top: 1px solid #c8cdd4; }
+.admin-verification-document-viewer__permit dl { display: grid; gap: 15px; margin: 33px 9px 27px; }
+.admin-verification-document-viewer__permit dl > div { display: grid; grid-template-columns: 1.03fr 1fr; gap: 16px; }
+.admin-verification-document-viewer__permit dt { color: #60708c; font-size: 14px; text-transform: uppercase; }
+.admin-verification-document-viewer__permit dd { margin: 0; color: #172033; font-size: 14px; font-weight: 800; overflow-wrap: anywhere; }
+.admin-verification-document-viewer__rules { display: grid; gap: 14px; margin: 0 0 24px; }
+.admin-verification-document-viewer__rules i { display: block; height: 1px; background: #c8cdd4; }
+.admin-verification-document-viewer__note { margin: 0; color: #60708c; font-size: 10px; }
+.admin-verification-document-viewer__signature { position: absolute; right: 54px; bottom: 18px; display: grid; justify-items: center; min-width: 128px; border-bottom: 1px solid #172033; }
+.admin-verification-document-viewer__signature b { font-size: 33px; line-height: .8; transform: rotate(-8deg); }
+.admin-verification-document-viewer__signature small { margin-top: 7px; color: #60708c; font-size: 9px; }
+.admin-verification-document-viewer__download { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: min(100%, 374px); min-height: 50px; margin-top: 24px; border: 1px solid #56b9f4; border-radius: 10px; background: #eff9ff; color: #008fe6; font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.admin-verification-document-viewer__download:disabled { cursor: wait; opacity: .7; }
+.admin-verification-document-viewer__download svg { width: 18px; height: 18px; }
+.admin-verification-document-viewer__download.is-disabled { color: #7a879b; border-color: #cbd5e1; background: #f8fafc; }
+.admin-verification-document-viewer button:focus-visible, .admin-verification-document-viewer a:focus-visible { outline: 3px solid rgb(0 150 230 / 28%); outline-offset: 3px; }
+@media (max-width: 650px) { .admin-verification-document-viewer__header { grid-template-columns: 1fr; gap: 8px; padding: 16px; } .admin-verification-document-viewer__header button { justify-self: start; } .admin-verification-document-viewer__header > span { display: none; } .admin-verification-document-viewer__toolbar { padding: 0 14px; } .admin-verification-document-viewer__toolbar button { width: 46px; } .admin-verification-document-viewer__canvas { min-height: 620px; padding: 18px 10px; justify-items: start; } .admin-verification-document-viewer__permit { width: min(500px, calc(100vw - 44px)); min-height: 590px; padding: 20px 24px 44px; } .admin-verification-document-viewer__permit dl { margin-right: 0; margin-left: 0; } .admin-verification-document-viewer__permit dl > div { grid-template-columns: 1fr; gap: 3px; } .admin-verification-document-viewer__signature { right: 24px; } }

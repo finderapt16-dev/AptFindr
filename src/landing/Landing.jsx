@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 
 import { isTenantVisibleApartment } from "@/utils/listingVisibility";
-import { isTenantRole, resetUnfinishedGoogleSignIn } from "@/services/authService";
+import { dashboardPathForRole, isTenantRole, resetUnfinishedGoogleSignIn } from "@/services/authService";
 import {
     geocodeLocationWithinLaPaz,
     GeocodingError,
@@ -694,12 +694,7 @@ export function Landing() {
        DASHBOARD
     ===================================================== */
 
-    const dashboardPath =
-        user?.role === "admin"
-            ? "/admin"
-            : isTenantRole(user?.role)
-                ? "/browse"
-                : "/landlord/dashboard";
+    const dashboardPath = dashboardPathForRole(user?.role);
 
 
     /* =====================================================
@@ -809,21 +804,6 @@ export function Landing() {
              * Normal login button.
              */
             if (
-                loggedInUser?.role ===
-                "admin"
-            ) {
-                navigate(
-                    "/admin",
-                    {
-                        replace: true,
-                    }
-                );
-
-                return;
-            }
-
-
-            if (
                 isTenantRole(
                     loggedInUser?.role
                 )
@@ -840,7 +820,7 @@ export function Landing() {
 
 
             navigate(
-                "/landlord/dashboard",
+                dashboardPathForRole(loggedInUser?.role),
                 {
                     replace: true,
                 }
@@ -1496,7 +1476,7 @@ export function Landing() {
                                                 onFocus={() => setSearchFocused(true)}
                                                 onBlur={() => window.setTimeout(() => setSearchFocused(false), 150)}
                                                 onKeyDown={handleSearchKeyDown}
-                                                placeholder="Search by area, address, or apartment name"
+                                                placeholder="Search apartments or try near ISAT U"
                                                 className="landing-search-input"
                                                 aria-label="Search apartments"
                                                 aria-controls="landing-search-suggestions"

@@ -18,6 +18,7 @@ import { isTenantVisibleApartment } from "@/utils/listingVisibility";
 import { ApartmentRatingSummary } from "@/components/ApartmentRatingSummary";
 import { EmptyState } from "@/tenant/EmptyState";
 import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
+import { dashboardPathForRole, isAdminRole } from "@/services/authService";
 const STATUS_LABEL = {
     available: "Available",
     occupied: "Occupied",
@@ -113,8 +114,8 @@ export function Favorites() {
             setRemovingId(null);
         }
     };
-    if (user?.role === "admin") {
-        return <Navigate to="/admin" replace/>;
+    if (isAdminRole(user?.role)) {
+        return <Navigate to={dashboardPathForRole(user?.role)} replace/>;
     }
     const FavoriteCard = ({ apartment }) => {
         const status = apartment.status ?? "available";

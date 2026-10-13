@@ -1,0 +1,46 @@
+/* Shared dimensions keep Reports and Appeals aligned when switching pages. */
+.admin-case-list.reports-reference,
+.admin-case-list.admin-appeals-reference { display: block; width: 100%; max-width: 1400px; margin: 15px auto 40px; }
+.admin-case-list > .reports-reference-header,
+.admin-case-list > .admin-appeals-reference-header { box-sizing: border-box; min-height: 144px; display: flex; flex-direction: column; justify-content: center; padding: 32px 64px; margin: 0 0 24px; border-radius: 10px; }
+.admin-case-list > header h1 { margin: 0; font-size: 26px; line-height: 32px; font-weight: 750; letter-spacing: -.025em; }
+.admin-case-list > header p { margin: 7px 0 0; font-size: 14px; line-height: 22px; }
+.admin-case-list > .reports-reference-filters,
+.admin-case-list > .admin-appeals-reference-controls { margin: 0 0 16px; }
+.admin-case-list .reports-reference-search,
+.admin-case-list .admin-appeals-reference-search input { box-sizing: border-box; height: 42px; border-radius: 8px; }
+.admin-case-list > .reports-reference-stats,
+.admin-case-list > .admin-appeals-reference-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
+.admin-case-list .reports-reference-stat,
+.admin-case-list .admin-appeals-reference-stat { box-sizing: border-box; height: 120px; min-height: 120px; gap: 0; padding: 10px; align-items: center; justify-content: center; }
+.admin-case-list .reports-reference-stat-icon,
+.admin-case-list .admin-appeals-reference-stat-icon { width: 38px; height: 38px; flex: 0 0 38px; margin-bottom: 7px; }
+.admin-case-list .reports-reference-stat-icon svg,
+.admin-case-list .admin-appeals-reference-stat-icon svg { width: 18px; height: 18px; }
+.admin-case-list .reports-reference-stat strong,
+.admin-case-list .admin-appeals-reference-stat strong,
+.admin-case-list .admin-appeals-reference-stat b { font-size: 20px; line-height: 25px; }
+.admin-case-list .reports-reference-review,
+.admin-case-list .admin-appeals-reference-actions > button { box-sizing: border-box; height: 46px; min-height: 46px; }
+@media (max-width: 760px) {
+  .admin-case-list.reports-reference,
+  .admin-case-list.admin-appeals-reference { margin: 12px auto 40px; }
+  .admin-case-list > .reports-reference-header,
+  .admin-case-list > .admin-appeals-reference-header { min-height: 144px; padding: 24px; margin-bottom: 20px; }
+  .admin-case-list > header h1 { font-size: 23px; }
+  .admin-case-list > .reports-reference-filters,
+  .admin-case-list > .admin-appeals-reference-controls { margin-bottom: 20px; }
+  .admin-case-list .reports-reference-search input,
+  .admin-case-list .admin-appeals-reference-search input { font-size: 16px; }
+  .admin-case-list > .reports-reference-stats,
+  .admin-case-list > .admin-appeals-reference-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px; }
+  .admin-case-list .reports-reference-stat,
+  .admin-case-list .admin-appeals-reference-stat { height: 108px; min-height: 108px; }
+  .admin-case-list .reports-reference-stat strong,
+  .admin-case-list .admin-appeals-reference-stat strong,
+  .admin-case-list .admin-appeals-reference-stat b { font-size: 15px; line-height: 19px; }
+}
+@media (max-width: 440px) {
+  .admin-case-list > .reports-reference-stats,
+  .admin-case-list > .admin-appeals-reference-stats { grid-template-columns: 1fr; }
+}
