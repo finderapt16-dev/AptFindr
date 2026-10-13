@@ -822,6 +822,22 @@
   color: #16a5e1;
 }
 
+.apartment-browse-distance-away {
+  align-items: center;
+  gap: calc(var(--spacing, .25rem) * 1);
+  margin-top: calc(var(--spacing, .25rem) * 1.5);
+  color: #087eaf;
+  font-size: var(--text-sm, .875rem);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--text-sm--line-height, calc(1.25 / .875));
+  display: flex;
+}
+
+.apartment-browse-distance-icon {
+  width: calc(var(--spacing, .25rem) * 3.5);
+  height: calc(var(--spacing, .25rem) * 3.5);
+}
+
 
 
 .apartment-browse-view-room-prices {
