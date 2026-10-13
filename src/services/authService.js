@@ -15,7 +15,7 @@ export class SignupFlowError extends Error {
     }
 }
 const APP_USERS_TABLE = 'app_users';
-const VALID_ROLES = new Set(['tenant', 'landlord', 'admin']);
+const VALID_ROLES = new Set(['tenant', 'landlord', 'admin', 'super_admin']);
 const GOOGLE_OAUTH_FLOW_STORAGE_KEY = 'aptfindr.google-oauth-flow';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let latestAuthProfileRequestId = 0;
@@ -58,9 +58,13 @@ function normalizeStatus(row) {
     return 'active';
 }
 function normalizeRoleValue(value) {
-    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    const normalized = typeof value === 'string'
+        ? value.trim().toLowerCase().replace(/[\s-]+/g, '_').replace(/_+/g, '_')
+        : '';
     // Keep legacy accounts usable while exposing only the current tenant role.
-    return normalized === 'student' || normalized === 'employee' ? 'tenant' : normalized;
+    if (normalized === 'student' || normalized === 'employee') return 'tenant';
+    if (normalized === 'superadmin') return 'super_admin';
+    return normalized;
 }
 function normalizeEmailAddress(email) {
     return String(email ?? '').trim().toLowerCase();
@@ -258,7 +262,7 @@ async function ensureRoleProfile(userId, role, input) {
         if (typeof input.isVerified === 'boolean')
             payload.is_verified = input.isVerified;
     }
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'super_admin') {
         table = 'admin_profiles';
         if (typeof input.adminLevel === 'string')
             payload.admin_level = input.adminLevel;
