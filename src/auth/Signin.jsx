@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
 import {
+    dashboardPathForRole,
+    isAdminRole,
     isTenantRole,
     loginWithGoogle,
     resendSignupVerification,
@@ -320,7 +322,11 @@ export function Login({
                  * is ever rendered directly.
                  */
                 if (
-                    redirectTo && result.user?.role === "admin"
+                    redirectTo &&
+                    (
+                        !isAdminRole(result.user?.role) ||
+                        redirectTo.startsWith(dashboardPathForRole(result.user?.role))
+                    )
                 ) {
                     navigate(
                         redirectTo,
@@ -333,11 +339,10 @@ export function Login({
                 }
 
                 if (
-                    result.user?.role ===
-                    "admin"
+                    isAdminRole(result.user?.role)
                 ) {
                     navigate(
-                        "/admin",
+                        dashboardPathForRole(result.user?.role),
                         {
                             replace: true,
                         }

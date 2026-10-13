@@ -1,0 +1,311 @@
+.admin-verification-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 26px;
+  color: #334155;
+}
+
+.admin-verification-header,
+.admin-verification-table-panel,
+.admin-verification-stat {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.admin-verification-header {
+  min-height: 55px;
+  padding: 12px 14px;
+}
+
+.admin-verification-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.admin-verification-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.admin-verification-controls {
+  display: flex;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.admin-verification-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  gap: 8px;
+  border: 1px solid #dbe4ed;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.admin-verification-search:focus-within {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+.admin-verification-search svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.admin-verification-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 9px;
+}
+
+.admin-verification-search input::placeholder { color: #94a3b8; }
+
+.admin-verification-statistics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-verification-stat {
+  display: flex;
+  min-height: 126px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.admin-verification-stat:hover { border-color: #7dd3fc; box-shadow: 0 4px 12px rgba(14, 165, 233, .1); }
+.admin-verification-stat.is-active { border-color: #0ea5e9; background: #f0f9ff; box-shadow: 0 0 0 3px rgba(14, 165, 233, .13); }
+.admin-verification-stat:focus-visible { outline: 3px solid rgba(14, 165, 233, .35); outline-offset: 2px; }
+.admin-verification-stat:active { transform: translateY(1px); }
+
+.admin-verification-stat-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 4px;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.admin-verification-stat-icon svg { width: 14px; height: 14px; }
+.admin-verification-stat-icon.total { background: #e0f2fe; color: #0ea5e9; }
+.admin-verification-stat-icon.pending { background: #fef3c7; color: #f59e0b; }
+.admin-verification-stat-icon.verified { background: #dcfce7; color: #16a34a; }
+.admin-verification-stat-icon.rejected { background: #fee2e2; color: #ef4444; }
+
+.admin-verification-stat strong { color: #334155; font-size: 12px; line-height: 1.25; font-weight: 700; }
+.admin-verification-stat > span:last-child { margin-top: 1px; color: #94a3b8; font-size: 8px; line-height: 1.25; }
+
+.admin-verification-table-panel { overflow: hidden; }
+.admin-verification-table-scroll { overflow-x: auto; }
+
+.admin-verification-table-panel table {
+  width: 100%;
+  min-width: 770px;
+  border-collapse: collapse;
+  font-size: 9px;
+}
+
+.admin-verification-table-panel th {
+  height: 33px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 600;
+  text-align: left;
+}
+
+.admin-verification-table-panel td {
+  height: 46px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #edf2f7;
+  color: #64748b;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.admin-verification-table-panel tbody tr:last-child td { border-bottom: 0; }
+.admin-verification-table-panel tbody tr:hover { background: #f8fafc; }
+
+.admin-verification-landlord { display: flex; align-items: center; min-width: 160px; gap: 7px; }
+.admin-verification-avatar { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 999px; background: #f3e8ff; color: #9333ea; font-size: 9px; font-weight: 700; }
+.admin-verification-landlord > span:last-child { display: grid; gap: 2px; }
+.admin-verification-landlord strong { color: #334155; font-size: 9px; line-height: 1.2; font-weight: 600; }
+.admin-verification-landlord small { color: #94a3b8; font-size: 8px; line-height: 1.2; }
+
+.admin-verification-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; min-height: 18px; padding: 3px 8px; border-radius: 999px; font-size: 7px; font-weight: 700; }
+.admin-verification-badge.verified { background: #dcfce7; color: #16a34a; }
+.admin-verification-badge.pending { background: #fef3c7; color: #d97706; }
+.admin-verification-badge.rejected { background: #fee2e2; color: #ef4444; }
+
+.admin-verification-view-button { min-width: 96px; height: 28px; padding: 0 12px; border: 1px solid #38bdf8; border-radius: 4px; background: #ffffff; color: #0284c7; font: inherit; font-size: 8px; font-weight: 700; cursor: pointer; }
+.admin-verification-view-button:hover { background: #f0f9ff; }
+.admin-verification-view-button.pending { border-color: #0ea5e9; background: #0ea5e9; color: #ffffff; }
+.admin-verification-view-button.pending:hover { background: #0284c7; }
+
+.admin-verification-empty { margin: 0; padding: 30px 16px; color: #64748b; font-size: 11px; text-align: center; }
+
+.admin-verification-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 5px; padding: 8px 10px; border-top: 1px solid #edf2f7; }
+.admin-verification-pagination button { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid #e2e8f0; border-radius: 4px; background: #ffffff; color: #64748b; font: inherit; font-size: 9px; cursor: pointer; }
+.admin-verification-pagination button[aria-current="page"] { border-color: #e0f2fe; background: #e0f2fe; color: #0284c7; }
+.admin-verification-pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
+.admin-verification-pagination svg { width: 13px; height: 13px; }
+
+@media (max-width: 760px) {
+  .admin-verification-page { padding: 16px; }
+  .admin-verification-controls { flex-direction: column; gap: 8px; }
+  .admin-verification-status-filter { flex-basis: auto; width: 100%; }
+  .admin-verification-statistics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px) {
+  .admin-verification-statistics { grid-template-columns: 1fr; }
+}
+
+
+/* Restore comfortable admin table readability across desktop and mobile. */
+.admin-verification-page { max-width: 1280px; padding: 24px; }
+.admin-verification-header { min-height: 0; padding: 20px 22px; border-radius: 10px; }
+.admin-verification-header h1 { font-size: 24px; line-height: 1.25; }
+.admin-verification-header p { font-size: 14px; }
+.admin-verification-controls { margin: 16px 0; }
+.admin-verification-search,
+.admin-verification-status-trigger { min-height: 42px; height: auto; border-radius: 8px; }
+.admin-verification-search input,
+.admin-verification-status-trigger,
+.admin-verification-status-menu button { font-size: 14px; }
+.admin-verification-status-filter { flex-basis: 190px; }
+.admin-verification-status-menu { border-radius: 8px; }
+.admin-verification-status-menu button { min-height: 40px; padding: 8px 10px; }
+.admin-verification-statistics { gap: 12px; margin-bottom: 16px; }
+.admin-verification-stat { min-height: 120px; border-radius: 10px; }
+.admin-verification-stat-icon { width: 38px; height: 38px; }
+.admin-verification-stat-icon svg { width: 18px; height: 18px; }
+.admin-verification-stat strong { font-size: 20px; }
+.admin-verification-stat > span:last-child { font-size: 12px; }
+.admin-verification-table-panel { border-radius: 10px; }
+.admin-verification-table-panel table { font-size: 13px; }
+.admin-verification-table-panel th { height: 42px; padding: 10px 14px; font-size: 12px; }
+.admin-verification-table-panel td { height: 58px; padding: 10px 14px; }
+.admin-verification-landlord { gap: 10px; }
+.admin-verification-avatar { width: 34px; height: 34px; font-size: 13px; }
+.admin-verification-landlord strong { font-size: 13px; }
+.admin-verification-landlord small { font-size: 11px; }
+.admin-verification-badge { min-height: 24px; padding: 4px 10px; font-size: 11px; }
+.admin-verification-view-button { min-width: 110px; min-height: 36px; height: auto; border-radius: 7px; font-size: 12px; }
+.admin-verification-empty { font-size: 14px; }
+.admin-verification-pagination { gap: 7px; padding: 12px 14px; }
+.admin-verification-pagination button { width: 36px; height: 36px; border-radius: 7px; font-size: 13px; }
+@media (max-width: 760px) {
+  .admin-verification-page { padding: 16px; }
+  .admin-verification-header { padding: 18px; }
+  .admin-verification-header h1 { font-size: 21px; }
+  .admin-verification-controls { flex-direction: column; }
+  .admin-verification-status-filter { flex-basis: auto; width: 100%; }
+  .admin-verification-statistics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-verification-table-panel table { min-width: 700px; }
+}
+@media (max-width: 420px) {
+  .admin-verification-statistics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-verification-page { padding: 12px; }
+}
+
+/* Match the notification page header footprint. */
+.admin-verification-page {
+  width: calc(100% - 80px);
+  max-width: 1200px;
+  margin: 15px auto 32px;
+  padding: 0;
+}
+.admin-verification-header {
+  min-height: 64px;
+  box-sizing: border-box;
+  margin: 0 0 10px;
+  padding: 15px 20px;
+  border-radius: 6px;
+}
+.admin-verification-header h1 { font-size: 14px; }
+.admin-verification-header p { margin-top: 3px; font-size: 9px; }
+
+@media (max-width: 760px) {
+  .admin-verification-page { width: calc(100% - 24px); margin: 12px; }
+  .admin-verification-header { min-height: 0; padding: 20px; }
+}
+
+/* Use the same desktop page header as the tenant and landlord dashboards. */
+@media (min-width: 761px) {
+  .admin-verification-page {
+    width: 100%;
+    max-width: 1400px;
+    margin: 15px auto 40px;
+    padding: 0;
+  }
+  .admin-verification-header {
+    min-height: 130px;
+    margin: 0 0 24px;
+    padding: 40px 64px;
+    box-sizing: border-box;
+    border-color: #d9d9d9;
+  }
+  .admin-verification-header h1 { font-size: 24px; }
+  .admin-verification-header p { margin-top: 5px; font-size: 14px; line-height: 20px; }
+}
+
+/* ------------------------------------------------------------------
+   PHONE LEGIBILITY FLOOR (added during the device-progressiveness pass)
+   The compact screens below were composed at desktop density, so at phone
+   widths their text fell under ~11px (and form controls under 16px, which
+   makes iOS Safari zoom the whole page on focus). These phone-only rules
+   raise the measured small values to a readable minimum without changing
+   the tablet and desktop layouts.
+   ------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .admin-verification-header p
+  { font-size: 12px; }
+}
+@media (max-width: 640px) {
+  .admin-verification-search input
+  { font-size: 16px; }
+}
+
+/* Sub-10px labels are unreadable on tablets and small laptops as well, so the
+   same floor applies across the whole compact shell range (<=1023px). */
+@media (max-width: 1023px) {
+  .admin-verification-search input
+  { font-size: 16px; }
+}
+
+
+/* Band-range floor: rules that only surface inside specific compact bands
+   (e.g. 641-767px) between the phone and tablet floor blocks. Kept to the
+   same readable minimums: 11px text, 16px form controls. */
+@media (max-width: 1023px) {
+  .admin-verification-header p { font-size: 11px; }
+}

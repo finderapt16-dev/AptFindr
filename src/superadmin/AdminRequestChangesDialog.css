@@ -1,0 +1,20 @@
+.admin-request-changes { width: min(704px, calc(100vw - 32px)); max-width: 704px; padding: 38px 40px 54px; border: 1px solid #d0d5dd; border-radius: 10px; box-shadow: 0 20px 54px rgb(16 24 40 / 22%); }
+.admin-request-changes > h2 { margin: 14px 0 7px; color: #111; font-size: 25px; line-height: 1.2; font-weight: 700; }
+.admin-request-changes > p { margin: 0 0 16px; color: #667085; font-size: 16px; line-height: 1.45; }
+.admin-request-changes__close { position: absolute; top: 20px; right: 28px; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 0; background: transparent; color: #667085; cursor: pointer; }
+.admin-request-changes__close svg { width: 27px; height: 27px; }
+.admin-request-changes form { display: grid; gap: 14px; }
+.admin-request-changes label { display: grid; gap: 7px; color: #111; font-size: 16px; font-weight: 600; }
+.admin-request-changes label > span { color: #f04438; }
+.admin-request-changes select, .admin-request-changes textarea { width: 100%; box-sizing: border-box; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; color: #344054; font: inherit; font-size: 15px; font-weight: 400; outline: none; }
+.admin-request-changes select { height: 43px; padding: 0 12px; appearance: auto; }
+.admin-request-changes textarea { min-height: 118px; padding: 11px 12px; resize: vertical; }
+.admin-request-changes select:focus, .admin-request-changes textarea:focus { border-color: #0ba5e8; box-shadow: 0 0 0 3px rgb(11 165 232 / 16%); }
+.admin-request-changes textarea::placeholder { color: #667085; }
+.admin-request-changes__count { margin: -8px 0 0; color: #667085; font-size: 14px; text-align: right; }
+.admin-request-changes footer { display: grid; grid-template-columns: minmax(180px, 203px) minmax(220px, 274px); justify-content: end; gap: 18px; margin-top: 0; }
+.admin-request-changes footer button { min-height: 50px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; color: #111; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.admin-request-changes footer button[type="submit"] { border-color: #12a8e6; background: #12a8e6; color: #fff; }
+.admin-request-changes footer button:disabled, .admin-request-changes__close:disabled { cursor: not-allowed; opacity: .58; }
+.admin-request-changes__overlay { background: rgb(15 23 42 / 45%); backdrop-filter: blur(2px); }
+@media (max-width: 620px) { .admin-request-changes { width: min(100vw - 24px, 520px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 30px 20px 24px; } .admin-request-changes > h2 { margin-top: 8px; font-size: 23px; } .admin-request-changes > p { font-size: 14px; } .admin-request-changes__close { top: 15px; right: 14px; } .admin-request-changes footer { grid-template-columns: 1fr; gap: 10px; } .admin-request-changes footer button { min-height: 48px; } }

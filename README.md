@@ -36,6 +36,20 @@ See [the tenant source guide](docs/TENANT_STRUCTURE.md) for tenant page location
 
 The local `supabase-master-migration.sql` is intentionally ignored and must not be committed. Run the current migration manually in the Supabase SQL Editor when required. Configure production Site URL, allowed `/auth/callback` and `/reset-password` redirects, and custom SMTP in Supabase.
 
+### Super admin account
+
+Super admin accounts are internal-only. They are not available from public signup. Create or refresh one with a Supabase service-role key from your local terminal:
+
+```powershell
+$env:SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+$env:SUPER_ADMIN_EMAIL="owner@example.com"
+$env:SUPER_ADMIN_PASSWORD="StrongPassword123!"
+$env:SUPER_ADMIN_NAME="Owner Name"
+npm run create:super-admin
+```
+
+The script reads `VITE_SUPABASE_URL` from `.env.local`, creates the Auth user, marks the email confirmed, writes `app_users.role = "super_admin"`, and syncs `admin_profiles.admin_level = "super_admin"`. If Supabase rejects the role, update the database role constraint/policy to allow `super_admin` and run the command again.
+
 ### Google OAuth profile setup
 
 Supabase's `signInWithOAuth()` does not accept custom user metadata in its `options`. AptFindr therefore assigns the tenant role and generated username **after** Google returns, once the user has accepted the signup terms. The `auth.users` trigger `handle_new_auth_user` must let Google Auth users through without trying to create an `app_users` row first; keep its existing email/password profile setup intact. Add this guard at the start of that trigger function:

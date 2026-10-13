@@ -3,7 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, getExistingProfileForAuthUser, getPendingGoogleOAuthFlow, isGoogleAuthUser, signOutAuthSession } from "@/services/authService";
 
-const dashboardPathForRole = (role) => role === "admin" ? "/admin" : role === "landlord" ? "/landlord/dashboard" : "/browse";
+const dashboardPathForRole = (role) => {
+    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    if (normalizedRole === "super_admin") return "/super-admin";
+    if (normalizedRole === "admin") return "/admin";
+    return normalizedRole === "landlord" ? "/landlord/dashboard" : "/browse";
+};
 
 function getOAuthErrorMessage(params) {
     const error = `${params.get("error_code") || params.get("error") || ""} ${params.get("error_description") || ""}`.trim();

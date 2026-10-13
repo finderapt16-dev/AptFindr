@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { dashboardPathForRole } from "../services/authService";
 export default function ProtectedRoute({ children, allowedRoles }) {
     const { user, isAuthenticated, isLoading } = useAuth();
     if (isLoading) {
@@ -23,12 +24,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       </div>);
     }
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-        const dashboardPath = user.role === "admin"
-            ? "/admin"
-            : user.role === "landlord"
-                ? "/landlord/dashboard"
-                : "/browse";
-        return <Navigate to={dashboardPath} replace/>;
+        return <Navigate to={dashboardPathForRole(user.role)} replace/>;
     }
     return <>{children}</>;
 }
