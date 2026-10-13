@@ -1781,7 +1781,6 @@ export function LandlordDashboard() {
         user?.mobileNumber || "",
       middleInitial: user?.middleInitial || "",
       facebookLink: "",
-      bio: "",
       avatar: "",
     }));
 
@@ -1919,7 +1918,6 @@ export function LandlordDashboard() {
                 ? preferenceSections.landlordProfile.facebookLink
                 : "")
           ),
-          bio: userRow?.bio || "",
           avatar:
             userRow?.avatar_url ||
             user.avatar ||
@@ -2112,14 +2110,6 @@ export function LandlordDashboard() {
       }
 
 
-      if (profile.bio.length > 300) {
-        toast.error(
-          "Bio cannot exceed 300 characters"
-        );
-        return;
-      }
-
-
       setIsUpdatingProfile(true);
 
 
@@ -2159,7 +2149,6 @@ export function LandlordDashboard() {
                 updatedUser.mobileNumber,
               avatar_url:
                 profile.avatar,
-              bio: profile.bio,
               middle_initial: profile.middleInitial.trim(),
               facebook_url: profile.facebookLink.trim(),
             });

@@ -386,7 +386,6 @@ export function AdminDashboard() {
             name: `${adminProfile.firstName.trim()} ${adminProfile.lastName.trim()}`,
             mobile: adminProfile.mobile.trim(),
             avatar_url: adminProfile.avatar || null,
-            bio: adminProfile.bio.trim(),
             department: adminProfile.department.trim(),
             admin_level: adminProfile.adminLevel,
             is_verified: user.isVerified ?? false,
@@ -405,7 +404,7 @@ export function AdminDashboard() {
                     action: "admin_profile_updated",
                     target_type: "user",
                     target_id: user.id,
-                    details: { fields: ["name", "email", "mobile", "bio", "department", "admin_level"] },
+                    details: { fields: ["name", "email", "mobile", "department", "admin_level"] },
                 });
                 toast.success("Profile updated successfully!");
             }
@@ -1519,7 +1518,7 @@ export function AdminDashboard() {
         const inputClass = "admin-dashboard-input-3";
         const adminName = `${adminProfile.firstName} ${adminProfile.lastName}`.trim();
         const accountStatus = user?.status || "Unavailable";
-        const ViewField = ({ label, value, wide = false }) => <div className={wide ? "admin-dashboard-panel-9" : ""}><p className="admin-dashboard-text-14">{label}</p><p className="admin-dashboard-text-15">{value?.trim() || (label === "Bio" ? "No bio provided" : "Not provided")}</p></div>;
+        const ViewField = ({ label, value, wide = false }) => <div className={wide ? "admin-dashboard-panel-9" : ""}><p className="admin-dashboard-text-14">{label}</p><p className="admin-dashboard-text-15">{value?.trim() || "Not provided"}</p></div>;
         return (<div className="admin-dashboard-container-5">
         <header className="admin-dashboard-header-4">
           <div className="admin-dashboard-row-21">
@@ -1553,8 +1552,7 @@ export function AdminDashboard() {
                   <SettingsField label="Last Name"><input value={adminProfile.lastName} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, lastName: event.target.value }))} className={inputClass}/></SettingsField>
                   <SettingsField label="Email Address" wide><input type="email" value={adminProfile.email} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, email: event.target.value }))} className={inputClass}/></SettingsField>
                   <SettingsField label="Mobile Number" wide><div className="admin-dashboard-panel-10"><Smartphone className="admin-dashboard-smartphone-icon"/><input type="tel" value={adminProfile.mobile} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, mobile: event.target.value }))} placeholder="Not provided" className={`${inputClass} admin-dashboard-input-4`}/></div></SettingsField>
-                  <SettingsField label="Bio" wide><textarea rows={4} value={adminProfile.bio} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, bio: event.target.value.slice(0, 200) }))} placeholder="No bio provided" className={`${inputClass} admin-dashboard-textarea`}/><span className="admin-dashboard-200">{adminProfile.bio.length}/200</span></SettingsField>
-                </fieldset> : <div className="admin-dashboard-grid-10"><ViewField label="First Name" value={adminProfile.firstName}/><ViewField label="Last Name" value={adminProfile.lastName}/><ViewField label="Email Address" value={adminProfile.email}/><ViewField label="Mobile Number" value={adminProfile.mobile}/><ViewField label="Bio" value={adminProfile.bio} wide/></div>}
+                </fieldset> : <div className="admin-dashboard-grid-10"><ViewField label="First Name" value={adminProfile.firstName}/><ViewField label="Last Name" value={adminProfile.lastName}/><ViewField label="Email Address" value={adminProfile.email}/><ViewField label="Mobile Number" value={adminProfile.mobile}/></div>}
         </CardContent></Card>
 
         <Card className="admin-dashboard-card-6"><CardContent className="admin-dashboard-card-content">

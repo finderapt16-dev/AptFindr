@@ -9,7 +9,6 @@ import { deleteUser as deleteUserAccount, isTenantRole } from "@/services/authSe
 import { fetchUserPreferenceSections, fetchUserProfileDetails, saveUserPreferenceSection, updateUserProfile, uploadUserAvatar } from "@/services/dashboardSupabaseService";
 import { Settings as TenantSettings } from "@/tenant/Settings";
 const inputClass = "settings-input";
-const textareaClass = "settings-textarea";
 const Toggle = ({ checked, onChange, disabled }) => (<button type="button" onClick={() => !disabled && onChange(!checked)} className={`settings-toggle ${checked ? "settings-toggle-on" : "settings-toggle-off"} ${disabled ? "settings-toggle-disabled" : "settings-toggle-enabled"}`}>
     <span className={`settings-toggle-thumb ${checked ? "settings-toggle-thumb-on" : "settings-toggle-thumb-off"}`}/>
   </button>);
@@ -45,7 +44,6 @@ function profileStateFromUser(user) {
         middleInitial: user?.middleInitial || "",
         email: user?.email || "",
         mobile: user?.mobileNumber || user?.mobile || "",
-        bio: user?.bio || "",
         avatar: user?.avatar || "",
         address: user?.address || "",
         department: user?.department || "",
@@ -112,7 +110,6 @@ export function Settings({ embedded = false } = {}) {
                     middleInitial,
                     email: String(details.user.email ?? ""),
                     mobile: String(details.user.mobile ?? details.user.mobileNumber ?? ""),
-                    bio: String(details.user.bio ?? ""),
                     avatar: String(details.user.avatar_url ?? ""),
                     address: String(details.user.address ?? ""),
                     department: String(details.adminProfile?.department ?? details.user.department ?? ""),
@@ -247,7 +244,6 @@ export function Settings({ embedded = false } = {}) {
                 role: user.role,
                 mobile: profile.mobile.trim(),
                 avatar_url: profile.avatar,
-                bio: profile.bio,
                 middle_initial: profile.middleInitial.trim(),
                 address: profile.address.trim(),
                 department: profile.department?.trim(),
@@ -415,10 +411,6 @@ export function Settings({ embedded = false } = {}) {
                 </Field>
                 <Field label="Mobile Number" hint="Optional contact number">
                   <input className={inputClass} type="tel" value={profile.mobile} onChange={(e) => updateProfile((p) => ({ ...p, mobile: e.target.value }))} placeholder="Not provided"/>
-                </Field>
-                <Field label="Bio / About You" hint="Short description (max 200 characters)">
-                  <textarea className={textareaClass} value={profile.bio} onChange={(e) => updateProfile((p) => ({ ...p, bio: e.target.value.slice(0, 200) }))} placeholder="Not provided"/>
-                  <p className="settings-style-42 settings-text-right">{profile.bio.length}/200</p>
                 </Field>
               </div>
             </section>)}

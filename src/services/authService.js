@@ -191,7 +191,6 @@ function normalizeUser(row) {
         mobileNumber: getStringValue(record, ['mobile']),
         mobile: getStringValue(record, ['mobile']),
         avatar: getStringValue(record, ['avatar_url']),
-        bio: getStringValue(record, ['bio']),
         permitNumber: getStringValue(record, ['permit_number']),
         department: getStringValue(record, ['department']),
         adminLevel: getStringValue(record, ['admin_level']),

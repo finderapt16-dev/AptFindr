@@ -232,7 +232,6 @@ function toUserRow(row) {
         middle_initial: getStringValue(row.middle_initial),
         address: getStringValue(row.address),
         avatar_url: getStringValue(row.avatar_url),
-        bio: getStringValue(row.bio),
         permit_number: getStringValue(row.permit_number),
         permitNumber: getStringValue(row.permitNumber),
         business_permit_number: getStringValue(row.business_permit_number),
@@ -1424,7 +1423,6 @@ export async function updateUserProfile(payload) {
     };
     assignIfProvided(updatePayload, "mobile", payload.mobile);
     assignIfProvided(updatePayload, "avatar_url", payload.avatar_url);
-    assignIfProvided(updatePayload, "bio", payload.bio);
     assignIfProvided(updatePayload, "middle_initial", payload.middle_initial);
     assignIfProvided(updatePayload, "address", payload.address);
     assignIfProvided(updatePayload, "is_verified", payload.is_verified);

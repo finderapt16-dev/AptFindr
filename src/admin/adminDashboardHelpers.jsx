@@ -45,7 +45,6 @@ export function toAdminProfileState(source) {
         lastName: lastNameParts.join(" "),
         email: String(source?.email ?? ""),
         mobile: String(dashboardSource?.mobile ?? dashboardSource?.mobileNumber ?? authSource?.mobileNumber ?? authSource?.mobile ?? ""),
-        bio: String(dashboardSource?.bio ?? authSource?.bio ?? ""),
         avatar: String(dashboardSource?.avatar_url ?? authSource?.avatar ?? ""),
         department: String(dashboardSource?.department ?? authSource?.department ?? ""),
         adminLevel: String(dashboardSource?.admin_level ?? dashboardSource?.adminLevel ?? authSource?.adminLevel ?? ""),

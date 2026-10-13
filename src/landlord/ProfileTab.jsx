@@ -1,6 +1,6 @@
 import "./ProfileTab.css";
 import { Button } from "@/components/ui/button";
-import { SettingsField as Field, SettingsSectionTitle as SectionTitle, SettingsInput, SettingsTextarea } from "@/landlord/SettingsFormFields";
+import { SettingsField as Field, SettingsSectionTitle as SectionTitle, SettingsInput } from "@/landlord/SettingsFormFields";
 import { Camera, RotateCcw } from "lucide-react";
 export const ProfileTab = ({ profile, isUploadingProfilePhoto, profilePhotoInputRef, handleRemoveProfilePhoto, handleProfilePhoto, updateProfile, setProfile, savedProfile, handleUpdateProfile, isUpdatingProfile, }) => (<div className="profile-tab-grid">
     <div className="profile-tab-card">
@@ -31,10 +31,6 @@ export const ProfileTab = ({ profile, isUploadingProfilePhoto, profilePhotoInput
       </Field>
       <Field label="Mobile Number" hint="Visible to tenants if enabled in Business settings">
         <SettingsInput type="tel" value={profile.mobile} onChange={(e) => updateProfile(p => ({ ...p, mobile: e.target.value }))} placeholder="09XXXXXXXXX"/>
-      </Field>
-      <Field label="Bio / About You" hint="Shown on your landlord profile page (max 300 characters)">
-        <SettingsTextarea rows={3} value={profile.bio} onChange={(e) => updateProfile(p => ({ ...p, bio: e.target.value.slice(0, 300) }))} placeholder="Tell tenants about yourself…"/>
-        <p className="profile-tab-300">{profile.bio.length}/300</p>
       </Field>
     </div>
 
