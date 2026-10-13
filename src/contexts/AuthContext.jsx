@@ -127,8 +127,10 @@ export function AuthProvider({ children }) {
         };
         const channel = supabase
             .channel('auth-verification-sync')
+            // Account changes belong here. Apartment updates are handled by
+            // ApartmentsContext; refreshing every profile for them repaints
+            // the whole app and can cause visible mobile flicker.
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_users' }, scheduleRefresh)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apartments' }, scheduleRefresh)
             .subscribe();
         return () => {
             if (refreshTimer)
