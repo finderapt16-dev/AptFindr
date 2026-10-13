@@ -16,6 +16,12 @@ import {
     isTenantVisibleApartment,
 } from "@/utils/listingVisibility";
 
+import {
+    findNearbyApartments,
+    formatDistance,
+    parseNearbySearchIntent,
+} from "@/tenant/geospatialSearch";
+
 import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
 import { fetchRatingsForApartments, summarizeApartmentRatings } from "@/services/apartmentRatingsService";
 
@@ -36,10 +42,31 @@ function selectRandomListings(apartments) {
     return listings.slice(0, 4);
 }
 
-function PreviewCard({ apartment, onApartmentClick, viewCount = 0, ratingStats, ratingsLoading }) {
+function PreviewCard({ apartment, onApartmentClick, viewCount = 0, ratingStats, ratingsLoading, showDistance = false }) {
     return <div className="landing-preview-wrapper">
       <ApartmentCard apartment={{ ...apartment, views: viewCount }} ratingStats={ratingStats} ratingsLoading={ratingsLoading} onApartmentClick={onApartmentClick} showGuestFavorite/>
+      {showDistance && Number.isFinite(apartment.distanceMeters) && (
+        <span className="landing-preview-distance">
+          {formatDistance(apartment.distanceMeters)}
+        </span>
+      )}
     </div>;
+}
+
+function matchesPublicSearch(apartment, query) {
+    const searchable = [
+        apartment.title,
+        apartment.city,
+        apartment.address,
+        apartment.location,
+        apartment.description,
+        ...(Array.isArray(apartment.amenities) ? apartment.amenities : []),
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("en-PH");
+
+    return searchable.includes(query.toLocaleLowerCase("en-PH"));
 }
 
 /* =========================================================
@@ -73,6 +100,9 @@ function PreviewSkeleton() {
 
 export function LandingApartmentPreview({
     onBrowseClick,
+    searchQuery = "",
+    activeNearbySearch = null,
+    nearbySearchError = "",
 }) {
     const {
         apartments,
@@ -179,11 +209,47 @@ export function LandingApartmentPreview({
 
     const publishedApartments =
         useMemo(
-            () => selectRandomListings(apartments),
+            () => apartments.filter(isTenantVisibleApartment),
             [
                 apartments,
             ]
         );
+
+    const searchedApartments = useMemo(() => {
+        const query = searchQuery.trim();
+        const nearbyIntent = parseNearbySearchIntent(query);
+
+        if (nearbySearchError) return [];
+
+        if (activeNearbySearch) {
+            return findNearbyApartments(
+                publishedApartments,
+                activeNearbySearch.location
+            );
+        }
+
+        // While a nearby result is being resolved, retain the standard
+        // inventory rather than pretending the text is a listing keyword.
+        if (nearbyIntent) return publishedApartments;
+
+        if (!query) return publishedApartments;
+
+        return publishedApartments.filter((apartment) =>
+            matchesPublicSearch(apartment, query)
+        );
+    }, [
+        activeNearbySearch,
+        nearbySearchError,
+        publishedApartments,
+        searchQuery,
+    ]);
+
+    const displayedApartments = useMemo(
+        () => searchQuery.trim()
+            ? searchedApartments
+            : selectRandomListings(publishedApartments),
+        [publishedApartments, searchQuery, searchedApartments]
+    );
 
 
     const [ratingRows, setRatingRows] = useState([]);
@@ -192,12 +258,12 @@ export function LandingApartmentPreview({
     useEffect(() => {
         let active = true;
         setRatingsLoading(true);
-        fetchRatingsForApartments(publishedApartments.map(apartment => apartment.id))
+        fetchRatingsForApartments(displayedApartments.map(apartment => apartment.id))
             .then(rows => { if (active) setRatingRows(rows); })
             .catch(error => { console.error("Unable to load apartment ratings:", error); if (active) setRatingRows([]); })
             .finally(() => { if (active) setRatingsLoading(false); });
         return () => { active = false; };
-    }, [publishedApartments]);
+    }, [displayedApartments]);
 
     /* =========================
        LOADING
@@ -280,11 +346,25 @@ export function LandingApartmentPreview({
        NO APARTMENTS
     ========================= */
 
-    if (
-        publishedApartments.length ===
-        0
-    ) {
+    if (publishedApartments.length === 0) {
         return null;
+    }
+
+    if (searchQuery.trim() && displayedApartments.length === 0) {
+        return (
+            <section className="landing-listings-section">
+                <div className="landing-section-container">
+                    <div className="landing-search-empty" role="status">
+                        <h2>No apartments found</h2>
+                        <p>
+                            {activeNearbySearch
+                                ? `No available apartments were found within 800 meters of ${activeNearbySearch.target}.`
+                                : "Try another apartment name, area, address, or nearby landmark."}
+                        </p>
+                    </div>
+                </div>
+            </section>
+        );
     }
 
 
@@ -297,9 +377,17 @@ export function LandingApartmentPreview({
 
             <div className="landing-section-container">
 
+                {searchQuery.trim() && (
+                    <p className="landing-search-results-summary" role="status">
+                        {activeNearbySearch
+                            ? `${displayedApartments.length} apartments within 800 m of ${activeNearbySearch.target} · nearest first`
+                            : `${displayedApartments.length} matching apartments`}
+                    </p>
+                )}
+
                 <div className="landing-listings-grid">
 
-                    {publishedApartments.map(
+                    {displayedApartments.map(
                         (
                             apartment
                         ) => (
@@ -323,6 +411,8 @@ export function LandingApartmentPreview({
                                         apartment.id
                                     )
                                 }
+
+                                showDistance={Boolean(activeNearbySearch)}
                             />
                         )
                     )}
@@ -342,6 +432,9 @@ export function LandingApartmentPreview({
 
 export function LandingListingsSection({
     onBrowseClick,
+    searchQuery,
+    activeNearbySearch,
+    nearbySearchError,
 }) {
     const {
         apartments,
@@ -371,6 +464,9 @@ export function LandingListingsSection({
                 onBrowseClick={
                     onBrowseClick
                 }
+                searchQuery={searchQuery}
+                activeNearbySearch={activeNearbySearch}
+                nearbySearchError={nearbySearchError}
             />
         );
     }

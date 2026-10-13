@@ -339,6 +339,19 @@ function ApartmentBrowseCard({
 
                             {locationText}
                         </p>
+
+                        {activeNearbySearch &&
+                            Number.isFinite(
+                                apartment.distanceMeters
+                            ) && (
+                                <p className="apartment-browse-distance-away">
+                                    <MapPin className="apartment-browse-distance-icon" />
+
+                                    {formatDistance(
+                                        apartment.distanceMeters
+                                    )}
+                                </p>
+                            )}
                     </div>
 
                     <div className="apartment-browse-panel-8">

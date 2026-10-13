@@ -17,9 +17,19 @@ import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 
 import { isTenantVisibleApartment } from "@/utils/listingVisibility";
 import { isTenantRole, resetUnfinishedGoogleSignIn } from "@/services/authService";
+import {
+    geocodeLocationWithinLaPaz,
+    GeocodingError,
+} from "@/services/geocodingService";
+import {
+    parseNearbySearchIntent,
+} from "@/tenant/geospatialSearch";
 
 import {
+    Building2,
+    MapPin,
     Menu,
+    Search,
     X,
 } from "lucide-react";
 
@@ -314,6 +324,31 @@ export function Landing() {
         landingSearch,
         setLandingSearch,
     ] = useState("");
+
+    // Searches are applied on submit so visitors can edit a query without
+    // changing the listings beneath them mid-typing.
+    const [
+        appliedLandingSearch,
+        setAppliedLandingSearch,
+    ] = useState("");
+
+    const [
+        activeNearbySearch,
+        setActiveNearbySearch,
+    ] = useState(null);
+
+    const [
+        nearbySearchLoading,
+        setNearbySearchLoading,
+    ] = useState(false);
+
+    const [
+        nearbySearchError,
+        setNearbySearchError,
+    ] = useState("");
+
+    const geocodeRequest = useRef(0);
+    const geocodeController = useRef(null);
 
     /*
      * Progressive search: whether the
@@ -761,9 +796,7 @@ export function Landing() {
              * User clicked something protected
              * before signing in.
              */
-            if (
-                destination && loggedInUser?.role === "admin"
-            ) {
+            if (destination && loggedInUser?.role) {
                 navigate(
                     destination
                 );
@@ -889,48 +922,64 @@ export function Landing() {
     /* =====================================================
        PROGRESSIVE SEARCH
 
-       The query is carried over to the browse page as a
-       ?search= parameter. Guests hit the login modal first;
-       the destination (including the query) is preserved and
-       navigated to right after a successful login.
+       Searches run directly on the public landing-page inventory. Guests can
+       discover apartments first; account access is required only when they
+       select an apartment's details.
     ===================================================== */
 
     const runLandingSearch =
-        (rawQuery) => {
+        async (rawQuery) => {
             const query =
                 rawQuery.trim();
 
+            geocodeController.current?.abort();
+            geocodeRequest.current += 1;
 
-            const params =
-                new URLSearchParams();
+            setAppliedLandingSearch(query);
+            setActiveNearbySearch(null);
+            setNearbySearchError("");
+            setNearbySearchLoading(false);
+            setSearchFocused(false);
+            setActiveSuggestionIndex(-1);
 
+            const intent = parseNearbySearchIntent(query);
+            if (!intent) return;
 
-            if (query) {
-                params.set(
-                    "search",
-                    query
+            const controller = new AbortController();
+            const request = ++geocodeRequest.current;
+            geocodeController.current = controller;
+
+            setNearbySearchLoading(true);
+
+            try {
+                const location = await geocodeLocationWithinLaPaz(
+                    intent.target,
+                    controller.signal
                 );
+
+                if (request === geocodeRequest.current) {
+                    setActiveNearbySearch({
+                        target: intent.target,
+                        location,
+                    });
+                }
+            } catch (error) {
+                if (error instanceof DOMException && error.name === "AbortError") {
+                    return;
+                }
+
+                if (request === geocodeRequest.current) {
+                    setNearbySearchError(
+                        error instanceof GeocodingError
+                            ? error.message
+                            : "Unable to search that location."
+                    );
+                }
+            } finally {
+                if (request === geocodeRequest.current) {
+                    setNearbySearchLoading(false);
+                }
             }
-
-
-            const destination =
-                params.toString()
-                    ? `/browse?${params.toString()}`
-                    : "/browse";
-
-
-            if (!user) {
-                openLogin(
-                    destination
-                );
-
-                return;
-            }
-
-
-            navigate(
-                destination
-            );
         };
 
 
@@ -938,7 +987,7 @@ export function Landing() {
         (event) => {
             event.preventDefault();
 
-            runLandingSearch(
+            void runLandingSearch(
                 landingSearch
             );
         };
@@ -1063,10 +1112,20 @@ export function Landing() {
                 -1
             );
 
-            runLandingSearch(
+            void runLandingSearch(
                 suggestion.label
             );
         };
+
+
+    const updateLandingSearch = (value) => {
+        geocodeController.current?.abort();
+        geocodeRequest.current += 1;
+        setLandingSearch(value);
+        setActiveNearbySearch(null);
+        setNearbySearchError("");
+        setNearbySearchLoading(false);
+    };
 
 
     const handleSearchKeyDown =
@@ -1425,6 +1484,75 @@ export function Landing() {
                                 amenities all in one place.
                             </p>
 
+                            <div className="landing-search-box">
+                                <form className="landing-search-form" onSubmit={handleLandingSearch}>
+                                    <div className="landing-search-row">
+                                        <div className="landing-search-field">
+                                            <Search className="landing-search-icon" aria-hidden="true" />
+                                            <input
+                                                type="search"
+                                                value={landingSearch}
+                                                onChange={(event) => updateLandingSearch(event.target.value)}
+                                                onFocus={() => setSearchFocused(true)}
+                                                onBlur={() => window.setTimeout(() => setSearchFocused(false), 150)}
+                                                onKeyDown={handleSearchKeyDown}
+                                                placeholder="Search apartments or try near ISAT U"
+                                                className="landing-search-input"
+                                                aria-label="Search apartments"
+                                                aria-controls="landing-search-suggestions"
+                                                aria-expanded={showSuggestions}
+                                                aria-activedescendant={
+                                                    activeSuggestionIndex >= 0
+                                                        ? `landing-search-suggestion-${activeSuggestionIndex}`
+                                                        : undefined
+                                                }
+                                            />
+                                        </div>
+
+                                        <Button type="submit" className="landing-search-button" disabled={nearbySearchLoading}>
+                                            {nearbySearchLoading ? "Searching..." : "Search"}
+                                        </Button>
+                                    </div>
+                                </form>
+
+                                {showSuggestions && (
+                                    <div
+                                        id="landing-search-suggestions"
+                                        className="landing-suggestions-panel"
+                                        role="listbox"
+                                        aria-label="Search suggestions"
+                                    >
+                                        {visibleSuggestions.map((suggestion, index) => (
+                                            <button
+                                                key={`${suggestion.kind}-${suggestion.label}`}
+                                                id={`landing-search-suggestion-${index}`}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={activeSuggestionIndex === index}
+                                                data-active={activeSuggestionIndex === index}
+                                                className="landing-suggestion-button"
+                                                onMouseDown={(event) => event.preventDefault()}
+                                                onClick={() => selectSuggestion(suggestion)}
+                                            >
+                                                {suggestion.kind === "location" ? (
+                                                    <MapPin className="landing-suggestion-icon" aria-hidden="true" />
+                                                ) : (
+                                                    <Building2 className="landing-suggestion-icon" aria-hidden="true" />
+                                                )}
+                                                <span className="landing-suggestion-label">{suggestion.label}</span>
+                                                <span className="landing-suggestion-count">{suggestion.count}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {nearbySearchError && (
+                                <p className="landing-search-message landing-search-message-error" role="alert">
+                                    {nearbySearchError}
+                                </p>
+                            )}
+
 
                         </div>
 
@@ -1445,6 +1573,9 @@ export function Landing() {
                     onBrowseClick={
                         handleProtectedAction
                     }
+                    searchQuery={appliedLandingSearch}
+                    activeNearbySearch={activeNearbySearch}
+                    nearbySearchError={nearbySearchError}
                 />
 
             </div>
