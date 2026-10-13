@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchApartmentInspectionDetails, verifyAndPublishApartment } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
@@ -454,11 +454,23 @@ export function AdminDashboard() {
     const handleApproveAndPublishApartment = async (apartment) => {
         if (!apartment.id || !user?.id || publishingApartmentId)
             return;
-        if (typeof window !== "undefined" && !window.confirm("Verify and publish this listing? It will become visible to tenants."))
+        const landlordId = text(apartment.landlordId ?? apartment.landlord_id ?? selectedLandlord?.id);
+        if (!landlordId) {
+            toast.error("Unable to identify the listing landlord.");
+            return;
+        }
+        if (typeof window !== "undefined" && !window.confirm("Verify this landlord and publish this listing? It will become visible to tenants."))
             return;
         setPublishingApartmentId(apartment.id);
         try {
-            await verifyAndPublishApartment(apartment.id, user.id);
+            await verifyLandlordAndPublishApartment(apartment.id, landlordId, user.id);
+            const verifiedLandlordFields = {
+                isVerified: true,
+                is_verified: true,
+                status: "verified",
+                verification_status: "verified",
+                landlord_status: "verified",
+            };
             const updatedApartment = {
                 ...apartment,
                 isPublished: true,
@@ -470,6 +482,8 @@ export function AdminDashboard() {
                 deletedAt: undefined,
                 deleted_at: null,
             };
+            setLandlords((current) => current.map((item) => text(item.id) === landlordId ? { ...item, ...verifiedLandlordFields } : item));
+            setSelectedLandlord((current) => current?.id === landlordId ? { ...current, ...verifiedLandlordFields } : current);
             setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
             setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
             setSelectedLandlordProperty((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);

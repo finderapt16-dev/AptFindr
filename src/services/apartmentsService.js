@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { apartmentFormValuesToInsertRow, apartmentFormValuesToUpdateRow, apartmentRowToApartment, } from '../data/apartments';
-import { isTenantRole } from './authService';
+import { isTenantRole, verifyLandlord as verifyLandlordAccount } from './authService';
 import { hasValidBusinessPermit } from './businessPermitRenewalService';
 import { optimizeImageForUpload } from '../utils/imageUpload';
 import { isTenantVisibleApartment } from '../utils/listingVisibility';
@@ -299,6 +299,22 @@ export const deleteApartment = async (id) => {
         throw new Error(unwrapErrorMessage(error, 'Unable to delete apartment.'));
     }
 };
+const assertApartmentHasAvailableRoom = async (id) => {
+    const { data: roomRows, error: roomError } = await supabase
+        .from('apartment_rooms')
+        .select('id, status, is_occupied')
+        .eq('apartment_id', id);
+    if (roomError) {
+        throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available units before publishing.'));
+    }
+    const hasAvailableRoom = (roomRows ?? []).some((room) => {
+        const roomStatus = room.status ?? (room.is_occupied ? 'occupied' : 'available');
+        return roomStatus === 'available' && room.is_occupied !== true;
+    });
+    if (!hasAvailableRoom) {
+        throw new Error('Add at least one available unit before publishing this apartment. Tenants can only browse apartments with an available unit.');
+    }
+};
 export const updateApartmentPublication = async (id, isPublished, actorUserId) => {
     if (!id) {
         throw new Error('Missing apartment ID. Please refresh and try again.');
@@ -313,20 +329,7 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
     }
     const landlordId = isRecord(before) && typeof before.landlord_id === 'string' ? before.landlord_id : '';
     if (isPublished) {
-        const { data: roomRows, error: roomError } = await supabase
-            .from('apartment_rooms')
-            .select('id, status, is_occupied')
-            .eq('apartment_id', id);
-        if (roomError) {
-            throw new Error(unwrapErrorMessage(roomError, 'Unable to verify available units before publishing.'));
-        }
-        const hasAvailableRoom = (roomRows ?? []).some((room) => {
-            const roomStatus = room.status ?? (room.is_occupied ? 'occupied' : 'available');
-            return roomStatus === 'available' && room.is_occupied !== true;
-        });
-        if (!hasAvailableRoom) {
-            throw new Error('Add at least one available unit before publishing this apartment. Tenants can only browse apartments with an available unit.');
-        }
+        await assertApartmentHasAvailableRoom(id);
         const { data: landlord, error: landlordError } = await supabase
             .from('public_landlords')
             .select('id, is_verified, status, verification_status')
@@ -390,6 +393,21 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
 // permit checks in updateApartmentPublication have passed.
 export const verifyAndPublishApartment = async (id, actorUserId) => {
     return updateApartmentPublication(id, true, actorUserId);
+};
+// This is the one admin action for a submitted listing. It uses the existing
+// landlord-verification RPC first, then the guarded publication RPC. The latter
+// still enforces the available-unit and current business-permit requirements.
+export const verifyLandlordAndPublishApartment = async (id, landlordId, actorUserId) => {
+    if (!landlordId) {
+        throw new Error('Unable to identify the listing landlord.');
+    }
+    await assertApartmentHasAvailableRoom(id);
+    const validBusinessPermit = await hasValidBusinessPermit(landlordId);
+    if (!validBusinessPermit) {
+        throw new Error('This apartment cannot be published because the landlord does not have a valid approved business permit for the current permit year.');
+    }
+    await verifyLandlordAccount(landlordId, true);
+    return verifyAndPublishApartment(id, actorUserId);
 };
 export const updateApartmentStatus = async (id, status = 'available', actorUserId) => {
     const { data: before } = await supabase.from('apartments').select('status').eq('id', id).maybeSingle();
