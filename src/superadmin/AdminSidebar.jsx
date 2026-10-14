@@ -5,6 +5,7 @@ import {
   Flag,
   Gavel,
   LogOut,
+  MessageCircleQuestion,
   Settings,
   UserRound,
   Users,
@@ -21,6 +22,7 @@ const MAIN_ITEMS = [
 const MANAGEMENT_ITEMS = [
   { icon: Flag, label: "Reports", section: "reports" },
   { icon: Gavel, label: "Appeals", section: "appeals" },
+  { icon: MessageCircleQuestion, label: "Contact Support", section: "support" },
   { icon: Wrench, label: "Maintenance", section: "maintenance" },
 ];
 
@@ -34,6 +36,7 @@ export function AdminSidebar({
   pendingReports,
   activeAppealsCount,
   unreadNotifsCount,
+  unreadSupportCount,
   user,
   navigateToAdminModule,
   navigateToSupport,
@@ -41,7 +44,7 @@ export function AdminSidebar({
   onNavigate,
 }) {
   const countFor = (section, label) => {
-    if (label === "Help & Support") return 0;
+    if (section === "support") return unreadSupportCount;
     if (section === "reports") return pendingReports;
     if (section === "appeals") return activeAppealsCount;
     if (section === "notifications") return unreadNotifsCount;
@@ -53,7 +56,7 @@ export function AdminSidebar({
       <p>{label}</p>
       {items.map(({ icon: Icon, label: itemLabel, section }) => {
         const count = countFor(section, itemLabel);
-        const isCurrent = itemLabel === "Help & Support"
+        const isCurrent = section === "support"
           ? isSupportView
           : activeSection === section && !(isSupportView && section === "notifications");
 
@@ -63,7 +66,7 @@ export function AdminSidebar({
             className={`admin-figma-sidebar-item ${isCurrent ? "is-active" : ""}`}
             key={itemLabel}
             onClick={() => {
-              if (itemLabel === "Help & Support") {
+              if (section === "support") {
                 navigateToSupport?.();
               } else {
                 navigateToAdminModule(section);

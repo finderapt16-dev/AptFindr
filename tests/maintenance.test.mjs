@@ -56,3 +56,11 @@ test('maintenance has a dedicated super admin sidebar destination', () => {
   assert.match(sidebarSource, /label: "Maintenance", section: "maintenance"/);
   assert.match(helperSource, /"maintenance"/);
 });
+
+test('tenant and landlord support requests have a dedicated super admin inbox', () => {
+  const sidebarSource = readFileSync(new URL('../src/superadmin/AdminSidebar.jsx', import.meta.url), 'utf8');
+  const dashboardSource = readFileSync(new URL('../src/superadmin/AdminDashboard.jsx', import.meta.url), 'utf8');
+  assert.match(sidebarSource, /label: "Contact Support", section: "support"/);
+  assert.match(dashboardSource, /fetchSupportTicketById/);
+  assert.match(dashboardSource, /activeSection === "support" \? category === "support" : category !== "support"/);
+});

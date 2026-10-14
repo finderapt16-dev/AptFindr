@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isAdminRole } from "@/services/authService";
 import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
-import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
+import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchSupportTicketById, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
@@ -1150,8 +1150,11 @@ export function AdminDashboard() {
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
     const unreadNotifsCount = adminNotifs.filter((n) => {
         const category = getNotificationCategory(n);
-        return category !== "reports" && category !== "appeals" && !n.is_deleted && !isNotificationRead(n);
+        return category !== "reports" && category !== "appeals" && category !== "support" && !n.is_deleted && !isNotificationRead(n);
     }).length;
+    const unreadSupportCount = adminNotifs.filter((notification) => getNotificationCategory(notification) === "support"
+        && !notification.is_deleted
+        && !isNotificationRead(notification)).length;
     const restoreAdminModule = (section) => {
         if (!user?.id)
             return;
@@ -1286,12 +1289,14 @@ export function AdminDashboard() {
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
-    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
+    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} unreadSupportCount={unreadSupportCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
         const notificationCenterItems = adminNotifs.filter((notification) => {
             const category = getNotificationCategory(notification);
-            return category !== "reports" && category !== "appeals";
+            if (category === "reports" || category === "appeals")
+                return false;
+            return activeSection === "support" ? category === "support" : category !== "support";
         });
         const activeNotifications = notificationCenterItems.filter((notification) => !notification.is_deleted);
         const unreadCount = activeNotifications.filter((notification) => !isNotificationRead(notification)).length;
@@ -1335,7 +1340,7 @@ export function AdminDashboard() {
         const visibleNotifs = filteredNotifs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
         return (<div className="admin-dashboard-container-3">
         <header>
-          <h1 className="admin-dashboard-notifications">{activeSection === "support" ? "Help & Support" : "Notifications"}</h1>
+          <h1 className="admin-dashboard-notifications">{activeSection === "support" ? "Contact Support" : "Notifications"}</h1>
           <p className="admin-dashboard-text-6">{activeSection === "support" ? "Review submitted support requests and open their details." : "Review system updates and items relevant to administration."}</p>
         </header>
         <div className="admin-dashboard-row-17">
@@ -1848,9 +1853,9 @@ export function AdminDashboard() {
           </button>
           {PortalSidebarContent({ onNavigate: () => setSidebarOpen(false) })}
         </aside>}
-        {!isFocusedWorkspace && <button aria-label={`Open navigation, ${unreadNotifsCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        {!isFocusedWorkspace && <button aria-label={`Open navigation, ${unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="admin-dashboard-menu-icon"/>
-          {unreadNotifsCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + pendingReports + activeAppealsCount}</span>}
+          {unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount}</span>}
         </button>}
         <div className="app-shell-main">
           <main className="app-shell-content app-shell-content-mobile-nav">
