@@ -1147,7 +1147,6 @@ export function AdminDashboard() {
     const pendingReports = reports.filter((r) => r.status === "pending").length;
     const activeAppealsCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
-<<<<<<< HEAD
     const unreadNotifsCount = adminNotifs.filter((n) => {
         const category = getNotificationCategory(n);
         return category !== "reports" && category !== "appeals" && category !== "support" && !n.is_deleted && !isNotificationRead(n);
@@ -1155,9 +1154,6 @@ export function AdminDashboard() {
     const unreadSupportCount = adminNotifs.filter((notification) => getNotificationCategory(notification) === "support"
         && !notification.is_deleted
         && !isNotificationRead(notification)).length;
-=======
-    const unreadNotifsCount = adminNotifs.filter((n) => !n.is_deleted && !isNotificationRead(n)).length;
->>>>>>> fca2044 (redeploy updates)
     const restoreAdminModule = (section) => {
         if (!user?.id)
             return;
@@ -1295,16 +1291,12 @@ export function AdminDashboard() {
     const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} unreadSupportCount={unreadSupportCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
-<<<<<<< HEAD
         const notificationCenterItems = adminNotifs.filter((notification) => {
             const category = getNotificationCategory(notification);
             if (category === "reports" || category === "appeals")
                 return false;
             return activeSection === "support" ? category === "support" : category !== "support";
         });
-=======
-        const notificationCenterItems = adminNotifs;
->>>>>>> fca2044 (redeploy updates)
         const activeNotifications = notificationCenterItems.filter((notification) => !notification.is_deleted);
         const unreadCount = activeNotifications.filter((notification) => !isNotificationRead(notification)).length;
         const selectNotificationView = (status, type = "all") => {
