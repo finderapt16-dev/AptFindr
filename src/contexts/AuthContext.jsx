@@ -222,7 +222,7 @@ export function AuthProvider({ children }) {
         authRequestIdRef.current += 1;
         setIsLoading(true);
         setCurrentUser(null);
-        void logoutUser().catch((logoutError) => {
+        return logoutUser().catch((logoutError) => {
             console.warn('Failed to sign out from Supabase Auth:', logoutError);
         }).finally(() => {
             persistCurrentUser(null);

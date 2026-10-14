@@ -43,6 +43,13 @@ test('the app gate applies only to tenant and landlord roles', () => {
   assert.match(rootSource, /subscribeToMaintenanceSettings/);
 });
 
+test('back to home waits for the auth session to sign out', () => {
+  const rootSource = readFileSync(new URL('../src/components/Root.jsx', import.meta.url), 'utf8');
+  const authContextSource = readFileSync(new URL('../src/contexts/AuthContext.jsx', import.meta.url), 'utf8');
+  assert.match(rootSource, /await logout\(\);\s*window\.location\.assign\("\/"\)/);
+  assert.match(authContextSource, /return logoutUser\(\)\.catch/);
+});
+
 test('maintenance has a dedicated super admin sidebar destination', () => {
   const sidebarSource = readFileSync(new URL('../src/superadmin/AdminSidebar.jsx', import.meta.url), 'utf8');
   const helperSource = readFileSync(new URL('../src/superadmin/adminDashboardHelpers.jsx', import.meta.url), 'utf8');
