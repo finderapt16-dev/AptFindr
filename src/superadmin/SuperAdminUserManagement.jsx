@@ -249,7 +249,8 @@ export function SuperAdminUserManagement({ currentUser, onUsersChanged }) {
                 const fallbackUsers = await fetchDashboardUsers();
                 setUsers(fallbackUsers.filter((account) => ["admin", "super_admin", "landlord", "tenant"].includes(String(account.role ?? "").trim().toLowerCase())));
                 setReadOnlyFallback(true);
-                setError("Secure user-management service is not deployed yet. Showing existing accounts in view-only mode.");
+                const reason = loadError instanceof Error ? loadError.message : "The secure service could not be reached.";
+                setError(`Secure user-management service is unavailable: ${reason} Showing existing accounts in view-only mode.`);
             }
             catch (fallbackError) {
                 console.error("Unable to load fallback user list:", fallbackError);

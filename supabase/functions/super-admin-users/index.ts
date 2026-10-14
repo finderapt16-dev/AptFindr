@@ -55,6 +55,18 @@ function isInactive(status: unknown) {
   return INACTIVE_STATUSES.has(asString(status).toLowerCase());
 }
 
+function verifiedJwtAssuranceLevel(accessToken: string) {
+  try {
+    const payload = accessToken.split(".")[1];
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return asString(JSON.parse(atob(padded))?.aal).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
 function publicUser(row: JsonRecord | null) {
   if (!row) return null;
   return {
@@ -365,6 +377,7 @@ Deno.serve(async (req) => {
     if (!authorization.toLowerCase().startsWith("bearer ")) {
       return badRequest("Missing authenticated user session.", 401);
     }
+    const accessToken = authorization.slice(7).trim();
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false },
@@ -372,10 +385,9 @@ Deno.serve(async (req) => {
     const service = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: authData, error: authError } = await userClient.auth.getUser();
+    const { data: authData, error: authError } = await userClient.auth.getUser(accessToken);
     if (authError || !authData?.user) return badRequest("Invalid authenticated session.", 401);
-    const { data: assurance, error: assuranceError } = await userClient.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (assuranceError || assurance?.currentLevel !== "aal2") {
+    if (verifiedJwtAssuranceLevel(accessToken) !== "aal2") {
       return badRequest("Multi-factor authentication is required for Super Admin operations.", 403);
     }
     const actor = await getActor(service, authData.user.id);

@@ -75,8 +75,8 @@ test('super admin mutations do not silently ignore audit log failures', () => {
 });
 
 test('the Super Admin Edge Function requires an AAL2 session', () => {
-  assert.match(edgeFunctionSource, /getAuthenticatorAssuranceLevel\(\)/);
-  assert.match(edgeFunctionSource, /assurance\?\.currentLevel !== "aal2"/);
+  assert.match(edgeFunctionSource, /getUser\(accessToken\)/);
+  assert.match(edgeFunctionSource, /verifiedJwtAssuranceLevel\(accessToken\) !== "aal2"/);
 });
 
 test('every Super Admin route is blocked by the MFA gate until verification', () => {
