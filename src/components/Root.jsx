@@ -2,23 +2,52 @@ import { useLocation, useOutlet } from "react-router-dom";
 import { Toaster } from "./ui/sonner";
 import { ApartmentsProvider } from "../contexts/ApartmentsContext";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "@/services/supabaseClient";
+import { fetchMaintenanceSettings, isMaintenanceActive, subscribeToMaintenanceSettings } from "@/services/maintenanceService";
 import { useEffect, useState } from "react";
 function RootContent() {
     const location = useLocation();
     const outlet = useOutlet();
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [maintenance, setMaintenance] = useState(null);
+    const [maintenanceReady, setMaintenanceReady] = useState(false);
     useEffect(() => {
-        if (!user) {
+        if (!user?.role || !["tenant", "landlord"].includes(user.role)) {
             setMaintenance(null);
+            setMaintenanceReady(true);
             return;
         }
-        const load = () => void supabase.from("platform_status").select("status,title,message,expected_end_at").eq("id", true).maybeSingle().then(({ data }) => setMaintenance(data));
-        load();
-        const channel = supabase.channel("platform-maintenance-gate").on("postgres_changes", { event: "*", schema: "public", table: "platform_status" }, load).subscribe();
-        return () => { void supabase.removeChannel(channel); };
-    }, [user?.id]);
+        let active = true;
+        const load = async () => {
+            try {
+                const settings = await fetchMaintenanceSettings();
+                if (active)
+                    setMaintenance(settings.find((setting) => setting.portal === user.role) ?? null);
+            }
+            catch (error) {
+                console.error("Unable to load portal maintenance status:", error);
+                if (active)
+                    setMaintenance(null);
+            }
+            finally {
+                if (active)
+                    setMaintenanceReady(true);
+            }
+        };
+        setMaintenanceReady(false);
+        void load();
+        const unsubscribe = subscribeToMaintenanceSettings(load);
+        const timer = window.setInterval(load, 60_000);
+        return () => {
+            active = false;
+            window.clearInterval(timer);
+            unsubscribe();
+        };
+    }, [user?.id, user?.role]);
+    const maintenanceActive = isMaintenanceActive(maintenance);
+    const returnHome = async () => {
+        await logout();
+        window.location.assign("/");
+    };
     // Key the outlet on the path only: query strings carry the active
     // dashboard section (?section=notifications), so remounting on them would
     // tear down every screen on each section switch, resetting section state
@@ -29,7 +58,7 @@ function RootContent() {
           <div className="app-root-orb app-root-orb-bottom"/>
         </div>)}
       <main key={location.pathname}>
-        {maintenance?.status === "maintenance" ? <div className="maintenance-page"><section className="maintenance-card"><div className="maintenance-icon">🛠</div><h1 className="maintenance-title">{maintenance.title || "AptFindr is temporarily under maintenance"}</h1><p className="maintenance-message">{maintenance.message || "We're performing system updates to improve platform reliability. Please try again later."}</p>{maintenance.expected_end_at && <p className="maintenance-time">Expected availability: {new Date(maintenance.expected_end_at).toLocaleString("en-PH")}</p>}</section></div> : outlet}
+        {!maintenanceReady ? <div className="auth-status-page auth-session-loading">Checking portal availability...</div> : maintenanceActive ? <div className="maintenance-page"><section className="maintenance-card"><img className="maintenance-wordmark" src="/aptfindr-wordmark.png?v=2" alt="AptFindr"/><h1 className="maintenance-title">{maintenance.title || "Under Maintenance"}</h1><p className="maintenance-message">{maintenance.message || "We're currently performing scheduled maintenance to improve your experience."}</p><p className="maintenance-followup">Please check back again shortly.</p>{maintenance.ends_at && <p className="maintenance-time">Expected availability: {new Date(maintenance.ends_at).toLocaleString("en-PH")}</p>}<div className="maintenance-actions"><button type="button" className="maintenance-home" onClick={() => void returnHome()}>Back to Home</button><button type="button" className="maintenance-refresh" onClick={() => window.location.reload()}>Refresh Page</button></div><footer className="maintenance-footer">Thank you for your patience.</footer></section></div> : outlet}
       </main>
       <Toaster
         position="top-center"

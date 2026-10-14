@@ -1,0 +1,198 @@
+.maintenance-control {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.maintenance-control-heading {
+    align-items: center;
+    display: flex;
+    gap: 0.85rem;
+}
+
+.maintenance-control-heading > span,
+.maintenance-control-icon {
+    align-items: center;
+    background: #e0f2fe;
+    color: #0369a1;
+    display: inline-flex;
+    height: 2.6rem;
+    justify-content: center;
+    width: 2.6rem;
+}
+
+.maintenance-control-heading svg,
+.maintenance-control-icon svg {
+    height: 1.25rem;
+    width: 1.25rem;
+}
+
+.maintenance-control-heading h2,
+.maintenance-control-portal h3 {
+    color: #0f172a;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.maintenance-control-heading p,
+.maintenance-control-portal header p {
+    color: #64748b;
+    font-size: 0.85rem;
+    margin: 0.2rem 0 0;
+}
+
+.maintenance-control-portals {
+    display: grid;
+    gap: 1rem;
+}
+
+.maintenance-control-portal {
+    border: 1px solid #dbe5ef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.maintenance-control-portal > header {
+    align-items: center;
+    background: #f8fafc;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: auto 1fr auto;
+    padding: 1rem;
+}
+
+.maintenance-control-fields {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 1rem;
+}
+
+.maintenance-control-fields label {
+    color: #475569;
+    display: grid;
+    font-size: 0.8rem;
+    font-weight: 700;
+    gap: 0.4rem;
+}
+
+.maintenance-control-fields small {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.maintenance-control-fields input,
+.maintenance-control-fields textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #0f172a;
+    font: inherit;
+    padding: 0.7rem 0.75rem;
+    resize: vertical;
+}
+
+.maintenance-control-wide {
+    grid-column: 1 / -1;
+}
+
+.maintenance-control-portal footer {
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.85rem 1rem;
+}
+
+.maintenance-control-portal footer svg {
+    height: 1rem;
+    width: 1rem;
+}
+
+.maintenance-control-switch {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.maintenance-control-switch input {
+    height: 1px;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+}
+
+.maintenance-control-switch span {
+    background: #cbd5e1;
+    border-radius: 999px;
+    height: 1.4rem;
+    position: relative;
+    transition: background 160ms ease;
+    width: 2.5rem;
+}
+
+.maintenance-control-switch span::after {
+    background: #fff;
+    border-radius: 50%;
+    content: "";
+    height: 1rem;
+    left: 0.2rem;
+    position: absolute;
+    top: 0.2rem;
+    transition: transform 160ms ease;
+    width: 1rem;
+}
+
+.maintenance-control-switch input:checked + span {
+    background: #0284c7;
+}
+
+.maintenance-control-switch input:checked + span::after {
+    transform: translateX(1.1rem);
+}
+
+.maintenance-control-switch input:focus-visible + span {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
+}
+
+.maintenance-control-switch strong {
+    color: #334155;
+    font-size: 0.8rem;
+    min-width: 1.5rem;
+}
+
+.maintenance-control-loading {
+    align-items: center;
+    color: #64748b;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    min-height: 8rem;
+}
+
+.maintenance-control-loading svg,
+.maintenance-control-spin {
+    animation: maintenance-control-spin 0.8s linear infinite;
+}
+
+@keyframes maintenance-control-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 700px) {
+    .maintenance-control-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .maintenance-control-wide {
+        grid-column: auto;
+    }
+
+    .maintenance-control-portal > header {
+        grid-template-columns: auto 1fr;
+    }
+
+    .maintenance-control-switch {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+}

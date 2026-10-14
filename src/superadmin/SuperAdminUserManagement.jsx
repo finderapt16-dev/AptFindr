@@ -6,6 +6,8 @@ import {
     fetchSuperAdminManagedUserDetails,
     fetchSuperAdminManagedUsers,
     getManagedUserInitials,
+    getManagedUserProfileFields,
+    getManagedUserRelatedRecords,
     getManagedUserRoleLabel,
     getManagedUserStatusLabel,
     isManageableAccountRole,
@@ -127,7 +129,13 @@ function UserFormModal({ mode, form, setForm, saving, onClose, onSubmit }) {
 function DetailModal({ details, loading, onClose }) {
     const user = details?.user;
     const dependencies = details?.dependencyCounts ?? {};
-    const profile = details?.adminProfile ?? details?.landlordProfile ?? details?.tenantProfile ?? null;
+    const profileFields = getManagedUserProfileFields(user, details);
+    const relatedRecords = getManagedUserRelatedRecords(user, dependencies);
+    const formatProfileValue = (value) => {
+        if (typeof value === "boolean")
+            return value ? "Yes" : "No";
+        return String(value);
+    };
     return (
         <div className="super-admin-users-modal-backdrop" role="presentation">
             <section className="super-admin-users-modal super-admin-users-details" role="dialog" aria-modal="true" aria-labelledby="super-admin-user-details-title">
@@ -148,14 +156,23 @@ function DetailModal({ details, loading, onClose }) {
                         <div><span>Status</span><strong>{getManagedUserStatusLabel(user)}</strong></div>
                         <div><span>Contact</span><strong>{user.mobile || user.mobileNumber || "Not provided"}</strong></div>
                         <div><span>Created</span><strong>{user.created_at ? new Date(user.created_at).toLocaleString("en-PH") : "Not available"}</strong></div>
-                        {profile && <div className="super-admin-users-detail-wide"><span>Profile Row</span><code>{JSON.stringify(profile, null, 2)}</code></div>}
+                        {profileFields.length > 0 && (
+                            <div className="super-admin-users-detail-wide super-admin-users-profile-details">
+                                <span>Role Profile</span>
+                                <dl>
+                                    {profileFields.map((field) => (
+                                        <div key={field.key}>
+                                            <dt>{field.label}</dt>
+                                            <dd>{formatProfileValue(field.value)}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </div>
+                        )}
                         <div className="super-admin-users-detail-wide">
                             <span>Related Records</span>
                             <ul>
-                                <li>Apartment listings: {dependencies.apartments ?? 0}</li>
-                                <li>Reports: {dependencies.reports ?? 0}</li>
-                                <li>Appeals: {dependencies.appeals ?? 0}</li>
-                                <li>Favorites: {dependencies.favorites ?? 0}</li>
+                                {relatedRecords.map((record) => <li key={record.key}>{record.label}: {record.count}</li>)}
                             </ul>
                         </div>
                     </div>

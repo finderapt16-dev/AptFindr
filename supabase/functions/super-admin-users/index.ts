@@ -146,19 +146,21 @@ async function countWhere(service: any, table: string, column: string, userId: s
 }
 
 async function dependencyCounts(service: any, userId: string) {
-  const [apartments, reportsByUser, reportsByReporter, reportsByLandlord, appeals, favorites] = await Promise.all([
+  const [apartments, reportsByUser, reportsByReporter, reportsByLandlord, appeals, favorites, auditLogs] = await Promise.all([
     countWhere(service, "apartments", "landlord_id", userId),
     countWhere(service, "reports", "user_id", userId),
     countWhere(service, "reports", "reporter_id", userId),
     countWhere(service, "reports", "landlord_id", userId),
     countWhere(service, "appeals", "landlord_id", userId),
     countWhere(service, "favorites", "user_id", userId),
+    countWhere(service, "audit_logs", "admin_id", userId),
   ]);
   return {
     apartments,
     reports: reportsByUser + reportsByReporter + reportsByLandlord,
     appeals,
     favorites,
+    auditLogs,
   };
 }
 
@@ -248,7 +250,12 @@ async function createUser(service: any, actor: JsonRecord, input: JsonRecord) {
     department: role === "admin" ? asString(input.department) || null : null,
     admin_level: role === "admin" ? "Admin" : null,
   };
-  const { data, error } = await service.from("app_users").insert(appUserPayload).select("*").single();
+  // The auth.users trigger may have already created this profile.
+  const { data, error } = await service
+    .from("app_users")
+    .upsert(appUserPayload, { onConflict: "id" })
+    .select("*")
+    .single();
   if (error || !data) {
     await service.auth.admin.deleteUser(authUser.id).catch(() => undefined);
     throw new Error(error?.message || "Unable to create the app user profile.");

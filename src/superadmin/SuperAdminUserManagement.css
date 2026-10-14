@@ -471,16 +471,30 @@
     padding: 0.9rem;
 }
 
-.super-admin-users-detail-grid code {
-    background: #0f172a;
-    border-radius: 8px;
-    color: #e2e8f0;
-    display: block;
+.super-admin-users-profile-details dl {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0.25rem 0 0;
+}
+
+.super-admin-users-profile-details dl div {
+    background: #fff;
+    border: 1px solid #e5edf5;
+    padding: 0.75rem;
+}
+
+.super-admin-users-profile-details dt {
+    color: #64748b;
     font-size: 0.75rem;
-    max-height: 12rem;
-    overflow: auto;
-    padding: 0.85rem;
-    white-space: pre-wrap;
+    font-weight: 700;
+}
+
+.super-admin-users-profile-details dd {
+    color: #0f172a;
+    font-weight: 700;
+    margin: 0.25rem 0 0;
+    overflow-wrap: anywhere;
 }
 
 .super-admin-users-detail-grid ul {
@@ -538,7 +552,8 @@
 
     .super-admin-users-stats,
     .super-admin-users-form,
-    .super-admin-users-detail-grid {
+    .super-admin-users-detail-grid,
+    .super-admin-users-profile-details dl {
         grid-template-columns: 1fr;
     }
 

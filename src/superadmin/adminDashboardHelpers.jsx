@@ -33,7 +33,7 @@ export const NOTICE_TYPES = [
     "Account suspended pending review",
     "Permit re-verification required",
 ];
-export const ADMIN_DASHBOARD_SECTIONS = new Set(["users", "overview", "notifications", "support", "landlords", "apartments", "reports", "appeals", "admininfo"]);
+export const ADMIN_DASHBOARD_SECTIONS = new Set(["users", "overview", "notifications", "support", "landlords", "apartments", "reports", "appeals", "maintenance", "admininfo"]);
 export const isAdminModule = (value) => ADMIN_DASHBOARD_SECTIONS.has(value);
 export function toAdminProfileState(source) {
     const name = String(source?.name ?? "").trim();

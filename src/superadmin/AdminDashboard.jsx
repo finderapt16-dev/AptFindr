@@ -30,6 +30,7 @@ import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdmi
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
 import { SuperAdminUserManagement } from './SuperAdminUserManagement';
+import { MaintenanceControl } from './MaintenanceControl';
 const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
     if (account.role !== "landlord" || !account.id)
         return account;
@@ -1499,14 +1500,6 @@ export function AdminDashboard() {
                   </CardContent></Card>
                 </section>
                 <section className="admin-settings-reference-column">
-                  <Card className="admin-settings-reference-card"><CardContent>
-                    <div className="admin-settings-reference-card-heading"><h2>System Settings</h2><p>System-wide settings are unavailable until a secured settings service is configured.</p></div>
-                    <fieldset disabled hidden className="admin-settings-system-fields">
-                      <label>Application Name<input defaultValue="AptFindr"/></label><label>Support Email<input type="email" defaultValue="support@aptfindr.com"/></label><label>Contact Number<input defaultValue="0912 345 6789"/></label><label>Address<input defaultValue="La Paz, Iloilo City"/></label>
-                      <label>Default Currency<select defaultValue="PHP"><option value="PHP">Philippine Peso (₱)</option></select></label><label>Permit Renewal Reminder<select defaultValue="30"><option value="30">30 days before expiration</option></select></label><label>Max Apartment Photos<input type="number" defaultValue="10" min="1"/></label><label>Items Per Page<input type="number" defaultValue="10" min="1"/></label>
-                    </fieldset>
-                    <div className="admin-settings-card-actions"><Button disabled className="admin-settings-primary-button">System settings unavailable</Button></div>
-                  </CardContent></Card>
                   <Card className="admin-settings-reference-card admin-settings-admins-card"><CardContent>
                     <div className="admin-settings-admins-heading"><div><h2>System Administrators</h2><p>View administrator accounts. Invitations and role changes require a secured backend.</p></div><Button disabled className="admin-settings-add-admin">Admin invitations unavailable</Button></div>
                     <div className="admin-settings-admin-table-wrap"><table className="admin-settings-admin-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead><tbody>
@@ -1835,6 +1828,7 @@ export function AdminDashboard() {
         apartments: renderApartments,
         reports: renderReports,
         appeals: renderAppeals,
+        maintenance: () => <main className="admin-settings-reference"><header className="admin-settings-reference-header"><h1>Maintenance</h1><p>Control portal availability for tenants and landlords.</p></header><Card className="admin-settings-reference-card"><CardContent><MaintenanceControl currentUser={user}/></CardContent></Card></main>,
         history: renderHistory,
         admininfo: renderAdminInfo,
     };

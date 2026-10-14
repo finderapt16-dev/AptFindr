@@ -8,6 +8,7 @@ import {
   Settings,
   UserRound,
   Users,
+  Wrench,
 } from "lucide-react";
 
 const MAIN_ITEMS = [
@@ -20,6 +21,7 @@ const MAIN_ITEMS = [
 const MANAGEMENT_ITEMS = [
   { icon: Flag, label: "Reports", section: "reports" },
   { icon: Gavel, label: "Appeals", section: "appeals" },
+  { icon: Wrench, label: "Maintenance", section: "maintenance" },
 ];
 
 const ACCOUNT_ITEMS = [

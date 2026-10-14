@@ -51,6 +51,55 @@ export function summarizeManagedUsers(users) {
     }, { total: 0, admin: 0, landlord: 0, tenant: 0 });
 }
 
+const PROFILE_FIELDS_BY_ROLE = {
+    admin: [
+        ["department", "Department"],
+        ["admin_level", "Admin Level"],
+    ],
+    landlord: [
+        ["business_name", "Business Name"],
+        ["business_permit_number", "Business Permit Number"],
+        ["permit_number", "Permit Number"],
+        ["id_number", "ID Number"],
+        ["years_active", "Years Active"],
+        ["total_units", "Total Units"],
+        ["is_verified", "Verified"],
+    ],
+    tenant: [],
+};
+
+export function getManagedUserProfileFields(user, details = {}) {
+    const role = normalizeManagedRole(user?.role);
+    const profile = role === "admin"
+        ? details.adminProfile
+        : role === "landlord"
+            ? details.landlordProfile
+            : details.tenantProfile;
+    if (!profile)
+        return [];
+    return PROFILE_FIELDS_BY_ROLE[role]
+        .filter(([key]) => profile[key] !== null && profile[key] !== undefined && profile[key] !== "")
+        .map(([key, label]) => ({ key, label, value: profile[key] }));
+}
+
+export function getManagedUserRelatedRecords(user, dependencyCounts = {}) {
+    const role = normalizeManagedRole(user?.role);
+    if (role === "landlord") {
+        return [
+            { key: "apartments", label: "Apartment listings", count: dependencyCounts.apartments ?? 0 },
+            { key: "reports", label: "Reports", count: dependencyCounts.reports ?? 0 },
+            { key: "appeals", label: "Appeals", count: dependencyCounts.appeals ?? 0 },
+        ];
+    }
+    if (role === "admin") {
+        return [{ key: "auditLogs", label: "Administrative actions", count: dependencyCounts.auditLogs ?? 0 }];
+    }
+    return [
+        { key: "reports", label: "Reports", count: dependencyCounts.reports ?? 0 },
+        { key: "favorites", label: "Saved favorites", count: dependencyCounts.favorites ?? 0 },
+    ];
+}
+
 export function subscribeToManagedUserRealtime({ onAccountChange, onSubscriptionStatus } = {}) {
     const channel = supabase
         .channel(`super-admin-user-management-${Date.now()}-${Math.random().toString(36).slice(2)}`)
