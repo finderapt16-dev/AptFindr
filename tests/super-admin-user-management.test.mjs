@@ -64,6 +64,13 @@ test('user creation safely merges a profile created by the auth trigger', () => 
   assert.doesNotMatch(edgeFunctionSource, /\.insert\(appUserPayload\)/);
 });
 
+test('super admin mutations do not silently ignore audit log failures', () => {
+  assert.match(edgeFunctionSource, /const \{ error \} = await service\.from\("audit_logs"\)\.insert/);
+  assert.match(edgeFunctionSource, /if \(error\) \{\s*throw new Error/);
+  assert.match(edgeFunctionSource, /MUTATING_ACTIONS\.has\(action\)/);
+  assert.match(edgeFunctionSource, /"super_admin_user_action_attempted"/);
+});
+
 test('related records are relevant to the selected account role', () => {
   const counts = { apartments: 2, reports: 3, appeals: 4, favorites: 5, auditLogs: 6 };
   assert.deepEqual(

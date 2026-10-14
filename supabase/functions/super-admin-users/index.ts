@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const MANAGED_ROLES = new Set(["admin", "landlord", "tenant"]);
 const INACTIVE_STATUSES = new Set(["disabled", "inactive", "deactivated", "deleted"]);
+const MUTATING_ACTIONS = new Set(["create", "update", "set-status", "delete"]);
 
 type JsonRecord = Record<string, unknown>;
 
@@ -97,13 +98,16 @@ async function uniqueUsername(service: any, name: string, email: string) {
 }
 
 async function audit(service: any, actorId: string, action: string, targetId: string | null, details: JsonRecord = {}) {
-  await service.from("audit_logs").insert({
+  const { error } = await service.from("audit_logs").insert({
     admin_id: actorId,
     action,
     target_type: "user",
     target_id: targetId,
     details,
   });
+  if (error) {
+    throw new Error(error.message || "The administrative action could not be recorded in the audit log.");
+  }
 }
 
 async function getActor(service: any, callerAuthId: string) {
@@ -373,6 +377,11 @@ Deno.serve(async (req) => {
     const actor = await getActor(service, authData.user.id);
     const body = await req.json().catch(() => ({}));
     const action = asString(body.action);
+    if (MUTATING_ACTIONS.has(action)) {
+      await audit(service, String(actor.id), "super_admin_user_action_attempted", asString(body.userId) || null, {
+        requested_action: action,
+      });
+    }
     if (action === "list") return await listUsers(service);
     if (action === "get") return await getUserDetails(service, asString(body.userId));
     if (action === "create") return await createUser(service, actor, (body.user ?? {}) as JsonRecord);
