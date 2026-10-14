@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { dashboardPathForRole } from "../services/authService";
+import { SuperAdminMfaGate } from "./SuperAdminMfaGate";
 export default function ProtectedRoute({ children, allowedRoles }) {
     const { user, isAuthenticated, isLoading } = useAuth();
     if (isLoading) {
@@ -25,6 +26,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     }
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
         return <Navigate to={dashboardPathForRole(user.role)} replace/>;
+    }
+    if (user.role === "super_admin") {
+        return <SuperAdminMfaGate>{children}</SuperAdminMfaGate>;
     }
     return <>{children}</>;
 }

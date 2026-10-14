@@ -374,6 +374,10 @@ Deno.serve(async (req) => {
     });
     const { data: authData, error: authError } = await userClient.auth.getUser();
     if (authError || !authData?.user) return badRequest("Invalid authenticated session.", 401);
+    const { data: assurance, error: assuranceError } = await userClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError || assurance?.currentLevel !== "aal2") {
+      return badRequest("Multi-factor authentication is required for Super Admin operations.", 403);
+    }
     const actor = await getActor(service, authData.user.id);
     const body = await req.json().catch(() => ({}));
     const action = asString(body.action);

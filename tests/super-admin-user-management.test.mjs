@@ -7,6 +7,9 @@ const edgeFunctionSource = readFileSync(
   new URL('../supabase/functions/super-admin-users/index.ts', import.meta.url),
   'utf8',
 );
+const protectedRouteSource = readFileSync(new URL('../src/auth/ProtectedRoute.jsx', import.meta.url), 'utf8');
+const mfaGateSource = readFileSync(new URL('../src/auth/SuperAdminMfaGate.jsx', import.meta.url), 'utf8');
+const mfaServiceSource = readFileSync(new URL('../src/services/superAdminMfaService.js', import.meta.url), 'utf8');
 const start = source.indexOf('export const MANAGED_USER_ROLES');
 const end = source.indexOf('async function invokeSuperAdminUsers', start);
 const body = source
@@ -69,6 +72,19 @@ test('super admin mutations do not silently ignore audit log failures', () => {
   assert.match(edgeFunctionSource, /if \(error\) \{\s*throw new Error/);
   assert.match(edgeFunctionSource, /MUTATING_ACTIONS\.has\(action\)/);
   assert.match(edgeFunctionSource, /"super_admin_user_action_attempted"/);
+});
+
+test('the Super Admin Edge Function requires an AAL2 session', () => {
+  assert.match(edgeFunctionSource, /getAuthenticatorAssuranceLevel\(\)/);
+  assert.match(edgeFunctionSource, /assurance\?\.currentLevel !== "aal2"/);
+});
+
+test('every Super Admin route is blocked by the MFA gate until verification', () => {
+  assert.match(protectedRouteSource, /user\.role === "super_admin"/);
+  assert.match(protectedRouteSource, /<SuperAdminMfaGate>\{children\}<\/SuperAdminMfaGate>/);
+  assert.match(mfaServiceSource, /currentLevel === "aal2"/);
+  assert.match(mfaServiceSource, /challengeAndVerify/);
+  assert.match(mfaServiceSource, /AptFindr Super Admin \$\{Date\.now\(\)\.toString\(36\)\}/);
 });
 
 test('related records are relevant to the selected account role', () => {
