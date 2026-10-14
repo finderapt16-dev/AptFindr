@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Bell, Building2, Flag, LayoutDashboard, RefreshCw, Shield, Users } from "lucide-react";
+import { AlertTriangle, Bell, Building2, Flag, RefreshCw, Shield, UserRound, Users } from "lucide-react";
 export const NAV_MAIN = [
-    { icon: LayoutDashboard, label: "Dashboard", section: "overview" },
-    { icon: Bell, label: "Notifications", section: "notifications" },
-    { icon: Users, label: "Landlords", section: "landlords" },
+    { icon: Users, label: "User Management", section: "users" },
+    { icon: UserRound, label: "Landlords", section: "landlords" },
     { icon: Building2, label: "Apartments", section: "apartments" },
+    { icon: Bell, label: "Notifications", section: "notifications" },
     { icon: Flag, label: "Reports", section: "reports" },
     { icon: AlertTriangle, label: "Appeals", section: "appeals" },
 ];
@@ -33,7 +33,7 @@ export const NOTICE_TYPES = [
     "Account suspended pending review",
     "Permit re-verification required",
 ];
-export const ADMIN_DASHBOARD_SECTIONS = new Set(["overview", "notifications", "support", "landlords", "apartments", "reports", "appeals", "admininfo"]);
+export const ADMIN_DASHBOARD_SECTIONS = new Set(["users", "overview", "notifications", "support", "landlords", "apartments", "reports", "appeals", "admininfo"]);
 export const isAdminModule = (value) => ADMIN_DASHBOARD_SECTIONS.has(value);
 export function toAdminProfileState(source) {
     const name = String(source?.name ?? "").trim();

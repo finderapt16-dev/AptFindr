@@ -472,7 +472,7 @@ function requiresPendingEmailVerification(authUser) {
 }
 function assertActiveAccount(user) {
     if (!user) return;
-    if (String(user.status).toLowerCase() === 'disabled') {
+    if (['disabled', 'inactive', 'deactivated', 'deleted'].includes(String(user.status).toLowerCase())) {
         throw new Error('This account has been deactivated. Contact an administrator.');
     }
 }

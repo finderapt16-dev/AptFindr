@@ -50,6 +50,24 @@ npm run create:super-admin
 
 The script reads `VITE_SUPABASE_URL` from `.env.local`, creates the Auth user, marks the email confirmed, writes `app_users.role = "super_admin"`, and syncs `admin_profiles.admin_level = "super_admin"`. If Supabase rejects the role, update the database role constraint/policy to allow `super_admin` and run the command again.
 
+### Super admin user management
+
+The Super Admin dashboard includes a secured User Management page at `/super-admin`. It calls the Supabase Edge Function in `supabase/functions/super-admin-users` for account listing and CRUD actions, so service-role access stays on the server.
+The page also subscribes to `app_users` realtime changes, refreshes automatically, and shows a Super Admin toast when a new managed account is created.
+
+Before using it in a deployed Supabase project:
+
+1. Review and run `supabase/migrations/20261014000000_super_admin_user_management.sql` in the Supabase SQL Editor. This also adds `app_users` to the Supabase Realtime publication when needed.
+2. Deploy the Edge Function:
+
+```powershell
+supabase functions deploy super-admin-users
+```
+
+3. Ensure the function has `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` available in Supabase function secrets.
+
+The delete action is intentionally a safe soft-delete: it disables the account, preserves apartments/reports/appeals, records dependency counts in `app_users.preferences`, and writes an audit log.
+
 ### Google OAuth profile setup
 
 Supabase's `signInWithOAuth()` does not accept custom user metadata in its `options`. AptFindr therefore assigns the tenant role and generated username **after** Google returns, once the user has accepted the signup terms. The `auth.users` trigger `handle_new_auth_user` must let Google Auth users through without trying to create an `app_users` row first; keep its existing email/password profile setup intact. Add this guard at the start of that trigger function:
