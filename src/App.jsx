@@ -33,8 +33,8 @@ const ManageRooms = lazy(() => import("./landlord/ManageRooms").then((module) =>
 // Admin
 const AdminDashboard = lazy(() => import("@/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })));
 const AdminApartmentDetail = lazy(() => import("./admin/AdminApartmentDetail").then((module) => ({ default: module.AdminApartmentDetail })));
-const SuperAdminDashboard = lazy(() => import("@/superadmin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })));
-const SuperAdminApartmentDetail = lazy(() => import("./superadmin/AdminApartmentDetail").then((module) => ({ default: module.AdminApartmentDetail })));
+const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard").then((module) => ({ default: module.AdminDashboard })));
+const SuperAdminApartmentDetail = lazy(() => import("./superadmin/SuperAdminApartmentDetail").then((module) => ({ default: module.AdminApartmentDetail })));
 const APARTMENT_LOGIN_MESSAGE = "Please sign in or create an account to view apartment details.";
 
 function TenantDashboardRoute() {

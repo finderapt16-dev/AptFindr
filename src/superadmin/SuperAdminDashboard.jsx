@@ -1,8 +1,8 @@
 import { subscribeToLiveUpdates } from "@/services/liveUpdates";
-import { AdminOverview } from "./AdminOverview";
+import { AdminOverview } from "./SuperAdminOverview";
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
-import { getAdminListingState, getLowestRoomRent } from "@/superadmin/adminListingState";
-import { clearAdminNavigationMemory, getAdminModuleLocation, getAdminModulePath, rememberAdminModuleLocation } from "@/superadmin/adminNavigationMemory";
+import { getAdminListingState, getLowestRoomRent } from "@/superadmin/superAdminListingState";
+import { clearAdminNavigationMemory, getAdminModuleLocation, getAdminModulePath, rememberAdminModuleLocation } from "@/superadmin/superAdminNavigationMemory";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,18 +19,18 @@ import { Activity, AlertOctagon, AlertTriangle, Archive, Bell, BellRing, Calenda
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AdminApartments } from './AdminApartments';
-import { AdminAppeals } from './AdminAppeals';
-import { AdminLandlordVerification } from './AdminLandlordVerification';
-import { AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
-import { AdminApartmentVerification } from './AdminApartmentVerification';
-import { AdminVerificationDocumentViewer } from './AdminVerificationDocumentViewer';
-import { AdminRequestChangesDialog } from './AdminRequestChangesDialog';
-import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
-import { AdminReports } from './AdminReports';
-import { AdminSidebar } from './AdminSidebar';
+import { AdminApartments } from './SuperAdminApartments';
+import { AdminAppeals } from './SuperAdminAppeals';
+import { AdminLandlordVerification } from './SuperAdminLandlordVerification';
+import { AdminLandlordVerificationReview } from './SuperAdminLandlordVerificationReview';
+import { AdminApartmentVerification } from './SuperAdminApartmentVerification';
+import { AdminVerificationDocumentViewer } from './SuperAdminVerificationDocumentViewer';
+import { AdminRequestChangesDialog } from './SuperAdminRequestChangesDialog';
+import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './superAdminDashboardHelpers';
+import { AdminReports } from './SuperAdminReports';
+import { AdminSidebar } from './SuperAdminSidebar';
 import { SuperAdminUserManagement } from './SuperAdminUserManagement';
-import { MaintenanceControl } from './MaintenanceControl';
+import { MaintenanceControl } from './SuperAdminMaintenanceControl';
 const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
     if (account.role !== "landlord" || !account.id)
         return account;

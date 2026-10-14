@@ -1,4 +1,4 @@
-import "./AdminApartmentVerification.css";
+import "./SuperAdminApartmentVerification.css";
 import { ArrowLeft, Check, Clock3, Eye, FileText, MapPin, Phone, UserRound, X } from "lucide-react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 

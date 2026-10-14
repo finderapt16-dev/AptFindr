@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Eye, FileText, Mail, MapPin, Phone } from "luc
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { fetchUserById } from "@/services/dashboardSupabaseService";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import "./ApprovedAppealDetail.css";
+import "./SuperAdminApprovedAppealDetail.css";
 
 const date = value => value ? new Date(value).toLocaleDateString("en-PH", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", year: "numeric" }) : "Not recorded";
 const size = bytes => bytes ? bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB` : "Size unavailable";

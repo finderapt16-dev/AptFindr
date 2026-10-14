@@ -1,4 +1,4 @@
-import "./AdminVerificationDocumentViewer.css";
+import "./SuperAdminVerificationDocumentViewer.css";
 import { ArrowLeft, Download, Minus, Plus } from "lucide-react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { useState } from "react";

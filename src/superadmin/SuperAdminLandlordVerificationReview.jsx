@@ -1,4 +1,4 @@
-import "./AdminLandlordVerificationReview.css";
+import "./SuperAdminLandlordVerificationReview.css";
 import { ArrowLeft, CalendarDays, Mail, MapPin, Phone, UserRound } from "lucide-react";
 
 const value = (input, fallback = "Not provided") => String(input ?? "").trim() || fallback;

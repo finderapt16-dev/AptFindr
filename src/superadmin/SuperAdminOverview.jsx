@@ -1,4 +1,4 @@
-import "./AdminOverview.css";
+import "./SuperAdminOverview.css";
 import { useEffect, useState } from "react";
 import { Building2, UserRound, FileText, Gavel } from "lucide-react";
 import { fetchRecentActivityLogs } from "@/services/dashboardSupabaseService";

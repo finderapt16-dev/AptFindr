@@ -8,7 +8,7 @@ import {
 import { Building2, Loader2, Save, Users, Wrench } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import "./MaintenanceControl.css";
+import "./SuperAdminMaintenanceControl.css";
 
 const PORTAL_META = {
     tenant: { label: "Tenant Portal", icon: Users },

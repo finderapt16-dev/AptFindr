@@ -1,6 +1,6 @@
 import { MapView } from "@/components/MapView";
-import { AdminApartmentInspectionReview } from "@/superadmin/AdminApartmentInspectionReview";
-import { AdminSidebar } from "@/superadmin/AdminSidebar";
+import { AdminApartmentInspectionReview } from "@/superadmin/SuperAdminApartmentInspectionReview";
+import { AdminSidebar } from "@/superadmin/SuperAdminSidebar";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { LogoutConfirmation } from "@/components/LogoutConfirmation";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,8 @@ import { VERIFICATION_DOCUMENT_TYPES, fetchApartmentVerificationDocuments, } fro
 import { formatAuditLogForDisplay } from "@/utils/auditLogDisplay";
 import { fetchApartmentRatings, subscribeToApartmentRatings } from "@/services/apartmentRatingsService";
 import { supabase } from "@/services/supabaseClient";
-import { clearAdminNavigationMemory, rememberAdminModuleLocation } from "@/superadmin/adminNavigationMemory";
-import { getAdminAvailabilityLabel, getAdminListingLabel, getAdminRoomState } from "@/superadmin/adminListingState";
+import { clearAdminNavigationMemory, rememberAdminModuleLocation } from "@/superadmin/superAdminNavigationMemory";
+import { getAdminAvailabilityLabel, getAdminListingLabel, getAdminRoomState } from "@/superadmin/superAdminListingState";
 import { AlertTriangle, ArrowLeft, Bell, Building2, CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, Eye, EyeOff, FileSearch, FileText, Flag, Home, Image as ImageIcon, Lock, LayoutDashboard, LogOut, Mail, Menu, MapPin, MessageSquare, Phone, Send, ShieldCheck, Settings, Star, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";

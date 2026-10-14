@@ -1,4 +1,4 @@
-import "./AdminLandlordVerification.css";
+import "./SuperAdminLandlordVerification.css";
 
 import {
   CheckCircle2,

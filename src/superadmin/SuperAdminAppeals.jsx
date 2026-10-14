@@ -1,7 +1,7 @@
-import "./AdminCaseList.css";
-import { ApprovedAppealDetail } from "./ApprovedAppealDetail";
+import "./SuperAdminCaseList.css";
+import { ApprovedAppealDetail } from "./SuperAdminApprovedAppealDetail";
 import { useEffect, useState } from "react";
-import "./AdminReports.css";
+import "./SuperAdminReports.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { canArchiveAppealStatus, updateAppealStatus } from "@/services/dashboard
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { AlertTriangle, Archive, ArrowLeft, Bell, Building2, Calendar, Check, ChevronLeft, ChevronRight, Clock3, Eye, FileText, Flag, Mail, MapPin, Phone, RotateCcw, Search, Trash2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
-import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, text } from './adminDashboardHelpers';
+import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, text } from './superAdminDashboardHelpers';
 export function AdminAppeals({ landlords, reports, archivedReports, violations, allApartments, appealSearch, appealArchiveView, archivedAppeals, appeals, appealTypeFilter, appealSort, selectedAppeal, user, appealStatus, appealResponse, setAppeals, setSelectedAppeal, setAppealResponse, setAppealStatus, setActiveSection, unreadNotifsCount, setSelectedReport, navigate, apartmentDetailBasePath, portalBasePath, setCaseAction, setAppealSearch, setAppealTypeFilter, setAppealSort, setAppealArchiveView, }) {
     const [page, setPage] = useState(1);
     useEffect(() => { setPage(1); }, [appealSearch, appealTypeFilter, appealSort, appealArchiveView]);

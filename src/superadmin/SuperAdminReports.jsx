@@ -1,11 +1,11 @@
-import { ReportReviewDetail } from "./ReportReviewDetail";
-import "./AdminCaseList.css";
-import "./AdminReports.css";
+import { ReportReviewDetail } from "./SuperAdminReportReviewDetail";
+import "./SuperAdminCaseList.css";
+import "./SuperAdminReports.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { Archive, ArrowLeft, Bell, Building2, Calendar, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, FileX, Clock, Eye, Flag, Mail, Phone, RotateCcw, Search, Trash2, User as UserIcon, X, XCircle } from "lucide-react";
-import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, SEVERITY_LABEL, text } from './adminDashboardHelpers';
+import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, SEVERITY_LABEL, text } from './superAdminDashboardHelpers';
 export function AdminReports({ reports, reportArchiveView, archivedReports, reportSearch, allApartments, reportStatusFilter, reportTypeFilter, reportSort, selectedReport, selectedReportDetails, setSelectedReport, setActiveSection, unreadNotifsCount, setViewingUserProfile, navigate, apartmentDetailBasePath, portalBasePath, selectedReportEvidence, onReportUpdated, resolveReport, setDismissReportModal, setCaseAction, setReportSearch, setReportStatusFilter, setReportTypeFilter, setReportSort, setReportArchiveView, dismissReportModal, dismissReport, viewingUserProfile, }) {
     const [page, setPage] = useState(1);
     const reportStatus = (report) => {

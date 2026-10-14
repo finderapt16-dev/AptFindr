@@ -51,22 +51,22 @@ test('back to home waits for the auth session to sign out', () => {
 });
 
 test('maintenance has a dedicated super admin sidebar destination', () => {
-  const sidebarSource = readFileSync(new URL('../src/superadmin/AdminSidebar.jsx', import.meta.url), 'utf8');
-  const helperSource = readFileSync(new URL('../src/superadmin/adminDashboardHelpers.jsx', import.meta.url), 'utf8');
+  const sidebarSource = readFileSync(new URL('../src/superadmin/SuperAdminSidebar.jsx', import.meta.url), 'utf8');
+  const helperSource = readFileSync(new URL('../src/superadmin/superAdminDashboardHelpers.jsx', import.meta.url), 'utf8');
   assert.match(sidebarSource, /label: "Maintenance", section: "maintenance"/);
   assert.match(helperSource, /"maintenance"/);
 });
 
 test('tenant and landlord support requests have a dedicated super admin inbox', () => {
-  const sidebarSource = readFileSync(new URL('../src/superadmin/AdminSidebar.jsx', import.meta.url), 'utf8');
-  const dashboardSource = readFileSync(new URL('../src/superadmin/AdminDashboard.jsx', import.meta.url), 'utf8');
+  const sidebarSource = readFileSync(new URL('../src/superadmin/SuperAdminSidebar.jsx', import.meta.url), 'utf8');
+  const dashboardSource = readFileSync(new URL('../src/superadmin/SuperAdminDashboard.jsx', import.meta.url), 'utf8');
   assert.match(sidebarSource, /label: "Contact Support", section: "support"/);
   assert.match(dashboardSource, /fetchSupportTicketById/);
   assert.match(dashboardSource, /activeSection === "support" \? category === "support" : category !== "support"/);
 });
 
 test('super admin notifications expose operational event filters', () => {
-  const dashboardSource = readFileSync(new URL('../src/superadmin/AdminDashboard.jsx', import.meta.url), 'utf8');
+  const dashboardSource = readFileSync(new URL('../src/superadmin/SuperAdminDashboard.jsx', import.meta.url), 'utf8');
   for (const filter of ['Accounts', 'Properties', 'Approvals', 'Archived']) {
     assert.match(dashboardSource, new RegExp(`label: "${filter}"`));
   }

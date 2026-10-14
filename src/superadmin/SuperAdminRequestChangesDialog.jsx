@@ -1,4 +1,4 @@
-import "./AdminRequestChangesDialog.css";
+import "./SuperAdminRequestChangesDialog.css";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";

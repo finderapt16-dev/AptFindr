@@ -1,5 +1,5 @@
 import { getUnitAmenities } from "@/tenant/apartmentAmenities";
-import "./AdminApartmentInspectionReview.css";
+import "./SuperAdminApartmentInspectionReview.css";
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Check, Clock3, FileText, MapPin, Trash2, UserRound, X } from "lucide-react";
 import { MapView } from "@/components/MapView";
 import { ImageWithFallback } from "@/components/ImageWithFallback";

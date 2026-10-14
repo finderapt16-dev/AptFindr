@@ -9,8 +9,8 @@ import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { getImageUrl } from "@/utils/images";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { ReportPropertyInspection } from "@/components/ReportPropertyInspection";
-import { EvidenceViewer } from "./EvidenceViewer";
-import "./ReportReviewDetail.css";
+import { EvidenceViewer } from "./SuperAdminEvidenceViewer";
+import "./SuperAdminReportReviewDetail.css";
 
 const labels = { pending: "Open", open: "Open", under_review: "Under Review", in_review: "Under Review", resolved: "Resolved", dismissed: "Dismissed" };
 const fileSize = bytes => bytes ? (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`) : "Size unavailable";
