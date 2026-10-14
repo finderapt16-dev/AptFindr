@@ -221,9 +221,10 @@ export function getRecommendedApartments({
      * - Verification
      * - Listing recency
      */
-    return rankApartments(
-        apartments,
-        preferences
-    );
+    
+    // Hide apartments with zero matching score.
+    return rankApartments(apartments, preferences)
+        .filter((apartment) => Number(apartment.matchScore) > 0);
+
 }
 

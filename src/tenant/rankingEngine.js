@@ -1,4 +1,4 @@
-import { getNormalizedRoomAmenities, normalizeAmenity } from "./apartmentAmenities.js";
+import { getNormalizedRoomAmenities } from "./apartmentAmenities.js";
 import { isRoomAvailable } from "../utils/listingVisibility.js";
 
 // These percentages are separate from the demand-ranking algorithm. Only
@@ -43,12 +43,6 @@ const selectedAmenityNames = (preferences) => {
     const selected = PREFERENCE_AMENITIES
         .filter(([key]) => preferences?.[key] === true)
         .map(([, amenity]) => amenity);
-
-    // "Others" is an existing choice in the form. It is meaningful only when
-    // the tenant supplies a name, so it never creates a fabricated match.
-    if (preferences?.other === true && String(preferences.otherAmenities ?? "").trim()) {
-        selected.push(normalizeAmenity(preferences.otherAmenities));
-    }
 
     return [...new Set(selected.filter(Boolean))];
 };
