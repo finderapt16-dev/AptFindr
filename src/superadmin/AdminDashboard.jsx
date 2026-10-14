@@ -29,6 +29,7 @@ import { AdminRequestChangesDialog } from './AdminRequestChangesDialog';
 import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
+import { SuperAdminUserManagement } from './SuperAdminUserManagement';
 const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
     if (account.role !== "landlord" || !account.id)
         return account;
@@ -57,9 +58,9 @@ export function AdminDashboard() {
     const apartmentDetailBasePath = "/super-admin/apartment";
     const [searchParams] = useSearchParams();
     const requestedSectionValue = searchParams.get("section");
-    const requestedSection = requestedSectionValue || "overview";
+    const requestedSection = requestedSectionValue || "users";
     const isAvailableSection = (value) => isAdminModule(value);
-    const [activeSection, setActiveSection] = useState(() => isAvailableSection(requestedSection) ? requestedSection : "landlords");
+    const [activeSection, setActiveSection] = useState(() => isAvailableSection(requestedSection) ? requestedSection : "users");
     const internalSectionNavigation = useRef(null);
     useEffect(() => {
         if (isAvailableSection(requestedSection))
@@ -1826,6 +1827,7 @@ export function AdminDashboard() {
       </div>);
     };
     const sectionMap = {
+        users: () => <SuperAdminUserManagement currentUser={user} onUsersChanged={refreshUsers}/>,
         overview: () => <AdminOverview apartments={allApartments} landlords={landlords} reports={reports} appeals={appeals} onNavigate={navigateToAdminModule}/>,
         notifications: renderNotifications,
         support: renderNotifications,

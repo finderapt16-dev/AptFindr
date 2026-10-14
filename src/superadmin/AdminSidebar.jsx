@@ -4,14 +4,14 @@ import {
   Building2,
   Flag,
   Gavel,
-  LayoutDashboard,
   LogOut,
   Settings,
   UserRound,
+  Users,
 } from "lucide-react";
 
 const MAIN_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard", section: "overview" },
+  { icon: Users, label: "User Management", section: "users" },
   { icon: UserRound, label: "Landlord", section: "landlords" },
   { icon: Building2, label: "Apartments", section: "apartments" },
   { icon: Bell, label: "Notifications", section: "notifications" },
