@@ -1718,31 +1718,6 @@ if (browseMode === "popular") {
                                     </>
                                 ) : (
                                     <div className="apartment-browse-card-6">
-                                        <div className="apartment-browse-shown-on-map">
-                                            {mappedApartmentCount.toLocaleString()}{" "}
-                                            {mappedApartmentCount ===
-                                            1
-                                                ? "apartment"
-                                                : "apartments"}{" "}
-                                            shown
-                                            on map
-
-                                            {mappedApartmentCount <
-                                                filteredApartments.length && (
-                                                <span className="apartment-browse-span-2">
-                                                    Some
-                                                    listings
-                                                    could
-                                                    not
-                                                    be
-                                                    placed
-                                                    on
-                                                    the
-                                                    map.
-                                                </span>
-                                            )}
-                                        </div>
-
                                         <MapView
                                             lat={
                                                 mapCenter.lat

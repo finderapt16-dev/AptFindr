@@ -34,7 +34,10 @@ export const ReportProblem = ({ reportSubmitted, resetReport, reportForm, setRep
 
           <ReportStep step="2" title="Describe the Problem" description="Please provide as much detail as possible.">
             <div className="report-section-panel-3">
-              <textarea rows={5} maxLength={500} value={reportForm.details} onChange={(e) => setReportForm((f) => ({ ...f, details: e.target.value }))} placeholder="Describe what you experienced in as much detail as possible..." className="report-section-textarea"/>
+              <textarea name="report-details" aria-label="Describe the problem" rows={5} maxLength={500} value={reportForm.details} onChange={(e) => {
+                const details = e.target.value;
+                setReportForm((form) => ({ ...form, details }));
+              }} placeholder="Describe what you experienced in as much detail as possible..." className="report-section-textarea"/>
               <span className="report-section-500">{reportForm.details.length}/500</span>
             </div>
           </ReportStep>

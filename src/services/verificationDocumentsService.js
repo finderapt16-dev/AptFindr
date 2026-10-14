@@ -127,7 +127,7 @@ export async function fetchLandlordBusinessPermits(landlordId) {
     if (renewalsResult.error && !["42P01", "PGRST205"].includes(renewalsResult.error.code)) throw new Error(renewalsResult.error.message);
     const properties = propertiesResult.data ?? [];
     const documents = documentsResult.data ?? [];
-    const renewalEntries = await Promise.all((renewalsResult.data ?? []).map(async renewal => {
+    const renewalEntries = await Promise.all((renewalsResult.data ?? []).filter(renewal => renewal.status !== "superseded").map(async renewal => {
         const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(String(renewal.document_path), 15 * 60);
         if (error) throw new Error(error.message || "Unable to open business permit.");
         return {

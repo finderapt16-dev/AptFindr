@@ -10,7 +10,15 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     const [page, setPage] = useState(1);
     const reportStatus = (report) => {
         const status = String(report.status ?? "pending").toLowerCase().replace(/[ -]/g, "_");
-        return status === "pending" ? "open" : ["in_review", "reviewing"].includes(status) ? "under_review" : status;
+        if (["pending", "open", "pending_review", "in_review", "reviewing"].includes(status))
+            return "under_review";
+        if (["dismissed", "rejected"].includes(status))
+            return "dismissed";
+        if (["awaiting_landlord_appeal", "under_appeal", "appeal_period_expired", "evidence_deadline_expired", "appeal_dismissed_pending_final_decision"].includes(status))
+            return "in_progress";
+        if (["resolved", "closed", "approved", "completed", "resolved_appeal_approved"].includes(status))
+            return "resolved";
+        return "under_review";
     };
     const reportSource = reportArchiveView ? archivedReports : reports;
     const normalizedSearch = reportSearch.trim().toLowerCase();
@@ -18,21 +26,24 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     const getReportApartmentTitle = (report) => report.apartment_title ?? report.apartment ?? getReportApartment(report)?.title ?? "Apartment unavailable";
     const getReporterLabel = (report) => report.reporter_name ?? report.reporter ?? "Reporter unavailable";
     const visibleReports = reportSource.filter((report) => {
-        const statusFilter = reportStatusFilter === "pending" ? "open" : reportStatusFilter;
+        const statusFilter = ["pending", "open"].includes(reportStatusFilter)
+            ? "under_review"
+            : reportStatusFilter;
         const matchesStatus = reportArchiveView || statusFilter === "all" || reportStatus(report) === statusFilter;
         const matchesSearch = !normalizedSearch || [getReportApartmentTitle(report), getReporterLabel(report), report.issueType, report.issue_type, report.category, report.details, report.id, getReportApartment(report)?.landlordName]
             .some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
         return matchesStatus && matchesSearch;
     }).sort((left, right) => new Date(right.submittedAt ?? right.submitted_at ?? right.created_at ?? 0) - new Date(left.submittedAt ?? left.submitted_at ?? left.created_at ?? 0));
     useEffect(() => { setPage(1); }, [reportSearch, reportStatusFilter, reportArchiveView]);
-    const pageCount = Math.max(1, Math.ceil(visibleReports.length / 4));
+    const pageSize = 5;
+    const pageCount = Math.max(1, Math.ceil(visibleReports.length / pageSize));
     const currentPage = Math.min(page, pageCount);
-    const pageReports = visibleReports.slice((currentPage - 1) * 4, currentPage * 4);
+    const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     const summaryCards = [
         { label: "Total Reports", value: reports.length, note: "All submitted reports", icon: FileX, tone: "total", filterValue: "all" },
-        { label: "Open", value: reports.filter((report) => reportStatus(report) === "open").length, note: "Needs action", icon: Clock, tone: "open", filterValue: "open" },
-        { label: "Under Review", value: reports.filter((report) => reportStatus(report) === "under_review").length, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
+        { label: "Under Review", value: reports.filter((report) => ["under_review", "in_progress"].includes(reportStatus(report))).length, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
         { label: "Resolved", value: reports.filter((report) => reportStatus(report) === "resolved").length, note: "Closed cases", icon: CheckCircle2, tone: "resolved", filterValue: "resolved" },
+        { label: "Dismissed", value: reports.filter((report) => reportStatus(report) === "dismissed").length, note: "Closed without action", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
     ];
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -49,7 +60,7 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
 
       </div>
       <div className="reports-reference-stats" aria-label="Report status filters">{summaryCards.map(({ label, value, note, icon: Icon, tone, filterValue }) => {
-        const active = !reportArchiveView && (reportStatusFilter === "pending" ? "open" : reportStatusFilter) === filterValue;
+        const active = !reportArchiveView && (["pending", "open"].includes(reportStatusFilter) ? "under_review" : reportStatusFilter) === filterValue;
         return <button type="button" key={label} className={`reports-reference-stat ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => { setReportArchiveView(false); setReportStatusFilter(filterValue); setPage(1); }}><span className={`reports-reference-stat-icon is-${tone}`}><Icon aria-hidden="true"/></span><span><strong>{value} {label}</strong><span className="reports-reference-stat-note">{note}</span></span></button>;
       })}</div>
       <div className="reports-reference-table-wrap"><table className="reports-reference-table">
@@ -57,14 +68,14 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
         <tbody>{pageReports.map((report) => {
           const apartment = getReportApartment(report);
           const status = reportStatus(report);
-          const statusLabel = { open: "Open", under_review: "Under Review", resolved: "Resolved", dismissed: "Dismissed" }[status] ?? report.status ?? "Open";
+            const statusLabel = { under_review: "Pending Admin Review", in_progress: "Appeal / Final Review", resolved: "Resolved", dismissed: "Dismissed" }[status];
           return <tr key={report.id}>
-            <td><strong>{getReportApartmentTitle(report)}</strong><p>{apartment ? formatApartmentLocation(apartment) || "Location not provided" : report.apartment_address || "Location not provided"}</p><p>Apartment</p></td>
+            <td><strong>{getReportApartmentTitle(report)}</strong><p>{apartment ? formatApartmentLocation(apartment) || "Location not provided" : report.apartment_address || "Location not provided"}</p></td>
             <td><strong className="reports-reference-reporter">{getReporterLabel(report)}</strong><p className="reports-reference-role">{report.reporter_role ?? report.role ?? "Tenant"}</p></td>
             <td>{report.details || report.issueType || report.issue_type || report.category || "No description provided."}</td>
             <td className="reports-reference-date">{formatOptionalDate(report.submittedAt ?? report.submitted_at ?? report.created_at, { month: "short", day: "numeric", year: "numeric" })}</td>
             <td><span className={`reports-reference-status is-${status}`}>{statusLabel}</span></td>
-            <td><button className="reports-reference-review" onClick={() => setSelectedReport(report)}>{status === "open" ? "Review" : "View"}</button>{reportArchiveView && <div className="reports-reference-archive-actions"><button onClick={() => setCaseAction({ type: "restore-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Restore</button><button onClick={() => setCaseAction({ type: "delete-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Delete</button></div>}</td>
+            <td><button className="reports-reference-review" onClick={() => setSelectedReport(report)}>{status === "under_review" ? "Review" : "View"}</button>{reportArchiveView && <div className="reports-reference-archive-actions"><button onClick={() => setCaseAction({ type: "restore-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Restore</button><button onClick={() => setCaseAction({ type: "delete-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Delete</button></div>}</td>
           </tr>;
         })}{pageReports.length === 0 && <tr><td colSpan={6} className="reports-reference-empty">{reports.length === 0 && !reportArchiveView ? "No reports submitted yet." : "No reports match the selected filters."}</td></tr>}</tbody>
       </table></div>

@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import { apartmentFormValuesToInsertRow, apartmentFormValuesToUpdateRow, apartmentRowToApartment, } from '../data/apartments';
 import { isTenantRole, verifyLandlord as verifyLandlordAccount } from './authService';
-import { hasValidBusinessPermit } from './businessPermitRenewalService';
+import { approveSubmittedBusinessPermit, hasValidBusinessPermit } from './businessPermitRenewalService';
 import { optimizeImageForUpload } from '../utils/imageUpload';
 import { isTenantVisibleApartment } from '../utils/listingVisibility';
 const APARTMENT_SELECT = '*, apartment_images(url, is_primary, sort_order), apartment_rooms(*)';
@@ -394,14 +394,15 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
 export const verifyAndPublishApartment = async (id, actorUserId) => {
     return updateApartmentPublication(id, true, actorUserId);
 };
-// This is the one admin action for a submitted listing. It uses the existing
-// landlord-verification RPC first, then the guarded publication RPC. The latter
-// still enforces the available-unit and current business-permit requirements.
+// This is the one admin action for a submitted listing. The administrator's
+// review approves the submitted permit first, then verifies the landlord and
+// publishes the apartment through the existing guarded publication RPC.
 export const verifyLandlordAndPublishApartment = async (id, landlordId, actorUserId) => {
     if (!landlordId) {
         throw new Error('Unable to identify the listing landlord.');
     }
     await assertApartmentHasAvailableRoom(id);
+    await approveSubmittedBusinessPermit(landlordId);
     const validBusinessPermit = await hasValidBusinessPermit(landlordId);
     if (!validBusinessPermit) {
         throw new Error('This apartment cannot be published because the landlord does not have a valid approved business permit for the current permit year.');
@@ -563,6 +564,7 @@ export const reportApartment = async (report, userId) => {
         apartment_id: report.apartmentId,
         reason: report.reason,
         details: report.details?.trim() || null,
+        status: 'pending_review',
     });
     if (error) {
         throw new Error(unwrapErrorMessage(error, 'Unable to submit report.'));

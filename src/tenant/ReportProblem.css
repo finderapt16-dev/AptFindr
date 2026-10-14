@@ -219,6 +219,8 @@
 }
 
 .report-section-textarea {
+  box-sizing: border-box;
+  display: block;
   min-height: calc(var(--spacing, .25rem) * 40);
   resize: none;
   border-radius: var(--radius-xl, .75rem);
@@ -234,6 +236,7 @@
   transition-timing-function: var(--default-transition-timing-function, cubic-bezier(.4, 0, .2, 1));
   transition-duration: var(--default-transition-duration, .15s);
   border: 1px solid #d9d9d9;
+  cursor: text;
   outline-style: none;
 }
 
@@ -249,6 +252,7 @@
   line-height: var(--text-xs--line-height, calc(1 / .75));
   font-weight: var(--font-weight-bold, 700);
   color: var(--color-slate-400, #8a8a8a);
+  pointer-events: none;
   position: absolute;
 }
 

@@ -100,7 +100,6 @@ export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoad
         <CardContent className="apartment-card-card-content">
           <div className="apartment-card-row">
             <h3 className="apartment-card-heading">{apartment.title}</h3>
-            <span className="apartment-card-views">{views.toLocaleString()} {views === 1 ? "view" : "views"}</span>
           </div>
           <p className="apartment-card-location">{locationText}</p>
           <ApartmentRatingSummary stats={ratingStats} isLoading={ratingsLoading} compact className="apartment-card-apartment-rating-summary"/>

@@ -84,3 +84,90 @@
   .report-review-detail dl { gap: 12px; }
   .report-review-notes textarea, .report-review-status-field select { font-size: 16px; }
 }
+
+/* Report detail layout: readable desktop scale while preserving the reference layout. */
+.report-review-detail { max-width: 1280px; padding: 24px 20px 40px; border: 0; border-radius: 0; }
+.report-review-back { gap: 6px; font-size: 13px; }
+.report-review-back svg { width: 15px; height: 15px; }
+.report-review-header { margin: 10px 0 20px; }
+.report-review-header h1 { font-size: 26px; line-height: 1.2; }
+.report-review-header p { font-size: 13px; line-height: 1.45; }
+.report-review-columns { grid-template-columns: minmax(0, 2fr) minmax(310px, 1fr); gap: 20px; }
+.report-review-sidebar { display: grid; gap: 20px; min-width: 0; }
+.report-review-panel { padding: 22px; border-color: #dbe3eb; border-radius: 10px; }
+.report-review-panel h2 { margin-bottom: 18px; font-size: 18px; line-height: 1.25; }
+.report-review-detail dl { grid-template-columns: 140px minmax(0, 1fr); gap: 12px 20px; font-size: 13px; line-height: 1.45; }
+.report-review-detail dt { color: #64748b; }
+.report-review-detail dd { color: #334155; }
+.report-review-description { max-width: 510px; }
+.report-review-status { min-width: 108px; padding: 5px 12px; font-size: 11px; }
+.report-review-status.is-under_review, .report-review-status.is-in_review { background: #fff7ed; color: #f59e0b; }
+.report-review-apartment-info h3 { margin: 0 0 12px; font-size: 15px; }
+.report-review-apartment-info dl { grid-template-columns: 104px minmax(0, 1fr); gap: 10px 14px; }
+.report-review-publish { min-width: 0; padding: 4px 12px; font-size: 11px; }
+.report-review-evidence-heading button { font-size: 13px; font-weight: 600; }
+.report-review-evidence-grid { gap: 12px; }
+.report-review-file-preview { height: 112px; margin-bottom: 6px; border-radius: 7px; }
+.report-review-file-preview svg { width: 30px; height: 30px; }
+.report-review-file strong, .report-review-file small { font-size: 11px; line-height: 1.35; }
+.report-review-actions h2 { margin-bottom: 16px; }
+.report-review-action-buttons { gap: 10px; margin-top: 0; }
+.report-review-action-buttons button { min-height: 42px; gap: 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.report-review-action-buttons svg { width: 15px; height: 15px; }
+.report-review-under-review { background: #0ea5e9; border-color: #0ea5e9 !important; }
+.report-review-request { color: #0284c7; border-color: #38bdf8 !important; background: #fff; }
+.report-review-resolve { color: #ef4444; border-color: #fda4af !important; background: #fff1f2; }
+.report-review-empty { margin: 0; font-size: 13px; }
+.report-review-decision h2 { margin-bottom: 4px; }
+.report-review-decision-date { margin: 0 0 14px; color: #64748b; font-size: 12px; }
+.report-review-decision-result { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; }
+.report-review-decision-result svg { width: 23px; height: 23px; padding: 2px; border: 2px solid currentColor; border-radius: 999px; box-sizing: border-box; }
+.report-review-decision.is-resolved .report-review-decision-result { background: #dcfce7; color: #22c55e; }
+.report-review-decision.is-dismissed .report-review-decision-result { background: #fff1f2; color: #fb7185; }
+.report-review-decision .report-review-archive { margin-top: 12px; font-size: 12px; color: #475569; }
+
+@media (max-width: 850px) {
+  .report-review-detail { padding-inline: 16px; }
+  .report-review-columns { grid-template-columns: 1fr; }
+}
+
+/* Keep the right rail self-contained. The detail component renders the
+   apartment image and metadata directly, so these styles prevent that content
+   from spilling into the admin action card at desktop widths. */
+.report-review-sidebar > .report-review-panel { overflow: hidden; }
+.report-review-apartment { display: grid; gap: 16px; align-content: start; }
+.report-review-apartment > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #eaf0f6;
+}
+.report-review-apartment-info { min-width: 0; }
+.report-review-apartment-info h3 { overflow-wrap: anywhere; }
+.report-review-apartment-info > p {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.report-review-apartment-info > p svg { flex: 0 0 auto; margin-top: 2px; }
+.report-review-actions > p,
+.report-review-decision > p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.report-review-actions .report-review-action-buttons { margin-top: 16px; }
+.report-review-actions .report-review-action-buttons button { width: 100%; }
+
+@media (max-width: 850px) {
+  .report-review-apartment > img { max-height: 300px; }
+}

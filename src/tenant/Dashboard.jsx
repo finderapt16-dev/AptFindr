@@ -18,7 +18,7 @@ import { uploadReportEvidence } from "@/services/reportEvidenceService";
 import { getAvailableRoomCount, isTenantVisibleApartment } from "@/utils/listingVisibility";
 import { hasMeaningfulPreferences, rankApartments } from "@/tenant/rankingEngine";
 import { AlertTriangle, Menu, Loader2, RotateCcw, X, ChevronRight, Clock, Heart, LayoutDashboard, Search, Sparkles, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState } from "@/tenant/EmptyState";
@@ -56,6 +56,7 @@ export function Dashboard() {
     });
     const [reportEvidenceFiles, setReportEvidenceFiles] = useState([]);
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+    const appliedReportApartmentRef = useRef("");
     const [supportSubmitted, setSupportSubmitted] = useState(false);
     const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
     const [supportForm, setSupportForm] = useState({
@@ -140,6 +141,22 @@ export function Dashboard() {
     const publishedApartments = useMemo(() => {
         return allApartments.filter(isTenantVisibleApartment);
     }, [allApartments]);
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const apartmentId = params.get("apartment");
+        if (readDashboardSection(location.search) !== "report" || !apartmentId) {
+            appliedReportApartmentRef.current = "";
+            return;
+        }
+        // Only accept a currently visible listing. This keeps a crafted URL
+        // from selecting a listing the tenant cannot browse or report here.
+        if (appliedReportApartmentRef.current === apartmentId)
+            return;
+        if (publishedApartments.some((apartment) => String(apartment.id) === apartmentId)) {
+            appliedReportApartmentRef.current = apartmentId;
+            setReportForm((current) => ({ ...current, apartment: apartmentId }));
+        }
+    }, [location.search, publishedApartments]);
     const ratingSummary = useMemo(() => summarizeApartmentRatings(dashboardRatingRows), [dashboardRatingRows]);
     const isApartmentAvailable = isTenantVisibleApartment;
     const availableApartments = useMemo(() => {
@@ -296,6 +313,11 @@ export function Dashboard() {
         setReportSubmitted(false);
         setReportForm({ apartment: "", details: "", contact: user?.email || "" });
         setReportEvidenceFiles([]);
+        const params = new URLSearchParams(location.search);
+        if (params.has("apartment")) {
+            params.delete("apartment");
+            navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+        }
     };
     const handleSupportSubmit = async () => {
         if (isSubmittingSupport)

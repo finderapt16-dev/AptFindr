@@ -1,9 +1,10 @@
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
-import { Bell, Check, MoreVertical, Trash2 } from "lucide-react";
+import { Bell, Check, CheckCircle2, MoreVertical, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { notificationKind, relativeTime, reportIdOf, resolveActionUrl } from "@/tenant/notificationPresentation";
 export function Notifications({ state }) {
     const navigate = useNavigate();
@@ -70,6 +71,7 @@ export function Notifications({ state }) {
             setIsMarkingAllRead(false);
         }
     };
+    const selectedReportIsResolved = selectedReport?.type === "report_resolved" || String(selectedReport?.payload?.status || "").startsWith("resolved");
     return <div className="tenant-notifications-container">
     <section className="tenant-notifications-section">
       <div className="tenant-notifications-panel"><h1 className="tenant-notifications-notifications">Notifications</h1><p className="tenant-notifications-text">Stay updated on your reports and apartment activity.</p></div>
@@ -95,6 +97,17 @@ export function Notifications({ state }) {
             })}</div>}
     </section>
 
-    {selectedReport && <section className="tenant-notifications-section-3" aria-live="polite"><div className="tenant-notifications-row-5"><div><p className="tenant-notifications-my-report-status">My report status</p><h2 className="tenant-notifications-heading">{selectedReport.title || "Report update"}</h2><p className="tenant-notifications-text-3">{selectedReport.message}</p><p className="tenant-notifications-updated">Updated {relativeTime(selectedReport.created_at ?? selectedReport.createdAt)}</p></div><button onClick={() => setSelectedReport(null)} className="tenant-notifications-close">Close</button></div></section>}
+    <Dialog open={Boolean(selectedReport)} onOpenChange={(open) => !open && setSelectedReport(null)}>
+      <DialogContent className="tenant-report-status-dialog">
+        <DialogHeader>
+          {selectedReportIsResolved && <span className="tenant-report-status-dialog-icon"><CheckCircle2 aria-hidden="true"/></span>}
+          <p className="tenant-notifications-my-report-status">My report status</p>
+          <DialogTitle>{selectedReportIsResolved ? "Your report has been resolved" : selectedReport?.title || "Report update"}</DialogTitle>
+          <DialogDescription>{selectedReport?.message || "Your report status has been updated."}</DialogDescription>
+        </DialogHeader>
+        {selectedReport && <p className="tenant-report-status-dialog-time">Updated {relativeTime(selectedReport.created_at ?? selectedReport.createdAt)}</p>}
+        <div className="tenant-report-status-dialog-actions"><Button onClick={() => setSelectedReport(null)}>Done</Button></div>
+      </DialogContent>
+    </Dialog>
   </div>;
 }

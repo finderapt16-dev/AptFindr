@@ -481,6 +481,18 @@
   border: 1px solid #d9d9d9;
 }
 
+/* Clicking a report notification now opens a concise status confirmation,
+   rather than placing the selected report below the notification list. */
+.tenant-report-status-dialog { max-width:440px; padding:28px; }
+.tenant-report-status-dialog [data-slot="dialog-header"] { align-items:center; text-align:center; }
+.tenant-report-status-dialog-icon { display:grid; width:52px; height:52px; margin:0 auto 10px; place-items:center; border-radius:50%; color:#079647; background:#e8f9ef; }
+.tenant-report-status-dialog-icon svg { width:27px; height:27px; }
+.tenant-report-status-dialog [data-slot="dialog-title"] { margin-top:3px; color:#172033; font-size:21px; line-height:1.25; }
+.tenant-report-status-dialog [data-slot="dialog-description"] { max-width:350px; margin:6px auto 0; color:#607087; font-size:14px; line-height:1.55; }
+.tenant-report-status-dialog-time { margin:16px 0 0; color:#8291a5; font-size:12px; text-align:center; }
+.tenant-report-status-dialog-actions { display:flex; justify-content:center; margin-top:22px; }
+.tenant-report-status-dialog-actions .ui-button { min-width:116px; }
+
 /* Compact inbox layout, shared visually with landlord notifications. */
 .tenant-notifications-container {
   max-width: 1200px;

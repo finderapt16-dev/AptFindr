@@ -65,6 +65,15 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
         e.preventDefault();
         e.stopPropagation();
     };
+    const openFilePicker = () => {
+        fileInputRef.current?.click();
+    };
+    const handleDropzoneKeyDown = (e) => {
+        if (e.key !== "Enter" && e.key !== " ")
+            return;
+        e.preventDefault();
+        openFilePicker();
+    };
     const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -92,44 +101,21 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
                 toast.error(`${file.name}: ${error}`);
                 continue;
             }
-            const fileId = `evidence-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const fileType = getFileTypeCategory(file.type);
-            const mimeType = file.type;
-            // Create preview for images
-            if (file.type.startsWith("image/")) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const preview = event.target?.result;
-                    onEvidenceChange([
-                        ...evidenceFiles,
-                        {
-                            id: fileId,
-                            file,
-                            fileName: file.name,
-                            fileType,
-                            mimeType,
-                            fileSize: file.size,
-                            preview,
-                            uploadedAt: new Date(),
-                        },
-                    ]);
-                };
-                reader.readAsDataURL(file);
-            }
-            else {
-                validFiles.push({
-                    id: fileId,
-                    file,
-                    fileName: file.name,
-                    fileType,
-                    mimeType,
-                    fileSize: file.size,
-                    uploadedAt: new Date(),
-                });
-            }
+            validFiles.push({
+                id: `evidence-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                file,
+                fileName: file.name,
+                fileType: getFileTypeCategory(file.type),
+                mimeType: file.type,
+                fileSize: file.size,
+                preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+                uploadedAt: new Date(),
+            });
         }
         if (validFiles.length > 0) {
-            onEvidenceChange([...evidenceFiles, ...validFiles]);
+            // Use React's functional state update so selecting several photos
+            // in one picker action cannot overwrite earlier FileReader results.
+            onEvidenceChange((currentFiles = []) => [...currentFiles, ...validFiles]);
         }
         // Reset input
         if (fileInputRef.current) {
@@ -171,8 +157,8 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
         return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
     };
     return (<div className="evidence-uploader-style-1">
-      {remainingSlots > 0 && (<div onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop} className={`evidence-dropzone ${dragActive ? "evidence-dropzone-active" : "evidence-dropzone-idle"}`}>
-          <input ref={fileInputRef} type="file" multiple accept={ALLOWED_EXTENSIONS.join(",")} onChange={handleFileInputChange} className="evidence-uploader-style-6"/>
+      {remainingSlots > 0 && (<div onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop} onClick={openFilePicker} onKeyDown={handleDropzoneKeyDown} role="button" tabIndex={0} aria-label="Choose supporting evidence files" className={`evidence-dropzone ${dragActive ? "evidence-dropzone-active" : "evidence-dropzone-idle"}`}>
+          <input ref={fileInputRef} type="file" multiple accept={ALLOWED_EXTENSIONS.join(",")} onChange={handleFileInputChange} onClick={(event) => event.stopPropagation()} className="evidence-uploader-style-6"/>
 
           <div className="evidence-uploader-style-7 evidence-uploader-column">
             <div className="evidence-uploader-style-8">

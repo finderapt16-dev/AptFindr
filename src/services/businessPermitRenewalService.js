@@ -59,14 +59,21 @@ export async function submitBusinessPermitUpdate({ landlordId, apartmentId, perm
         });
         if (uploadError) throw new Error(uploadError.message || "Unable to upload the permit.");
 
-        const { data, error } = await supabase.rpc("fn_submit_business_permit_renewal", {
+        const { data, error } = await supabase.rpc("fn_replace_business_permit", {
             p_permit_number: permitNumber.trim(),
             p_permit_year: targetPermitYear,
             p_permit_issued_at: issuedAt,
             p_document_path: path,
             p_document_name: file.name,
         });
-        if (error) throw new Error(error.message || "Unable to submit the permit for review.");
+        if (error) throw new Error(error.message || "Unable to update the business permit.");
+        const oldPaths = Array.isArray(data?.old_paths)
+            ? data.old_paths.filter((oldPath) => typeof oldPath === "string" && oldPath && oldPath !== path && !/^https?:\/\//i.test(oldPath))
+            : [];
+        if (oldPaths.length) {
+            const { error: removalError } = await supabase.storage.from("verification-documents").remove(oldPaths);
+            if (removalError) console.warn("The permit was updated, but an old file could not be removed:", removalError);
+        }
         return data;
     } catch (error) {
         await supabase.storage.from("verification-documents").remove([path]);
@@ -99,6 +106,17 @@ export async function reviewBusinessPermitRenewal({ renewalId, decision, adminNo
         p_admin_note: adminNote || null,
     });
     if (error) throw new Error(error.message || "Unable to review this business permit renewal.");
+    return data;
+}
+
+// Used by the apartment verification action after an administrator has reviewed
+// the submitted permit document on that screen.
+export async function approveSubmittedBusinessPermit(landlordId) {
+    if (!landlordId) throw new Error("Unable to identify the listing landlord.");
+    const { data, error } = await supabase.rpc("fn_approve_submitted_business_permit", {
+        p_landlord_id: String(landlordId),
+    });
+    if (error) throw new Error(error.message || "Unable to approve the submitted business permit.");
     return data;
 }
 

@@ -1,82 +1,46 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Check, FilePlus2, FileText, FileX, MapPin } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Check, FileText, FileX, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/services/supabaseClient";
-import { createAuditLog, createNotification, updateReportStatus } from "@/services/dashboardSupabaseService";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import { getImageUrl } from "@/utils/images";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
-import { EvidenceViewer } from "./EvidenceViewer";
+import { finalizeReportListing, reviewTenantReport } from "@/services/dashboardSupabaseService";
 import "./ReportReviewDetail.css";
 
-const labels = { pending: "Open", open: "Open", under_review: "Under Review", in_review: "Under Review", resolved: "Resolved", dismissed: "Dismissed" };
-const fileSize = bytes => bytes ? (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`) : "Size unavailable";
+const displayDate = (value) => value ? new Date(value).toLocaleString("en-PH", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "Not available";
+const labels = { pending_review: "Pending Admin Review", awaiting_landlord_appeal: "Awaiting Landlord Appeal", under_appeal: "Appeal Under Review", appeal_period_expired: "Appeal Period Expired", evidence_deadline_expired: "Evidence Deadline Expired", appeal_dismissed_pending_final_decision: "Final Listing Decision Required", resolved_appeal_approved: "Resolved — Appeal Approved", resolved: "Resolved", dismissed: "Dismissed" };
 
-export function ReportReviewDetail({ report, apartment, details, evidence = [], onBack, onUpdated, resolveReport, dismissReport, archived, onArchive }) {
-    const { user } = useAuth();
-    const [notes, setNotes] = useState("");
-    const [processing, setProcessing] = useState(false);
-    const [viewAll, setViewAll] = useState(false);
-    const [confirmDismiss, setConfirmDismiss] = useState(false);
-    useEffect(() => {
-        let active = true;
-        setNotes("");
-        supabase.from("audit_logs").select("details").eq("target_type", "report").eq("target_id", report.id).eq("action", "REPORT_REVIEW_NOTES").order("created_at", { ascending: false }).limit(1).maybeSingle()
-            .then(({ data }) => { if (active) setNotes(data?.details?.notes || ""); });
-        return () => { active = false; };
-    }, [report.id]);
-    const saveNotes = async () => {
-        const saved = await createAuditLog({ admin_id: user?.id, action: "REPORT_REVIEW_NOTES", target_type: "report", target_id: report.id, details: { notes: notes.trim() } });
-        if (!saved) throw new Error("Unable to save admin notes. Please try again.");
-    };
-    const action = async (status, requestEvidence = false) => {
-        if (processing) return;
-        if (requestEvidence && !notes.trim()) return void toast.error("Add a note explaining the additional evidence needed.");
-        const reporterId = details?.reporter?.id || report.reporter_id || report.user_id;
-        if (requestEvidence && !reporterId) return void toast.error("The reporter is unavailable. Evidence cannot be requested.");
-        setProcessing(true);
-        try {
-            await saveNotes();
-            if (status === "resolved") { await resolveReport(report.id); return; }
-            if (status === "dismissed") { await dismissReport(report.id, notes.trim() || undefined); return; }
-            const updated = await updateReportStatus(report.id, status);
-            if (!updated) throw new Error("Unable to update report status. Please try again.");
-            onUpdated(updated);
-            if (requestEvidence) {
-                const notification = await createNotification({ user_id: reporterId, type: "report_update", title: "Additional Evidence Requested", message: notes.trim(), action_target_id: report.id, action_target_type: "report", payload: { report_id: report.id } });
-                if (!notification) return void toast.error("Report marked under review, but the evidence request could not be delivered. Please retry the request.");
-            }
-            toast.success(requestEvidence ? "Additional evidence requested." : "Report status updated.");
-        } catch (error) { toast.error(error.message || "Unable to update the report."); }
-        finally { setProcessing(false); }
-    };
-    const reporter = details?.reporter;
-    const status = String(report.status || "pending").toLowerCase().replace(/[ -]/g, "_");
-    const closed = ["resolved", "dismissed"].includes(status);
-    const underReview = ["under_review", "in_review", "reviewing"].includes(status);
-    const images = [...new Set([apartment?.image, ...(apartment?.images || [])].filter(Boolean))].slice(0, 4);
-    const prices = (apartment?.rooms || []).map(room => Number(room.price)).filter(price => Number.isFinite(price) && price > 0);
-    const priceRange = prices.length ? `₱${Math.min(...prices).toLocaleString("en-PH")}${Math.max(...prices) !== Math.min(...prices) ? `–₱${Math.max(...prices).toLocaleString("en-PH")}` : ""} / month` : "Price unavailable";
-    const published = apartment?.isPublished ?? apartment?.is_published ?? ["published", "active", "available", "occupied", "maintenance"].includes(apartment?.status);
-    return <div className={`report-review-detail ${underReview ? "report-review-under-review-page" : ""}`}>
-      <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
-      <header className="report-review-header"><div><h1>Report Details</h1><p>Review the report and take appropriate action.</p></div><span className={`report-review-status is-${underReview ? "under_review" : status}`}>{underReview ? "Under Review" : labels[status] || report.status}</span></header>
-      <div className="report-review-columns">
-        <div className="report-review-main">
-          <section className="report-review-panel report-review-apartment"><h2>Apartment Information</h2><div className="report-review-apartment-content">
-            <div className="report-review-photos">{images[0] ? <ImageWithFallback src={getImageUrl(images[0])} alt={apartment?.title || "Reported apartment"} className="report-review-main-photo"/> : <div className="report-review-main-photo report-review-placeholder"><FileText/></div>}<div className="report-review-thumbnails">{Array.from({ length: 3 }, (_, index) => images[index + 1] ? <ImageWithFallback key={index} src={getImageUrl(images[index + 1])} alt={`Apartment photo ${index + 2}`}/> : <span key={index}/>)}</div></div>
-            <div className="report-review-apartment-info"><h3>{apartment?.title || report.apartment_title || report.apartment || "Apartment unavailable"}</h3><p className="report-review-location"><MapPin/>{formatApartmentLocation(apartment)}</p><dl><dt>Apartment Type</dt><dd>{apartment?.propertyType || apartment?.type || "Apartment"}</dd><dt>Total Rooms</dt><dd>{apartment ? `${apartment.rooms?.length ?? apartment.totalRooms ?? 0} rooms` : "Unavailable"}</dd><dt>Price Range</dt><dd>{priceRange}</dd><dt>Status</dt><dd><span className={`report-review-publish ${published ? "is-published" : ""}`}>{apartment ? published ? "Published" : "Unpublished" : "Unavailable"}</span></dd></dl></div>
-          </div></section>
-          <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd>{reporter?.name || report.reporter_name || report.reporter || "Reporter unavailable"}{(reporter?.role || report.reporter_role || report.role) && ` (${reporter?.role || report.reporter_role || report.role})`}</dd><dt>Email</dt><dd>{reporter?.email || report.contact || "Not provided"}</dd><dt>Date Submitted</dt><dd>{report.submittedAt || report.submitted_at ? new Date(report.submittedAt || report.submitted_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "Not provided"}</dd><dt>Report Type</dt><dd>{report.issueType || report.issue_type || report.category || "Not specified"}</dd><dt>Description</dt><dd className="report-review-description">{report.details || "No description provided."}</dd></dl></section>
-          <section className="report-review-panel"><div className="report-review-evidence-heading"><h2>Supporting Evidence</h2>{evidence.length > 0 && <button onClick={() => setViewAll(true)}>View All ({evidence.length})</button>}</div>{evidence.length ? <div className="report-review-evidence-grid">{evidence.slice(0, 4).map((file, index) => <button className="report-review-file" key={file.id || index} onClick={() => setViewAll(true)}><span className="report-review-file-preview">{file.fileType === "image" ? <ImageWithFallback src={file.fileUrl} alt={file.fileName}/> : <FileText/>}</span><strong>{file.fileName || "Supporting document"}</strong><small>{fileSize(file.fileSize)}</small></button>)}</div> : <p className="report-review-empty">No supporting evidence submitted.</p>}</section>
-        </div>
-        <aside className="report-review-panel report-review-actions"><h2>Admin Actions</h2><label className="report-review-status-field">Status<select value={status === "open" ? "pending" : underReview ? "under_review" : status} disabled={processing || archived || closed} onChange={event => void action(event.target.value)}><option value="pending">Open</option><option value="under_review">Under Review</option><option value="resolved">Resolved</option>{status === "dismissed" && <option value="dismissed">Dismissed</option>}</select></label><label className="report-review-notes">Admin Notes<textarea value={notes} onChange={event => setNotes(event.target.value)} placeholder="Add notes about your decision..." disabled={processing || archived || closed}/></label>
-          {!archived && !closed ? <div className="report-review-action-buttons"><button className="report-review-under-review" disabled={processing} onClick={() => void action(underReview ? "resolved" : "under_review")}><Check/>{underReview ? "Mark as Resolved" : "Mark as Under Review"}</button><button className="report-review-request" disabled={processing} onClick={() => void action("under_review", true)}><FilePlus2/>Request Additional Evidence</button><button className="report-review-resolve" disabled={processing} onClick={() => underReview ? setConfirmDismiss(true) : void action("resolved")}><FileX/>{underReview ? "Dismiss Report" : "Resolve Report"}</button></div> : <p className="report-review-empty">This report is {labels[status]?.toLowerCase() || status}.{!archived && <button className="report-review-archive" onClick={onArchive}>Archive Report</button>}</p>}
-        </aside>
-      </div>
-      <Dialog open={confirmDismiss} onOpenChange={open => { if (!processing) setConfirmDismiss(open); }}><DialogContent className="report-review-dismiss-dialog" aria-describedby="report-dismiss-description"><DialogTitle>Dismiss Report</DialogTitle><p id="report-dismiss-description">Dismiss this report? The reporter will be notified, and your admin notes will be saved with the review.</p><div><button disabled={processing} onClick={() => setConfirmDismiss(false)}>Cancel</button><button disabled={processing} onClick={() => void action("dismissed")}>{processing ? "Dismissing..." : "Confirm Dismissal"}</button></div></DialogContent></Dialog>
-      <Dialog open={viewAll} onOpenChange={setViewAll}><DialogContent className="report-review-evidence-dialog" aria-describedby={undefined}><DialogTitle>Supporting Evidence</DialogTitle><EvidenceViewer evidence={evidence} title="Submitted Evidence"/></DialogContent></Dialog>
-    </div>;
+export function ReportReviewDetail({ report, apartment, details, evidence = [], onBack, onUpdated, archived, onArchive }) {
+  const [action, setAction] = useState(null); const [notes, setNotes] = useState(""); const [processing, setProcessing] = useState(false);
+  const status = String(report.status || "pending_review").toLowerCase().replace(/[ -]/g, "_");
+  const needsInitialReview = ["pending_review", "pending", "open", "under_review", "in_review"].includes(status);
+  const needsFinalDecision = ["appeal_period_expired", "evidence_deadline_expired", "appeal_dismissed_pending_final_decision"].includes(status);
+  const closed = ["dismissed", "resolved", "resolved_appeal_approved"].includes(status);
+  const save = async () => {
+    setProcessing(true);
+    try {
+      const updated = action === "approve" || action === "dismiss" ? await reviewTenantReport(report.id, action === "approve" ? "approved" : "dismissed", notes) : await finalizeReportListing(report.id, action === "unpublish" ? "unpublish_listing" : "keep_published", notes);
+      onUpdated(updated); setAction(null); setNotes("");
+      toast.success(action === "approve" ? "Report approved; the landlord now has seven days to appeal." : action === "dismiss" ? "Report dismissed and tenant notified." : action === "unpublish" ? "Listing unpublished and both parties notified." : "Case resolved with no listing change.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save the report decision."); }
+    finally { setProcessing(false); }
+  };
+  const reporter = details?.reporter; const image = apartment?.image || apartment?.image_url || apartment?.images?.[0];
+  return <div className="report-review-detail">
+    <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
+    <header className="report-review-header"><div><h1>Report Details</h1><p>Review the tenant report, deadlines, and any appeal workflow.</p></div></header>
+    <div className="report-review-columns"><div className="report-review-main">
+      <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd>{reporter?.name || "Tenant"}</dd><dt>Date Submitted</dt><dd>{displayDate(report.submitted_at || report.submittedAt || report.created_at)}</dd><dt>Report Reason</dt><dd>{report.issue_type || report.category || "Not specified"}</dd><dt>Describe the Problem</dt><dd className="report-review-description">{report.details || "No description provided."}</dd><dt>Current Status</dt><dd><span className="report-review-status is-under_review">{labels[status] || status.replace(/_/g, " ")}</span></dd>{report.appeal_deadline && <><dt>Appeal Deadline</dt><dd>{displayDate(report.appeal_deadline)}</dd></>}{report.admin_notes && <><dt>Admin Notes</dt><dd>{report.admin_notes}</dd></>}</dl></section>
+      <section className="report-review-panel"><h2>Supporting Evidence</h2>{evidence.length ? <div className="report-review-evidence-grid">{evidence.map((file, index) => <a className="report-review-file" key={file.id || index} href={file.fileUrl || file.file_url} target="_blank" rel="noreferrer"><span className="report-review-file-preview">{file.fileType === "image" ? <ImageWithFallback src={file.fileUrl || file.file_url} alt={file.fileName || "Evidence"}/> : <FileText/>}</span><strong>{file.fileName || file.file_name || "Supporting document"}</strong></a>)}</div> : <p className="report-review-empty">No supporting evidence submitted.</p>}</section>
+    </div><aside className="report-review-sidebar">
+      <section className="report-review-panel report-review-apartment"><h2>Apartment Information</h2>{image && <ImageWithFallback src={image} alt={apartment?.title || "Apartment"}/>}<div className="report-review-apartment-info"><h3>{apartment?.title || report.apartment_title || "Apartment unavailable"}</h3><p><MapPin size={16}/> {formatApartmentLocation(apartment) || "Location unavailable"}</p></div></section>
+      {needsInitialReview && <section className="report-review-panel report-review-actions"><h2>Admin Actions</h2><p>Approving starts the stored seven-day landlord appeal period.</p><div className="report-review-action-buttons"><button className="report-review-under-review" onClick={() => setAction("approve")}><Check/>Approve Report</button><button className="report-review-resolve" onClick={() => setAction("dismiss")}><FileX/>Dismiss Report</button></div></section>}
+      {status === "awaiting_landlord_appeal" && <section className="report-review-panel report-review-decision"><h2>Appeal Period</h2><p>The landlord may appeal until {displayDate(report.appeal_deadline)}. The listing remains published unless an admin later decides otherwise.</p></section>}
+      {status === "under_appeal" && <section className="report-review-panel report-review-decision"><h2>Appeal Submitted</h2><p>Open the Appeals section to approve, dismiss, or request more evidence.</p></section>}
+      {needsFinalDecision && <section className="report-review-panel report-review-actions"><h2>{labels[status]}</h2><p>{status === "appeal_period_expired" ? "Landlord did not submit an appeal within seven days." : status === "evidence_deadline_expired" ? "Landlord did not submit the requested evidence within seven days." : "The appeal was dismissed. Make the final listing decision manually."}</p><div className="report-review-action-buttons"><button className="report-review-under-review" onClick={() => setAction("keep")}><Check/>Keep Published / Close Case</button><button className="report-review-resolve" onClick={() => setAction("unpublish")}><FileX/>Unpublish Listing</button></div></section>}
+      {closed && <section className="report-review-panel report-review-decision"><h2>Case Closed</h2><p>{labels[status] || "Report resolved"}</p>{!archived && <button className="report-review-archive" onClick={onArchive}>Archive Report</button>}</section>}
+    </aside></div>
+    <Dialog open={Boolean(action)} onOpenChange={(open) => !processing && !open && setAction(null)}><DialogContent aria-describedby="report-workflow-description"><DialogTitle>{action === "approve" ? "Approve Report" : action === "dismiss" ? "Dismiss Report" : action === "unpublish" ? "Unpublish Listing" : "Keep Listing Published"}</DialogTitle><p id="report-workflow-description">{action === "approve" ? "The landlord will receive the report reason, description, and a seven-day appeal deadline." : "Record the decision notes for the case history and notification."}</p><textarea className="admin-appeals-textarea" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional decision notes..."/><div className="admin-appeals-row-7"><Button variant="outline" disabled={processing} onClick={() => setAction(null)}>Cancel</Button><Button disabled={processing} onClick={() => void save()}>{processing ? "Saving..." : "Confirm"}</Button></div></DialogContent></Dialog>
+  </div>;
 }

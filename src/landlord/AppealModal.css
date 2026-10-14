@@ -469,3 +469,50 @@
   .appeal-modal-row-5 { flex-direction: column-reverse; }
   .appeal-modal-row-5 > button { width: 100%; min-height: 42px; }
 }
+
+/* Compact appeal form matching the landlord review workflow. */
+.appeal-modal-overlay { padding: 18px; }
+.appeal-modal-card { width: min(100%, 540px); max-width: 540px; margin: 0; border: 1px solid #dfe3e8; border-radius: 5px; background: #fff; box-shadow: 0 12px 30px rgb(15 23 42 / 18%); }
+.appeal-modal-panel { max-height: min(70dvh, 560px); padding: 22px; overflow-y: auto; }
+.appeal-modal-submit-appeal { margin: 0 0 15px; color: #202124; font-size: 18px; line-height: 1.2; font-weight: 700; }
+.appeal-modal-field,
+.appeal-modal-panel-3 { display: grid; gap: 7px; margin: 0 0 14px; }
+.appeal-modal-field-label { color: #3c4043; font-size: 12px; line-height: 1.25; font-weight: 700; }
+.appeal-modal-field-label > span { color: #ef4444; }
+.appeal-modal-field-label em { color: #6b7280; font-style: normal; font-weight: 400; }
+.appeal-modal-apartment-card { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 8px; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; }
+.appeal-modal-apartment-image { width: 106px; height: 58px; flex: 0 0 auto; border-radius: 4px; object-fit: cover; background: #eef2f5; }
+.appeal-modal-apartment-image-empty { background: linear-gradient(135deg, #dce8f4, #f5f7fa); }
+.appeal-modal-apartment-card strong { display: block; color: #333; font-size: 14px; line-height: 1.2; }
+.appeal-modal-apartment-card p { margin: 5px 0 0; color: #7a818a; font-size: 10px; line-height: 1.25; }
+.appeal-modal-textarea,
+.appeal-modal-input { box-sizing: border-box; width: 100%; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; color: #333; font: inherit; font-size: 12px; font-weight: 400; outline: none; }
+.appeal-modal-textarea { min-height: 78px; padding: 12px; resize: vertical; }
+.appeal-modal-input { height: 40px; padding: 0 12px; }
+.appeal-modal-textarea::placeholder,
+.appeal-modal-input::placeholder { color: #87909a; }
+.appeal-modal-textarea:focus,
+.appeal-modal-input:focus { border-color: #16a5e1; box-shadow: 0 0 0 3px rgb(22 165 225 / 12%); }
+.appeal-modal-500 { justify-self: end; margin-top: -3px; color: #95a0aa; font-size: 10px; line-height: 1; }
+.appeal-modal-card .evidence-dropzone { box-sizing: border-box; min-height: 78px; padding: 16px; border: 1px dashed #83cbed; border-radius: 5px; background: #f3fbff; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.appeal-modal-card .evidence-dropzone:hover,
+.appeal-modal-card .evidence-dropzone:focus-visible,
+.appeal-modal-card .evidence-dropzone.evidence-dropzone-active { border-color: #16a5e1; background: #e5f6ff; box-shadow: 0 0 0 3px rgb(22 165 225 / 16%); outline: none; }
+.appeal-modal-card .evidence-dropzone:hover { transform: translateY(-1px); }
+.appeal-modal-card .evidence-uploader-style-7 { justify-content: center; gap: 10px; }
+.appeal-modal-card .evidence-uploader-style-8 { width: 34px; height: 34px; border: 0; border-radius: 50%; color: #168fc3; background: #dff3ff; box-shadow: none; }
+.appeal-modal-card .evidence-uploader-style-9 { width: 25px; height: 25px; }
+.appeal-modal-card .evidence-uploader-style-10 { margin: 0; color: #167fac; font-size: 12px; font-weight: 700; }
+.appeal-modal-card .evidence-uploader-style-11 { margin: 4px 0 0; color: #87909a; font-size: 10px; font-weight: 400; }
+.appeal-modal-row-5 { gap: 12px; padding: 10px 22px 18px; border: 0; }
+.appeal-modal-row-5 > button { height: 38px; min-height: 38px; border-radius: 7px; font-size: 12px; }
+.appeal-modal-cancel { flex: 0 0 120px; border-color: #dfe3e8; color: #4b5563; background: #fff; }
+.appeal-modal-button-2 { background: #16a5e1; flex: 1; box-shadow: none; }
+.appeal-modal-button-2:hover { background: #0e93ca; }
+
+@media (max-width: 420px) {
+  .appeal-modal-panel { padding: 18px; max-height: calc(100dvh - 130px); }
+  .appeal-modal-row-5 { flex-direction: row; padding: 10px 18px 18px; }
+  .appeal-modal-row-5 > button { width: auto; }
+  .appeal-modal-apartment-image { width: 88px; }
+}

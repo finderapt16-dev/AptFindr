@@ -2,7 +2,6 @@ import { notifyNotificationsChanged } from "./liveUpdates";
 import { supabase } from "./supabaseClient";
 import { safeRandomId } from "../utils/safeRandomId";
 import { apartmentRowToApartment } from "../data/apartments";
-import { resolveAppUserId } from "./apartmentsService";
 export const defaultTenantPreferences = {
     hasSavedPreferences: false,
     preferredArea: "",
@@ -118,6 +117,10 @@ function toReportRow(row) {
         resolved_at: getStringValue(row.resolved_at),
         reviewed_by: getStringValue(row.reviewed_by),
         reviewed_at: getStringValue(row.reviewed_at),
+        appeal_deadline: getStringValue(row.appeal_deadline),
+        admin_decision: getStringValue(row.admin_decision),
+        admin_notes: getStringValue(row.admin_notes),
+        final_listing_decision: getStringValue(row.final_listing_decision),
         landlord_id: getStringValue(row.landlord_id),
         is_archived: typeof row.is_archived === "boolean" ? row.is_archived : null,
         archived_at: getStringValue(row.archived_at),
@@ -245,6 +248,7 @@ function toUserRow(row) {
     };
 }
 export async function fetchAdminReports() {
+    await refreshReportWorkflowDeadlines();
     const { data, error } = await supabase
         .from("reports")
         .select("*")
@@ -799,24 +803,18 @@ async function hydrateAppealDocuments(appeal) {
 }
 export async function createAppeal(appeal) {
     try {
-        const { data, error } = await supabase
-            .from("appeals")
-            .insert({
-            ...(appeal.id ? { id: appeal.id } : {}),
-            landlord_id: appeal.landlord_id,
-            report_id: appeal.report_id ?? null,
-            violation_id: appeal.violation_id ?? null,
-            reason: appeal.reason,
-            description: appeal.description ?? null,
-            supporting_docs: appeal.supporting_docs ?? [],
-            status: "pending",
-        })
-            .select("*")
-            .single();
-        if (error || !data) {
-            throw new Error(error?.message || "Unable to save the appeal.");
+        if (!appeal.report_id) {
+            throw new Error("Only an approved tenant report can be appealed from this screen.");
         }
-        return hydrateAppealDocuments(data);
+        const { data, error } = await supabase.rpc("fn_submit_report_appeal", {
+            p_report_id: String(appeal.report_id),
+            p_description: appeal.description?.trim() || "",
+            p_contact: appeal.contact_information?.trim() || null,
+            p_supporting_docs: appeal.supporting_docs ?? [],
+        });
+        if (error || !data)
+            throw new Error(error?.message || "Unable to submit the appeal.");
+        return hydrateAppealDocuments(Array.isArray(data) ? data[0] : data);
     }
     catch (error) {
         console.error("Unexpected error in createAppeal:", error);
@@ -878,10 +876,12 @@ export async function submitAppealFollowupWithEvidence(appealId, landlordId, des
             uploadedPaths.push(path);
             documents.push({ kind: "evidence", bucket: "verification-documents", path, file_name: evidence.fileName, mime_type: evidence.mimeType, file_size: evidence.file.size });
         }
-        const { data, error } = await supabase.rpc("fn_submit_appeal_followup", {
+        void landlordId;
+        void contact;
+        const { data, error } = await supabase.rpc("fn_submit_appeal_evidence", {
             p_appeal_id: appealId,
             p_description: description,
-            p_supporting_docs: documents,
+            p_supporting_docs: documents.filter((document) => document.kind === "evidence"),
         });
         if (error || !data)
             throw new Error(error?.message || "Unable to submit additional appeal information.");
@@ -895,6 +895,7 @@ export async function submitAppealFollowupWithEvidence(appealId, landlordId, des
 }
 export async function fetchAppealsByLandlord(landlordId) {
     try {
+        await refreshReportWorkflowDeadlines();
         const { data, error } = await supabase
             .from("appeals")
             .select("*")
@@ -913,6 +914,7 @@ export async function fetchAppealsByLandlord(landlordId) {
 }
 export async function fetchPendingAppeals() {
     try {
+        await refreshReportWorkflowDeadlines();
         const { data, error } = await supabase
             .from("appeals")
             .select("*")
@@ -948,11 +950,15 @@ export async function fetchArchivedAppeals() {
     }
 }
 export async function updateAppealStatus(appealId, status, adminId, adminResponse) {
+    const normalizedStatus = status === "rejected" || status === "dismissed" ? "denied" : status;
+    if (normalizedStatus === "approved" || normalizedStatus === "denied") {
+        return decideAppeal(appealId, normalizedStatus, adminResponse);
+    }
     try {
         const { data, error } = await supabase
             .from("appeals")
             .update({
-            status,
+            status: normalizedStatus,
             admin_id: adminId ?? null,
             admin_response: adminResponse ?? null,
             reviewed_at: new Date().toISOString(),
@@ -971,7 +977,60 @@ export async function updateAppealStatus(appealId, status, adminId, adminRespons
         return null;
     }
 }
-const PROCESSED_REPORT_STATUSES = new Set(["resolved", "closed", "approved", "rejected", "completed", "violation_issued", "notice_issued", "dismissed"]);
+/** Resolve an appeal through the database function so the decision, report
+ * history, and landlord notification are committed together. */
+export async function decideAppeal(appealId, status, adminResponse) {
+    const normalizedStatus = status === "denied" ? "dismissed" : status;
+    if (!appealId || !["approved", "dismissed"].includes(normalizedStatus)) {
+        throw new Error("Choose either approved or dismissed for this appeal.");
+    }
+    if (!adminResponse?.trim()) {
+        throw new Error("An admin response is required.");
+    }
+    const { data, error } = await supabase.rpc("fn_decide_appeal", {
+        p_appeal_id: appealId,
+        p_status: normalizedStatus,
+        p_admin_response: adminResponse.trim(),
+    });
+    if (error || !data) {
+        throw new Error(error?.message || "Unable to save the appeal decision.");
+    }
+    return hydrateAppealDocuments(Array.isArray(data) ? data[0] : data);
+}
+/** Move report workflow deadlines forward without relying on an open browser. */
+export async function refreshReportWorkflowDeadlines() {
+    const { error } = await supabase.rpc("fn_refresh_report_workflow_deadlines");
+    // The first deploy can load before its migration is run. Read screens stay
+    // usable, while protected workflow actions explain the missing RPC clearly.
+    if (error && error.code !== "PGRST202") {
+        console.warn("Unable to refresh report workflow deadlines:", error.message);
+    }
+}
+export async function reviewTenantReport(reportId, decision, notes = "") {
+    const { data, error } = await supabase.rpc("fn_review_tenant_report", {
+        p_report_id: String(reportId), p_decision: decision, p_notes: notes?.trim() || null,
+    });
+    if (error || !data)
+        throw new Error(error?.message || "Unable to review the report.");
+    return toReportRow(Array.isArray(data) ? data[0] : data);
+}
+export async function requestAppealEvidence(appealId, message) {
+    const { data, error } = await supabase.rpc("fn_request_appeal_evidence", {
+        p_appeal_id: String(appealId), p_message: message?.trim() || "",
+    });
+    if (error || !data)
+        throw new Error(error?.message || "Unable to request additional evidence.");
+    return hydrateAppealDocuments(Array.isArray(data) ? data[0] : data);
+}
+export async function finalizeReportListing(reportId, listingDecision, notes = "") {
+    const { data, error } = await supabase.rpc("fn_finalize_report_listing", {
+        p_report_id: String(reportId), p_listing_decision: listingDecision, p_notes: notes?.trim() || null,
+    });
+    if (error || !data)
+        throw new Error(error?.message || "Unable to save the final listing decision.");
+    return toReportRow(Array.isArray(data) ? data[0] : data);
+}
+const PROCESSED_REPORT_STATUSES = new Set(["resolved", "resolved_appeal_approved", "closed", "approved", "rejected", "completed", "violation_issued", "notice_issued", "dismissed"]);
 const PROCESSED_APPEAL_STATUSES = new Set(["resolved", "closed", "approved", "rejected", "completed", "violation_issued", "notice_issued", "dismissed"]);
 export const canArchiveReportStatus = (status) => PROCESSED_REPORT_STATUSES.has(String(status ?? "").trim().toLowerCase());
 export const canArchiveAppealStatus = (status) => PROCESSED_APPEAL_STATUSES.has(String(status ?? "").trim().toLowerCase());
@@ -1816,40 +1875,27 @@ export async function fetchReportWithDetails(reportId) {
     }
 }
 export async function createReport(report) {
-    const reporterId = report.reporter_id ? await resolveAppUserId(report.reporter_id) : null;
-    const landlordId = report.landlord_id ? await resolveAppUserId(report.landlord_id) : null;
-    if (!reporterId) {
+    if (!report.reporter_id || !report.apartment_id) {
         throw new Error("Please sign in to submit a report.");
     }
-    const { data, error } = await supabase
-        .from("reports")
-        .insert({
-        reporter_id: reporterId,
-        user_id: reporterId,
-        reporter_role: report.reporter_role ?? null,
-        apartment_id: report.apartment_id ?? null,
-        issue_type: report.issue_type ?? null,
-        category: report.category ?? null,
-        tags: report.tags ?? [],
-        details: report.details ?? null,
-        contact: report.contact ?? null,
-        date_of_incident: report.date_of_incident ?? null,
-        landlord_id: landlordId,
-        has_evidence: report.has_evidence ?? false,
-        evidence_count: report.evidence_count ?? 0,
-        severity: report.severity ?? "med",
-        status: "pending",
-        last_action_at: new Date().toISOString(),
-    })
-        .select("*")
-        .single();
+    const { data, error } = await supabase.rpc("fn_submit_tenant_report", {
+        p_apartment_id: String(report.apartment_id),
+        p_issue_type: report.issue_type ?? null,
+        p_category: report.category ?? null,
+        p_tags: report.tags ?? [],
+        p_details: report.details?.trim() || null,
+        p_contact: report.contact?.trim() || null,
+        p_has_evidence: report.has_evidence ?? false,
+        p_evidence_count: report.evidence_count ?? 0,
+        p_severity: report.severity ?? "med",
+    });
     if (error) {
         throw new Error(error.message || "Unable to save report.");
     }
     if (!data) {
         throw new Error("Unable to save report.");
     }
-    const normalized = toReportRow(data);
+    const normalized = toReportRow(Array.isArray(data) ? data[0] : data);
     const cached = await fetchAdminReports();
     cached.unshift(normalized);
     writeCachedValue("reports", JSON.stringify(cached));

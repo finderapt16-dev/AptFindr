@@ -34,10 +34,25 @@
 .admin-portal-shell.admin-appeal-review-shell .app-shell-main {
   width: 100%;
   min-width: 0;
+  /* The focused case view has no sidebar. Removing the shared shell's large
+     reserved footer keeps short appeal reviews within the viewport, so an
+     unnecessary nested scrollbar is not shown. */
+  padding-bottom: 0;
 }
 
 .admin-portal-shell.admin-appeal-review-shell .app-shell-content {
+  min-height: 0;
   padding: 16px 20px;
+}
+
+/* The full case-file layout usually fits on tall desktop screens. On shorter
+   screens it must remain reachable, so allow normal vertical page scrolling
+   while keeping horizontal overflow out of the review workspace. */
+@media (min-width: 761px) {
+  .admin-portal-shell.admin-appeal-review-shell .app-shell-main {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
 }
 
 /* Apartment verification is a focused review workspace: it uses the full

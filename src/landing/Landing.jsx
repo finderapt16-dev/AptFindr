@@ -1433,14 +1433,7 @@ export function Landing() {
                             <h1 className="landing-hero-title">
 
                                 <span className="landing-title-line">
-                                    Find Apartments
-
-                                </span>
-
-
-                                <span className="landing-title-line">
-
-                                    in{" "}
+                                    Find Apartments in{" "}
 
                                     <span className="location-highlight">
                                         La Paz
@@ -1455,14 +1448,6 @@ export function Landing() {
 
                             </h1>
 
-
-                            <p className="landing-hero-description">
-                                Browse verified apartment
-                                listings, compare rental
-                                options, explore locations,
-                                and review unit details and
-                                amenities all in one place.
-                            </p>
 
                             <div className="landing-search-box">
                                 <form className="landing-search-form" onSubmit={handleLandingSearch}>

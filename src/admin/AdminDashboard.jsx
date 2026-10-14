@@ -620,6 +620,17 @@ export function AdminDashboard() {
         let apartmentRefreshTimer = null;
         let visibleRefreshTimer = null;
         const openApartmentId = text(selectedLandlordProperty?.id);
+        const selectedLandlordId = text(selectedLandlord?.id);
+        const refreshSelectedLandlordDetails = () => {
+            if (!selectedLandlordId)
+                return;
+            void fetchLandlordWithDetails(selectedLandlordId)
+                .then((details) => {
+                if (details)
+                    setSelectedLandlordDetails(details);
+            })
+                .catch((error) => console.warn("Unable to refresh landlord details in real time:", error));
+        };
         const refreshOpenApartment = (apartmentId) => {
             if (!apartmentId || apartmentId !== openApartmentId)
                 return;
@@ -656,11 +667,17 @@ export function AdminDashboard() {
                     } : current);
                 }).catch((error) => console.warn("Unable to refresh apartments in real time:", error));
                 refreshOpenApartment(changedApartmentId);
+                refreshSelectedLandlordDetails();
             }, ADMIN_DASHBOARD_REFRESH_DELAY_MS);
         };
         const refreshUserData = () => {
             void fetchUsers().then(async (users) => {
-                setLandlords(await attachLandlordPermitNumbers(users.filter((account) => account.role === "landlord")));
+                const refreshedLandlords = await attachLandlordPermitNumbers(users.filter((account) => account.role === "landlord"));
+                setLandlords(refreshedLandlords);
+                setSelectedLandlord((current) => {
+                    const refreshed = refreshedLandlords.find((account) => text(account.id) === text(current?.id));
+                    return refreshed ? { ...current, ...refreshed } : current;
+                });
                 setAdminAccounts(users.filter((account) => account.role === "admin"));
             });
         };
@@ -673,6 +690,7 @@ export function AdminDashboard() {
             void fetchArchivedReports().then(setArchivedReports);
             void fetchArchivedAppeals().then(setArchivedAppeals);
             void loadAdminNotifications();
+            refreshSelectedLandlordDetails();
         };
         const scheduleVisibleRefresh = () => {
             if (visibleRefreshTimer)
@@ -689,6 +707,7 @@ export function AdminDashboard() {
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_rooms" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_verification_documents" }, refreshApartmentData)
+            .on("postgres_changes", { event: "*", schema: "public", table: "landlord_permit_renewals" }, scheduleVisibleRefresh)
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_users" }, scheduleVisibleRefresh)
             .subscribe();
         const refreshOnFocus = () => scheduleVisibleRefresh();
@@ -709,7 +728,7 @@ export function AdminDashboard() {
             document.removeEventListener("visibilitychange", refreshOnVisibility);
             void supabase.removeChannel(channel);
         };
-    }, [loadAdminNotifications, selectedLandlordProperty?.id, user?.id, user?.role]);
+    }, [loadAdminNotifications, selectedLandlord?.id, selectedLandlordProperty?.id, user?.id, user?.role]);
     // Fetch full report details when a report is selected
     useEffect(() => {
         let active = true;
@@ -1380,7 +1399,13 @@ export function AdminDashboard() {
                     const permitPayload = notification.payload ?? {};
                     const expirationAt = permitPayload.expiration_at;
                     const renewalStatus = permitPayload.renewal_status;
-                    const apartmentNames = permitPayload.apartment_names;
+                    const permitLandlordId = String(permitPayload.landlord_id ?? notification.action_target_id ?? "");
+                    const apartmentNames = permitPayload.apartment_names
+                        || allApartments
+                            .filter((item) => String(item.landlordId ?? item.landlord_id ?? "") === permitLandlordId)
+                            .map((item) => String(item.title ?? "").trim())
+                            .filter(Boolean)
+                            .join(", ");
                     const supportRequestLoading = loadingSupportRequestId === (notification.id ?? supportTicketId);
                     const openNotification = () => {
                         if (archived)
@@ -1452,7 +1477,7 @@ export function AdminDashboard() {
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────
-    const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView}/>);
+    const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView} onWorkflowChanged={async () => { const [nextReports, nextAppeals] = await Promise.all([fetchAdminReports(), fetchPendingAppeals()]); setReports(nextReports); setAppeals(nextAppeals); }}/>);
     const renderAdminInfo = () => {
         return (() => {
             const adminName = `${adminProfile.firstName} ${adminProfile.lastName}`.trim();

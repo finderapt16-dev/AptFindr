@@ -466,28 +466,16 @@
 .landing-hero-title {
   letter-spacing: -.04em;
   color: #111111;
-  max-width: 720px;
-  margin: 0 auto 1.25rem;
-  font-size: 3rem;
-  font-weight: 900;
-  line-height: 1.01;
+  max-width: 560px;
+  margin: 0 auto clamp(2.5rem, 5vw, 3.5rem);
+  font-size: clamp(1.5rem, 3vw, 2.125rem);
+  font-weight: 800;
+  line-height: 1.12;
 }
 
 @media (width >= 40rem) {
   .landing-hero-title {
-    font-size: 52px;
-  }
-}
-
-@media (width >= 64rem) {
-  .landing-hero-title {
-    font-size: 50px;
-  }
-}
-
-@media (width >= 80rem) {
-  .landing-hero-title {
-    font-size: 56px;
+    font-size: clamp(1.875rem, 3vw, 2.375rem);
   }
 }
 

@@ -3662,3 +3662,270 @@
 .tenant-apartment-favorite-button .apartment-detail-heart-icon-2 {
   fill: currentColor;
 }
+
+/* Shared tenant and Market Trends landlord-card styling. */
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-landlord-information {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-strong-2 {
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  width: max-content !important;
+  min-width: max-content;
+  height: 32px;
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 4px 12px !important;
+  border-color: #93c5fd;
+  border-width: 2px;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #0284c7;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  gap: 6px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge .verified-badge-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: #fff;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge .verified-badge-check {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge > span:last-child {
+  display: block;
+  white-space: nowrap;
+}
+
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-facebook-link,
+:is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-text-11 {
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* Market Trends → View Details: compact landlord card matching the market
+   listing reference, without changing the standard apartment-detail view. */
+.landlord-market-detail .apartment-detail-landlord-section {
+  padding: 16px;
+  border: 1px solid #d8dfe7;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.landlord-market-detail .apartment-detail-landlord-information {
+  margin: 0;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.landlord-market-detail .apartment-detail-landlord-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(145px, .92fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.landlord-market-detail .apartment-detail-row-10 {
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.landlord-market-detail .apartment-detail-grid-8 {
+  width: 48px;
+  height: 48px;
+  color: #fff;
+  background: #078a63;
+  font-size: 12px;
+}
+
+.landlord-market-detail .apartment-detail-strong-2 {
+  color: #263242;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.landlord-market-detail .apartment-detail-verified-badge {
+  width: max-content;
+  margin-top: 5px;
+  padding: 3px 8px;
+  border-color: #9ed8fd;
+  border-radius: 5px;
+  background: #eff8ff;
+  color: #1684d4;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.landlord-market-detail .landlord-tenant-rating {
+  margin-top: 7px;
+  gap: 5px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.landlord-market-detail .landlord-tenant-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: #f59e0b;
+}
+
+.landlord-market-detail .landlord-tenant-stars svg {
+  width: 13px;
+  height: 13px;
+}
+
+.landlord-market-detail .apartment-detail-panel-20 {
+  align-self: start;
+  gap: 9px;
+  padding-top: 2px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.landlord-market-detail .apartment-detail-facebook-link,
+.landlord-market-detail .apartment-detail-text-11 {
+  gap: 6px;
+  color: #2878ef;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.landlord-market-detail .apartment-detail-phone-copy,
+.landlord-market-detail .apartment-detail-text-11 {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.landlord-market-detail .apartment-detail-facebook-link svg,
+.landlord-market-detail .apartment-detail-phone-icon {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 560px) {
+  .landlord-market-detail .apartment-detail-landlord-card {
+    grid-template-columns: 1fr;
+  }
+
+  .landlord-market-detail .apartment-detail-panel-20 {
+    width: auto;
+    padding: 10px 0 0;
+    border-top: 1px solid #edf1f5;
+  }
+}
+
+/* Exact compact sizing for the Market Trends reference card. */
+.landlord-market-detail .apartment-detail-aside .apartment-detail-landlord-section {
+  box-sizing: border-box;
+  width: min(100%, 400px);
+  max-width: 400px;
+  padding: 12px 14px;
+  border-color: #d9dee6;
+  border-radius: 7px;
+}
+
+.landlord-market-detail .apartment-detail-landlord-information {
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.landlord-market-detail .apartment-detail-landlord-card {
+  grid-template-columns: minmax(0, 194px) minmax(130px, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.landlord-market-detail .apartment-detail-grid-8 {
+  width: 42px;
+  height: 42px;
+  font-size: 10px;
+}
+
+.landlord-market-detail .apartment-detail-row-10 {
+  gap: 8px;
+}
+
+.landlord-market-detail .apartment-detail-strong-2 {
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.landlord-market-detail .apartment-detail-verified-badge {
+  min-height: 19px;
+  margin-top: 4px;
+  padding: 2px 7px;
+  font-size: 9px;
+}
+
+.landlord-market-detail .landlord-tenant-rating {
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+.landlord-market-detail .landlord-tenant-stars svg {
+  width: 12px;
+  height: 12px;
+}
+
+.landlord-market-detail .apartment-detail-panel-20 {
+  gap: 7px;
+  padding-top: 1px;
+  font-size: 10px;
+}
+
+.landlord-market-detail .apartment-detail-facebook-link,
+.landlord-market-detail .apartment-detail-text-11 {
+  gap: 5px;
+  font-size: 10px;
+  line-height: 13px;
+}
+
+.landlord-market-detail .apartment-detail-facebook-link svg,
+.landlord-market-detail .apartment-detail-phone-icon {
+  width: 13px;
+  height: 13px;
+}
+
+@media (max-width: 560px) {
+  .landlord-market-detail .apartment-detail-landlord-card {
+    grid-template-columns: 1fr;
+  }
+
+  .landlord-market-detail .apartment-detail-panel-20 {
+    width: auto;
+    padding: 9px 0 0;
+    border-top: 1px solid #edf1f5;
+  }
+}

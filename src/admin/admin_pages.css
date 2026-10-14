@@ -20137,14 +20137,19 @@
 .admin-appeals-reference-stat b { display:inline; color:#334155; font-size:20px; line-height:1.25; font-weight:700; }
 .admin-appeals-reference-stat strong { margin-right:4px; }
 .admin-appeals-reference-stat small { display:block; margin-top:2px; color:#94a3b8; font-size:12px; line-height:1.25; }
-.admin-appeals-reference-table { overflow:auto; border:1px solid #cfd3d8; border-radius:10px 10px 0 0; background:#fff; }
+.admin-appeals-reference-table { overflow-x:auto; border:1px solid #cfd3d8; border-radius:10px; background:#fff; }
 .admin-appeals-reference-table-head,
-.admin-appeals-reference-row { display:grid; grid-template-columns:1.3fr 1.05fr .72fr .72fr .68fr; min-width:980px; column-gap:24px; align-items:center; }
-.admin-appeals-reference-table-head { min-height:42px; padding:0 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:12px; font-weight:600; }
+.admin-appeals-reference-row { display:grid; grid-template-columns:minmax(190px,1.25fr) minmax(190px,1.2fr) minmax(145px,.9fr) minmax(125px,.85fr) minmax(135px,.9fr) 120px; min-width:1120px; column-gap:20px; align-items:center; }
+.admin-appeals-reference-table-head { min-height:44px; padding:0 16px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:12px; font-weight:650; letter-spacing:.01em; }
 .admin-appeals-reference-table-head span:nth-child(3) { color:#172033; }
-.admin-appeals-reference-row { min-height:58px; padding:0 14px; border-bottom:1px solid #edf2f7; cursor:pointer; transition:background-color .15s ease; }
+.admin-appeals-reference-row { min-height:68px; padding:0 16px; border-bottom:1px solid #edf2f7; cursor:pointer; transition:background-color .15s ease; }
 .admin-appeals-reference-row:last-child { border-bottom:0; }
 .admin-appeals-reference-row:hover { background:#f8fbfd; }
+.admin-appeals-reference-row > div { min-width:0; }
+.admin-appeals-reference-row > div strong,
+.admin-appeals-reference-row > div small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-appeals-reference-row > div strong { color:#172033; font-size:13px; font-weight:700; line-height:18px; }
+.admin-appeals-reference-row > div small { margin-top:3px; color:#8291aa; font-size:12px; line-height:16px; }
 .admin-appeals-reference-landlord { display:flex; min-width:0; align-items:center; gap:10px; }
 .admin-appeals-reference-landlord > img,
 .admin-appeals-reference-landlord > span { display:grid; width:34px; height:34px; flex:0 0 auto; place-items:center; border-radius:50%; background:#f1e6ff; color:#a14cff; font-size:13px; font-weight:700; object-fit:cover; }
@@ -20157,11 +20162,12 @@
 .admin-appeals-reference-landlord small,
 .admin-appeals-reference-case small { margin-top:3px; color:#8291aa; font-size:12px; }
 .admin-appeals-reference-case small + small { margin-top:2px; }
-.admin-appeals-reference-row time { color:#64748b; font-size:13px; }
+.admin-appeals-reference-row time { color:#64748b; font-size:13px; white-space:nowrap; }
 .admin-appeals-reference-badge { display:inline-flex; min-width:92px; box-sizing:border-box; justify-content:center; padding:7px 10px; border-radius:999px; font-size:12px; line-height:1; text-align:center; }
 .admin-appeals-reference-badge.is-pending { color:#eb7900; background:#fff5e9; }
 .admin-appeals-reference-badge.is-approved { color:#079647; background:#d9f9e6; }
 .admin-appeals-reference-badge.is-denied { color:#e33434; background:#ffe0e0; }
+.admin-appeals-reference-row > .ui-button { justify-self:start; min-width:108px; height:34px; padding:0 14px; white-space:nowrap; }
 .admin-appeals-reference-actions { display:flex; gap:8px; }
 .admin-appeals-reference-actions .ui-button { min-width:112px; height:32px; border-color:#16a5e1; background:#16a5e1; color:#fff; font-size:12px; font-weight:650; }
 .admin-appeals-reference-actions .ui-button:hover { border-color:#0e93ca; background:#0e93ca; }
@@ -20457,6 +20463,84 @@
   .admin-appeal-review-shell .admin-appeal-detail-property .ui-button { min-height: 38px; }
   .admin-appeal-review-shell .admin-appeal-detail-decision-actions .ui-button { min-height: 38px; }
   .admin-appeals-reference-actions .ui-button { min-height: 38px; }
+}
+
+/* Appeal review: a single, full-width case file mirrors the review sequence
+   (listing, original report, appeal, then decision) from top to bottom. */
+.admin-appeal-review-shell { width:100%; max-width:1400px; margin:10px auto 28px; color:#102043; }
+.admin-appeal-review-heading { display:flex; align-items:center; gap:14px; margin:0 0 22px; }
+.admin-appeal-review-back { display:grid; width:48px; height:48px; flex:0 0 auto; padding:0; place-items:center; border:0; border-radius:12px; background:#eaf7ff; color:#0a9bef; cursor:pointer; transition:background-color .15s ease, transform .15s ease; }
+.admin-appeal-review-back:hover { background:#d9f1ff; transform:translateX(-2px); }
+.admin-appeal-review-heading h1 { margin:0; color:#0c1f43; font-size:29px; line-height:1.12; font-weight:800; letter-spacing:-.035em; }
+.admin-appeal-review-heading p { margin:4px 0 0; color:#5f7195; font-size:15px; line-height:1.45; }
+.admin-appeal-review-card { min-width:0; margin-top:16px; padding:20px 24px; border:1px solid #dfe8f1; border-radius:13px; background:#fff; box-shadow:0 3px 10px rgb(15 35 69 / 4%); }
+.admin-appeal-review-section-title { display:flex; align-items:center; gap:14px; }
+.admin-appeal-review-section-title > span { display:grid; width:47px; height:47px; flex:0 0 auto; place-items:center; border-radius:10px; color:#049bf1; background:#e9f7ff; }
+.admin-appeal-review-section-title > span svg { width:25px; height:25px; stroke-width:2; }
+.admin-appeal-review-section-title h2 { margin:0; color:#0c1f43; font-size:20px; line-height:1.2; font-weight:800; letter-spacing:-.025em; }
+.admin-appeal-review-section-title p { margin:3px 0 0; color:#60729a; font-size:14px; line-height:1.4; }
+.admin-appeal-review-property { display:flex; align-items:center; gap:25px; margin-top:17px; }
+.admin-appeal-review-property-image { display:block; width:270px; height:132px; flex:0 0 auto; overflow:hidden; border-radius:7px; background:#eff5fa; }
+.admin-appeal-review-property-image img { display:block; width:100%; height:100%; object-fit:cover; }
+.admin-appeal-review-property-details { min-width:0; }
+.admin-appeal-review-property-details h3 { margin:0 0 8px; color:#071b3d; font-size:21px; line-height:1.25; font-weight:800; }
+.admin-appeal-review-property-details > p { display:flex; align-items:flex-start; gap:9px; margin:6px 0; color:#536587; font-size:14px; line-height:1.4; }
+.admin-appeal-review-property-details > p svg { width:17px; height:17px; flex:0 0 auto; color:#475b7d; }
+.admin-appeal-review-card-action { min-height:40px; margin-top:15px; border-color:#159ff1; color:#078ee3; font-size:14px; font-weight:700; }
+.admin-appeal-review-card-action svg:last-child { margin-left:8px; }
+.admin-appeal-review-summary-grid { display:grid; grid-template-columns:minmax(0,2.05fr) minmax(190px,.7fr) minmax(250px,.85fr); margin-top:18px; padding:15px 22px; border-radius:10px; background:linear-gradient(105deg,#f3f9ff,#fbfdff); }
+.admin-appeal-review-summary-grid > div { display:grid; grid-template-columns:28px minmax(0,1fr); align-content:center; gap:0 12px; min-width:0; padding:0 22px; border-left:1px solid #dce9f4; }
+.admin-appeal-review-summary-grid > div:first-child { display:block; padding-left:0; border-left:0; }
+.admin-appeal-review-summary-grid svg { grid-row:span 2; width:22px; height:22px; align-self:center; color:#049bf1; }
+.admin-appeal-review-summary-grid small { display:block; color:#4d6083; font-size:12px; line-height:1.35; font-weight:700; }
+.admin-appeal-review-summary-grid strong { display:block; margin-top:5px; color:#11264b; font-size:15px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; }
+.admin-appeal-review-evidence-group { margin-top:16px; }
+.admin-appeal-review-evidence-group > p { margin:0 0 8px; color:#506486; font-size:13px; line-height:1.4; font-weight:700; }
+.admin-appeal-review-evidence { display:flex; flex-wrap:wrap; gap:10px; }
+.admin-appeal-review-evidence a { display:flex; min-width:260px; align-items:center; gap:10px; padding:10px 14px; border:1px solid #dbe6ef; border-radius:8px; color:#087fd0; background:#fff; font-size:14px; line-height:1.35; font-weight:700; text-decoration:none; transition:border-color .15s ease, background-color .15s ease; }
+.admin-appeal-review-evidence a:hover { border-color:#77cdf6; background:#f5fbff; }
+.admin-appeal-review-evidence a > svg { flex:0 0 auto; color:#079bf0; }
+.admin-appeal-review-evidence a > svg:last-child { margin-left:auto; }
+.admin-appeal-review-evidence a span { min-width:0; }
+.admin-appeal-review-evidence a span strong,
+.admin-appeal-review-evidence a span small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-appeal-review-evidence a span small { margin-top:2px; color:#6b7d9c; font-size:12px; font-weight:500; }
+.admin-appeal-review-empty-note { margin:0; color:#8291a5; font-size:13px; line-height:1.5; }
+.admin-appeal-review-appeal-summary { grid-template-columns:minmax(0,2.1fr) minmax(220px,.8fr); }
+.admin-appeal-review-workflow-note { margin-top:14px; padding:11px 14px; border-radius:8px; color:#536587; background:#fff8e8; font-size:13px; line-height:1.45; }
+.admin-appeal-review-workflow-note p { margin:0; }
+.admin-appeal-review-workflow-note p + p { margin-top:5px; }
+.admin-appeal-review-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:16px; }
+.admin-appeal-review-actions .ui-button { min-height:42px; justify-content:center; font-size:14px; font-weight:750; }
+.admin-appeal-review-actions .ui-button.ui-button-destructive { background:#f84143; }
+.admin-appeal-review-decision-note,
+.admin-appeal-review-decision-summary p { margin:16px 0 0; color:#607087; font-size:14px; line-height:1.5; }
+.admin-appeal-review-decision-summary strong { display:block; margin-top:16px; color:#152b52; font-size:15px; }
+@media (max-width:900px) {
+  .admin-appeal-review-summary-grid { grid-template-columns:1fr 1fr; }
+  .admin-appeal-review-summary-grid > div:nth-child(3) { grid-column:1 / -1; margin-top:14px; padding-top:14px; padding-left:0; border-top:1px solid #dce9f4; border-left:0; }
+  .admin-appeal-review-appeal-summary > div:nth-child(2) { grid-column:auto; margin-top:0; padding-top:0; padding-left:22px; border-top:0; border-left:1px solid #dce9f4; }
+}
+@media (max-width:760px) {
+  .admin-appeal-review-shell { width:min(100% - 32px, 640px); margin:18px auto 36px; }
+  .admin-appeal-review-heading h1 { font-size:25px; }
+  .admin-appeal-review-heading p { font-size:13px; }
+  .admin-appeal-review-card { padding:18px; }
+  .admin-appeal-review-section-title h2 { font-size:18px; }
+  .admin-appeal-review-property { align-items:flex-start; }
+  .admin-appeal-review-property-image { width:175px; height:108px; }
+  .admin-appeal-review-summary-grid { grid-template-columns:1fr; padding:14px; }
+  .admin-appeal-review-summary-grid > div,
+  .admin-appeal-review-appeal-summary > div:nth-child(2) { margin-top:13px; padding-top:13px; padding-left:0; border-top:1px solid #dce9f4; border-left:0; }
+  .admin-appeal-review-summary-grid > div:first-child { margin-top:0; padding-top:0; border-top:0; }
+  .admin-appeal-review-actions { grid-template-columns:1fr; gap:10px; }
+}
+@media (max-width:500px) {
+  .admin-appeal-review-heading { align-items:flex-start; }
+  .admin-appeal-review-back { width:42px; height:42px; }
+  .admin-appeal-review-property { display:grid; gap:15px; }
+  .admin-appeal-review-property-image { width:100%; height:160px; }
+  .admin-appeal-review-evidence a { width:100%; min-width:0; }
 }
 
 /* Desktop readability floor: these selectors resolved below 10px above the

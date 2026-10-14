@@ -1,5 +1,6 @@
 /* Shared component layout and presentation classes. */
 .evidence-uploader-style-1 { @apply space-y-4; }
+.evidence-dropzone { position: relative; }
 .evidence-uploader-style-6 { @apply absolute inset-0 h-full w-full cursor-pointer opacity-0; }
 .evidence-uploader-style-7 { @apply flex items-center gap-2; }
 .evidence-uploader-style-8 { @apply flex h-14 w-14 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-600 shadow-sm; }

@@ -1,6 +1,7 @@
 import "./LandlordDashboard.css";
 
 import { AppealModal } from "@/landlord/AppealModal";
+import { LandlordAppealDetails } from "@/landlord/LandlordAppealDetails";
 import { NotificationDetailModal } from "@/landlord/NotificationDetailModal";
 import { PeopleModal } from "@/landlord/PeopleModal";
 import { LandlordActivity } from "@/landlord/LandlordActivity";
@@ -390,6 +391,7 @@ export function LandlordDashboard() {
     violationId: null,
     relatedType: "admin_message",
     relatedLabel: "",
+    apartment: null,
   });
 
 
@@ -409,6 +411,9 @@ export function LandlordDashboard() {
   const [selectedNotificationDetail, setSelectedNotificationDetail] =
     useState(null);
 
+  const [selectedLandlordAppeal, setSelectedLandlordAppeal] =
+    useState(null);
+
 
   const closeAppealModal = () => {
     setAppealModal({
@@ -421,6 +426,7 @@ export function LandlordDashboard() {
       violationId: null,
       relatedType: "admin_message",
       relatedLabel: "",
+      apartment: null,
     });
 
     setAppealMessage("");
@@ -520,7 +526,7 @@ export function LandlordDashboard() {
     setAppealModal({
       open: true,
       appealId:
-        detail.appeal?.status === "needs_information"
+        detail.appeal?.status === "more_evidence_requested"
           ? detail.appeal.id ?? null
           : null,
       notificationId:
@@ -531,6 +537,7 @@ export function LandlordDashboard() {
       violationId,
       relatedType,
       relatedLabel,
+      apartment,
     });
   };
 
@@ -1188,6 +1195,9 @@ export function LandlordDashboard() {
         const rows = await fetchAppealsByLandlord(user.id);
         if (active) {
           setLandlordAppeals(rows);
+          setSelectedLandlordAppeal((current) => current
+            ? rows.find((item) => item.id === current.id) ?? current
+            : null);
         }
       } catch (error) {
         console.error("Failed to load landlord appeals:", error);
@@ -1288,6 +1298,8 @@ export function LandlordDashboard() {
     const appealableTypes = new Set([
       "admin_message",
       "property_reported",
+      "report_approved_for_appeal",
+      "appeal_evidence_requested",
       "violation_issued",
       "notice_issued",
       "appeal_status_updated",
@@ -1336,6 +1348,13 @@ export function LandlordDashboard() {
           null
         : null;
 
+
+      if (appeal && String(notification.type) === "appeal_status_updated") {
+        setSelectedLandlordAppeal(appeal);
+        setSelectedNotificationDetail(null);
+        handleSectionChange("notifications");
+        return;
+      }
 
       setSelectedNotificationDetail({
         notification,
@@ -2920,14 +2939,15 @@ export function LandlordDashboard() {
       }
 
 
-      if (
-        !validateEmail(
-          appealContact.trim()
-        )
-      ) {
+      if (appealContact.trim() && !validateEmail(appealContact.trim())) {
         toast.error(
           "Please enter a valid contact email address"
         );
+        return;
+      }
+
+      if (appealEvidence.length === 0) {
+        toast.error("Please attach at least one supporting evidence file");
         return;
       }
 
@@ -2974,14 +2994,22 @@ export function LandlordDashboard() {
                     user.id,
                   report_id:
                     appealModal.reportId,
+                  apartment_id:
+                    appealModal.apartmentId,
                   violation_id:
                     appealModal.violationId,
+                  appeal_type:
+                    appealModal.reportId
+                      ? "property_report"
+                      : "general",
                   reason: `${appealModal.relatedType.replace(
                     /_/g,
                     " "
                   )} appeal`,
                   description:
                     appealMessage.trim(),
+                  contact_information:
+                    appealContact.trim(),
                   supporting_docs: [
                     {
                       kind: "contact",
@@ -3031,6 +3059,8 @@ export function LandlordDashboard() {
         setSelectedNotificationDetail(
           null
         );
+        setSelectedLandlordAppeal(created);
+        handleSectionChange("notifications");
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -3124,7 +3154,17 @@ export function LandlordDashboard() {
     ),
 
 
-    notifications: () => (
+    notifications: () => selectedLandlordAppeal ? (
+      <LandlordAppealDetails
+        appeal={selectedLandlordAppeal}
+        apartment={myApartments.find((item) => String(item.id) === String(selectedLandlordAppeal.apartment_id ?? getAppealMetadata(selectedLandlordAppeal, "source")?.apartment_id))}
+        onBack={() => setSelectedLandlordAppeal(null)}
+        onViewApartment={() => {
+          const apartmentId = selectedLandlordAppeal.apartment_id ?? getAppealMetadata(selectedLandlordAppeal, "source")?.apartment_id;
+          if (apartmentId) navigate(`/apartment/${apartmentId}`, { state: { returnTo: "/landlord/dashboard?section=notifications", backLabel: "Back to Notifications" } });
+        }}
+      />
+    ) : (
       <LandlordNotifications
         notifications={
           notifications

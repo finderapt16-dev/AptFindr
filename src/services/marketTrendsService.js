@@ -1,9 +1,11 @@
+
 import {
   fetchApartmentViews,
   fetchFavoritesForApartments,
   fetchNotifications,
   fetchViewActivityForApartments,
 } from "@/services/dashboardSupabaseService";
+
 import { fetchRatingsForApartments } from "@/services/apartmentRatingsService";
 import { supabase } from "@/services/supabaseClient";
 
@@ -22,50 +24,202 @@ const EMPTY_PREFERENCE_ANALYTICS = {
   },
 };
 
-async function fetchTenantPreferenceAnalytics(period) {
-  const { data, error } = await supabase.rpc("fn_get_tenant_preference_analytics", {
-    p_period: period,
-  });
+const VALID_PERIODS = new Set([
+  "thisWeek",
+  "lastWeek",
+  "last30Days",
+  "allTime",
+]);
 
-  if (error) {
-    console.warn("Tenant preference analytics are unavailable:", error.message);
+/**
+ * Tenant preference analytics are platform-wide.
+ * Apartment ownership and landlord ID must not be
+ * passed to this RPC.
+ */
+export async function fetchTenantPreferenceAnalytics(
+  period = "thisWeek"
+) {
+  const selectedPeriod = VALID_PERIODS.has(period)
+    ? period
+    : "thisWeek";
+
+  try {
+    const { data, error } = await supabase.rpc(
+      "fn_get_tenant_preference_analytics",
+      {
+        p_period: selectedPeriod,
+      }
+    );
+
+    if (error) {
+      console.error(
+        "[Market Trends] Tenant analytics RPC failed:",
+        {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        }
+      );
+
+      return {
+        data: null,
+        error:
+          error.code === "PGRST202"
+            ? "Tenant preference analytics database function is missing or its signature does not match."
+            : `Unable to load tenant preferences: ${
+                error.message || "Database request failed."
+              }`,
+      };
+    }
+
+    // RPC must return an object containing chart data.
+    if (
+      !data ||
+      typeof data !== "object" ||
+      Array.isArray(data)
+    ) {
+      console.error(
+        "[Market Trends] Unexpected analytics response:",
+        data
+      );
+
+      return {
+        data: null,
+        error:
+          "Tenant preference analytics returned an invalid response.",
+      };
+    }
+
+    const analytics = {
+      ...EMPTY_PREFERENCE_ANALYTICS,
+      ...data,
+      responseCounts: {
+        ...EMPTY_PREFERENCE_ANALYTICS.responseCounts,
+        ...(data.responseCounts ?? {}),
+      },
+    };
+
     return {
-      data: EMPTY_PREFERENCE_ANALYTICS,
-      error: error.code === "PGRST202"
-        ? "Install the tenant preference analytics database function to display these charts."
-        : `Tenant preference analytics are currently unavailable: ${error.message || "an unknown database error occurred."}`,
+      data: analytics,
+      error: "",
+    };
+  } catch (error) {
+    console.error(
+      "[Market Trends] Unexpected analytics error:",
+      error
+    );
+
+    return {
+      data: null,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to retrieve tenant preferences.",
     };
   }
-
-  return {
-    data: data && typeof data === "object" && !Array.isArray(data) ? data : EMPTY_PREFERENCE_ANALYTICS,
-    error: "",
-  };
 }
 
 /**
- * Loads the existing engagement sources used by the landlord market page.
- * This deliberately composes the established services rather than duplicating
- * their Supabase queries or introducing a new schema dependency.
+ * Handle individual service errors without causing
+ * unrelated Market Trends sections to disappear.
  */
-export async function fetchMarketTrendsData({ apartmentIds = [], userId, period = "allTime" } = {}) {
-  const ids = apartmentIds.filter(Boolean);
-  const [allTimeViews, viewActivity, favorites, ratings, notifications, preferenceAnalytics] = await Promise.all([
-    fetchApartmentViews(),
-    ids.length ? fetchViewActivityForApartments(ids) : [],
-    ids.length ? fetchFavoritesForApartments(ids) : [],
-    ids.length ? fetchRatingsForApartments(ids) : [],
-    userId ? fetchNotifications(userId) : [],
+async function safelyFetch(label, fetcher, fallback = []) {
+  try {
+    const result = await fetcher();
+    return Array.isArray(result) ? result : fallback;
+  } catch (error) {
+    console.error(
+      `[Market Trends] Failed to fetch ${label}:`,
+      error
+    );
+    return fallback;
+  }
+}
+
+/**
+ * Fetch platform-wide Market Trends.
+ *
+ * apartmentIds:
+ *   IDs of all tenant-visible apartments.
+ *
+ * userId:
+ *   Used only for the logged-in landlord's notifications.
+ *
+ * period:
+ *   Used for analytics and engagement time filtering.
+ *
+ * Tenant preference analytics do NOT depend on:
+ * - landlord ownership
+ * - number of landlord apartments
+ * - landlord verification status
+ */
+export async function fetchMarketTrendsData({
+  apartmentIds = [],
+  userId,
+  period = "thisWeek",
+} = {}) {
+  const ids = [
+    ...new Set(
+      apartmentIds.filter(Boolean).map(String)
+    ),
+  ];
+
+  const [
+    allTimeViews,
+    viewActivity,
+    favorites,
+    ratings,
+    notifications,
+    preferenceAnalyticsResult,
+  ] = await Promise.all([
+    safelyFetch(
+      "apartment views",
+      () => fetchApartmentViews()
+    ),
+
+    ids.length
+      ? safelyFetch(
+          "view activity",
+          () => fetchViewActivityForApartments(ids)
+        )
+      : Promise.resolve([]),
+
+    ids.length
+      ? safelyFetch(
+          "favorites",
+          () => fetchFavoritesForApartments(ids)
+        )
+      : Promise.resolve([]),
+
+    ids.length
+      ? safelyFetch(
+          "ratings",
+          () => fetchRatingsForApartments(ids)
+        )
+      : Promise.resolve([]),
+
+    userId
+      ? safelyFetch(
+          "notifications",
+          () => fetchNotifications(userId)
+        )
+      : Promise.resolve([]),
+
+    // Always fetch preferences, even with zero apartments.
     fetchTenantPreferenceAnalytics(period),
   ]);
 
   return {
-    allTimeViews: Array.isArray(allTimeViews) ? allTimeViews : [],
-    viewActivity: Array.isArray(viewActivity) ? viewActivity : [],
-    favorites: Array.isArray(favorites) ? favorites : [],
-    ratings: Array.isArray(ratings) ? ratings : [],
-    notifications: Array.isArray(notifications) ? notifications : [],
-    preferenceAnalytics: preferenceAnalytics.data,
-    preferenceAnalyticsError: preferenceAnalytics.error,
+    allTimeViews,
+    viewActivity,
+    favorites,
+    ratings,
+    notifications,
+
+    preferenceAnalytics: preferenceAnalyticsResult.data,
+
+    preferenceAnalyticsError:
+      preferenceAnalyticsResult.error,
   };
 }
