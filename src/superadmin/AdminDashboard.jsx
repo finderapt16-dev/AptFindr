@@ -164,19 +164,20 @@ export function AdminDashboard() {
         const value = `${type} ${title} ${message} ${action}`;
         if (type === "support_request" || payload.ticket_id || payload.support_ticket_id)
             return "support";
-        if (type === "landlord_activity" || payload.category === "landlord_activity" || payload.activity_type)
-            return "activities";
         if (value.includes("report") || value.includes("violation"))
             return "reports";
         if (value.includes("appeal"))
             return "appeals";
-        if (value.includes("landlord") ||
-            value.includes("property") ||
-            value.includes("submission") ||
-            value.includes("verification") ||
-            payload.landlord_id ||
-            payload.landlordId)
-            return "landlord";
+        if (value.includes("approv") || value.includes("verif") || value.includes("publish") ||
+            payload.approved_at || payload.verified_at || payload.published_at)
+            return "approvals";
+        if (value.includes("property") || value.includes("apartment") || value.includes("listing") ||
+            value.includes("submission") || payload.apartment_id || payload.property_id)
+            return "properties";
+        if (value.includes("account") || value.includes("sign up") || value.includes("signup") ||
+            value.includes("register") || value.includes("new user") || value.includes("tenant") ||
+            value.includes("landlord") || payload.user_id || payload.tenant_id || payload.landlord_id || payload.landlordId)
+            return "accounts";
         return "system";
     };
     const isBusinessPermitNotification = (notification) => String(notification.type ?? "").toLowerCase().startsWith("business_permit_")
@@ -1313,10 +1314,12 @@ export function AdminDashboard() {
         const isViewActive = (status, type = "all") => notifFilter === status && notifTypeFilter === type;
         const notificationTone = (notification) => {
             const category = getNotificationCategory(notification);
-            if (category === "activities")
+            if (category === "approvals")
                 return { icon: Activity, bg: "admin-dashboard-span-10", text: "admin-dashboard-span-13" };
-            if (category === "landlord")
+            if (category === "accounts")
                 return { icon: Users, bg: "admin-dashboard-span-11", text: "admin-dashboard-span-14" };
+            if (category === "properties")
+                return { icon: ClipboardList, bg: "admin-dashboard-span-10", text: "admin-dashboard-span-13" };
             return { icon: Bell, bg: "admin-dashboard-span-12", text: "admin-dashboard-span-15" };
         };
         const openPermitLandlord = (notification) => {
@@ -1329,10 +1332,21 @@ export function AdminDashboard() {
             setSelectedLandlord(landlord);
             handleSectionChange("landlords");
         };
-        const activityTypes = Array.from(new Set(notificationCenterItems
-            .filter((notification) => getNotificationCategory(notification) === "activities")
-            .map((notification) => String(notification.payload?.activity_type ?? notification.type ?? ""))
-            .filter(Boolean))).sort();
+        const notificationFilters = activeSection === "support"
+            ? [
+                { label: "All", status: "all", type: "support", icon: Bell },
+                { label: `Unread ${unreadCount}`, status: "unread", type: "support", icon: Mail },
+                { label: "Archived", status: "archived", type: "support", icon: Archive },
+            ]
+            : [
+                { label: "All", status: "all", type: "all", icon: Bell },
+                { label: `Unread ${unreadCount}`, status: "unread", type: "all", icon: Mail },
+                { label: "Accounts", status: "all", type: "accounts", icon: Users },
+                { label: "Properties", status: "all", type: "properties", icon: ClipboardList },
+                { label: "Approvals", status: "all", type: "approvals", icon: CheckCircle2 },
+                { label: "System", status: "all", type: "system", icon: Settings },
+                { label: "Archived", status: "archived", type: "all", icon: Archive },
+            ];
         // Keep the compact notification view as one continuous list.
         const pageSize = Math.max(1, filteredNotifs.length);
         const pageCount = Math.max(1, Math.ceil(filteredNotifs.length / pageSize));
@@ -1354,18 +1368,13 @@ export function AdminDashboard() {
         <section className="admin-dashboard-section-5">
           <div className="admin-dashboard-notification-toolbar">
             <div className="admin-dashboard-card-2">
-              {[
-                { label: "All", status: "all", type: "all", icon: Bell },
-                { label: `Unread ${unreadCount}`, status: "unread", type: "all", icon: Mail },
-            ].map(({ label, status, type, icon: Icon }) => {
+              {notificationFilters.map(({ label, status, type, icon: Icon }) => {
                 const selected = isViewActive(status, type);
                 return <button key={label} onClick={() => selectNotificationView(status, type)} className={`admin-dashboard-button-7 ${selected ? "admin-dashboard-button-8" : "admin-dashboard-button-9"}`}><Icon className="admin-dashboard-icon-icon-3"/>{label}</button>;
             })}
             </div>
             <Button variant="outline" onClick={() => void markNotifsRead()} disabled={isMarkingAllNotifs || unreadCount === 0} className="admin-dashboard-button-6"><CheckCheck className="admin-dashboard-check-check-icon"/>{isMarkingAllNotifs ? "Marking..." : "Mark all as read"}</Button>
           </div>
-          {notifTypeFilter === "activities" && <select value={notifActivityFilter} onChange={(event) => setNotifActivityFilter(event.target.value)} className="admin-dashboard-select"><option value="all">All activity types</option>{activityTypes.map((type) => <option key={type} value={type}>{formatNotificationType(type)}</option>)}</select>}
-
           {notificationCenterItems.length === 0 ? (<NotificationEmpty title="No notifications found." message="New administrative notifications will appear here."/>) : filteredNotifs.length === 0 ? (notifFilter === "unread" && !notifSearch && notifTypeFilter === "all"
                 ? <NotificationEmpty title="You're all caught up." message="You have no unread notifications."/>
                 : notifFilter === "archived" ? <ArchiveEmpty kind="notifications" icon={Bell}/> : <NotificationEmpty title="No notifications found." message="Try adjusting your search or filter."/>) : (<div className="admin-dashboard-card-3">

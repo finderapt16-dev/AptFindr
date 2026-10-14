@@ -64,3 +64,13 @@ test('tenant and landlord support requests have a dedicated super admin inbox', 
   assert.match(dashboardSource, /fetchSupportTicketById/);
   assert.match(dashboardSource, /activeSection === "support" \? category === "support" : category !== "support"/);
 });
+
+test('super admin notifications expose operational event filters', () => {
+  const dashboardSource = readFileSync(new URL('../src/superadmin/AdminDashboard.jsx', import.meta.url), 'utf8');
+  for (const filter of ['Accounts', 'Properties', 'Approvals', 'System', 'Archived']) {
+    assert.match(dashboardSource, new RegExp(`label: "${filter}"`));
+  }
+  assert.match(dashboardSource, /return "approvals"/);
+  assert.match(dashboardSource, /return "properties"/);
+  assert.match(dashboardSource, /return "accounts"/);
+});
