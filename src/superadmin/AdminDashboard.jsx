@@ -1344,7 +1344,6 @@ export function AdminDashboard() {
                 { label: "Accounts", status: "all", type: "accounts", icon: Users },
                 { label: "Properties", status: "all", type: "properties", icon: ClipboardList },
                 { label: "Approvals", status: "all", type: "approvals", icon: CheckCircle2 },
-                { label: "System", status: "all", type: "system", icon: Settings },
                 { label: "Archived", status: "archived", type: "all", icon: Archive },
             ];
         // Keep the compact notification view as one continuous list.
