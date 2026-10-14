@@ -10,10 +10,20 @@ const canInspectApartment = (apartment) => apartment?.isPublished === true
     || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
 export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, aptStatusFilter, setAptStatusFilter, aptPropertyTypeFilter, setAptPropertyTypeFilter, aptSort, setAptSort, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, resolveReport, dismissReport, }) {
     const reportedCount = allApartments.filter((a) => getApartmentReportCount(a.id) > 0).length;
-    const availableCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "published").length;
-    const reviewCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "pending").length;
-    const unpublishedCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "unpublished").length;
-    const rejectedCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "rejected").length;
+    const landlordsById = new Map();
+    allApartments.forEach((apartment) => {
+        const landlord = getLandlordForApt(apartment);
+        const landlordId = String(landlord?.id ?? apartment.landlordId ?? apartment.landlord_id ?? "").trim();
+        if (landlordId && !landlordsById.has(landlordId)) {
+            landlordsById.set(landlordId, landlord ?? apartment);
+        }
+    });
+    const expiredPermitCount = Array.from(landlordsById.values()).filter((landlord) => {
+        const verification = landlord?.features?.verification ?? {};
+        const expiry = landlord?.permit_expiry ?? landlord?.permitExpiry ?? landlord?.expires_at ?? landlord?.expiresAt ?? verification.permitExpiry ?? verification.expiresAt;
+        const expiryDate = expiry ? new Date(expiry) : null;
+        return expiryDate && !Number.isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now();
+    }).length;
     const propertyTypes = Array.from(new Set(allApartments.map((apartment) => apartment.propertyType).filter((value) => Boolean(value)))).sort();
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -31,13 +41,10 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
           </div>
         </header>
 
-        <section className="admin-apartments-section">
+        <section className="admin-apartments-section admin-apartments-summary">
           {[
-            { label: "Total Apartments", value: allApartments.length, note: "All listings", icon: Building2 },
-            { label: "Published", value: availableCount, note: "Visible to tenants", icon: CheckCircle2 },
-            { label: "Unpublished", value: unpublishedCount, note: "Hidden from tenants", icon: Building2 },
-            { label: "Pending Review", value: reviewCount, note: "Requires inspection", icon: Clock },
-            { label: "Rejected", value: rejectedCount, note: "Did not pass review", icon: XCircle },
+            { label: "Total Landlords", value: landlordsById.size, note: "Listing owners", icon: Building2 },
+            { label: "Expired Permits", value: expiredPermitCount, note: "Needs renewal", icon: AlertOctagon },
         ].map(({ label, value, note, icon: Icon }) => (<div key={label} className="admin-apartments-row-3"><span className="admin-apartments-row-4"><Icon className="admin-apartments-icon-icon"/></span><span className="admin-apartments-span-2"><span className="admin-apartments-span-3">{value}</span><span className="admin-apartments-span-4">{label}</span><span className="admin-apartments-span-5">{note}</span></span></div>))}
         </section>
 

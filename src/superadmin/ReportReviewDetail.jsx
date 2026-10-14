@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { getImageUrl } from "@/utils/images";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
+import { ReportPropertyInspection } from "@/components/ReportPropertyInspection";
 import { EvidenceViewer } from "./EvidenceViewer";
 import "./ReportReviewDetail.css";
 
@@ -63,6 +64,7 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
     return <div className={`report-review-detail ${underReview ? "report-review-under-review-page" : ""}`}>
       <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
       <header className="report-review-header"><div><h1>Report Details</h1><p>Review the report and take appropriate action.</p></div><span className={`report-review-status is-${underReview ? "under_review" : status}`}>{underReview ? "Under Review" : labels[status] || report.status}</span></header>
+      <ReportPropertyInspection apartment={apartment} landlord={details?.landlord}/>
       <div className="report-review-columns">
         <div className="report-review-main">
           <section className="report-review-panel report-review-apartment"><h2>Apartment Information</h2><div className="report-review-apartment-content">

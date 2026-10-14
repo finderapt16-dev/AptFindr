@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
+import { ReportPropertyInspection } from "@/components/ReportPropertyInspection";
 import { finalizeReportListing, reviewTenantReport } from "@/services/dashboardSupabaseService";
 import "./ReportReviewDetail.css";
 
@@ -30,6 +31,7 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
   return <div className="report-review-detail">
     <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
     <header className="report-review-header"><div><h1>Report Details</h1><p>Review the tenant report, deadlines, and any appeal workflow.</p></div></header>
+    <ReportPropertyInspection apartment={apartment} landlord={details?.landlord}/>
     <div className="report-review-columns"><div className="report-review-main">
       <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd>{reporter?.name || "Tenant"}</dd><dt>Date Submitted</dt><dd>{displayDate(report.submitted_at || report.submittedAt || report.created_at)}</dd><dt>Report Reason</dt><dd>{report.issue_type || report.category || "Not specified"}</dd><dt>Describe the Problem</dt><dd className="report-review-description">{report.details || "No description provided."}</dd><dt>Current Status</dt><dd><span className="report-review-status is-under_review">{labels[status] || status.replace(/_/g, " ")}</span></dd>{report.appeal_deadline && <><dt>Appeal Deadline</dt><dd>{displayDate(report.appeal_deadline)}</dd></>}{report.admin_notes && <><dt>Admin Notes</dt><dd>{report.admin_notes}</dd></>}</dl></section>
       <section className="report-review-panel"><h2>Supporting Evidence</h2>{evidence.length ? <div className="report-review-evidence-grid">{evidence.map((file, index) => <a className="report-review-file" key={file.id || index} href={file.fileUrl || file.file_url} target="_blank" rel="noreferrer"><span className="report-review-file-preview">{file.fileType === "image" ? <ImageWithFallback src={file.fileUrl || file.file_url} alt={file.fileName || "Evidence"}/> : <FileText/>}</span><strong>{file.fileName || file.file_name || "Supporting document"}</strong></a>)}</div> : <p className="report-review-empty">No supporting evidence submitted.</p>}</section>

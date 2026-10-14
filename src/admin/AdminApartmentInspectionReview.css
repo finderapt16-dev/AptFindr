@@ -102,3 +102,148 @@
   .admin-inspection-review-cover, .admin-inspection-review-no-image { height: 288px; border-radius: 10px; }
   .admin-inspection-review-thumbnails button { height: 90px; border-radius: 10px; }
 }
+
+/* Property-inspection reference structure: a compact property-and-landlord
+   review canvas with vertically inspectable unit records. */
+@media (min-width: 1001px) {
+  .admin-inspection-review { width: min(100%, 1004px); }
+  .admin-inspection-review-heading { margin: 16px 0 15px; }
+  .admin-inspection-review h1 { font-size: 19px; }
+  .admin-inspection-review-heading p { font-size: 11px; }
+  .admin-inspection-review-layout { grid-template-columns: minmax(0, 656px) 316px; gap: 34px; }
+  .admin-inspection-review-main, .admin-inspection-review-side { gap: 16px; }
+  .admin-inspection-review-card { padding: 12px 10px; border-color: #d8dce2; border-radius: 7px; }
+  .admin-inspection-review-card h2 { font-size: 17px; }
+  .admin-inspection-review-property { grid-template-columns: minmax(0, 337px) minmax(0, 1fr); gap: 9px; margin-top: 12px; }
+  .admin-inspection-review-cover, .admin-inspection-review-no-image { height: 207px; border-radius: 6px; }
+  .admin-inspection-review-dots { margin: 5px 0; }
+  .admin-inspection-review-thumbnails { gap: 7px; }
+  .admin-inspection-review-thumbnails button { height: 66px; border-radius: 5px; }
+  .admin-inspection-review-summary { gap: 9px; }
+  .admin-inspection-review-title h3 { font-size: 16px; }
+  .admin-inspection-review-title p, .admin-inspection-review-summary dt, .admin-inspection-review-summary dd { font-size: 10px; }
+  .admin-inspection-review-title > span { padding: 5px 10px; font-size: 9px; }
+  .admin-inspection-review-summary dl { gap: 8px; }
+  .admin-inspection-review-summary dl div { grid-template-columns: 105px minmax(0, 1fr); gap: 8px; }
+  .admin-inspection-review-about h4, .admin-inspection-review-tags strong { font-size: 10px; }
+  .admin-inspection-review-about p { min-height: 56px; padding: 6px; font-size: 9px; }
+  .admin-inspection-review-tags { padding: 7px 9px; }
+  .admin-inspection-review-tags div { gap: 4px; margin-top: 5px; }
+  .admin-inspection-review-tags span { flex: 1 1 29%; padding: 3px 5px; font-size: 8px; text-align: center; }
+
+  .admin-inspection-review-subtitle { font-size: 10px; }
+  .admin-inspection-review-rooms { grid-template-columns: 1fr; gap: 9px; margin-top: 16px; padding: 16px; border-inline: 1px solid #e2e6eb; }
+  .admin-inspection-review-rooms article { position: relative; grid-template-columns: 170px minmax(0, 1fr); grid-auto-rows: min-content; gap: 5px 12px; min-height: 145px; padding: 10px; border-radius: 7px; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { display: block; grid-column: 1; grid-row: 1 / span 8; width: 170px; height: 145px; margin: 0; overflow: hidden; border-radius: 5px; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) img { width: 100%; height: 100%; margin: 0; object-fit: cover; }
+  .admin-inspection-review-rooms article > :not(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { grid-column: 2; }
+  .admin-inspection-review-rooms strong { padding-right: 82px; font-size: 14px; }
+  .admin-inspection-review-rooms b { color: #078be0; font-size: 15px; }
+  .admin-inspection-review-rooms span { font-size: 10px; }
+  .admin-inspection-review-rooms em { position: absolute; top: 10px; right: 10px; padding: 4px 12px; font-size: 8px; }
+  .admin-inspection-review-unit-amenities { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: 5px; margin-top: 3px; }
+  .admin-inspection-review-unit-amenities > strong { padding: 0; font-size: 9px; }
+  .admin-inspection-review-unit-amenities > div { gap: 4px; margin: 0; }
+  .admin-inspection-review-unit-amenities span { padding: 4px 8px; border-radius: 6px; font-size: 8px; }
+  .admin-inspection-review-map { height: 350px; margin-top: 12px; border-radius: 6px; }
+
+  .admin-inspection-review-side > .admin-inspection-review-card:first-child { display: none; }
+  .admin-inspection-review-side .admin-inspection-review-card { padding: 20px 28px; border-radius: 7px; }
+  .admin-inspection-review-side .admin-inspection-review-card h2 { font-size: 17px; }
+  .admin-inspection-review-landlord { margin: 16px 0; }
+  .admin-inspection-review-landlord > span { width: 43px; height: 43px; font-size: 15px; }
+  .admin-inspection-review-landlord strong { font-size: 14px; }
+  .admin-inspection-review-landlord p, .admin-inspection-review-side .admin-inspection-review-card > p { font-size: 10px; }
+  .admin-inspection-review-outline, .admin-inspection-review-approve, .admin-inspection-review-reject { min-height: 39px; border-radius: 6px; font-size: 11px; }
+  .admin-inspection-review-actions { margin-top: 14px; }
+  .admin-inspection-review-actions .admin-inspection-review-approve,
+  .admin-inspection-review-actions .admin-inspection-review-reject { display: none; }
+}
+
+/* The image fallback component is a wrapper element, so make that wrapper the
+   first grid column at tablet widths too. This prevents the unit contents from
+   collapsing into the narrow, centered column seen in the inspection view. */
+@media (min-width: 561px) and (max-width: 1000px) {
+  .admin-inspection-review-rooms { grid-template-columns: 1fr; gap: 10px; }
+  .admin-inspection-review-rooms article { position: relative; grid-template-columns: 145px minmax(0, 1fr); grid-auto-rows: min-content; gap: 5px 12px; min-height: 130px; padding: 10px; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { display: block; grid-column: 1; grid-row: 1 / span 8; width: 145px; height: 130px; margin: 0; overflow: hidden; border-radius: 5px; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) img { width: 100%; height: 100%; margin: 0; object-fit: cover; }
+  .admin-inspection-review-rooms article > :not(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { grid-column: 2; }
+  .admin-inspection-review-rooms strong { padding-right: 80px; }
+  .admin-inspection-review-rooms em { position: absolute; top: 10px; right: 10px; }
+  .admin-inspection-review-unit-amenities { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; gap: 6px; margin-top: 3px; }
+  .admin-inspection-review-unit-amenities > div { margin-top: 0; }
+}
+
+@media (max-width: 560px) {
+  .admin-inspection-review-rooms { grid-template-columns: 1fr; }
+  .admin-inspection-review-rooms article { grid-template-columns: 1fr; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { display: block; width: 100%; height: 180px; overflow: hidden; border-radius: 6px; }
+  .admin-inspection-review-rooms article > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) img { width: 100%; height: 100%; margin: 0; object-fit: cover; }
+  .admin-inspection-review-rooms article > :not(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { grid-column: auto; }
+  .admin-inspection-review-rooms em { position: absolute; top: 16px; right: 16px; }
+}
+
+/* MapView owns an inner shell and canvas.  Keep both at the card's full
+   height, otherwise Leaflet initialises into a zero-height area. */
+.admin-inspection-review-map .map-view-shell,
+.admin-inspection-review-map .map-view-container,
+.admin-inspection-review-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-inspection-review-map > .map-view-shell {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  place-content: initial;
+}
+
+.admin-inspection-review-map > .map-view-shell > .map-view-container {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
+.admin-inspection-review-map-address {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0 !important;
+  color: #61728f;
+  font-size: 13px;
+}
+
+.admin-inspection-review-map-address svg {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  color: #078be0;
+}
+
+/* Retain a consistent gallery rail even when the landlord uploaded only one
+   image, rather than leaving a large unintentional blank area beneath it. */
+.admin-inspection-review-thumbnails button.is-active {
+  outline: 2px solid #0b94f5;
+  outline-offset: 1px;
+}
+
+.admin-inspection-review-thumbnail-empty {
+  display: block;
+  min-width: 0;
+  height: 70px;
+  border: 1px dashed #d3dae5;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f7f9fc, #eef2f7);
+}
+
+@media (min-width: 1001px) {
+  .admin-inspection-review-thumbnail-empty {
+    height: 66px;
+    border-radius: 5px;
+  }
+}

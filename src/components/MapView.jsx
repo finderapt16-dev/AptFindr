@@ -430,13 +430,21 @@ export function MapView({
       hasCenteredOnLocationRef.current = true;
     }
 
-    const resizeTimer = setTimeout(
-      () => map.invalidateSize(),
-      0
-    );
+    // Maps are also mounted inside cards that can finish sizing after this
+    // effect runs. Keep Leaflet synchronized with its actual canvas size so
+    // tiles and markers remain visible on detail/review pages.
+    const resizeMap = () => map.invalidateSize();
+    const resizeTimer = setTimeout(resizeMap, 0);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(resizeMap);
+
+    resizeObserver?.observe(mapRef.current);
 
     return () => {
       clearTimeout(resizeTimer);
+      resizeObserver?.disconnect();
 
       map.remove();
 

@@ -9,40 +9,18 @@ import { supabase } from "@/services/supabaseClient";
 
 const formatPermitDate = (value) => {
   if (!value) return "Not provided";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "Asia/Manila",
-  }).format(date);
-};
-
-const formatPermitDateTime = (value) => {
-  if (!value) return "Not provided";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return new Intl.DateTimeFormat("en-PH", {
     month: "long",
     day: "numeric",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
     timeZone: "Asia/Manila",
   }).format(date);
-};
-
-const renewalStatusLabel = (value) => {
-  const normalized = String(value || "").replace(/_/g, " ").trim();
-  return normalized ? normalized.replace(/\b\w/g, character => character.toUpperCase()) : "No renewal submitted";
 };
 
 const permitFileName = (url) => {
   if (!url) return "No business permit uploaded";
-
   try {
     return decodeURIComponent(new URL(url).pathname.split("/").pop()) || "Business permit document";
   } catch {
@@ -74,21 +52,29 @@ function BusinessPermitInformation({ business }) {
   const [updatePermit, setUpdatePermit] = useState(null);
   const [renewalStatus, setRenewalStatus] = useState("");
   const [renewalExpiry, setRenewalExpiry] = useState("");
+
   useEffect(() => {
     let active = true;
-    if (!user?.id) return;
-    void supabase.from("landlord_permit_renewals").select("status, expires_at, permit_year").eq("landlord_id", user.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
-      if (active) { setRenewalStatus(data?.status || ""); setRenewalExpiry(data?.status === "approved" ? data.expires_at || "" : ""); }
+    if (!user?.id) return undefined;
+    void supabase.from("landlord_permit_renewals").select("status, expires_at").eq("landlord_id", user.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
+      if (active) {
+        setRenewalStatus(data?.status || "");
+        setRenewalExpiry(data?.status === "approved" ? data.expires_at || "" : "");
+      }
     });
     return () => { active = false; };
   }, [user?.id, reload]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
     setPermits([]);
     setPage(0);
-    if (!user?.id) { setLoading(false); return; }
+    if (!user?.id) {
+      setLoading(false);
+      return undefined;
+    }
     fetchLandlordBusinessPermits(user.id).then(records => {
       if (active) setPermits(records);
     }).catch(reason => {
@@ -96,6 +82,7 @@ function BusinessPermitInformation({ business }) {
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [user?.id, reload]);
+
   const records = permits.length ? permits : business && (business.documentUrl || business.permitNumber) ? [business] : [];
   const currentPage = Math.min(page, Math.max(0, records.length - 1));
   const permit = records[currentPage];
@@ -105,24 +92,24 @@ function BusinessPermitInformation({ business }) {
   const renewalBlocked = renewalStatus === "pending_review";
   const renewalDue = !renewalBlocked && (["expired", "requires_changes", "rejected"].includes(renewalStatus) || Date.now() >= expiryTimestamp);
   const canSubmitRenewal = !renewalBlocked;
+
   return <section className="landlord-settings-card landlord-settings-business-card">
     <header className="landlord-settings-card-header landlord-settings-business-header">
       <div><h2>Business Information</h2><p>Manage your business verification and permit details.</p></div>
-      <span className="landlord-settings-read-only"><LockKeyhole aria-hidden="true" strokeWidth={1.6} />{renewalBlocked ? "UNDER REVIEW" : renewalDue ? "UPDATE AVAILABLE" : "RENEWAL READY"}</span>
+      <span className="landlord-settings-read-only"><LockKeyhole aria-hidden="true" strokeWidth={1.6} />READ-ONLY</span>
     </header>
     {loading ? <p role="status">Loading business permits...</p> : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : permit ? <>
       <div className="landlord-settings-business-record">
         <dl className="landlord-settings-permit-details">
           <div><dt>Apartment Name</dt><dd>{permit.apartmentName || permit.businessName || "Not provided"}</dd></div>
           <div><dt>Permit Number</dt><dd>{permit.permitNumber || "Not provided"}</dd></div>
-          <div><dt>Annual Expiration</dt><dd>{formatPermitDateTime(expiry)}</dd></div>
+          <div><dt>Business Account Number</dt><dd>{permit.businessAccount || "Not provided"}</dd></div>
           <div><dt>Issued Date</dt><dd>{formatPermitDate(permit.issuedAt)}</dd></div>
-          <div><dt>Renewal Status</dt><dd>{renewalStatusLabel(renewalStatus || permit.renewalStatus)}</dd></div>
         </dl>
         <div className="landlord-settings-permit-file">
           <span className="landlord-settings-file-icon"><FileText aria-hidden="true" /></span>
           <div>
-            {canSubmitRenewal ? <button type="button" className="landlord-settings-permit-update-link" onClick={() => setUpdatePermit({ ...permit, permitExpiry: expiry })}>{renewalDue ? "Update business permit" : "Renew business permit"}</button> : permit.documentUrl ? <a href={permit.documentUrl} target="_blank" rel="noreferrer">{permit.fileName || permitFileName(permit.documentUrl)}</a> : <strong>Renewal pending review</strong>}
+            {renewalDue && canSubmitRenewal ? <button type="button" className="landlord-settings-permit-update-link" onClick={() => setUpdatePermit({ ...permit, permitExpiry: expiry })}>Update business permit</button> : permit.documentUrl ? <a href={permit.documentUrl} target="_blank" rel="noreferrer">{permit.fileName || permitFileName(permit.documentUrl)}</a> : <strong>{renewalBlocked ? "Renewal pending review" : "No business permit uploaded"}</strong>}
             <small>{size > 0 ? size >= 1024 * 1024 ? `${(size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB` : "Size not provided"}</small>
           </div>
         </div>
@@ -132,8 +119,8 @@ function BusinessPermitInformation({ business }) {
         <span aria-live="polite">Page {currentPage + 1} of {records.length}</span>
         <button type="button" aria-label="Next business permit" disabled={currentPage === records.length - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight aria-hidden="true" /></button>
       </nav>
-    </> : <p>No business permits submitted. Upload a permit when creating or updating a apartment.</p>}
-    {updatePermit && <UpdateBusinessPermitDialog permit={updatePermit} landlordId={user.id} onClose={() => setUpdatePermit(null)} onSubmitted={() => { setRenewalStatus("pending_review"); setReload(value => value + 1); }}/>}
+    </> : <p>No business permits submitted. Upload a permit when creating or updating an apartment.</p>}
+    {updatePermit && <UpdateBusinessPermitDialog permit={updatePermit} landlordId={user.id} onClose={() => setUpdatePermit(null)} onSubmitted={() => { setRenewalStatus("pending_review"); setReload(value => value + 1); }} />}
   </section>;
 }
 

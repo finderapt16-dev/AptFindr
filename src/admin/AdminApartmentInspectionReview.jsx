@@ -41,7 +41,14 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
                 </>}
               </div>
               {images.length > 1 && <div className="admin-inspection-review-dots">{images.slice(0, 6).map((image, index) => <button type="button" aria-label={`View image ${index + 1}`} aria-current={selectedImageIndex === index} key={`${image}-${index}`} onClick={() => onSelectImage(index)} />)}</div>}
-              {images.length > 1 && <div className="admin-inspection-review-thumbnails">{images.slice(0, 4).map((image, index) => <button type="button" key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>)}</div>}
+              {images.length > 0 && <div className="admin-inspection-review-thumbnails" aria-label={`${images.length} property photo${images.length === 1 ? "" : "s"} uploaded`}>
+                {Array.from({ length: Math.max(4, Math.min(images.length, 4)) }, (_, index) => {
+                  const image = images[index];
+                  return image
+                    ? <button type="button" className={selectedImageIndex === index ? "is-active" : ""} key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>
+                    : <span className="admin-inspection-review-thumbnail-empty" key={`empty-thumbnail-${index}`} aria-hidden="true" />;
+                })}
+              </div>}
             </div>
             <div className="admin-inspection-review-summary">
               <div className="admin-inspection-review-title"><div><h3>{apartment.title || "Untitled apartment"}</h3><p>{location}</p></div><span className={isPublished ? "published" : "pending"}>{statusLabel}</span></div>
@@ -58,7 +65,15 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
           </div>
         </section>
         <section className="admin-inspection-review-card"><h2>Units Overview</h2><p className="admin-inspection-review-subtitle">Review the submitted units for this apartment.</p><div className="admin-inspection-review-rooms">{rooms.length ? rooms.map((room, index) => <article key={room.id ?? index}><ImageWithFallback src={list(room.images ?? room.image ?? room.image_url)[0]} alt={room.name || `Unit ${index + 1}`} /><strong>{room.name || `Unit ${index + 1}`}</strong><b>{room.price ? `₱${amount(room.price)} / month` : "Price not set"}</b><span>{room.bedrooms ?? 1} Bed | {room.bathrooms ?? 1} Bath</span><span>{room.maxOccupants ?? room.max_occupants ?? 1} Occupancy</span><em>{String(room.status || "available").replace(/\b\w/g, (letter) => letter.toUpperCase())}</em><div className="admin-inspection-review-unit-amenities"><strong>Unit Amenities</strong><div>{getUnitAmenities(room, apartment).length ? getUnitAmenities(room, apartment).map(item => <span key={item}>{item}</span>) : <small>No amenities provided.</small>}</div></div></article>) : <p>No units submitted for this apartment.</p>}</div></section>
-        <section className="admin-inspection-review-card"><h2>Map Location</h2><div className="admin-inspection-review-map">{Number.isFinite(Number(apartment.lat)) && Number.isFinite(Number(apartment.lng)) ? <MapView lat={Number(apartment.lat)} lng={Number(apartment.lng)} zoom={15} showSingleMarker /> : <div><MapPin aria-hidden="true" />Location coordinates have not been provided.</div>}</div></section>
+        <section className="admin-inspection-review-card">
+          <h2>Map Location</h2>
+          <p className="admin-inspection-review-map-address"><MapPin aria-hidden="true" />{location}</p>
+          <div className="admin-inspection-review-map">
+            {Number.isFinite(Number(apartment.lat)) && Number.isFinite(Number(apartment.lng))
+              ? <MapView lat={Number(apartment.lat)} lng={Number(apartment.lng)} zoom={15} showSingleMarker />
+              : <div><MapPin aria-hidden="true" />Location coordinates have not been provided.</div>}
+          </div>
+        </section>
       </div>
       <aside className="admin-inspection-review-side">
         <section className="admin-inspection-review-card"><h2>Listing Status</h2><p>Submitted on {submittedOn}</p><span className={`admin-inspection-review-status ${isPublished ? "published" : "pending"}`}><Clock3 aria-hidden="true" />{statusLabel}</span></section>

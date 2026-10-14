@@ -1,0 +1,37 @@
+.report-property-inspection { display: grid; gap: 16px; margin-bottom: 20px; }
+.report-property-inspection__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.report-property-inspection__header h2 { margin: 0; color: #172033; font-size: 20px; line-height: 1.2; }
+.report-property-inspection__header p { display: flex; align-items: center; gap: 5px; margin: 5px 0 0; color: #64748b; font-size: 12px; }
+.report-property-inspection__header p svg { width: 13px; height: 13px; }
+.report-property-inspection__header > span, .report-property-inspection__section-heading > span { border-radius: 999px; padding: 4px 9px; background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.report-property-inspection__grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+.report-property-inspection__primary, .report-property-inspection__side { display: grid; gap: 12px; min-width: 0; }
+.report-property-inspection__card { min-width: 0; padding: 14px; border: 1px solid #dbe3eb; border-radius: 8px; background: #fff; }
+.report-property-inspection__card h3 { margin: 0 0 10px; color: #172033; font-size: 12px; font-weight: 700; }
+.report-property-inspection__photos > :first-child, .report-property-inspection__photos > :first-child img { display: block; width: 100%; height: 190px; border-radius: 5px; object-fit: cover; }
+.report-property-inspection__photos > div:last-child { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.report-property-inspection__photos > div:last-child > * { display: block; width: 100%; height: 52px; border-radius: 4px; background: #b5b5b5; object-fit: cover; }
+.report-property-inspection__image-placeholder, .report-property-inspection__unit-placeholder { display: grid !important; place-items: center; background: #eef2f6 !important; color: #94a3b8; }
+.report-property-inspection__image-placeholder svg, .report-property-inspection__unit-placeholder svg { width: 30px; height: 30px; }
+.report-property-inspection__section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.report-property-inspection__section-heading h3 { margin-bottom: 2px; }
+.report-property-inspection__section-heading p { margin: 0; color: #64748b; font-size: 10px; }
+.report-property-inspection__units { display: grid; gap: 7px; }
+.report-property-inspection__unit { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 9px; padding: 7px; border: 1px solid #dbe3eb; border-radius: 6px; }
+.report-property-inspection__unit > img, .report-property-inspection__unit-placeholder { width: 76px; height: 76px; border-radius: 4px; object-fit: cover; }
+.report-property-inspection__unit header { display: flex; justify-content: space-between; gap: 8px; color: #1e293b; font-size: 11px; }
+.report-property-inspection__unit header span { padding: 2px 5px; border-radius: 999px; font-size: 8px; font-weight: 700; white-space: nowrap; }
+.report-property-inspection__unit header .is-available { color: #15803d; background: #dcfce7; }.report-property-inspection__unit header .is-unavailable { color: #b45309; background: #fef3c7; }
+.report-property-inspection__unit b { display: block; margin: 2px 0 4px; color: #0284c7; font-size: 11px; }
+.report-property-inspection__unit p { margin: 5px 0 0; color: #64748b; font-size: 9px; line-height: 1.3; }
+.report-property-inspection__tags, .report-property-inspection__pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.report-property-inspection__tags span, .report-property-inspection__pills span { border: 1px solid #dbe3eb; border-radius: 4px; padding: 3px 6px; color: #475569; background: #f8fafc; font-size: 9px; }
+.report-property-inspection__landlord { display: flex; align-items: center; gap: 8px; }
+.report-property-inspection__landlord > span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 999px; color: #fff; background: #07865a; font-size: 11px; font-weight: 700; }
+.report-property-inspection__landlord strong, .report-property-inspection__landlord small { display: block; }.report-property-inspection__landlord strong { color: #1e293b; font-size: 11px; }.report-property-inspection__landlord small { margin-top: 2px; color: #64748b; font-size: 9px; }
+.report-property-inspection__landlord + dl { display: grid; gap: 5px; margin: 10px 0 0; }.report-property-inspection__landlord + dl div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 5px; }.report-property-inspection__landlord + dl dt, .report-property-inspection__landlord + dl dd { overflow-wrap: anywhere; margin: 0; font-size: 9px; }.report-property-inspection__landlord + dl dt { display: flex; gap: 3px; color: #64748b; }.report-property-inspection__landlord + dl dt svg { width: 10px; height: 10px; }.report-property-inspection__landlord + dl dd { color: #334155; }
+.report-property-inspection__about, .report-property-inspection__map-caption { margin: 0; color: #64748b; font-size: 10px; line-height: 1.45; white-space: pre-wrap; }
+.report-property-inspection__map { height: 145px; overflow: hidden; border: 1px solid #dbe3eb; border-radius: 5px; }.report-property-inspection__map .map-view-shell, .report-property-inspection__map .map-view-container { height: 100%; min-height: 0; }.report-property-inspection__map > p { display: grid; height: 100%; margin: 0; padding: 12px; place-items: center; text-align: center; color: #64748b; font-size: 10px; }.report-property-inspection__map > p svg { width: 18px; height: 18px; }
+.report-property-inspection__empty { margin: 0; color: #64748b; font-size: 11px; }
+@media (max-width: 850px) { .report-property-inspection__grid { grid-template-columns: 1fr; } }
+@media (max-width: 500px) { .report-property-inspection__card { padding: 12px; }.report-property-inspection__photos > :first-child, .report-property-inspection__photos > :first-child img { height: 165px; } }

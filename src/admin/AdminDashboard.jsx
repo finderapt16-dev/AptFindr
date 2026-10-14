@@ -319,8 +319,6 @@ export function AdminDashboard() {
     const filteredNotifs = useMemo(() => {
         return adminNotifs.filter((n) => {
             const category = getNotificationCategory(n);
-            if (category === "reports" || category === "appeals")
-                return false;
             const matchesSearch = !notifSearch ||
                 n.title?.toLowerCase().includes(notifSearch.toLowerCase()) ||
                 n.message?.toLowerCase().includes(notifSearch.toLowerCase()) ||
@@ -1164,10 +1162,7 @@ export function AdminDashboard() {
     const pendingReports = reports.filter((r) => r.status === "pending").length;
     const activeAppealsCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
-    const unreadNotifsCount = adminNotifs.filter((n) => {
-        const category = getNotificationCategory(n);
-        return category !== "reports" && category !== "appeals" && !n.is_deleted && !isNotificationRead(n);
-    }).length;
+    const unreadNotifsCount = adminNotifs.filter((n) => !n.is_deleted && !isNotificationRead(n)).length;
     const restoreAdminModule = (section) => {
         if (!user?.id)
             return;
@@ -1305,10 +1300,7 @@ export function AdminDashboard() {
     const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
-        const notificationCenterItems = adminNotifs.filter((notification) => {
-            const category = getNotificationCategory(notification);
-            return category !== "reports" && category !== "appeals";
-        });
+        const notificationCenterItems = adminNotifs;
         const activeNotifications = notificationCenterItems.filter((notification) => !notification.is_deleted);
         const unreadCount = activeNotifications.filter((notification) => !isNotificationRead(notification)).length;
         const selectNotificationView = (status, type = "all") => {
@@ -1443,7 +1435,7 @@ export function AdminDashboard() {
                         <span><strong>Apartments:</strong> {String(apartmentNames ?? "Not provided")}</span>
                         <span><strong>Notification:</strong> {String(permitPayload.notification_status ?? "Notification Created")}</span>
                       </div>}
-                      <p className="admin-dashboard-text-9">{formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                      <time className="admin-dashboard-notification-date" dateTime={notification.createdAt ?? notification.created_at ?? undefined}>Received {formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
                     </div>
                     <div className="admin-dashboard-row-20">
                       {!archived && isSupportRequest && <Button size="sm" variant="outline" disabled={supportRequestLoading} onClick={() => void openSupportRequest(notification)} className="admin-dashboard-button-10"><Eye className="admin-dashboard-eye-icon"/>{supportRequestLoading ? "Loading..." : "View Details"}</Button>}
