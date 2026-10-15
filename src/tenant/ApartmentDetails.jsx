@@ -377,6 +377,7 @@ export function ApartmentDetails() {
     const propertyFeatures = [apartment.petFriendly && "Pet Friendly", apartment.parking && "Parking", apartment.furnished && "Furnished", ...listFromUnknown(featureRecord.customFeatures)].filter(Boolean);
     const includedUtilities = listFromUnknown(apartment.utilities);
     const landlordName = landlord?.name || "Not provided";
+    const landlordAvatarUrl = getImageUrl(landlord?.avatar_url ?? landlord?.avatar ?? "");
     const landlordPhone = landlord?.mobile || landlord?.mobileNumber || "";
     const copyLandlordPhone = async () => {
         if (!landlordPhone)
@@ -460,7 +461,9 @@ export function ApartmentDetails() {
                         <div className="apartment-detail-landlord-card">
                             <div className="apartment-detail-row-10">
                                 <span className={`apartment-detail-grid-8 ${landlordPortal ? "apartment-detail-span-9" : "apartment-detail-span-10"}`}>
-                                    {landlordName === "Not provided" ? "L" : landlordName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}
+                                    {landlordAvatarUrl
+                                        ? <img src={landlordAvatarUrl} alt={`${landlordName} profile`} />
+                                        : landlordName === "Not provided" ? "L" : landlordName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}
                                 </span>
                                 <div className="apartment-detail-panel-2">
                                     <strong className="apartment-detail-strong-2">{landlordName}</strong>

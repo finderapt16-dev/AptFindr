@@ -515,6 +515,8 @@ export function AdminDashboard() {
             const matchesSearch = !query || [apartment.title, apartment.location, apartment.address, landlordName]
                 .some((value) => String(value ?? "").toLowerCase().includes(query));
             const status = getAdminListingState(apartment);
+            if (status === "rejected")
+                return false;
             const matchesStatus = aptStatusFilter === "all" || status === aptStatusFilter;
             const matchesType = aptPropertyTypeFilter === "all" || apartment.propertyType === aptPropertyTypeFilter;
             return matchesSearch && matchesStatus && matchesType;
@@ -1144,8 +1146,15 @@ export function AdminDashboard() {
         setViolationModal({ open: true, mode, landlordId, landlordName, apartmentTitle, reportId, apartmentId, sourceModule });
     };
     const getLandlordForApt = (apt) => landlords.find((l) => l.id === apt.landlordId) ?? null;
-    const pendingReports = reports.filter((r) => r.status === "pending").length;
-    const activeAppealsCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
+    const pendingLandlordsCount = landlords.filter((landlord) => {
+        if (landlord.isVerified === true || landlord.is_verified === true)
+            return false;
+        const status = String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").trim().toLowerCase();
+        return !["rejected", "denied", "declined"].includes(status);
+    }).length;
+    const pendingApartmentsCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "pending").length;
+    const pendingReports = reports.filter((report) => ["pending", "open", "pending_review", "under_review", "in_review", "reviewing"].includes(String(report.status ?? "pending").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
+    const activeAppealsCount = appeals.filter((appeal) => ["pending", "pending_review", "under_review", "needs_information", "additional_evidence_submitted"].includes(String(appeal.status ?? "pending_review").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
     const unreadNotifsCount = adminNotifs.filter((n) => {
         const category = getNotificationCategory(n);
@@ -1288,7 +1297,7 @@ export function AdminDashboard() {
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
-    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} unreadSupportCount={unreadSupportCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
+    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingLandlordsCount={pendingLandlordsCount} pendingApartmentsCount={pendingApartmentsCount} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} unreadSupportCount={unreadSupportCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
         const notificationCenterItems = adminNotifs.filter((notification) => {
@@ -1460,7 +1469,7 @@ export function AdminDashboard() {
       </div>);
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
-    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
+    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
@@ -1688,6 +1697,7 @@ export function AdminDashboard() {
         if (!selectedLandlord || !selectedLandlordDetails)
             return renderLandlords();
         const verified = selectedLandlord.isVerified || selectedLandlord.is_verified;
+        const landlordAvatarUrl = String(selectedLandlord.avatar_url ?? selectedLandlord.avatar ?? "").trim();
         const closeDetails = () => setSelectedLandlord(null);
         return (<div className="admin-dashboard-container-3">
         <button type="button" onClick={closeDetails} className="admin-dashboard-back-to-landlords">
@@ -1697,7 +1707,7 @@ export function AdminDashboard() {
         <header className="admin-dashboard-header-6">
           <div className="admin-dashboard-row-32">
             <div className="admin-dashboard-row-33">
-              {selectedLandlord.name?.[0]?.toUpperCase() ?? "L"}
+              {landlordAvatarUrl ? <img src={landlordAvatarUrl} alt="" /> : (selectedLandlord.name?.[0]?.toUpperCase() ?? "L")}
             </div>
             <div className="admin-dashboard-panel-4">
               <div className="admin-dashboard-row-19">
@@ -1859,9 +1869,9 @@ export function AdminDashboard() {
           </button>
           {PortalSidebarContent({ onNavigate: () => setSidebarOpen(false) })}
         </aside>}
-        {!isFocusedWorkspace && <button aria-label={`Open navigation, ${unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
+        {!isFocusedWorkspace && <button aria-label={`Open navigation, ${unreadNotifsCount + unreadSupportCount + pendingLandlordsCount + pendingApartmentsCount + pendingReports + activeAppealsCount} total items`} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">
           <Menu className="admin-dashboard-menu-icon"/>
-          {unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + unreadSupportCount + pendingReports + activeAppealsCount}</span>}
+          {unreadNotifsCount + unreadSupportCount + pendingLandlordsCount + pendingApartmentsCount + pendingReports + activeAppealsCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{unreadNotifsCount + unreadSupportCount + pendingLandlordsCount + pendingApartmentsCount + pendingReports + activeAppealsCount > 99 ? "99+" : unreadNotifsCount + unreadSupportCount + pendingLandlordsCount + pendingApartmentsCount + pendingReports + activeAppealsCount}</span>}
         </button>}
         <div className="app-shell-main">
           <main className="app-shell-content app-shell-content-mobile-nav">

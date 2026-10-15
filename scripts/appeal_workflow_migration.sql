@@ -17,7 +17,7 @@ begin
   select pg_catalog.format_type(a.atttypid, a.atttypmod) into app_user_id_type from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='app_users' and a.attname='id' and not a.attisdropped;
   select pg_catalog.format_type(a.atttypid, a.atttypmod) into apartment_id_type from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='apartments' and a.attname='id' and not a.attisdropped;
   if app_user_id_type is null or apartment_id_type is null then raise exception 'Expected public.app_users(id) and public.apartments(id).'; end if;
-  execute format('alter table public.appeals add column if not exists apartment_id %s references public.apartments(id)', apartment_id_type);
+  execute format('alter table public.appeals add column if not exists apartment_id %s references public.apartments(id) on delete cascade', apartment_id_type);
   execute format('alter table public.appeals add column if not exists reviewed_by %s references public.app_users(id)', app_user_id_type);
 end $$;
 

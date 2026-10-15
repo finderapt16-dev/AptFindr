@@ -1,4 +1,5 @@
 import "./AdminLandlordVerification.css";
+import { getAdminListingState } from "@/admin/adminListingState";
 
 import {
   CheckCircle2,
@@ -13,11 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 10;
 
-const getVerificationState = (landlord) => {
-  if (landlord?.isVerified === true || landlord?.is_verified === true) {
-    return "verified";
-  }
-
+const getVerificationState = (landlord, apartments) => {
   const status = String(
     landlord?.landlord_status ??
       landlord?.verification_status ??
@@ -27,13 +24,30 @@ const getVerificationState = (landlord) => {
     .trim()
     .toLowerCase();
 
-  return ["rejected", "denied", "declined"].includes(status)
-    ? "rejected"
+  if (["rejected", "denied", "declined"].includes(status)) {
+    return "rejected";
+  }
+
+  const landlordId = String(landlord?.id ?? "");
+  const hasPendingApartment = (apartments ?? []).some((apartment) =>
+    String(apartment?.landlordId ?? apartment?.landlord_id ?? "") === landlordId &&
+    getAdminListingState(apartment) === "pending"
+  );
+
+  if (hasPendingApartment) {
+    return "pending";
+  }
+
+  return landlord?.isVerified === true || landlord?.is_verified === true
+    ? "verified"
     : "pending";
 };
 
 const getLandlordName = (landlord) =>
   String(landlord?.name ?? landlord?.full_name ?? "Unnamed landlord");
+
+const getAvatarUrl = (landlord) =>
+  String(landlord?.avatar_url ?? landlord?.avatar ?? "").trim();
 
 const getContact = (landlord) =>
   String(
@@ -68,6 +82,7 @@ const formatDate = (value) => {
 
 export function AdminLandlordVerification({
   landlords,
+  apartments = [],
   onViewVerification,
 }) {
   const [search, setSearch] = useState("");
@@ -78,17 +93,17 @@ export function AdminLandlordVerification({
     const values = { total: landlords.length, pending: 0, verified: 0, rejected: 0 };
 
     landlords.forEach((landlord) => {
-      values[getVerificationState(landlord)] += 1;
+      values[getVerificationState(landlord, apartments)] += 1;
     });
 
     return values;
-  }, [landlords]);
+  }, [landlords, apartments]);
 
   const filteredLandlords = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return landlords.filter((landlord) => {
-      const matchesStatus = status === "all" || getVerificationState(landlord) === status;
+      const matchesStatus = status === "all" || getVerificationState(landlord, apartments) === status;
       const searchableValues = [
         getLandlordName(landlord),
         landlord?.email,
@@ -103,10 +118,11 @@ export function AdminLandlordVerification({
 
       return matchesStatus && matchesSearch;
     });
-  }, [landlords, search, status]);
+  }, [landlords, apartments, search, status]);
 
   const pageCount = Math.max(1, Math.ceil(filteredLandlords.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
+  const visiblePageNumbers = [Math.max(1, Math.min(currentPage - 1, pageCount - 1)), Math.max(1, Math.min(currentPage - 1, pageCount - 1)) + 1].filter((pageNumber) => pageNumber <= pageCount);
   const visibleLandlords = filteredLandlords.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
@@ -137,7 +153,7 @@ export function AdminLandlordVerification({
       <section className="admin-verification-statistics" aria-label="Verification summary">
         {[
           { label: "Total Landlords", note: "Registered landlord accounts", count: counts.total, icon: UserRound, tone: "total", filterValue: "all" },
-          { label: "Pending Review", note: "Awaiting verification", count: counts.pending, icon: Clock3, tone: "pending", filterValue: "pending" },
+          { label: "Pending Review", note: "Awaiting account or apartment review", count: counts.pending, icon: Clock3, tone: "pending", filterValue: "pending" },
           { label: "Verified", note: "Approved landlord accounts", count: counts.verified, icon: CheckCircle2, tone: "verified", filterValue: "verified" },
           { label: "Rejected", note: "Verification denied", count: counts.rejected, icon: X, tone: "rejected", filterValue: "rejected" },
         ].map(({ label, note, count, icon: Icon, tone, filterValue }) => (
@@ -173,14 +189,15 @@ export function AdminLandlordVerification({
             <tbody>
               {visibleLandlords.map((landlord) => {
                 const name = getLandlordName(landlord);
-                const verificationState = getVerificationState(landlord);
+                const avatarUrl = getAvatarUrl(landlord);
+                const verificationState = getVerificationState(landlord, apartments);
 
                 return (
                   <tr key={landlord.id}>
                     <td>
                       <div className="admin-verification-landlord">
                         <span aria-hidden="true" className="admin-verification-avatar">
-                          {name.charAt(0).toUpperCase()}
+                          {avatarUrl ? <img src={avatarUrl} alt="" /> : name.charAt(0).toUpperCase()}
                         </span>
                         <span>
                           <strong>{name}</strong>
@@ -228,7 +245,7 @@ export function AdminLandlordVerification({
             >
               <ChevronLeft aria-hidden="true" />
             </button>
-            {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+            {visiblePageNumbers.map((pageNumber) => (
               <button
                 aria-current={pageNumber === currentPage ? "page" : undefined}
                 key={pageNumber}

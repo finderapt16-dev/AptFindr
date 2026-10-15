@@ -2,7 +2,7 @@
  * Only apartments inside this radius will appear
  * in Nearby Search results.
  */
-export const MAX_NEARBY_DISTANCE_METERS = 1000;
+export const MAX_NEARBY_DISTANCE_METERS = 500;
 const DISTANCE_COMPARISON_EPSILON_METERS = 0.000001;
 /**
  * Detect nearby-search queries.

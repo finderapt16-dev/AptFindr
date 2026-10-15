@@ -60,6 +60,13 @@
 .report-review-dismiss-dialog button { padding: 8px 16px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
 .report-review-dismiss-dialog > div:last-child button:last-child { background: #fff1f2; color: #ff1744; border-color: #ff1744; }
 .report-review-detail :is(button, select, textarea):focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.report-review-person { display: inline-flex; align-items: center; gap: 8px; }
+.report-review-person > img, .report-review-person > span { width: 32px; height: 32px; border-radius: 50%; }
+.report-review-person > img { object-fit: cover; }
+.report-review-person > span { display: grid; place-items: center; background: #e0f2fe; color: #0284c7; font-size: 12px; font-weight: 700; }
+.report-review-view-apartment { width: 100%; min-height: 38px; margin-top: 16px; border: 1px solid #0ea5e9; border-radius: 7px; background: #fff; color: #0284c7; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.report-review-view-apartment:hover:not(:disabled) { background: #f0f9ff; }
+.report-review-view-apartment:disabled { cursor: not-allowed; opacity: .55; }
 @media (max-width: 1200px) {
   .report-review-detail { padding: 20px; }
   .report-review-panel { padding: 20px; }

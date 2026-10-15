@@ -18,6 +18,7 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
   const roomPrices = rooms.map((room) => Number(room.price || 0)).filter((price) => price > 0);
   const lowestPrice = roomPrices.length ? Math.min(...roomPrices) : Number(apartment.price || 0);
   const highestPrice = roomPrices.length ? Math.max(...roomPrices) : Number(apartment.price || 0);
+  const landlordAvatarUrl = String(landlord?.avatar_url ?? landlord?.avatar ?? "").trim();
   const submitRequest = async () => {
     if (!message.trim()) return;
     const sent = await onRequestChanges(message.trim());
@@ -41,13 +42,8 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
                 </>}
               </div>
               {images.length > 1 && <div className="admin-inspection-review-dots">{images.slice(0, 6).map((image, index) => <button type="button" aria-label={`View image ${index + 1}`} aria-current={selectedImageIndex === index} key={`${image}-${index}`} onClick={() => onSelectImage(index)} />)}</div>}
-              {images.length > 0 && <div className="admin-inspection-review-thumbnails" aria-label={`${images.length} property photo${images.length === 1 ? "" : "s"} uploaded`}>
-                {Array.from({ length: Math.max(4, Math.min(images.length, 4)) }, (_, index) => {
-                  const image = images[index];
-                  return image
-                    ? <button type="button" className={selectedImageIndex === index ? "is-active" : ""} key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>
-                    : <span className="admin-inspection-review-thumbnail-empty" key={`empty-thumbnail-${index}`} aria-hidden="true" />;
-                })}
+              {images.length > 1 && <div className="admin-inspection-review-thumbnails" aria-label={`${images.length} property photos uploaded`}>
+                {images.slice(0, 4).map((image, index) => <button type="button" className={selectedImageIndex === index ? "is-active" : ""} key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>)}
               </div>}
             </div>
             <div className="admin-inspection-review-summary">
@@ -77,7 +73,7 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
       </div>
       <aside className="admin-inspection-review-side">
         <section className="admin-inspection-review-card"><h2>Listing Status</h2><p>Submitted on {submittedOn}</p><span className={`admin-inspection-review-status ${isPublished ? "published" : "pending"}`}><Clock3 aria-hidden="true" />{statusLabel}</span></section>
-        <section className="admin-inspection-review-card"><h2>Landlord Profile</h2><div className="admin-inspection-review-landlord"><span>{(landlord?.name || "L").charAt(0).toUpperCase()}</span><div><strong>{landlord?.name || "Landlord unavailable"}</strong><p>Member since {landlord?.created_at ? new Date(landlord.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Not available"}</p></div></div><button type="button" className="admin-inspection-review-outline" disabled={!landlord} onClick={onViewLandlord}><UserRound aria-hidden="true" />View Landlord Profile<ArrowRight aria-hidden="true" /></button></section>
+        <section className="admin-inspection-review-card"><h2>Landlord Profile</h2><div className="admin-inspection-review-landlord"><span>{landlordAvatarUrl ? <img src={landlordAvatarUrl} alt="" /> : (landlord?.name || "L").charAt(0).toUpperCase()}</span><div><strong>{landlord?.name || "Landlord unavailable"}</strong><p>Member since {landlord?.created_at ? new Date(landlord.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Not available"}</p></div></div><button type="button" className="admin-inspection-review-outline" disabled={!landlord} onClick={onViewLandlord}><UserRound aria-hidden="true" />View Landlord Profile<ArrowRight aria-hidden="true" /></button></section>
         <section className="admin-inspection-review-card"><h2>Admin Actions</h2><p>Request document updates or necessary changes for this apartment listing.</p><div className="admin-inspection-review-actions"><button type="button" className="admin-inspection-review-approve" onClick={onApprove} disabled={isUpdating}>{isPublished ? <Trash2 aria-hidden="true" /> : <Check aria-hidden="true" />}{isUpdating ? (isPublished ? "Unpublishing..." : "Verifying & publishing...") : isPublished ? "Unpublish Listing" : "Verify & Publish Listing"}</button><button type="button" className="admin-inspection-review-outline" onClick={() => setRequestOpen(true)} disabled={isUpdating}><FileText aria-hidden="true" />Request Changes</button><button type="button" className="admin-inspection-review-reject" onClick={onReject} disabled={isUpdating}><Trash2 aria-hidden="true" />Reject Listing</button></div></section>
       </aside>
     </div>

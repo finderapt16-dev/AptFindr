@@ -38,6 +38,7 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     const pageSize = 5;
     const pageCount = Math.max(1, Math.ceil(visibleReports.length / pageSize));
     const currentPage = Math.min(page, pageCount);
+    const visiblePageNumbers = [Math.max(1, Math.min(currentPage - 1, pageCount - 1)), Math.max(1, Math.min(currentPage - 1, pageCount - 1)) + 1].filter((number) => number <= pageCount);
     const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     const summaryCards = [
         { label: "Total Reports", value: reports.length, note: "All submitted reports", icon: FileX, tone: "total", filterValue: "all" },
@@ -51,18 +52,17 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     if (selectedReport) {
         const listedApartment = getReportApartment(selectedReport);
         const reportApartment = listedApartment ? { ...selectedReportDetails?.apartment, ...listedApartment } : selectedReportDetails?.apartment;
-        return <ReportReviewDetail key={selectedReport.id} report={selectedReport} apartment={reportApartment} details={selectedReportDetails} evidence={selectedReportEvidence} onBack={() => setSelectedReport(null)} onUpdated={onReportUpdated} resolveReport={resolveReport} dismissReport={dismissReport} archived={reportArchiveView} onArchive={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: getReportApartmentTitle(selectedReport) })}/>;
+        return <ReportReviewDetail key={selectedReport.id} report={selectedReport} apartment={reportApartment} details={selectedReportDetails} evidence={selectedReportEvidence} onBack={() => setSelectedReport(null)} onViewApartment={() => reportApartment?.id && navigate(`${apartmentDetailBasePath}/${reportApartment.id}`, { state: { returnTo: `${portalBasePath}?section=reports`, backLabel: "Back to Reports" } })} onUpdated={onReportUpdated} resolveReport={resolveReport} dismissReport={dismissReport} archived={reportArchiveView} onArchive={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: getReportApartmentTitle(selectedReport) })}/>;
     }
     return (<div className="reports-reference admin-case-list">
       <header className="reports-reference-header"><h1>Report</h1><p>Review and manage reports submitted by tenants regarding apartment listings.</p></header>
-      <div className="reports-reference-filters">
-        <label className="reports-reference-search"><Search aria-hidden="true"/><input aria-label="Search reports" value={reportSearch} onChange={(event) => setReportSearch(event.target.value)} placeholder="Search landlords"/></label>
-
-      </div>
       <div className="reports-reference-stats" aria-label="Report status filters">{summaryCards.map(({ label, value, note, icon: Icon, tone, filterValue }) => {
         const active = !reportArchiveView && (["pending", "open"].includes(reportStatusFilter) ? "under_review" : reportStatusFilter) === filterValue;
         return <button type="button" key={label} className={`reports-reference-stat ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => { setReportArchiveView(false); setReportStatusFilter(filterValue); setPage(1); }}><span className={`reports-reference-stat-icon is-${tone}`}><Icon aria-hidden="true"/></span><span><strong>{value} {label}</strong><span className="reports-reference-stat-note">{note}</span></span></button>;
       })}</div>
+      <div className="reports-reference-filters">
+        <label className="reports-reference-search"><Search aria-hidden="true"/><input aria-label="Search reports" value={reportSearch} onChange={(event) => setReportSearch(event.target.value)} placeholder="Search landlords"/></label>
+      </div>
       <div className="reports-reference-table-wrap"><table className="reports-reference-table">
         <thead><tr>{["Apartment", "Reported By", "Issue", "Date Submitted", "Status", "Actions"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
         <tbody>{pageReports.map((report) => {
@@ -81,7 +81,7 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
       </table></div>
       <nav className="reports-reference-pagination" aria-label="Report pages">
         <button aria-label="Previous page" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft/></button>
-        {Array.from({ length: pageCount }, (_, index) => index + 1).filter((number) => number === 1 || number === pageCount || Math.abs(number - currentPage) <= 1).map((number, index, pages) => <span key={number}>{index > 0 && number - pages[index - 1] > 1 && <span className="reports-reference-page-gap">?</span>}<button aria-label={`Page ${number}`} aria-current={number === currentPage ? "page" : undefined} onClick={() => setPage(number)}>{number}</button></span>)}
+        {visiblePageNumbers.map((number) => <button key={number} aria-label={`Page ${number}`} aria-current={number === currentPage ? "page" : undefined} onClick={() => setPage(number)}>{number}</button>)}
         <button aria-label="Next page" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight/></button>
       </nav>
 

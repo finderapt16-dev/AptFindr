@@ -20468,11 +20468,12 @@
 /* Appeal review: a single, full-width case file mirrors the review sequence
    (listing, original report, appeal, then decision) from top to bottom. */
 .admin-appeal-review-shell { width:100%; max-width:1400px; margin:10px auto 28px; color:#102043; }
-.admin-appeal-review-heading { display:flex; align-items:center; gap:14px; margin:0 0 22px; }
-.admin-appeal-review-back { display:grid; width:48px; height:48px; flex:0 0 auto; padding:0; place-items:center; border:0; border-radius:12px; background:#eaf7ff; color:#0a9bef; cursor:pointer; transition:background-color .15s ease, transform .15s ease; }
-.admin-appeal-review-back:hover { background:#d9f1ff; transform:translateX(-2px); }
-.admin-appeal-review-heading h1 { margin:0; color:#0c1f43; font-size:29px; line-height:1.12; font-weight:800; letter-spacing:-.035em; }
-.admin-appeal-review-heading p { margin:4px 0 0; color:#5f7195; font-size:15px; line-height:1.45; }
+.admin-appeal-review-heading { margin:8px 0 22px; }
+.admin-appeal-review-back { display:inline-flex; align-items:center; gap:5px; padding:0; border:0; background:transparent; color:#0a9bef; font:inherit; font-size:12px; cursor:pointer; }
+.admin-appeal-review-back:hover { color:#0284c7; }
+.admin-appeal-review-back svg { width:15px; height:15px; }
+.admin-appeal-review-heading h1 { margin:0; color:#0c1f43; font-size:20px; line-height:1.2; font-weight:750; letter-spacing:-.025em; }
+.admin-appeal-review-heading p { margin:3px 0 0; color:#5f7195; font-size:12px; line-height:1.4; }
 .admin-appeal-review-card { min-width:0; margin-top:16px; padding:20px 24px; border:1px solid #dfe8f1; border-radius:13px; background:#fff; box-shadow:0 3px 10px rgb(15 35 69 / 4%); }
 .admin-appeal-review-section-title { display:flex; align-items:center; gap:14px; }
 .admin-appeal-review-section-title > span { display:grid; width:47px; height:47px; flex:0 0 auto; place-items:center; border-radius:10px; color:#049bf1; background:#e9f7ff; }
@@ -20537,7 +20538,6 @@
 }
 @media (max-width:500px) {
   .admin-appeal-review-heading { align-items:flex-start; }
-  .admin-appeal-review-back { width:42px; height:42px; }
   .admin-appeal-review-property { display:grid; gap:15px; }
   .admin-appeal-review-property-image { width:100%; height:160px; }
   .admin-appeal-review-evidence a { width:100%; min-width:0; }
@@ -20585,3 +20585,138 @@
 .admin-notification-floating-menu > button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 5px; background: #fff; color: #334155; font-size: 13px; text-align: left; cursor: pointer; }
 .admin-notification-floating-menu > button:hover { background: #f0f9ff; }
 .admin-notification-floating-menu svg { width: 16px; height: 16px; }
+
+/* Regular-admin appeal list — compact management layout. */
+.admin-appeals-reference.admin-case-list { display:grid; max-width:1400px; margin:8px auto 40px; color:#172033; }
+.admin-case-list .admin-appeals-reference-header { min-height:70px; margin:0 0 12px; padding:18px 32px; border:1px solid #dce3eb; border-radius:7px; background:#fff; }
+.admin-case-list .admin-appeals-reference-header h1 { margin:0; font-size:18px; line-height:1.2; font-weight:750; letter-spacing:-.025em; }
+.admin-case-list .admin-appeals-reference-header p { margin:4px 0 0; color:#8291aa; font-size:10px; }
+.admin-case-list .admin-appeals-reference-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 12px; }
+.admin-case-list .admin-appeals-reference-stat { display:flex; min-height:62px; box-sizing:border-box; align-items:center; justify-content:flex-start; gap:10px; padding:9px 12px; border:1px solid #e1e7ee; border-radius:7px; background:#fff; color:inherit; font:inherit; text-align:left; cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.admin-case-list .admin-appeals-reference-stat:hover { border-color:#7dd3fc; }
+.admin-case-list .admin-appeals-reference-stat.is-active { border-color:#0ea5e9; background:#f0f9ff; box-shadow:0 0 0 3px rgb(14 165 233 / 13%); }
+.admin-case-list .admin-appeals-reference-stat-icon { display:grid; width:28px; height:28px; flex:0 0 auto; margin:0; place-items:center; border-radius:50%; }
+.admin-case-list .admin-appeals-reference-stat-icon svg { width:15px; height:15px; stroke-width:1.8; }
+.admin-case-list .admin-appeals-reference-stat-icon.is-total { color:#287fff; background:#e0f2ff; }
+.admin-case-list .admin-appeals-reference-stat-icon.is-pending { color:#f18a00; background:#fff5e8; }
+.admin-case-list .admin-appeals-reference-stat-icon.is-approved { color:#12ae5a; background:#ddfbe9; }
+.admin-case-list .admin-appeals-reference-stat-icon.is-denied { color:#f04444; background:#ffe3e3; }
+.admin-case-list .admin-appeals-reference-stat > span:last-child { min-width:0; }
+.admin-case-list .admin-appeals-reference-stat strong { display:block; margin:0; color:#172033; font-size:12px; line-height:1; font-weight:750; }
+.admin-case-list .admin-appeals-reference-stat b { display:block; margin-top:3px; color:#293548; font-size:11px; line-height:1; font-weight:700; }
+.admin-case-list .admin-appeals-reference-stat small { display:block; margin-top:3px; color:#96a2b3; font-size:8px; line-height:1; }
+.admin-case-list .admin-appeals-reference-controls { margin:0 0 14px; }
+.admin-case-list .admin-appeals-reference-search svg { left:14px; width:16px; height:16px; color:#8a99ad; }
+.admin-case-list .admin-appeals-reference-search input { height:28px; padding:0 12px 0 34px; border-color:#d9e0e8; border-radius:6px; font-size:10px; }
+.admin-case-list .admin-appeals-reference-table { overflow:auto; border-color:#d9e0e8; border-radius:7px; }
+.admin-case-list .admin-appeals-reference-table-head,
+.admin-case-list .admin-appeals-reference-row { grid-template-columns:1.3fr 1.05fr .72fr .72fr .68fr; min-width:880px; column-gap:20px; }
+.admin-case-list .admin-appeals-reference-table-head { min-height:30px; padding:0 12px; border-color:#dfe6ed; background:#f5f8fc; color:#6c7c93; font-size:9px; font-weight:650; }
+.admin-case-list .admin-appeals-reference-row { min-height:41px; padding:0 12px; }
+.admin-case-list .admin-appeals-reference-landlord { gap:8px; }
+.admin-case-list .admin-appeals-reference-landlord > img,
+.admin-case-list .admin-appeals-reference-landlord > span { width:26px; height:26px; font-size:10px; }
+.admin-case-list .admin-appeals-reference-landlord strong,
+.admin-case-list .admin-appeals-reference-case strong { font-size:10px; }
+.admin-case-list .admin-appeals-reference-landlord small,
+.admin-case-list .admin-appeals-reference-case small { margin-top:2px; font-size:8px; }
+.admin-case-list .admin-appeals-reference-row time { font-size:9px; }
+.admin-case-list .admin-appeals-reference-badge { min-width:72px; padding:5px 8px; font-size:8px; }
+.admin-case-list .admin-appeals-reference-actions .ui-button { min-width:70px; height:22px; border-color:#27aae8; background:#fff; color:#168dca; font-size:9px; font-weight:650; }
+.admin-case-list .admin-appeals-reference-actions .ui-button:hover { border-color:#0e93ca; background:#e9f8ff; }
+@media (max-width:760px) { .admin-appeals-reference.admin-case-list { margin:12px; } .admin-case-list .admin-appeals-reference-header { padding:20px; } .admin-case-list .admin-appeals-reference-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Keep the Appeals list visually aligned with the Reports list. */
+.admin-case-list { --admin-list-search-height:56px; }
+.admin-appeals-reference.admin-case-list { gap:0; }
+.admin-case-list .admin-appeals-reference-header { min-height:0; margin:0 0 24px; padding:38px 64px; border-color:#ccc; border-radius:10px; }
+.admin-case-list .admin-appeals-reference-header h1 { font-size:24px; line-height:32px; font-weight:700; }
+.admin-case-list .admin-appeals-reference-header p { margin-top:5px; color:#647a9b; font-size:14px; line-height:22px; }
+.admin-case-list .admin-appeals-reference-stats { order:2; gap:12px; margin:0 0 16px; }
+.admin-case-list .admin-appeals-reference-controls { order:3; margin:0 0 32px; }
+.admin-case-list .admin-appeals-reference-table,
+.admin-case-list .admin-appeals-reference-empty { order:4; }
+.admin-case-list .admin-appeals-reference-stat { min-height:120px; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:10px; border-color:#ccc; border-radius:10px; text-align:center; }
+.admin-case-list .admin-appeals-reference-stat-icon { width:38px; height:38px; margin:0 0 7px; }
+.admin-case-list .admin-appeals-reference-stat-icon svg { width:18px; height:18px; }
+.admin-case-list .admin-appeals-reference-stat strong,
+.admin-case-list .admin-appeals-reference-stat b { display:inline; color:#334155; font-size:20px; line-height:1.25; font-weight:700; }
+.admin-case-list .admin-appeals-reference-stat strong { margin-right:4px; }
+.admin-case-list .admin-appeals-reference-stat small { margin-top:2px; font-size:12px; line-height:1.25; }
+.admin-case-list .admin-appeals-reference-search { display:flex; align-items:center; gap:10px; height:var(--admin-list-search-height); padding:0 20px; border:1px solid #ccc; border-radius:10px; background:#fff; }
+.admin-case-list .admin-appeals-reference-search svg { position:static; width:21px; height:21px; flex:0 0 auto; color:#4d6080; transform:none; }
+.admin-case-list .admin-appeals-reference-search input { height:auto; padding:0; border:0; font-size:14px; }
+.admin-case-list .admin-appeals-reference-table { border-color:#dbe3eb; border-radius:8px; }
+.admin-case-list .admin-appeals-reference-table-head { min-height:42px; padding:10px 14px; border-color:#e5e7eb; background:#fff; color:#64748b; font-size:10px; font-weight:700; }
+.admin-case-list .admin-appeals-reference-row { min-height:80px; box-sizing:border-box; padding:10px 14px; border-color:#e5e7eb; }
+.admin-case-list .admin-appeals-reference-row time { font-size:11px; }
+.admin-case-list .admin-appeals-reference-landlord > img,
+.admin-case-list .admin-appeals-reference-landlord > span { width:34px; height:34px; font-size:13px; }
+.admin-case-list .admin-appeals-reference-landlord strong,
+.admin-case-list .admin-appeals-reference-case strong { font-size:11px; color:#334155; }
+.admin-case-list .admin-appeals-reference-landlord small,
+.admin-case-list .admin-appeals-reference-case small { margin-top:3px; font-size:9px; color:#94a3b8; }
+.admin-case-list .admin-appeals-reference-badge { width:144px; height:33px; min-width:0; min-height:0; box-sizing:border-box; align-items:center; padding:0; font-size:10px; font-weight:600; }
+.admin-case-list .admin-appeals-reference-actions .ui-button { min-width:100px; min-height:30px; height:30px; padding:6px 12px; border-color:#38bdf8; border-radius:6px; color:#0284c7; font-size:10px; font-weight:600; }
+.admin-case-list .reports-reference-pagination { order:5; margin-top:24px; }
+@media (max-width:760px) { .admin-case-list .admin-appeals-reference-header { padding:24px 20px; } .admin-case-list .admin-appeals-reference-controls { margin-bottom:20px; } .admin-case-list .admin-appeals-reference-stats { gap:12px; margin-bottom:20px; } .admin-case-list .admin-appeals-reference-stat { min-height:108px; } .admin-case-list .admin-appeals-reference-stat strong,.admin-case-list .admin-appeals-reference-stat b { font-size:15px; } }
+
+/* Appeal Details — two-column case-review layout. */
+.admin-appeal-reference-layout { max-width:1270px; margin:36px auto 48px; color:#0f172a; }
+.admin-appeal-reference-layout .admin-appeal-review-back { gap:8px; color:#0ea5e9; font-size:14px; font-weight:500; }
+.admin-appeal-reference-layout .admin-appeal-review-back svg { width:16px; height:16px; }
+.admin-appeal-reference-layout .admin-appeal-review-heading { margin:16px 0 24px; }
+.admin-appeal-reference-layout .admin-appeal-review-heading h1 { color:#000; font-size:24px; line-height:29px; font-weight:600; letter-spacing:0; }
+.admin-appeal-reference-layout .admin-appeal-review-heading p { margin-top:0; color:#475569; font-size:14px; line-height:17px; }
+.admin-appeal-reference-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; }
+.admin-appeal-reference-column { display:grid; gap:16px; }
+.admin-appeal-reference-card { min-width:0; padding:24px; border:1px solid rgb(0 0 0 / 20%); border-radius:10px; background:#fff; }
+.admin-appeal-reference-card h2 { margin:0 0 16px; color:#000; font-size:20px; line-height:24px; font-weight:600; }
+.admin-appeal-reference-apartment { display:flex; align-items:flex-start; gap:16px; }
+.admin-appeal-reference-apartment-image { width:206px; height:167px; flex:0 0 auto; overflow:hidden; border-radius:6px; object-fit:cover; background:#e2e8f0; }
+.admin-appeal-reference-details { display:grid; gap:14px; margin:0; }
+.admin-appeal-reference-details div { display:grid; grid-template-columns:minmax(130px,max-content) minmax(0,1fr); gap:16px; }
+.admin-appeal-reference-details dt { color:#475b7d; font-size:14px; font-weight:700; line-height:20px; }
+.admin-appeal-reference-details dd { min-width:0; margin:0; color:#16213a; font-size:16px; line-height:22px; overflow-wrap:anywhere; }
+.admin-appeal-reference-apartment .admin-appeal-reference-details { flex:1; padding-top:1px; }
+.admin-appeal-reference-apartment .admin-appeal-reference-details div { display:block; }
+.admin-appeal-reference-apartment .admin-appeal-reference-details dd { margin-top:5px; }
+.admin-appeal-reference-outline-action { display:flex; width:100%; min-height:54px; box-sizing:border-box; align-items:center; justify-content:center; gap:9px; margin-top:24px; padding:12px 18px; border:1px solid #009bff; border-radius:10px; background:#effaff; color:#008ff0; font-size:16px; font-weight:500; line-height:1.2; text-decoration:none; }
+.admin-appeal-reference-outline-action:hover { background:#e0f5ff; }
+.admin-appeal-reference-outline-action.is-disabled { border-color:#d9e5ec; background:#f8fafc; color:#94a3b8; cursor:not-allowed; }
+.admin-appeal-reference-report-details { gap:12px; }
+.admin-appeal-reference-appeal-details { gap:12px; }
+.admin-appeal-reference-evidence { margin-top:24px; }
+.admin-appeal-reference-evidence h3 { margin:0 0 9px; color:#475b7d; font-size:14px; line-height:20px; font-weight:700; }
+.admin-appeal-reference-evidence > p { margin:0; color:#64748b; font-size:14px; }
+.admin-appeal-reference-file { display:flex; width:min(100%,320px); min-height:64px; box-sizing:border-box; align-items:center; gap:10px; margin-top:8px; padding:10px 16px; border:1px solid #dfe3e8; border-radius:10px; color:#1e293b; text-decoration:none; }
+.admin-appeal-reference-file:hover { border-color:#9bdcff; background:#f7fcff; }
+.admin-appeal-reference-file > svg { width:40px; height:40px; flex:0 0 auto; padding:10px; box-sizing:border-box; border-radius:5px; color:#64748b; background:#d1d5db; }
+.admin-appeal-reference-file > span { min-width:0; }
+.admin-appeal-reference-file strong,.admin-appeal-reference-file small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-appeal-reference-file strong { color:#1e293b; font-size:13px; font-weight:500; }
+.admin-appeal-reference-file small { margin-top:4px; color:#64748b; font-size:12px; }
+.admin-appeal-reference-decision { padding-bottom:16px; }
+.admin-appeal-reference-actions { display:grid; gap:16px; }
+.admin-appeal-reference-actions .ui-button { width:100%; min-height:54px; justify-content:center; gap:10px; border-radius:10px; font-size:16px; font-weight:500; }
+.admin-appeal-reference-actions .ui-button:not(.ui-button-outline):not(.ui-button-destructive) { background:#1087f4; }
+.admin-appeal-reference-actions .ui-button.ui-button-outline { border-color:#008ff0; color:#008ff0; background:#fff; }
+.admin-appeal-reference-actions .ui-button.ui-button-destructive { border-color:#ff2222; color:#f51414; background:#ffeded; }
+.admin-appeal-reference-decision-summary { margin:0; padding:16px; border-radius:8px; color:#475569; background:#f8fafc; font-size:14px; line-height:1.5; }
+@media (max-width:900px) { .admin-appeal-reference-layout { width:min(100% - 32px, 680px); } .admin-appeal-reference-grid { grid-template-columns:1fr; } }
+@media (max-width:560px) { .admin-appeal-reference-layout { margin-top:20px; } .admin-appeal-reference-card { padding:18px; } .admin-appeal-reference-apartment { flex-direction:column; } .admin-appeal-reference-apartment-image { width:100%; height:190px; } .admin-appeal-reference-details div { grid-template-columns:1fr; gap:3px; } .admin-appeal-reference-file { width:100%; } }
+
+/* Compact apartment summary cards. */
+.admin-apartments-summary { display:flex; width:auto; gap:37px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
+.admin-apartments-summary .admin-apartments-row-3 { width:288px; min-height:80px; box-sizing:border-box; gap:12px; padding:12px; border:1px solid #dfe3e8; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgb(15 23 42 / 4%); }
+.admin-apartments-summary .admin-apartments-row-4 { width:32px; height:32px; border-radius:50%; color:#20b5f2; background:#e9f8ff; }
+.admin-apartments-summary .admin-apartments-row-3:nth-child(2) .admin-apartments-row-4 { color:#ff5656; background:#fff0f0; }
+.admin-apartments-summary .admin-apartments-icon-icon { width:16px; height:16px; }
+.admin-apartments-summary .admin-apartments-span-3 { font-size:14px; line-height:16px; font-weight:700; }
+.admin-apartments-summary .admin-apartments-span-4 { margin-top:1px; font-size:13px; line-height:16px; font-weight:700; }
+.admin-apartments-summary .admin-apartments-span-5 { margin-top:2px; font-size:9px; line-height:12px; font-weight:400; color:#94a3b8; }
+@media (max-width:520px) { .admin-apartments-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:37px; } .admin-apartments-summary .admin-apartments-row-3 { width:auto; } }
+
+/* The dashboard shell otherwise overrides this summary with a zero-gap grid. */
+.admin-portal-shell .admin-apartments-summary { display:flex; width:auto; grid-template-columns:none; gap:37px; }
+.admin-portal-shell .admin-apartments-summary .admin-apartments-row-3 { width:288px; }

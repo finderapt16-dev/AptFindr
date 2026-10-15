@@ -388,6 +388,25 @@ export const updateApartmentPublication = async (id, isPublished, actorUserId) =
     await writeApartmentAudit(id, actorUserId, 'apartment_publication_updated', buildAuditChanges(before, after, ['is_published', 'approval_status', 'is_archived', 'deleted_at', 'status', 'published_at', 'published_by']));
     return after;
 };
+// Rejection is distinct from merely unpublishing a listing. Store the review
+// result so the apartment cannot reappear in the active review queue.
+export const rejectApartmentListing = async (id, actorUserId) => {
+    await updateApartmentPublication(id, false, actorUserId);
+    const { data, error } = await supabase
+        .from('apartments')
+        .update({ approval_status: 'rejected', is_published: false })
+        .eq('id', id)
+        .select('id, is_published, approval_status')
+        .single();
+    if (error || !data) {
+        throw new Error(unwrapErrorMessage(error, 'Unable to record the rejected listing status.'));
+    }
+    await writeApartmentAudit(id, actorUserId, 'apartment_listing_rejected', {
+        approval_status: { to: data.approval_status },
+        is_published: { to: data.is_published },
+    });
+    return data;
+};
 // The publication RPC is the single database operation that approves and makes
 // a listing public. It runs only after the existing unit, landlord, and business
 // permit checks in updateApartmentPublication have passed.

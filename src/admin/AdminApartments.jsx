@@ -8,7 +8,7 @@ import { canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatu
 const canInspectApartment = (apartment) => apartment?.isPublished === true
     || apartment?.is_published === true
     || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
-export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, aptStatusFilter, setAptStatusFilter, aptPropertyTypeFilter, setAptPropertyTypeFilter, aptSort, setAptSort, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, resolveReport, dismissReport, }) {
+export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, resolveReport, dismissReport, }) {
     const reportedCount = allApartments.filter((a) => getApartmentReportCount(a.id) > 0).length;
     const landlordsById = new Map();
     allApartments.forEach((apartment) => {
@@ -24,7 +24,6 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
         const expiryDate = expiry ? new Date(expiry) : null;
         return expiryDate && !Number.isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now();
     }).length;
-    const propertyTypes = Array.from(new Set(allApartments.map((apartment) => apartment.propertyType).filter((value) => Boolean(value)))).sort();
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",
     });
@@ -43,8 +42,8 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
 
         <section className="admin-apartments-section admin-apartments-summary">
           {[
-            { label: "Total Landlords", value: landlordsById.size, note: "Listing owners", icon: Building2 },
-            { label: "Expired Permits", value: expiredPermitCount, note: "Needs renewal", icon: AlertOctagon },
+            { label: "Total Apartments", value: allApartments.length, note: "Published listings", icon: Building2 },
+            { label: expiredPermitCount === 1 ? "Expired Permit" : "Expired Permits", value: expiredPermitCount, note: "Requires document request", icon: AlertOctagon },
         ].map(({ label, value, note, icon: Icon }) => (<div key={label} className="admin-apartments-row-3"><span className="admin-apartments-row-4"><Icon className="admin-apartments-icon-icon"/></span><span className="admin-apartments-span-2"><span className="admin-apartments-span-3">{value}</span><span className="admin-apartments-span-4">{label}</span><span className="admin-apartments-span-5">{note}</span></span></div>))}
         </section>
 
@@ -53,9 +52,6 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             <Search className="admin-apartments-search-icon"/>
             <input value={aptSearch} onChange={(event) => setAptSearch(event.target.value)} placeholder="Search apartments by name, location, or landlord" className="admin-apartments-input"/>
           </label>
-          <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value)} className="admin-apartments-select"><option value="all">Listing Status: All</option><option value="published">Published</option><option value="pending">Pending Review</option><option value="rejected">Rejected</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select>
-          <select value={aptPropertyTypeFilter} onChange={(event) => setAptPropertyTypeFilter(event.target.value)} className="admin-apartments-select"><option value="all">Apartment Type: All</option>{propertyTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
-          <select value={aptSort} onChange={(event) => setAptSort(event.target.value)} className="admin-apartments-select"><option value="newest">Sort by: Newest</option><option value="oldest">Sort by: Oldest</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option><option value="name">Sort by: Name</option></select>
         </section>
 
         {filteredApts.length === 0 ? (<div className="admin-apartments-card-3"><OverviewEmpty icon={Building2} text={aptFilter === "reported" ? "No reported apartments." : allApartments.length === 0 ? "No apartments have been added yet." : "No apartments match the selected filters."}/></div>) : (<section className="admin-apartments-section-3">

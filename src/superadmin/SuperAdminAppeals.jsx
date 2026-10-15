@@ -50,9 +50,9 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
         const rightTime = new Date(right.submitted_at ?? right.created_at ?? 0).getTime();
         return appealSort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
-    const pageCount = Math.max(1, Math.ceil(visibleAppeals.length / 4));
+    const pageCount = Math.max(1, Math.ceil(visibleAppeals.length / 5));
     const currentPage = Math.min(page, pageCount);
-    const pageAppeals = visibleAppeals.slice((currentPage - 1) * 4, currentPage * 4);
+    const pageAppeals = visibleAppeals.slice((currentPage - 1) * 5, currentPage * 5);
     const pendingAppealCount = appeals.filter((appeal) => appeal.status === "pending" || appeal.status === "under_review" || appeal.status === "needs_information").length;
     const approvedAppealCount = appeals.filter((appeal) => appeal.status === "approved").length;
     const deniedAppealCount = appeals.filter((appeal) => appeal.status === "rejected" || appeal.status === "dismissed").length;
@@ -332,13 +332,6 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
             <p>Review and manage appeals submitted by landlords.</p>
           </header>
 
-          <section className="admin-appeals-reference-controls" aria-label="Appeal filters">
-            <label className="admin-appeals-reference-search">
-              <Search aria-hidden="true" />
-              <input value={appealSearch} onChange={(event) => setAppealSearch(event.target.value)} placeholder="Search landlords" />
-            </label>
-          </section>
-
           <section className="admin-appeals-reference-stats" aria-label="Appeal statistics">
             {[
                 { label: "Total Appeals", value: appeals.length, note: "All submitted appeals", icon: UserRound, tone: "total", filterValue: "all" },
@@ -348,12 +341,19 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
             ].map(({ label, value, note, icon: Icon, tone, filterValue }) => <button type="button" key={label} className={`admin-appeals-reference-stat ${appealTypeFilter === filterValue && !appealArchiveView ? "is-active" : ""}`} aria-pressed={appealTypeFilter === filterValue && !appealArchiveView} onClick={() => { setAppealArchiveView(false); setAppealTypeFilter(filterValue); }}><span className={`admin-appeals-reference-stat-icon is-${tone}`}><Icon aria-hidden="true" /></span><span><strong>{value}</strong><b>{label}</b><small>{note}</small></span></button>)}
           </section>
 
+          <section className="admin-appeals-reference-controls" aria-label="Appeal filters">
+            <label className="admin-appeals-reference-search">
+              <Search aria-hidden="true" />
+              <input value={appealSearch} onChange={(event) => setAppealSearch(event.target.value)} placeholder="Search landlords" />
+            </label>
+          </section>
+
           {appealArchiveView && archivedAppeals.length === 0 ? <section className="admin-appeals-reference-empty"><ArchiveEmpty kind="appeals" icon={FileText}/></section> : !appealArchiveView && appeals.length === 0 ? <section className="admin-appeals-reference-empty"><AlertTriangle aria-hidden="true" /><h2>No appeals submitted.</h2><p>Landlord appeals will appear here when submitted.</p></section> : visibleAppeals.length === 0 ? <section className="admin-appeals-reference-empty"><OverviewEmpty icon={Search} text="No appeals match the selected filters."/></section> : <section className="admin-appeals-reference-table">
             <div className="admin-appeals-reference-table-head"><span>Landlord</span><span>Related Cases</span><span>Submitted</span><span>Status</span><span>Actions</span></div>
             <div>{pageAppeals.map((appeal) => {
                 const landlord = landlordMap.get(appeal.landlord_id ?? "");
                 const context = getAppealContext(appeal);
-                const caseTitle = appeal.report_id ? "Report appeal" : appeal.violation_id ? context.violation?.mode === "notice" ? "Violation notice" : "Violation appeal" : "General appeal";
+                const caseTitle = String(appeal.reason || (appeal.report_id ? context.report?.issueType ?? context.report?.issue_type ?? context.report?.category ?? "Apartment report" : appeal.violation_id ? context.violation?.mode === "notice" ? "Violation notice" : "Violation appeal" : "General appeal"));
                 const apartmentName = context.apartment?.title || String(context.source?.apartment_title ?? "Related case unavailable");
                 const location = context.apartment ? formatApartmentLocation(context.apartment) : String(context.source?.related_label ?? "");
                 const isDenied = ["rejected", "dismissed"].includes(appeal.status);
@@ -364,7 +364,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, violations, 
                   <div className="admin-appeals-reference-case"><strong>{caseTitle}</strong><small>{apartmentName}</small>{location && <small>{location}</small>}</div>
                   <time dateTime={appeal.submitted_at ?? appeal.created_at}>{formatOptionalDate(appeal.submitted_at ?? appeal.created_at, { month: "short", day: "numeric", year: "numeric" })}</time>
                   <span className={`admin-appeals-reference-badge is-${statusTone}`}>{statusLabel}</span>
-                  <div className="admin-appeals-reference-actions" onClick={(event) => event.stopPropagation()}><Button size="sm" onClick={() => setSelectedAppeal(appeal)}>{statusTone === "pending" ? "Review" : "View"}</Button>{appealArchiveView && <><Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "restore-appeal", id: text(appeal.id), label: appeal.reason || text(appeal.id) })}>Restore</Button><Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "delete-appeal", id: text(appeal.id), label: appeal.reason || text(appeal.id) })}>Delete</Button></>}</div>
+                  <div className="admin-appeals-reference-actions" onClick={(event) => event.stopPropagation()}><Button size="sm" variant="outline" onClick={() => setSelectedAppeal(appeal)}>View</Button>{appealArchiveView && <><Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "restore-appeal", id: text(appeal.id), label: appeal.reason || text(appeal.id) })}>Restore</Button><Button size="sm" variant="outline" onClick={() => setCaseAction({ type: "delete-appeal", id: text(appeal.id), label: appeal.reason || text(appeal.id) })}>Delete</Button></>}</div>
                 </article>;
             })}</div>
           </section>}

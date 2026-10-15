@@ -32,6 +32,8 @@ export function AdminSidebar({
   pendingReports,
   activeAppealsCount,
   unreadNotifsCount,
+  pendingLandlordsCount,
+  pendingApartmentsCount,
   user,
   navigateToAdminModule,
   navigateToSupport,
@@ -43,6 +45,8 @@ export function AdminSidebar({
     if (section === "reports") return pendingReports;
     if (section === "appeals") return activeAppealsCount;
     if (section === "notifications") return unreadNotifsCount;
+    if (section === "landlords") return pendingLandlordsCount;
+    if (section === "apartments") return pendingApartmentsCount;
     return 0;
   };
 

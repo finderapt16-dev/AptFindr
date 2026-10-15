@@ -13,7 +13,6 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
     const availableCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "published").length;
     const reviewCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "pending").length;
     const unpublishedCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "unpublished").length;
-    const rejectedCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "rejected").length;
     const propertyTypes = Array.from(new Set(allApartments.map((apartment) => apartment.propertyType).filter((value) => Boolean(value)))).sort();
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -37,7 +36,6 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             { label: "Published", value: availableCount, note: "Visible to tenants", icon: CheckCircle2 },
             { label: "Unpublished", value: unpublishedCount, note: "Hidden from tenants", icon: Building2 },
             { label: "Pending Review", value: reviewCount, note: "Requires inspection", icon: Clock },
-            { label: "Rejected", value: rejectedCount, note: "Did not pass review", icon: XCircle },
         ].map(({ label, value, note, icon: Icon }) => (<div key={label} className="admin-apartments-row-3"><span className="admin-apartments-row-4"><Icon className="admin-apartments-icon-icon"/></span><span className="admin-apartments-span-2"><span className="admin-apartments-span-3">{value}</span><span className="admin-apartments-span-4">{label}</span><span className="admin-apartments-span-5">{note}</span></span></div>))}
         </section>
 
@@ -46,7 +44,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             <Search className="admin-apartments-search-icon"/>
             <input value={aptSearch} onChange={(event) => setAptSearch(event.target.value)} placeholder="Search apartments by name, location, or landlord" className="admin-apartments-input"/>
           </label>
-          <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value)} className="admin-apartments-select"><option value="all">Listing Status: All</option><option value="published">Published</option><option value="pending">Pending Review</option><option value="rejected">Rejected</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select>
+          <select value={aptStatusFilter} onChange={(event) => setAptStatusFilter(event.target.value)} className="admin-apartments-select"><option value="all">Listing Status: All</option><option value="published">Published</option><option value="pending">Pending Review</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select>
           <select value={aptPropertyTypeFilter} onChange={(event) => setAptPropertyTypeFilter(event.target.value)} className="admin-apartments-select"><option value="all">Apartment Type: All</option>{propertyTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
           <select value={aptSort} onChange={(event) => setAptSort(event.target.value)} className="admin-apartments-select"><option value="newest">Sort by: Newest</option><option value="oldest">Sort by: Oldest</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option><option value="name">Sort by: Name</option></select>
         </section>

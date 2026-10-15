@@ -1,15 +1,16 @@
 .approved-appeal-page { width: 100%; max-width: 1622px; margin: 0 auto; padding: 23px 32px 40px; box-sizing: border-box; background: #fff; color: #111; border-radius: 10px; font-family: Inter, sans-serif; }
-.approved-appeal-back { display: flex; align-items: center; gap: 8px; color: #0ea5e9; border: 0; background: transparent; font-size: 14px; padding: 0; cursor: pointer; }
-.approved-appeal-back svg { width: 16px; height: 16px; }
-.approved-appeal-page header { margin: 25px 0 40px; }
-.approved-appeal-page h1 { font-size: 24px; line-height: 29px; font-weight: 600; margin: 0; }
-.approved-appeal-page header p { color: #475569; font-size: 14px; margin: 0; }
+.approved-appeal-back { display: inline-flex; align-items: center; gap: 5px; color: #0ea5e9; border: 0; background: transparent; font-size: 12px; padding: 0; cursor: pointer; }
+.approved-appeal-back svg { width: 15px; height: 15px; }
+.approved-appeal-page header { margin: 8px 0 28px; }
+.approved-appeal-page h1 { font-size: 20px; line-height: 24px; font-weight: 700; margin: 0; }
+.approved-appeal-page header p { color: #475569; font-size: 12px; margin: 3px 0 0; }
 .approved-appeal-columns { display: grid; grid-template-columns: minmax(0, 913fr) minmax(0, 599fr); gap: 20px; align-items: start; }
 .approved-appeal-main { display: grid; gap: 24px; min-width: 0; }
 .approved-appeal-page section, .approved-appeal-page aside { border: 1px solid #ccc; border-radius: 10px; padding: 24px 40px; min-width: 0; }
 .approved-appeal-page h2 { font-size: 24px; line-height: 29px; font-weight: 600; margin: 0 0 24px; }
 .approved-appeal-person { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-.approved-appeal-person > span { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: #e0f2fe; color: #0ea5e9; font-size: 20px; }
+.approved-appeal-person > span { display: grid; place-items: center; width: 60px; height: 60px; overflow: hidden; border-radius: 50%; background: #e0f2fe; color: #0ea5e9; font-size: 20px; }
+.approved-appeal-person > span img { width: 100%; height: 100%; object-fit: cover; }
 .approved-appeal-person strong { font-size: 20px; font-weight: 600; }
 .approved-appeal-person small { background: #dcfce7; color: #00ad3f; padding: 8px 14px; border-radius: 999px; font-size: 14px; }
 .approved-appeal-page dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 20px 24px; margin: 0; font-size: 16px; line-height: 22px; }

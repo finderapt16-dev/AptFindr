@@ -1423,6 +1423,13 @@
   display: grid;
 }
 
+.apartment-detail-grid-8 img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
 .apartment-detail-span-9 {
   color: #16a5e1;
   background-color: #f2f6fa;
@@ -3336,6 +3343,7 @@
   font-weight: 700;
 }
 
+
 .tenant-detail-colors .apartment-detail-button:hover,
 .landlord-property-detail .apartment-detail-button:hover {
   background: transparent !important;
@@ -3455,7 +3463,8 @@
 
 .apartment-detail-map-expand {
   position: absolute;
-  top: 9px;
+  top: auto;
+  bottom: 28px;
   right: 9px;
   z-index: 500;
   display: grid;

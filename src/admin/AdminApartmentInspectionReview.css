@@ -2,6 +2,8 @@
 
 /* Keep the inspection view in the same polished Admin shell as the dashboard. */
 .admin-inspection-review-outline svg:last-child { margin-left: 0; }
+.admin-inspection-review-landlord > span { overflow: hidden; }
+.admin-inspection-review-landlord > span img { width: 100%; height: 100%; object-fit: cover; }
 .admin-inspection-review-outline .lucide-arrow-right { margin-left: auto; }
 .admin-inspection-shell .app-shell-main { background: #f8fafc; transition: padding .22s ease, background-color .22s ease; }
 .admin-inspection-shell .admin-inspection-review { animation: admin-inspection-enter .28s ease-out both; }
@@ -225,25 +227,7 @@
   color: #078be0;
 }
 
-/* Retain a consistent gallery rail even when the landlord uploaded only one
-   image, rather than leaving a large unintentional blank area beneath it. */
 .admin-inspection-review-thumbnails button.is-active {
   outline: 2px solid #0b94f5;
   outline-offset: 1px;
-}
-
-.admin-inspection-review-thumbnail-empty {
-  display: block;
-  min-width: 0;
-  height: 70px;
-  border: 1px dashed #d3dae5;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #f7f9fc, #eef2f7);
-}
-
-@media (min-width: 1001px) {
-  .admin-inspection-review-thumbnail-empty {
-    height: 66px;
-    border-radius: 5px;
-  }
 }

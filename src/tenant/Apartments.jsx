@@ -1419,7 +1419,7 @@ if (browseMode === "popular") {
                                     <div className="apartment-browse-controls">
                                     <div className="apartment-browse-row-9">
                                         <BrowseButton
-                                            label="All Apartments"
+                                            label="All"
                                             active={
                                                 browseMode ===
                                                 "all"

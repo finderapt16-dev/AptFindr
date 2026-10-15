@@ -8,14 +8,19 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { getImageUrl } from "@/utils/images";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
+<<<<<<< HEAD:src/superadmin/SuperAdminReportReviewDetail.jsx
 import { ReportPropertyInspection } from "@/components/ReportPropertyInspection";
 import { EvidenceViewer } from "./SuperAdminEvidenceViewer";
 import "./SuperAdminReportReviewDetail.css";
+=======
+import { EvidenceViewer } from "./EvidenceViewer";
+import "./ReportReviewDetail.css";
+>>>>>>> f47732b (redeploy updates):src/superadmin/ReportReviewDetail.jsx
 
 const labels = { pending: "Open", open: "Open", under_review: "Under Review", in_review: "Under Review", resolved: "Resolved", dismissed: "Dismissed" };
 const fileSize = bytes => bytes ? (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`) : "Size unavailable";
 
-export function ReportReviewDetail({ report, apartment, details, evidence = [], onBack, onUpdated, resolveReport, dismissReport, archived, onArchive }) {
+export function ReportReviewDetail({ report, apartment, details, evidence = [], onBack, onViewApartment, onUpdated, resolveReport, dismissReport, archived, onArchive }) {
     const { user } = useAuth();
     const [notes, setNotes] = useState("");
     const [processing, setProcessing] = useState(false);
@@ -54,6 +59,8 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
         finally { setProcessing(false); }
     };
     const reporter = details?.reporter;
+    const reporterName = reporter?.name || report.reporter_name || report.reporter || "Reporter unavailable";
+    const reporterAvatarUrl = String(reporter?.avatar_url ?? reporter?.avatar ?? "").trim();
     const status = String(report.status || "pending").toLowerCase().replace(/[ -]/g, "_");
     const closed = ["resolved", "dismissed"].includes(status);
     const underReview = ["under_review", "in_review", "reviewing"].includes(status);
@@ -64,14 +71,13 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
     return <div className={`report-review-detail ${underReview ? "report-review-under-review-page" : ""}`}>
       <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
       <header className="report-review-header"><div><h1>Report Details</h1><p>Review the report and take appropriate action.</p></div><span className={`report-review-status is-${underReview ? "under_review" : status}`}>{underReview ? "Under Review" : labels[status] || report.status}</span></header>
-      <ReportPropertyInspection apartment={apartment} landlord={details?.landlord}/>
       <div className="report-review-columns">
         <div className="report-review-main">
           <section className="report-review-panel report-review-apartment"><h2>Apartment Information</h2><div className="report-review-apartment-content">
             <div className="report-review-photos">{images[0] ? <ImageWithFallback src={getImageUrl(images[0])} alt={apartment?.title || "Reported apartment"} className="report-review-main-photo"/> : <div className="report-review-main-photo report-review-placeholder"><FileText/></div>}<div className="report-review-thumbnails">{Array.from({ length: 3 }, (_, index) => images[index + 1] ? <ImageWithFallback key={index} src={getImageUrl(images[index + 1])} alt={`Apartment photo ${index + 2}`}/> : <span key={index}/>)}</div></div>
-            <div className="report-review-apartment-info"><h3>{apartment?.title || report.apartment_title || report.apartment || "Apartment unavailable"}</h3><p className="report-review-location"><MapPin/>{formatApartmentLocation(apartment)}</p><dl><dt>Apartment Type</dt><dd>{apartment?.propertyType || apartment?.type || "Apartment"}</dd><dt>Total Rooms</dt><dd>{apartment ? `${apartment.rooms?.length ?? apartment.totalRooms ?? 0} rooms` : "Unavailable"}</dd><dt>Price Range</dt><dd>{priceRange}</dd><dt>Status</dt><dd><span className={`report-review-publish ${published ? "is-published" : ""}`}>{apartment ? published ? "Published" : "Unpublished" : "Unavailable"}</span></dd></dl></div>
+            <div className="report-review-apartment-info"><h3>{apartment?.title || report.apartment_title || report.apartment || "Apartment unavailable"}</h3><p className="report-review-location"><MapPin/>{formatApartmentLocation(apartment)}</p><dl><dt>Apartment Type</dt><dd>{apartment?.propertyType || apartment?.type || "Apartment"}</dd><dt>Total Rooms</dt><dd>{apartment ? `${apartment.rooms?.length ?? apartment.totalRooms ?? 0} rooms` : "Unavailable"}</dd><dt>Price Range</dt><dd>{priceRange}</dd><dt>Status</dt><dd><span className={`report-review-publish ${published ? "is-published" : ""}`}>{apartment ? published ? "Published" : "Unpublished" : "Unavailable"}</span></dd></dl><button type="button" className="report-review-view-apartment" disabled={!apartment?.id} onClick={onViewApartment}>View Apartment</button></div>
           </div></section>
-          <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd>{reporter?.name || report.reporter_name || report.reporter || "Reporter unavailable"}{(reporter?.role || report.reporter_role || report.role) && ` (${reporter?.role || report.reporter_role || report.role})`}</dd><dt>Email</dt><dd>{reporter?.email || report.contact || "Not provided"}</dd><dt>Date Submitted</dt><dd>{report.submittedAt || report.submitted_at ? new Date(report.submittedAt || report.submitted_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "Not provided"}</dd><dt>Report Type</dt><dd>{report.issueType || report.issue_type || report.category || "Not specified"}</dd><dt>Description</dt><dd className="report-review-description">{report.details || "No description provided."}</dd></dl></section>
+          <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd><span className="report-review-person">{reporterAvatarUrl ? <img src={reporterAvatarUrl} alt="" /> : <span>{reporterName.charAt(0).toUpperCase()}</span>}<strong>{reporterName}</strong></span>{(reporter?.role || report.reporter_role || report.role) && ` (${reporter?.role || report.reporter_role || report.role})`}</dd><dt>Email</dt><dd>{reporter?.email || report.contact || "Not provided"}</dd><dt>Date Submitted</dt><dd>{report.submittedAt || report.submitted_at ? new Date(report.submittedAt || report.submitted_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "Not provided"}</dd><dt>Report Type</dt><dd>{report.issueType || report.issue_type || report.category || "Not specified"}</dd><dt>Description</dt><dd className="report-review-description">{report.details || "No description provided."}</dd></dl></section>
           <section className="report-review-panel"><div className="report-review-evidence-heading"><h2>Supporting Evidence</h2>{evidence.length > 0 && <button onClick={() => setViewAll(true)}>View All ({evidence.length})</button>}</div>{evidence.length ? <div className="report-review-evidence-grid">{evidence.slice(0, 4).map((file, index) => <button className="report-review-file" key={file.id || index} onClick={() => setViewAll(true)}><span className="report-review-file-preview">{file.fileType === "image" ? <ImageWithFallback src={file.fileUrl} alt={file.fileName}/> : <FileText/>}</span><strong>{file.fileName || "Supporting document"}</strong><small>{fileSize(file.fileSize)}</small></button>)}</div> : <p className="report-review-empty">No supporting evidence submitted.</p>}</section>
         </div>
         <aside className="report-review-panel report-review-actions"><h2>Admin Actions</h2><label className="report-review-status-field">Status<select value={status === "open" ? "pending" : underReview ? "under_review" : status} disabled={processing || archived || closed} onChange={event => void action(event.target.value)}><option value="pending">Open</option><option value="under_review">Under Review</option><option value="resolved">Resolved</option>{status === "dismissed" && <option value="dismissed">Dismissed</option>}</select></label><label className="report-review-notes">Admin Notes<textarea value={notes} onChange={event => setNotes(event.target.value)} placeholder="Add notes about your decision..." disabled={processing || archived || closed}/></label>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLandlordVerification, updateApartmentPublication, } from "@/data/apartments";
+import { getLandlordVerification, rejectApartmentListing, updateApartmentPublication, } from "@/data/apartments";
 import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { createViolation, fetchPendingAppeals, fetchAdminReports, fetchApartmentChangeLogs, fetchLandlordProfile, fetchUserById, sendAdminMessageToLandlord, updateReportStatus, } from "@/services/dashboardSupabaseService";
 import { VERIFICATION_DOCUMENT_TYPES, fetchApartmentVerificationDocuments, } from "@/services/verificationDocumentsService";
@@ -582,9 +582,9 @@ export function AdminApartmentDetail() {
             return;
         setIsUpdatingPublication(true);
         try {
-            await updateApartmentPublication(apartment.id, false, user.id);
-            setApartment((current) => current ? { ...current, isPublished: false, approvalStatus: "rejected" } : current);
-            toast.success("Listing rejected and unpublished");
+            await rejectApartmentListing(apartment.id, user.id);
+            toast.success("Listing rejected and removed from the active list");
+            handleBack();
         }
         catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to reject this listing.");

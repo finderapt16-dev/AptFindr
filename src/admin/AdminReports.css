@@ -3,7 +3,7 @@
 .reports-reference-header h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; }
 .reports-reference-header p { margin: 5px 0 0; color: #647a9b; font-size: 14px; line-height: 22px; }
 .reports-reference-filters { display: flex; align-items: center; justify-content: space-between; gap: clamp(20px, 6vw, 126px); margin-bottom: 32px; }
-.reports-reference-search { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; height: 48px; padding: 0 20px; border: 1px solid #ccc; border-radius: 10px; background: #fff; }
+.reports-reference-search { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; height: var(--admin-list-search-height, 56px); padding: 0 20px; border: 1px solid #ccc; border-radius: 10px; background: #fff; }
 .reports-reference-search svg { width: 21px; height: 21px; flex-shrink: 0; color: #4d6080; }
 .reports-reference-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; font-size: 14px; color: #0f172a; }
 .reports-reference-search input::placeholder { color: #4d6080; }
