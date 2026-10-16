@@ -8,11 +8,11 @@ import { useFavorites } from "@/tenant/useFavorites";
 export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const { favorites } = useFavorites();
+    const { unreadFavoriteCount } = useFavorites();
     const [open, setOpen] = useState(false);
     const isTenant = isTenantRole(user?.role);
     const unreadNotificationCount = Math.max(0, Number(unreadCount) || 0);
-    const navigationCount = unreadNotificationCount + favorites.length;
+    const navigationCount = unreadNotificationCount + unreadFavoriteCount;
     const navigationBadge = navigationCount > 99 ? "99+" : navigationCount;
     const portalLabel = user?.email ?? "";
     const displayName = user?.username?.trim();
@@ -49,7 +49,7 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
         </span>)}
     </Link>);
     return (<>
-      <button aria-label={navigationCount ? `Open navigation, ${navigationCount} total items: ${unreadNotificationCount} unread notifications and ${favorites.length} favorites` : "Open navigation"} onClick={() => setOpen(true)} className="app-sidebar-trigger">
+      <button aria-label={navigationCount ? `Open navigation, ${navigationCount} total items: ${unreadNotificationCount} unread notifications and ${unreadFavoriteCount} new favorites` : "Open navigation"} onClick={() => setOpen(true)} className="app-sidebar-trigger">
         <Menu className="tenant-mobile-navigation-menu-icon"/>
         {navigationCount > 0 && <span className="app-sidebar-trigger-notification-badge" aria-hidden="true">{navigationBadge}</span>}
       </button>
@@ -83,7 +83,7 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
               <nav className="tenant-mobile-navigation-nav">
                 <p className="tenant-mobile-navigation-main">Main</p>
                 <NavLink icon={Search} label="Apartments" to="/browse" section="apartments"/>
-                <NavLink icon={Heart} label="My Favorites" to="/favorites" section="favorites" badge={favorites.length}/>
+                <NavLink icon={Heart} label="My Favorites" to="/favorites" section="favorites" badge={unreadFavoriteCount}/>
                 <NavLink icon={Bell} label="Notifications" to="/tenant/dashboard?section=notifications" section="notifications" badge={unreadCount}/>
               </nav>
 

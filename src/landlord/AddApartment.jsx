@@ -973,8 +973,8 @@ export function AddApartment() {
                     delete next.images;
                     return next;
                 });
-            }} maxImages={5} maxFileSize={5}/>
-                    <p className="add-apartment-text-5">Upload clear photos of the apartment exterior, common areas, and facilities. Individual unit photos can be managed separately in Manage Units.</p>
+            }} maxImages={10} maxFileSize={5}/>
+                    <p className="add-apartment-text-5">Upload up to 10 clear photos of the apartment exterior, common areas, and facilities. Individual unit photos can be managed separately in Manage Units.</p>
                     {imageReuploadRequired && (<Alert className="add-apartment-card-6">
                         <Upload className="add-apartment-upload-icon-2"/>
                         <AlertDescription className="add-apartment-alert-description-2">Please re-upload images before submitting.</AlertDescription>

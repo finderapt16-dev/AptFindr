@@ -119,6 +119,11 @@
 .multi-image-thumbnail-primary { border-color:#facc15; box-shadow:0 0 0 2px #fde047; }
 .multi-image-thumbnail-standard { border-color:#e5e7eb; }
 .multi-image-thumbnail-standard:hover { border-color:#dcc9b4; }
+.multi-image-thumbnail-remove { position:absolute; top:5px; right:5px; display:grid; width:26px; height:26px; place-items:center; padding:0; border:1px solid rgba(255,255,255,.75); border-radius:50%; background:#dc2626; color:#fff; box-shadow:0 2px 6px rgba(15,23,42,.28); cursor:pointer; }
+.multi-image-thumbnail-remove:hover { background:#b91c1c; }
+.multi-image-thumbnail-remove:focus-visible { outline:3px solid rgba(22,165,225,.5); outline-offset:2px; }
+.multi-image-thumbnail-remove:disabled { cursor:not-allowed; opacity:.55; }
+.multi-image-thumbnail-remove svg { width:14px; height:14px; }
 .multi-image-empty { text-align:center; }
 @media (min-width:640px){ .multi-image-thumbnail-grid{grid-template-columns:repeat(6,minmax(0,1fr));} }
 /* ========================================

@@ -101,6 +101,7 @@ export function Favorites() {
     const {
         favorites,
         toggleFavorite,
+        markFavoritesViewed,
     } = useFavorites();
 
     const {
@@ -120,6 +121,10 @@ export function Favorites() {
         isLoading,
         setIsLoading,
     ] = useState(true);
+
+    useEffect(() => {
+        markFavoritesViewed();
+    }, [favorites, markFavoritesViewed]);
 
     const [
         filter,

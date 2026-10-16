@@ -12,8 +12,12 @@ export function ApartmentUnitList({ rooms, apartment, onSelect, tenantStyle = fa
         const status = getRoomStatus(room);
         const included = getUnitAmenities(room, apartment);
         const unitName = room.name ? /^unit\b/i.test(room.name) ? room.name : `Unit ${room.name}` : `Unit ${index + 1}`;
+        const roomImages = [...new Set((Array.isArray(room.images) ? room.images : typeof room.images === "string" ? room.images.split(",") : [])
+          .filter((image) => typeof image === "string" && image.trim()))];
         return <button type="button" key={room.id || index} className="market-apartment-unit" onClick={() => onSelect(room)}>
-          <div className="market-apartment-unit-photo">{room.images?.[0] ? <img src={getImageUrl(room.images[0])} alt={room.name || `Unit ${index + 1}`}/> : <DoorOpen/>}</div>
+          <div className={`market-apartment-unit-photo${roomImages.length > 1 ? " has-gallery" : ""}`}>
+            {roomImages.length ? <><img src={getImageUrl(roomImages[0])} alt={room.name || `Unit ${index + 1}`}/>{roomImages.length > 1 && <div className="market-apartment-unit-thumbnails" aria-label={`${roomImages.length} photos of ${unitName}`}>{roomImages.slice(1).map((image, imageIndex) => <img key={`${image}-${imageIndex}`} src={getImageUrl(image)} alt=""/>)}</div>}<span className="market-apartment-unit-photo-count">{roomImages.length} {roomImages.length === 1 ? "photo" : "photos"}</span></> : <DoorOpen/>}
+          </div>
           <div className="market-apartment-unit-information">
             <div className="market-apartment-unit-heading"><h3>{unitName}</h3><span className={`market-unit-status market-unit-status-${status}`}>{labels[status]}</span></div>
             <p className="market-apartment-unit-rent">₱ {Number(room.price || 0).toLocaleString("en-PH")} / month</p>

@@ -43,10 +43,9 @@ const NAV_ACCOUNT = [
 export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifications, activeSection, setActiveSection, setSidebarOpen, displayName, favoriteIds, handleLogout, mode = "page", }) {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const { favorites } = useFavorites();
+    const { unreadFavoriteCount } = useFavorites();
     const resolvedDisplayName = user?.username?.trim() || "Username unavailable";
     const resolvedUnreadCount = tenantNotifications?.unreadCount ?? unreadCount;
-    const resolvedFavoriteCount = favoriteIds?.length ?? favorites.length;
     const currentSection = mode === "dashboard"
         ? activeSection
         : active;
@@ -75,7 +74,7 @@ export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifica
     const renderItem = (item) => {
         const Icon = item.icon;
         const badge = item.section === "favorites"
-            ? resolvedFavoriteCount
+            ? unreadFavoriteCount
             : item.section === "notifications"
                 ? resolvedUnreadCount
                 : 0;

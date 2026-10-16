@@ -26,6 +26,8 @@ const MAX_ROOM_IMAGES = 5;
 const UNIT_INCLUSIONS = ["WiFi", "Air Conditioning", "Bed", "Study Table", "Balcony", "Private Bathroom", "Hot & Cold Shower", "Window", "Water", "Electricity", "Internet"];
 const MAX_ROOM_IMAGE_MB = 5;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const SQUARE_METERS_PER_SQUARE_FOOT = 0.09290304;
+const SQUARE_FEET_PER_SQUARE_METER = 1 / SQUARE_METERS_PER_SQUARE_FOOT;
 
 const emptyRoomForm = () => ({
     included: [],
@@ -34,7 +36,7 @@ const emptyRoomForm = () => ({
     price: "",
     maxOccupants: "",
     bedrooms: "",
-    sqft: "",
+    area: "",
     description: "",
     hasPrivateBath: false,
     bathroomType: "",
@@ -50,7 +52,11 @@ const roomToForm = (room) => ({
     price: room.price ? String(room.price) : "",
     maxOccupants: room.maxOccupants ? String(room.maxOccupants) : "",
     bedrooms: room.bedrooms == null ? "" : String(room.bedrooms),
-    sqft: String(room.sqft ?? ""),
+    // Room area is persisted in square feet, while the landlord form accepts
+    // square metres to match the wording shown in the interface.
+    area: room.sqft == null || Number(room.sqft) === 0
+        ? ""
+        : String(Math.round(Number(room.sqft) * SQUARE_METERS_PER_SQUARE_FOOT)),
     description: room.description ?? "",
     hasPrivateBath: room.hasPrivateBath === true,
     bathroomType: room.bathroomType || "en-suite",
@@ -68,7 +74,7 @@ const revokeIfBlob = (url) => { if (typeof url === "string" && url.startsWith("b
     URL.revokeObjectURL(url); };
 
 // Used to tell whether a card has unsaved edits, including the status chosen in Edit Unit.
-const DIRTY_FIELDS = ["included", "name", "type", "price", "maxOccupants", "bedrooms", "sqft", "description", "hasPrivateBath", "bathroomType", "sharedBathLocation", "hasAC", "status"];
+const DIRTY_FIELDS = ["included", "name", "type", "price", "maxOccupants", "bedrooms", "area", "description", "hasPrivateBath", "bathroomType", "sharedBathLocation", "hasAC", "status"];
 const snapshotOf = (form, images) => JSON.stringify([
     DIRTY_FIELDS.map((key) => form[key] ?? ""),
     images.map((image) => (image.file ? `file:${image.id}` : image.url)),
@@ -131,7 +137,9 @@ const buildRoomPayload = (form, imageUrls, status) => ({
     price: Number(form.price) || 0,
     maxOccupants: Number(form.maxOccupants) || 1,
     bedrooms: Number(form.bedrooms),
-    sqft: Number(form.sqft) || 0,
+    // `apartment_rooms.sqft` is an integer column. The form captures whole
+    // square metres, so converting to square feet may produce a fraction.
+    sqft: Math.round(Number(form.area) * SQUARE_FEET_PER_SQUARE_METER) || 0,
     description: form.description.trim(),
     hasPrivateBath: form.hasPrivateBath,
     bathroomType: form.hasPrivateBath ? form.bathroomType || "en-suite" : "",
@@ -346,11 +354,12 @@ function RoomEditorCard({ room, busy, onSave, onDelete, onCancelNew }) {
           <section className="mr-reference-section">
             <h3>Unit Information</h3>
             <div className="mr-reference-fields mr-unit-information">
-              <label className="mr-unit-field"><span>Unit Number / Name *</span><input required value={draft.name} onChange={setField("name")} className="mr-input" disabled={isSaving}/></label>
-              <label className="mr-unit-field"><span>Capacity *</span><span className="mr-unit-capacity"><input required type="number" min={1} step={1} value={draft.maxOccupants} onChange={setField("maxOccupants")} className="mr-input" disabled={isSaving}/><span>pax</span></span></label>
-              <label className="mr-unit-field"><span>Bedroom *</span><input required type="number" min={0} step={1} value={draft.bedrooms} onChange={setField("bedrooms")} className="mr-input" disabled={isSaving}/></label>
-              <label className="mr-unit-field"><span>Monthly Rent *</span><input required type="number" min={0} step="0.01" value={draft.price} onChange={setField("price")} className="mr-input" disabled={isSaving}/></label>
-              <label className="mr-unit-field mr-unit-description"><span>Description *</span><small>Provide a short description of this unit (maximum 500 characters).</small><textarea required rows={3} maxLength={500} value={draft.description} onChange={setField("description")} className="mr-textarea" disabled={isSaving}/><small className="mr-unit-description-count">{draft.description.length} / 500</small></label>
+              <label className="mr-unit-field"><span>Unit Number / Name *</span><input required value={draft.name} onChange={setField("name")} placeholder="Unit number" className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Capacity *</span><input required type="number" min={1} step={1} value={draft.maxOccupants} onChange={setField("maxOccupants")} placeholder="pax" className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Bedroom *</span><input required type="number" min={0} step={1} value={draft.bedrooms} onChange={setField("bedrooms")} placeholder="number of bedroom" className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Monthly Rent *</span><input required type="number" min={0} step="0.01" value={draft.price} onChange={setField("price")} placeholder="Monthly rent" className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field"><span>Floor Area *</span><input required type="number" min={1} step={1} value={draft.area} onChange={setField("area")} placeholder="sqm" className="mr-input" disabled={isSaving}/></label>
+              <label className="mr-unit-field mr-unit-description"><span>Description *</span><small>Provide a short description of this unit (maximum 500 characters).</small><textarea required rows={3} maxLength={500} value={draft.description} onChange={setField("description")} placeholder="Spacious room with balcony, good natural lighting, and study area, ideal for students and working professionals. This unit has 2 floors with separate living and sleeping areas." className="mr-textarea" disabled={isSaving}/><small className="mr-unit-description-count">{draft.description.length} / 500</small></label>
             </div>
           </section>
           <section className="mr-reference-section mr-unit-included">
@@ -476,6 +485,10 @@ export function ManageRooms({ propertyId }) {
         }
         if (form.bedrooms === "" || !Number.isInteger(Number(form.bedrooms)) || Number(form.bedrooms) < 0) {
             toast.error("Please enter a whole number of bedrooms (zero for a studio).");
+            return null;
+        }
+        if (form.area === "" || !Number.isInteger(Number(form.area)) || Number(form.area) < 1) {
+            toast.error("Floor area must be a whole number of square meters.");
             return null;
         }
         if (!form.description.trim() || form.description.length > 500) {

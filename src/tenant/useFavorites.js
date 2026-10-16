@@ -5,6 +5,28 @@ import { useAuth } from '../contexts/AuthContext';
 import { isTenantRole } from '../services/authService';
 import { getFavoriteApartmentIds, isApartmentFavorite, toggleFavorite as toggleFavoriteInDb, } from '../data/apartments';
 const FavoritesContext = createContext(null);
+const VIEWED_FAVORITES_STORAGE_PREFIX = "aptfindr.viewed-favorite-ids";
+
+const viewedFavoritesStorageKey = (userId) => `${VIEWED_FAVORITES_STORAGE_PREFIX}:${userId}`;
+const readViewedFavoriteIds = (userId) => {
+    if (!userId || typeof window === "undefined") return [];
+    try {
+        const stored = JSON.parse(window.localStorage.getItem(viewedFavoritesStorageKey(userId)) ?? "[]");
+        return Array.isArray(stored) ? stored.filter((id) => typeof id === "string" && id.trim()) : [];
+    }
+    catch {
+        return [];
+    }
+};
+const persistViewedFavoriteIds = (userId, ids) => {
+    if (!userId || typeof window === "undefined") return;
+    try {
+        window.localStorage.setItem(viewedFavoritesStorageKey(userId), JSON.stringify(ids));
+    }
+    catch {
+        // Browsing remains usable when local storage is unavailable.
+    }
+};
 export function FavoritesProvider({ children }) {
     return createElement(FavoritesContext.Provider, { value: useFavoritesState() }, children);
 }
@@ -20,13 +42,23 @@ function useFavoritesState() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [updatingFavoriteIds, setUpdatingFavoriteIds] = useState([]);
+    const [viewedFavoriteIds, setViewedFavoriteIds] = useState([]);
     const favoritesRef = useRef([]);
     const favoritesOwnerRef = useRef(user?.id ?? null);
+    const viewedFavoritesOwnerRef = useRef(null);
+    const viewedFavoriteIdsRef = useRef([]);
     const loadRequestRef = useRef(0);
     const pendingRef = useRef(new Set());
     useEffect(() => {
         favoritesRef.current = favorites;
     }, [favorites]);
+    useEffect(() => {
+        const userId = user?.id ?? null;
+        viewedFavoritesOwnerRef.current = userId;
+        const viewedIds = readViewedFavoriteIds(userId);
+        viewedFavoriteIdsRef.current = viewedIds;
+        setViewedFavoriteIds(viewedIds);
+    }, [user?.id]);
     const loadFavorites = useCallback(async () => {
         const requestedUserId = user?.id;
         if (pendingRef.current.size && favoritesOwnerRef.current === requestedUserId) return;
@@ -98,6 +130,15 @@ function useFavoritesState() {
         }
         const requestedUserId = user.id;
         const wasFavorite = favoritesOwnerRef.current === requestedUserId && favoritesRef.current.includes(apartmentId);
+        // A newly saved apartment is new to the Favorites page. Removing it
+        // also clears any stale viewed marker so a later re-save is new again.
+        setViewedFavoriteIds((previous) => {
+            const next = previous.filter((id) => id !== apartmentId);
+            viewedFavoriteIdsRef.current = next;
+            if (viewedFavoritesOwnerRef.current === requestedUserId)
+                persistViewedFavoriteIds(requestedUserId, next);
+            return next;
+        });
         pendingRef.current.add(mutationKey);
         loadRequestRef.current += 1;
         const optimistic = wasFavorite
@@ -146,14 +187,27 @@ function useFavoritesState() {
         }
     }, [favorites, isAuthenticated, updatingFavoriteIds, user?.id, user?.role]);
     const isFavorite = useCallback((apartmentId) => favoritesOwnerRef.current === user?.id && favorites.includes(apartmentId), [favorites, user?.id]);
+    const markFavoritesViewed = useCallback(() => {
+        const userId = user?.id;
+        if (!userId || viewedFavoritesOwnerRef.current !== userId) return;
+        const next = [...new Set(favoritesRef.current)];
+        viewedFavoriteIdsRef.current = next;
+        setViewedFavoriteIds(next);
+        persistViewedFavoriteIds(userId, next);
+    }, [user?.id]);
+    const unreadFavoriteCount = favoritesOwnerRef.current === user?.id
+        ? favorites.filter((id) => !viewedFavoriteIds.includes(id)).length
+        : 0;
     return {
         favorites: favoritesOwnerRef.current === user?.id ? favorites : [],
+        unreadFavoriteCount,
         isLoading,
         isRefreshing,
         error,
         updatingFavoriteIds,
         toggleFavorite,
         isFavorite,
+        markFavoritesViewed,
         refreshFavorites: loadFavorites,
     };
 }

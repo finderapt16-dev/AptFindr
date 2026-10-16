@@ -1,4 +1,5 @@
 import { LandingListingsSection } from "./LandingApartmentPreview";
+import { FooterContactLink } from "./FooterContactLink";
 import { FooterPolicyLink } from "@/legal/FooterPolicyLink";
 
 import { Button } from "@/components/ui/button";
@@ -1621,7 +1622,7 @@ export function Landing() {
                         <div className="landing-footer-column">
                             <h4 className="landing-footer-heading">Support</h4>
                             <ul className="landing-footer-links">
-                                <li><span className="landing-footer-link">Contact Us</span></li>
+                                <li><FooterContactLink /></li>
                                 <li><FooterPolicyLink kind="terms"/></li>
                                 <li><FooterPolicyLink kind="privacy"/></li>
                             </ul>

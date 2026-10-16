@@ -91,6 +91,9 @@
 .admin-inspection-review-unit-amenities > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .admin-inspection-review-unit-amenities span { padding: 4px 7px; border: 1px solid #d8d8d8; border-radius: 6px; color: #172033; overflow-wrap: anywhere; }
 .admin-inspection-review-unit-amenities small { color: #61728f; }
+.admin-inspection-review-room-thumbnails { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; min-width: 0; }
+.admin-inspection-review-room-thumbnails > :is(.image-with-fallback-dynamic-1, .image-with-fallback-dynamic-2) { display: block; min-width: 0; height: 34px; overflow: hidden; border-radius: 4px; background: #e5e7eb; }
+.admin-inspection-review-room-thumbnails img { display: block; width: 100%; height: 100%; margin: 0; object-fit: cover; }
 
 /* Property Inspection reference layout */
 @media (min-width: 1001px) {
@@ -147,6 +150,7 @@
   .admin-inspection-review-unit-amenities > strong { padding: 0; font-size: 9px; }
   .admin-inspection-review-unit-amenities > div { gap: 4px; margin: 0; }
   .admin-inspection-review-unit-amenities span { padding: 4px 8px; border-radius: 6px; font-size: 8px; }
+  .admin-inspection-review-room-thumbnails { grid-column: 1; grid-row: 8; width: 170px; }
   .admin-inspection-review-map { height: 350px; margin-top: 12px; border-radius: 6px; }
 
   .admin-inspection-review-side > .admin-inspection-review-card:first-child { display: none; }
@@ -175,6 +179,7 @@
   .admin-inspection-review-rooms em { position: absolute; top: 10px; right: 10px; }
   .admin-inspection-review-unit-amenities { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; gap: 6px; margin-top: 3px; }
   .admin-inspection-review-unit-amenities > div { margin-top: 0; }
+  .admin-inspection-review-room-thumbnails { grid-column: 1; grid-row: 8; width: 145px; }
 }
 
 @media (max-width: 560px) {
