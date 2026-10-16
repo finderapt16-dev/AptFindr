@@ -20,14 +20,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AdminApartments } from './SuperAdminApartments';
-import { AdminAppeals } from './SuperAdminAppeals';
+import { AdminAppeals } from '@/admin/AdminAppeals';
 import { AdminLandlordVerification } from './SuperAdminLandlordVerification';
 import { AdminLandlordVerificationReview } from './SuperAdminLandlordVerificationReview';
 import { AdminApartmentVerification } from './SuperAdminApartmentVerification';
 import { AdminVerificationDocumentViewer } from './SuperAdminVerificationDocumentViewer';
 import { AdminRequestChangesDialog } from './SuperAdminRequestChangesDialog';
 import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './superAdminDashboardHelpers';
-import { AdminReports } from './SuperAdminReports';
+import { AdminReports } from '@/admin/AdminReports';
 import { AdminSidebar } from './SuperAdminSidebar';
 import { SuperAdminUserManagement } from './SuperAdminUserManagement';
 import { MaintenanceControl } from './SuperAdminMaintenanceControl';
@@ -1475,7 +1475,7 @@ export function AdminDashboard() {
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────
-    const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView}/>);
+    const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView} onWorkflowChanged={async () => { const [nextReports, nextAppeals] = await Promise.all([fetchAdminReports(), fetchPendingAppeals()]); setReports(nextReports); setAppeals(nextAppeals); }}/>);
     const renderAdminInfo = () => {
         return (() => {
             const adminName = `${adminProfile.firstName} ${adminProfile.lastName}`.trim();

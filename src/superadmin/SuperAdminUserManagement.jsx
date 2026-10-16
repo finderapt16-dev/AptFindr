@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
 import { fetchUsers as fetchDashboardUsers } from "@/services/dashboardSupabaseService";
 import {
     createSuperAdminManagedUser,
@@ -233,6 +234,7 @@ export function SuperAdminUserManagement({ currentUser, onUsersChanged }) {
     const [details, setDetails] = useState(null);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [confirmAction, setConfirmAction] = useState(null);
+    const [openActionUserId, setOpenActionUserId] = useState(null);
 
     const loadUsers = useCallback(async ({ silent = false } = {}) => {
         if (!silent)
@@ -314,6 +316,10 @@ export function SuperAdminUserManagement({ currentUser, onUsersChanged }) {
     useEffect(() => {
         setPage(1);
     }, [search, roleFilter]);
+
+    useEffect(() => {
+        setOpenActionUserId(null);
+    }, [search, roleFilter, page]);
 
     const summary = useMemo(() => summarizeManagedUsers(users), [users]);
     const filteredUsers = useMemo(() => {
@@ -527,8 +533,12 @@ export function SuperAdminUserManagement({ currentUser, onUsersChanged }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {visibleUsers.map((managedUser) => (
-                                    <tr key={managedUser.id ?? managedUser.email}>
+                                {visibleUsers.map((managedUser) => {
+                                    const managedUserKey = managedUser.id ?? managedUser.email;
+                                    const managedUserLabel = managedUser.name || managedUser.email || "this user";
+                                    const isInactive = isManagedUserInactive(managedUser.status);
+                                    return (
+                                    <tr key={managedUserKey}>
                                         <td>
                                             <span className={`super-admin-users-avatar ${roleTone(managedUser.role)}`}>{getManagedUserInitials(managedUser)}</span>
                                             <strong>{managedUser.name || "Unnamed account"}</strong>
@@ -538,14 +548,23 @@ export function SuperAdminUserManagement({ currentUser, onUsersChanged }) {
                                         <td><span className={`super-admin-users-status ${statusTone(managedUser)}`}>{getManagedUserStatusLabel(managedUser)}</span></td>
                                         <td>
                                             <div className="super-admin-users-actions">
-                                                <button type="button" title="View details" aria-label={`View details for ${managedUser.name || managedUser.email}`} onClick={() => void viewDetails(managedUser)}><Eye aria-hidden="true" /></button>
-                                                <button type="button" title={readOnlyFallback ? "Secure function required" : "Edit user"} aria-label={`Edit ${managedUser.name || managedUser.email}`} onClick={() => openEdit(managedUser)} disabled={readOnlyFallback}><Pencil aria-hidden="true" /></button>
-                                                <button type="button" title={readOnlyFallback ? "Secure function required" : isManagedUserInactive(managedUser.status) ? "Reactivate user" : "Deactivate user"} aria-label={isManagedUserInactive(managedUser.status) ? `Reactivate ${managedUser.name || managedUser.email}` : `Deactivate ${managedUser.name || managedUser.email}`} onClick={() => requestStatusAction(managedUser)} disabled={readOnlyFallback || managedUser.id === currentUser?.id}><Power aria-hidden="true" /></button>
-                                                <button type="button" title={readOnlyFallback ? "Secure function required" : "Delete user safely"} aria-label={`Delete ${managedUser.name || managedUser.email}`} onClick={() => requestDelete(managedUser)} disabled={readOnlyFallback || managedUser.id === currentUser?.id} className="is-danger"><Trash2 aria-hidden="true" /></button>
+                                                <NotificationActionsMenu
+                                                    open={openActionUserId === managedUserKey}
+                                                    onOpenChange={(open) => setOpenActionUserId(open ? managedUserKey : null)}
+                                                    triggerAriaLabel={`Actions for ${managedUserLabel}`}
+                                                    triggerClassName="super-admin-users-actions-trigger"
+                                                    menuClassName="super-admin-users-actions-menu"
+                                                >
+                                                    <button type="button" role="menuitem" onClick={() => void viewDetails(managedUser)}><Eye aria-hidden="true" /><span>View details</span></button>
+                                                    <button type="button" role="menuitem" title={readOnlyFallback ? "Secure function required" : "Edit user"} onClick={() => openEdit(managedUser)} disabled={readOnlyFallback}><Pencil aria-hidden="true" /><span>Edit user</span></button>
+                                                    <button type="button" role="menuitem" title={readOnlyFallback ? "Secure function required" : isInactive ? "Reactivate user" : "Deactivate user"} onClick={() => requestStatusAction(managedUser)} disabled={readOnlyFallback || managedUser.id === currentUser?.id}><Power aria-hidden="true" /><span>{isInactive ? "Reactivate user" : "Deactivate user"}</span></button>
+                                                    <button type="button" role="menuitem" title={readOnlyFallback ? "Secure function required" : "Delete user safely"} onClick={() => requestDelete(managedUser)} disabled={readOnlyFallback || managedUser.id === currentUser?.id} className="is-danger"><Trash2 aria-hidden="true" /><span>Delete user safely</span></button>
+                                                </NotificationActionsMenu>
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                                 {visibleUsers.length === 0 && (
                                     <tr><td colSpan="5" className="super-admin-users-empty">No user accounts match your filters.</td></tr>
                                 )}

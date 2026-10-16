@@ -240,6 +240,13 @@
   font-weight: 700;
 }
 
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  line-height: 1;
+}
+
 .admin-figma-sidebar-logout {
   margin-top: auto;
   padding: 0 12px 16px;
@@ -440,10 +447,11 @@
   gap: 8px;
   margin: 0 0 6px;
   padding: 0 8px;
-  color: #667085 !important;
+  color: #16a5e1 !important;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .08em !important;
+  text-transform: uppercase;
 }
 
 .admin-portal-shell .admin-figma-sidebar-group > p::after {
@@ -465,24 +473,45 @@
   color: #333333 !important;
   font-size: 14px;
   font-weight: 600;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transform: translateX(0) !important;
 }
 
 .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item > svg {
   width: 20px !important;
   height: 20px !important;
   color: #9a9a9a !important;
+  transition:
+    color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateX(0) !important;
 }
 
-.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover {
+  border-color: transparent !important;
+  background: #eaf7fd !important;
+  color: #16a5e1 !important;
+  transform: translateX(2px) !important;
+}
+
 .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active {
   border-color: transparent !important;
   background: #eaf7fd !important;
   color: #16a5e1 !important;
+  transform: translateX(0) !important;
 }
 
-.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover > svg,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover > svg {
+  color: #16a5e1 !important;
+  transform: translateX(1px) scale(1.03) !important;
+}
+
 .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active > svg {
   color: #16a5e1 !important;
+  transform: translateX(0) !important;
 }
 
 .admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active::before {

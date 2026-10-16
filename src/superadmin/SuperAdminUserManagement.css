@@ -276,36 +276,90 @@
 
 .super-admin-users-actions {
     display: flex;
-    gap: 0.35rem;
+    justify-content: flex-start;
 }
 
-.super-admin-users-actions button {
+.super-admin-users-actions-trigger {
     align-items: center;
-    background: #eff6ff;
-    border: 0;
+    background: #ffffff;
+    border: 1px solid #d8e2ed;
     border-radius: 8px;
-    color: #1d4ed8;
+    color: #475569;
     cursor: pointer;
     display: inline-flex;
-    height: 2.05rem;
+    height: 2.25rem;
     justify-content: center;
-    width: 2.05rem;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+    width: 2.25rem;
 }
 
-.super-admin-users-actions button:disabled {
+.super-admin-users-actions-trigger:hover,
+.super-admin-users-actions-trigger[aria-expanded="true"] {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.super-admin-users-actions-trigger:focus-visible,
+.super-admin-users-actions-menu button:focus-visible {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
+}
+
+.super-admin-users-actions-menu {
+    background: #ffffff;
+    border: 1px solid #dbe7f3;
+    border-radius: 8px;
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.16);
+    display: grid;
+    gap: 0.15rem;
+    min-width: 13.5rem;
+    padding: 0.35rem;
+}
+
+.super-admin-users-actions-menu button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 700;
+    gap: 0.7rem;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    width: 100%;
+}
+
+.super-admin-users-actions-menu button:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.super-admin-users-actions-menu button:disabled {
     cursor: not-allowed;
     opacity: 0.45;
 }
 
-.super-admin-users-actions button.is-danger {
-    background: #fff1f2;
+.super-admin-users-actions-menu button.is-danger {
     color: #e11d48;
 }
 
-.super-admin-users-actions svg,
+.super-admin-users-actions-menu button.is-danger:hover:not(:disabled) {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.super-admin-users-actions-trigger svg,
+.super-admin-users-actions-menu svg,
 .super-admin-users-refresh svg,
 .super-admin-users-add svg,
 .super-admin-users-pagination svg {
+    flex: 0 0 auto;
     height: 1rem;
     width: 1rem;
 }

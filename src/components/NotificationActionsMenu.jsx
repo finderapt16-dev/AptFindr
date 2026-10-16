@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
 
-export function NotificationActionsMenu({ children, open: controlledOpen, onOpenChange, triggerClassName = "", menuClassName = "" }) {
+export function NotificationActionsMenu({ children, open: controlledOpen, onOpenChange, triggerAriaLabel = "Notification actions", triggerClassName = "", menuClassName = "" }) {
   const [localOpen, setLocalOpen] = useState(false);
   const open = controlledOpen ?? localOpen;
   const triggerRef = useRef(null);
@@ -38,7 +38,7 @@ export function NotificationActionsMenu({ children, open: controlledOpen, onOpen
   }, [open, setOpen]);
 
   return <>
-    <button ref={triggerRef} type="button" className={triggerClassName} aria-label="Notification actions" aria-haspopup="menu" aria-expanded={open} onClick={(event) => { event.stopPropagation(); setOpen(!open); }}><MoreVertical size={18} aria-hidden="true" /></button>
+    <button ref={triggerRef} type="button" className={triggerClassName} aria-label={triggerAriaLabel} aria-haspopup="menu" aria-expanded={open} onClick={(event) => { event.stopPropagation(); setOpen(!open); }}><MoreVertical size={18} aria-hidden="true" /></button>
     {open && createPortal(<div ref={menuRef} role="menu" className={menuClassName} style={{ position: "fixed", top: position.top, left: position.left, right: "auto", zIndex: 10000, maxWidth: "calc(100vw - 16px)", maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }} onClick={(event) => { event.stopPropagation(); if (event.target.closest("button") && !event.target.closest("button").disabled) setOpen(false); }}>{children}</div>, document.body)}
   </>;
 }

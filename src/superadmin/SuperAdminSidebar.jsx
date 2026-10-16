@@ -33,25 +33,25 @@ const ACCOUNT_ITEMS = [
 export function AdminSidebar({
   activeSection,
   isSupportView = false,
-  pendingReports,
-  activeAppealsCount,
-  unreadNotifsCount,
-  pendingLandlordsCount,
-  pendingApartmentsCount,
-  unreadSupportCount,
+  pendingLandlordsCount = 0,
+  pendingApartmentsCount = 0,
+  pendingReports = 0,
+  activeAppealsCount = 0,
+  unreadNotifsCount = 0,
+  unreadSupportCount = 0,
   user,
   navigateToAdminModule,
   navigateToSupport,
   handleLogout,
   onNavigate,
 }) {
-  const countFor = (section, label) => {
+  const countFor = (section) => {
+    if (section === "landlords") return pendingLandlordsCount;
+    if (section === "apartments") return pendingApartmentsCount;
     if (section === "support") return unreadSupportCount;
     if (section === "reports") return pendingReports;
     if (section === "appeals") return activeAppealsCount;
     if (section === "notifications") return unreadNotifsCount;
-    if (section === "landlords") return pendingLandlordsCount;
-    if (section === "apartments") return pendingApartmentsCount;
     return 0;
   };
 
@@ -59,7 +59,7 @@ export function AdminSidebar({
     <nav aria-label={label} className="admin-figma-sidebar-group">
       <p>{label}</p>
       {items.map(({ icon: Icon, label: itemLabel, section }) => {
-        const count = countFor(section, itemLabel);
+        const count = countFor(section);
         const isCurrent = section === "support"
           ? isSupportView
           : activeSection === section && !(isSupportView && section === "notifications");
@@ -81,7 +81,14 @@ export function AdminSidebar({
           >
             <Icon aria-hidden="true" />
             <span>{itemLabel}</span>
-            {count > 0 && <small>{count}</small>}
+            {count > 0 && (
+              <small
+                className="admin-figma-sidebar-count"
+                title={`${count} item${count === 1 ? "" : "s"} requiring attention`}
+              >
+                {count}
+              </small>
+            )}
           </button>
         );
       })}
@@ -104,9 +111,9 @@ export function AdminSidebar({
         </span>
       </div>
 
-      {renderGroup("Main", MAIN_ITEMS)}
-      {renderGroup("Management", MANAGEMENT_ITEMS)}
-      {renderGroup("Account", ACCOUNT_ITEMS)}
+      {renderGroup("MAIN", MAIN_ITEMS)}
+      {renderGroup("MANAGEMENT", MANAGEMENT_ITEMS)}
+      {renderGroup("ACCOUNT", ACCOUNT_ITEMS)}
 
       <div className="admin-figma-sidebar-logout">
         <LogoutConfirmation onConfirm={handleLogout}>

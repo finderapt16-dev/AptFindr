@@ -42,7 +42,12 @@ returns public.app_users.id%type language sql stable security definer set search
 $$;
 create or replace function public.fn_workflow_is_admin()
 returns boolean language sql stable security definer set search_path=public as $$
-  select exists (select 1 from public.app_users where (id::text=auth.uid()::text or auth_id::text=auth.uid()::text) and lower(role::text)='admin');
+  select exists (
+    select 1
+    from public.app_users
+    where (id::text=auth.uid()::text or auth_id::text=auth.uid()::text)
+      and replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin')
+  );
 $$;
 create or replace function public.fn_workflow_audit(p_action text,p_target_type text,p_target_id text,p_details jsonb default '{}'::jsonb)
 returns void language plpgsql security definer set search_path=public as $$
@@ -140,7 +145,7 @@ begin
   if exists(select 1 from public.appeals where report_id=r.id and status not in ('approved','dismissed','resolved')) then raise exception 'An active appeal already exists for this report'; end if;
   insert into public.appeals(landlord_id,report_id,apartment_id,appeal_type,reason,description,appeal_message,contact_information,supporting_docs,status,submitted_at) values(v_user,r.id,r.apartment_id,'property_report','Tenant report appeal',trim(p_description),trim(p_description),nullif(trim(p_contact),''),coalesce(p_supporting_docs,'[]'::jsonb),'pending_review',now()) returning * into appeal;
   update public.reports set status='under_appeal',last_action_at=now() where id=r.id returning * into r;
-  for v_admin in select id from public.app_users where lower(role::text)='admin' loop perform public.fn_workflow_notify(v_admin.id,'appeal_submitted','New appeal submitted',format('The owner of "%s" submitted an appeal.',coalesce(a.title,'a listing')),jsonb_build_object('appeal_id',appeal.id,'report_id',r.id,'apartment_id',r.apartment_id),appeal.id::text,'appeal'); end loop;
+  for v_admin in select id from public.app_users where replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin') loop perform public.fn_workflow_notify(v_admin.id,'appeal_submitted','New appeal submitted',format('The owner of "%s" submitted an appeal.',coalesce(a.title,'a listing')),jsonb_build_object('appeal_id',appeal.id,'report_id',r.id,'apartment_id',r.apartment_id),appeal.id::text,'appeal'); end loop;
   perform public.fn_workflow_audit('APPEAL_SUBMITTED','appeal',appeal.id::text,jsonb_build_object('report_id',r.id)); return to_jsonb(appeal);
 end;
 $$;
@@ -170,7 +175,7 @@ begin
   if not found or appeal.landlord_id is distinct from v_user then raise exception 'Appeal not found'; end if;
   if appeal.status<>'more_evidence_requested' or appeal.evidence_deadline is null or appeal.evidence_deadline<=now() then raise exception 'The evidence submission period has expired'; end if;
   update public.appeals set status='additional_evidence_submitted',description=coalesce(nullif(trim(p_description),''),description),supporting_docs=coalesce(supporting_docs,'[]'::jsonb)||coalesce(p_supporting_docs,'[]'::jsonb),evidence_deadline=null,updated_at=now() where id=appeal.id returning * into appeal;
-  for v_admin in select id from public.app_users where lower(role::text)='admin' loop perform public.fn_workflow_notify(v_admin.id,'appeal_evidence_submitted','Additional appeal evidence submitted','The landlord submitted the requested additional evidence.',jsonb_build_object('appeal_id',appeal.id,'report_id',appeal.report_id,'apartment_id',appeal.apartment_id),appeal.id::text,'appeal'); end loop;
+  for v_admin in select id from public.app_users where replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin') loop perform public.fn_workflow_notify(v_admin.id,'appeal_evidence_submitted','Additional appeal evidence submitted','The landlord submitted the requested additional evidence.',jsonb_build_object('appeal_id',appeal.id,'report_id',appeal.report_id,'apartment_id',appeal.apartment_id),appeal.id::text,'appeal'); end loop;
   perform public.fn_workflow_audit('APPEAL_EVIDENCE_SUBMITTED','appeal',appeal.id::text,jsonb_build_object('report_id',appeal.report_id)); return to_jsonb(appeal);
 end;
 $$;
@@ -229,12 +234,12 @@ begin
   perform set_config('app.workflow_transition','on',true);
   for r in select * from public.reports where status='awaiting_landlord_appeal' and appeal_deadline<=now() for update skip locked loop
     update public.reports set status='appeal_period_expired',last_action_at=now() where id=r.id;
-    for v_admin in select id from public.app_users where lower(role::text)='admin' loop perform public.fn_workflow_notify(v_admin.id,'appeal_deadline_expired','Appeal period expired','The landlord did not submit an appeal within the seven-day appeal period.',jsonb_build_object('report_id',r.id,'apartment_id',r.apartment_id,'appeal_deadline',r.appeal_deadline),r.id::text,'report'); end loop;
+    for v_admin in select id from public.app_users where replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin') loop perform public.fn_workflow_notify(v_admin.id,'appeal_deadline_expired','Appeal period expired','The landlord did not submit an appeal within the seven-day appeal period.',jsonb_build_object('report_id',r.id,'apartment_id',r.apartment_id,'appeal_deadline',r.appeal_deadline),r.id::text,'report'); end loop;
     perform public.fn_workflow_audit('APPEAL_DEADLINE_EXPIRED','report',r.id::text,jsonb_build_object('appeal_deadline',r.appeal_deadline)); n:=n+1;
   end loop;
   for r in select * from public.appeals where status='more_evidence_requested' and evidence_deadline<=now() for update skip locked loop
     update public.appeals set status='evidence_deadline_expired',updated_at=now() where id=r.id; update public.reports set status='evidence_deadline_expired',last_action_at=now() where id=r.report_id;
-    for v_admin in select id from public.app_users where lower(role::text)='admin' loop perform public.fn_workflow_notify(v_admin.id,'evidence_deadline_expired','Evidence deadline expired','The landlord did not submit the requested evidence within seven days.',jsonb_build_object('appeal_id',r.id,'report_id',r.report_id,'evidence_deadline',r.evidence_deadline),r.id::text,'appeal'); end loop;
+    for v_admin in select id from public.app_users where replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin') loop perform public.fn_workflow_notify(v_admin.id,'evidence_deadline_expired','Evidence deadline expired','The landlord did not submit the requested evidence within seven days.',jsonb_build_object('appeal_id',r.id,'report_id',r.report_id,'evidence_deadline',r.evidence_deadline),r.id::text,'appeal'); end loop;
     perform public.fn_workflow_audit('EVIDENCE_DEADLINE_EXPIRED','appeal',r.id::text,jsonb_build_object('evidence_deadline',r.evidence_deadline)); n:=n+1;
   end loop; return n;
 end;
@@ -278,7 +283,7 @@ returns trigger language plpgsql security definer set search_path=public as $$
 declare a record; v_admin record;
 begin
   select title, landlord_id into a from public.apartments where id=new.apartment_id;
-  for v_admin in select id from public.app_users where lower(role::text)='admin' loop perform public.fn_workflow_notify(v_admin.id,'report_submitted','New tenant report',format('A tenant reported "%s".',coalesce(a.title,'an apartment')),jsonb_build_object('report_id',new.id,'apartment_id',new.apartment_id,'apartment_title',a.title),new.id::text,'report'); end loop;
+  for v_admin in select id from public.app_users where replace(lower(trim(role::text)), '-', '_') in ('admin', 'super_admin') loop perform public.fn_workflow_notify(v_admin.id,'report_submitted','New tenant report',format('A tenant reported "%s".',coalesce(a.title,'an apartment')),jsonb_build_object('report_id',new.id,'apartment_id',new.apartment_id,'apartment_title',a.title),new.id::text,'report'); end loop;
   if a.landlord_id is not null then
     perform public.fn_workflow_notify(a.landlord_id,'property_reported','New tenant report received',format('A tenant submitted a report for "%s". An administrator will review it before taking action.',coalesce(a.title,'your listing')),jsonb_build_object('report_id',new.id,'apartment_id',new.apartment_id,'apartment_title',a.title,'status',new.status),new.id::text,'report');
   end if;

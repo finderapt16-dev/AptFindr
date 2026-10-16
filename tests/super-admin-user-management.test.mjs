@@ -3,6 +3,10 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../src/services/superAdminUserService.js', import.meta.url), 'utf8');
+const uiSource = readFileSync(
+  new URL('../src/superadmin/SuperAdminUserManagement.jsx', import.meta.url),
+  'utf8',
+);
 const edgeFunctionSource = readFileSync(
   new URL('../supabase/functions/super-admin-users/index.ts', import.meta.url),
   'utf8',
@@ -113,4 +117,12 @@ test('profile details hide technical-only tenant rows and format known role fiel
     { key: 'business_name', label: 'Business Name', value: 'Juan Rentals' },
     { key: 'is_verified', label: 'Verified', value: false },
   ]);
+});
+
+test('user table actions are grouped in an accessible three-dot menu', () => {
+  assert.match(uiSource, /<NotificationActionsMenu/);
+  assert.match(uiSource, /triggerAriaLabel=\{`Actions for \$\{managedUserLabel\}`\}/);
+  for (const action of ['View details', 'Edit user', 'Deactivate user', 'Delete user safely']) {
+    assert.match(uiSource, new RegExp(action));
+  }
 });
