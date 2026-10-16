@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { MapView } from "@/components/MapView";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
@@ -26,10 +25,6 @@ import { toast } from "sonner";
 import { Sidebar } from "@/tenant/Sidebar";
 import { useTenantNotifications } from "@/tenant/useTenantNotifications";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
-import { RoomImageGallery } from "@/components/RoomImageGallery";
-import { RoomDetails } from "./RoomDetails";
-const STATUS_LABEL = { available: "Available", occupied: "Occupied", maintenance: "Under Maintenance" };
-const STATUS_STYLE = { available: "apartment-detail-badge-2", occupied: "apartment-detail-badge-3", maintenance: "apartment-detail-badge-4" };
 const roomStatus = getRoomStatus;
 const safeExternalUrl = (value) => {
     try {
@@ -45,7 +40,6 @@ const listFromUnknown = (value) => Array.isArray(value)
 
 function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, locationText, mapPinAvailable, rules, navigate, onBack, user, onLogout }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [selectedRoom, setSelectedRoom] = useState(null);
     const [galleryExpanded, setGalleryExpanded] = useState(false);
     const roomsForDisplay = sortRoomsByAvailability(apartment.rooms ?? []);
     const navigateToDashboardSection = (section) =>
@@ -108,7 +102,6 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
                 </main>
               </div>
             </div>
-      {selectedRoom && <RoomDetails room={roomsForDisplay.find(room => room.id === selectedRoom.id) ?? selectedRoom} apartment={apartment} onClose={() => setSelectedRoom(null)} />}
       <Dialog open={galleryExpanded} onOpenChange={setGalleryExpanded}>
         <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{apartment.title || "Apartment"} photo {imageIndex + 1}{images.length > 1 ? ` of ${images.length}` : ""}</DialogTitle></DialogHeader>
@@ -187,7 +180,6 @@ export function ApartmentDetails() {
     const [galleryExpanded, setGalleryExpanded] = useState(false);
     const [mapExpanded, setMapExpanded] = useState(false);
     const [mobileNav, setMobileNav] = useState(false);
-    const [selectedRoom, setSelectedRoom] = useState(null);
     const [ratings, setRatings] = useState([]);
     const [ratingSaving, setRatingSaving] = useState(false);
     const [ratingOpen, setRatingOpen] = useState(false);
@@ -272,11 +264,6 @@ export function ApartmentDetails() {
         const unsubscribe = subscribeToApartmentRatings(loadRatings, id);
         return () => { active = false; unsubscribe(); };
     }, [id]);
-    useEffect(() => {
-        if (!selectedRoom?.id || !apartment?.rooms)
-            return;
-        setSelectedRoom(apartment.rooms.find((room) => room.id === selectedRoom.id) ?? null);
-    }, [apartment?.rooms, selectedRoom?.id]);
     const images = useMemo(() => apartment
         ? [...new Set([apartment.image, ...apartment.images].filter(Boolean).map(getImageUrl).filter(Boolean))]
         : [], [apartment]);
@@ -493,7 +480,7 @@ export function ApartmentDetails() {
         </InlinePropertyInfo>
 
         <div className="apartment-detail-grid-3"><div className="apartment-detail-panel-11">
-          <ApartmentUnitList rooms={roomsForDisplay} apartment={apartment} onSelect={setSelectedRoom} tenantStyle/>
+          <ApartmentUnitList rooms={roomsForDisplay} apartment={apartment} tenantStyle/>
 
         </div><aside className="apartment-detail-aside">
                     <section className="apartment-detail-section-3">
@@ -564,8 +551,8 @@ export function ApartmentDetails() {
         </DialogContent>
       </Dialog>
 
-      {selectedRoom && tenantAccount && <RoomDetails room={selectedRoom} apartment={apartment} onClose={() => setSelectedRoom(null)} />}
-      {selectedRoom && !tenantAccount && <div className="apartment-detail-overlay-2" onClick={() => setSelectedRoom(null)}>
+      {false && selectedRoom && tenantAccount && <RoomDetails room={selectedRoom} apartment={apartment} onClose={() => setSelectedRoom(null)} />}
+      {false && selectedRoom && !tenantAccount && <div className="apartment-detail-overlay-2" onClick={() => setSelectedRoom(null)}>
         <div className="apartment-detail-panel-24" onClick={(event) => event.stopPropagation()}>
           <div className="apartment-detail-row-12"><div><h2 className="apartment-detail-heading-2">{selectedRoom.name || "Room details"}</h2><p className="apartment-detail-text-14">{selectedRoom.type || "Room type not provided"}</p></div><button onClick={() => setSelectedRoom(null)} className="apartment-detail-button-12"><X className="apartment-detail-x-icon"/></button></div>
           <div className="apartment-detail-grid-10">

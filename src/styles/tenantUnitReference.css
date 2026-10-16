@@ -4,13 +4,82 @@
 .tenant-unit-reference > header p { font-size: 14px; color: #4b5d78; }
 .tenant-unit-reference > header > .market-unit-status { padding: 10px 16px; border: 1px solid #a7f3c0; border-radius: 12px; background: #ecfdf5; }
 .tenant-unit-reference .market-apartment-unit-list { padding: 26px 22px; gap: 16px; }
-.tenant-unit-reference .market-apartment-unit { grid-template-columns: minmax(0, 31fr) minmax(0, 60fr); gap: 22px; padding: 12px; border-radius: 10px; }
+.tenant-unit-reference .market-apartment-unit { grid-template-columns: minmax(220px, 31fr) minmax(0, 60fr); gap: 22px; padding: 12px; border-color: #b9e4fb; border-radius: 10px; background: #fbfdff; align-items: start; box-shadow: 0 1px 2px rgb(15 23 42 / 3%); }
 .tenant-unit-reference .market-apartment-unit-photo { min-height: 180px; border-radius: 8px; }
 .tenant-unit-reference .market-apartment-unit-photo img { height: 100%; min-height: 180px; }
 .tenant-unit-reference .market-apartment-unit-photo.has-gallery { align-self: start; height: 280px; min-height: 0; grid-template-rows: minmax(0, 1fr) 40px; place-items: stretch; }
 .tenant-unit-reference .market-apartment-unit-photo.has-gallery > img { min-height: 0; height: 100%; }
 .tenant-unit-reference .market-apartment-unit-thumbnails { width: 100%; height: 40px; }
 .tenant-unit-reference .market-apartment-unit-thumbnails img { min-height: 0; height: 40px; }
+.tenant-unit-reference .market-apartment-unit { cursor: default; }
+.tenant-unit-reference .market-apartment-unit-gallery { display: block; min-width: 0; height: auto; min-height: 0; overflow: hidden; border: 1px solid #dce7ef; border-radius: 9px; background: #fff; box-shadow: 0 1px 3px rgb(15 23 42 / 8%); }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-8 { width: 100%; min-width: 0; max-width: 100%; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-9 { width: 100%; height: auto; min-height: 0; aspect-ratio: 4 / 3; box-sizing: border-box; border-radius: 0; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-10 { min-height: 0; height: 100%; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-4,
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-6 {
+  position: absolute;
+  top: 50% !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+  border: 1px solid rgb(255 255 255 / 45%);
+  background: rgb(15 23 42 / 78%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 24%);
+}
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-4 { left: 8px !important; right: auto !important; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-6 { right: 8px !important; left: auto !important; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-5,
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-7,
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-13 {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: #fff !important;
+  stroke: currentColor !important;
+  stroke-width: 2.75 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-11 { top: 8px !important; left: 8px !important; right: auto !important; padding: 4px 7px; font-size: 10px; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-12 {
+  top: 8px !important;
+  right: 8px !important;
+  left: auto !important;
+  width: 32px;
+  height: 32px;
+  border-color: rgb(255 255 255 / 45%);
+  background: rgb(15 23 42 / 78%);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 24%);
+}
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-14 { margin: 0; padding: 8px; border-top: 1px solid #edf2f7; background: #fff; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-dynamic-1 { width: 52px; height: 40px; flex-basis: 52px; }
+.tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-15 { min-height: 0; height: 100%; }
+.tenant-unit-reference .unit-card-room-gallery .room-image-gallery-style-4,
+.tenant-unit-reference .unit-card-room-gallery .room-image-gallery-style-6,
+.tenant-unit-reference .unit-card-room-gallery .room-image-gallery-style-11,
+.tenant-unit-reference .unit-card-room-gallery .room-image-gallery-style-12 { display: none !important; }
+.tenant-unit-reference .unit-card-gallery-layer { position: absolute !important; inset: 0 !important; z-index: 8; display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; grid-template-rows: 36px minmax(0, 1fr) 20px; align-items: center; padding: 10px; pointer-events: none; }
+.tenant-unit-reference .unit-card-gallery-expand,
+.tenant-unit-reference .unit-card-gallery-arrow { position: static !important; z-index: 1; display: grid; width: 36px; height: 36px; place-items: center; padding: 0; border: 1px solid rgb(255 255 255 / 38%); border-radius: 999px; background: rgb(51 65 85 / 88%); color: #fff; box-shadow: 0 2px 8px rgb(15 23 42 / 28%); cursor: pointer; pointer-events: auto; }
+.tenant-unit-reference .unit-card-gallery-expand { grid-column: 3; grid-row: 1; }
+.tenant-unit-reference .unit-card-gallery-arrow { grid-row: 2; }
+.tenant-unit-reference .unit-card-gallery-arrow-left { grid-column: 1; }
+.tenant-unit-reference .unit-card-gallery-arrow-right { grid-column: 3; }
+.tenant-unit-reference .unit-card-gallery-expand:hover,
+.tenant-unit-reference .unit-card-gallery-arrow:hover { background: #1e293b; }
+.tenant-unit-reference .unit-card-gallery-expand svg,
+.tenant-unit-reference .unit-card-gallery-arrow svg { display: block; width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.5; }
+.tenant-unit-reference .unit-card-gallery-dots { grid-column: 2; grid-row: 3; z-index: 1; display: flex; justify-content: center; gap: 5px; pointer-events: auto; }
+.tenant-unit-reference .unit-card-gallery-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 999px; background: rgb(255 255 255 / 68%); box-shadow: 0 1px 2px rgb(15 23 42 / 35%); cursor: pointer; }
+.tenant-unit-reference .unit-card-gallery-dots button[aria-pressed="true"] { background: #0ea5e9; transform: scale(1.15); }
+.tenant-unit-reference .unit-card-gallery-toolbar span { margin-right: auto; color: #475569; font-size: 11px; font-weight: 700; }
+.tenant-unit-reference .unit-card-gallery-toolbar button { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font-size: 11px; font-weight: 700; cursor: pointer; }
+.tenant-unit-reference .unit-card-gallery-toolbar button:hover { border-color: #0ea5e9; background: #f0f9ff; color: #0369a1; }
+.tenant-unit-reference .unit-card-gallery-toolbar svg { width: 14px; height: 14px; stroke-width: 2.5; }
 .tenant-unit-reference .market-apartment-unit-heading h3 { font-size: 20px; line-height: 24px; }
 .tenant-unit-reference .market-unit-status { font-size: 13px; line-height: 18px; border-radius: 999px; padding: 5px 22px; }
 .tenant-unit-reference .market-apartment-unit-rent { font-size: 18px; line-height: 24px; color: #0075a9; margin: 4px 0; }
@@ -31,6 +100,29 @@
   .tenant-unit-reference .market-apartment-unit-photo img { min-height: 0; }
   .tenant-unit-reference .market-apartment-unit-thumbnails { height: 36px; }
   .tenant-unit-reference .market-apartment-unit-thumbnails img { height: 36px; }
+  .tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-9 { width: 100%; height: auto; aspect-ratio: 4 / 3; }
   .tenant-unit-reference .market-apartment-unit-facts { font-size: 16px; gap: 12px; }
   .tenant-unit-reference .market-apartment-unit-facts > span + span { padding-left: 12px; }
+}
+
+@media (max-width: 420px) {
+  .tenant-unit-reference > header { align-items: flex-start; gap: 12px; padding: 16px; }
+  .tenant-unit-reference > header > .market-unit-status { flex: 0 0 auto; padding: 9px 12px; font-size: 12px; }
+  .tenant-unit-reference .market-apartment-unit-list { padding: 12px; }
+  .tenant-unit-reference .market-apartment-unit { gap: 12px; padding: 10px; }
+  .tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-style-14 { gap: 6px; padding: 6px; }
+  .tenant-unit-reference .market-apartment-unit-gallery .room-image-gallery-dynamic-1 { width: 46px; height: 36px; flex-basis: 46px; }
+  .tenant-unit-reference .unit-card-gallery-layer { grid-template-columns: 32px minmax(0, 1fr) 32px; grid-template-rows: 32px minmax(0, 1fr) 18px; padding: 8px; }
+  .tenant-unit-reference .unit-card-gallery-expand,
+  .tenant-unit-reference .unit-card-gallery-arrow { width: 32px; height: 32px; }
+  .tenant-unit-reference .unit-card-gallery-expand svg,
+  .tenant-unit-reference .unit-card-gallery-arrow svg { width: 18px; height: 18px; }
+  .tenant-unit-reference .unit-card-gallery-dots { gap: 4px; }
+  .tenant-unit-reference .unit-card-gallery-dots button { width: 6px; height: 6px; }
+  .tenant-unit-reference .market-apartment-unit-heading h3 { font-size: 19px; }
+  .tenant-unit-reference .market-apartment-unit-rent { font-size: 18px; }
+  .tenant-unit-reference .market-apartment-unit-included { gap: 7px; margin-top: 10px; }
+  .tenant-unit-reference .market-apartment-unit-included strong { width: 100%; margin-right: 0; }
+  .tenant-unit-reference .market-apartment-unit-included span { padding: 7px 10px; }
+  .tenant-unit-reference .market-apartment-unit-description { margin-top: 8px; }
 }

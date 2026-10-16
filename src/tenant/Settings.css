@@ -341,6 +341,11 @@
     color: var(--settings-primary);
 }
 
+.tenant-profile-remove-photo:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .tenant-profile-photo-actions p {
     margin: 0;
 

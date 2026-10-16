@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Eye, FileText, Upload, X, } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Upload, X, } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
@@ -51,6 +51,7 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
     }, [previewImageId, evidenceFiles]);
     // Get images only for carousel
     const imageFiles = useMemo(() => evidenceFiles.filter((f) => f.fileType === "image"), [evidenceFiles]);
+    const documentFiles = useMemo(() => evidenceFiles.filter((f) => f.fileType !== "image"), [evidenceFiles]);
     const handleDragEnter = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -194,20 +195,22 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
           <div className="evidence-uploader-style-20 evidence-uploader-thumbnail-grid">
             {imageFiles.map((file) => (<div key={file.id} onClick={() => goToImage(file.id)} className={`evidence-thumbnail ${previewImageId === file.id ? "evidence-thumbnail-active" : "evidence-thumbnail-idle"}`}>
                 <img src={file.preview} alt={file.fileName} className="evidence-uploader-style-21"/>
+                <button type="button" onClick={(event) => { event.stopPropagation(); removeFile(file.id); }} className="evidence-thumbnail-remove" aria-label={`Remove ${file.fileName}`} title="Remove image"><X/></button>
               </div>))}
           </div>
         </div>)}
 
-      {evidenceFiles.length > 0 && (<div className="evidence-uploader-style-22">
+      {documentFiles.length > 0 && (<div className="evidence-uploader-style-22">
           <div className="evidence-uploader-style-23">
-            Attached Evidence ({evidenceFiles.length}/{maxFiles})
+            Attached Files ({documentFiles.length})
           </div>
           <div className="evidence-uploader-style-24">
-            {evidenceFiles.map((file) => (<Card key={file.id} className="evidence-uploader-style-25">
+            {documentFiles.map((file) => (<Card key={file.id} className="evidence-uploader-style-25">
                 <div className="evidence-uploader-style-26 evidence-uploader-grow">
-                  {file.fileType === "image" ? (<img src={file.preview} alt={file.fileName} className="evidence-uploader-style-27 evidence-uploader-no-shrink"/>) : (<div className="evidence-uploader-style-28 evidence-uploader-no-shrink">
-                      <FileText className="evidence-uploader-style-29"/>
-                    </div>)}
+                  <div className="evidence-file-thumbnail evidence-uploader-no-shrink">
+                    <div className="evidence-uploader-style-28"><FileText className="evidence-uploader-style-29"/></div>
+                    <button type="button" onClick={() => removeFile(file.id)} className="evidence-file-thumbnail-remove" aria-label={`Remove ${file.fileName}`} title="Remove file"><X/></button>
+                  </div>
                   <div className="evidence-uploader-file-copy">
                     <p className="evidence-uploader-style-30">
                       {file.fileName}
@@ -216,14 +219,6 @@ export function EvidenceUploader({ evidenceFiles, onEvidenceChange, maxFiles = 5
                       {FORMAT_LABELS[file.mimeType] || file.mimeType} • {formatFileSize(file.fileSize)}
                     </p>
                   </div>
-                </div>
-                <div className="evidence-uploader-style-32 evidence-uploader-no-shrink">
-                  {file.fileType === "image" && (<Button size="icon" variant="ghost" onClick={() => goToImage(file.id)} className="evidence-uploader-style-33">
-                      <Eye className="evidence-uploader-style-34"/>
-                    </Button>)}
-                  <Button size="icon" variant="ghost" onClick={() => removeFile(file.id)} className="evidence-uploader-style-35">
-                    <X className="evidence-uploader-style-36"/>
-                  </Button>
                 </div>
               </Card>))}
           </div>

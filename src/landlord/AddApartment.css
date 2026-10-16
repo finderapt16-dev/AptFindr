@@ -2481,6 +2481,34 @@
 .landlord-add-property .multi-image-uploader-style-2 { width: 15px; height: 15px; margin: 0 auto 4px; color: #8ba3b7; }
 .landlord-add-property .multi-image-uploader-style-3 { margin: 0; color: #000; font-size: 9px; font-weight: 650; }
 .landlord-add-property .multi-image-uploader-style-4 { margin: 2px 0 0; color: #98a2b3; font-size: 8px; }
+
+/* Apartment photos are a core part of a listing. Keep their controls and
+   thumbnails comfortably usable instead of applying the wizard's tiny
+   reference-density styles to this interactive area. */
+.landlord-add-property .multi-image-dropzone { min-height: 128px; padding: 16px; }
+.landlord-add-property .multi-image-uploader-style-2 { width: 22px; height: 22px; margin-bottom: 7px; color: #16a5e1; }
+.landlord-add-property .multi-image-uploader-style-3 { font-size: 13px; font-weight: 700; }
+.landlord-add-property .multi-image-uploader-style-4 { margin-top: 4px; font-size: 11px; }
+.landlord-add-property .multi-image-uploader-style-5 { display: block; margin: 7px 0 0; color: #64748b; font-size: 11px; }
+.landlord-add-property .multi-image-uploader-style-6 { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.landlord-add-property .multi-image-uploader-style-7,
+.landlord-add-property .multi-image-uploader-style-9 { min-height: 34px; border-radius: 6px; font-size: 12px; }
+.landlord-add-property .multi-image-uploader-style-25 { margin-top: 16px; }
+.landlord-add-property .multi-image-uploader-style-26 { border-color: #dce7ef; border-radius: 10px; box-shadow: 0 2px 8px rgb(15 23 42 / 8%); }
+.landlord-add-property .multi-image-uploader-style-27 { min-height: 220px; max-height: 440px; }
+.landlord-add-property .multi-image-uploader-style-35 { display: grid; gap: 8px; }
+.landlord-add-property .multi-image-uploader-style-36 { color: #344054; font-size: 12px; font-weight: 750; }
+.landlord-add-property .multi-image-thumbnail-grid { display: flex; gap: 10px; overflow-x: auto; padding: 3px; scrollbar-width: thin; }
+.landlord-add-property .multi-image-thumbnail { width:72px; height:72px; flex: 0 0 72px; cursor: pointer; }
+.landlord-add-property .multi-image-uploader-style-46 { color: #64748b; font-size: 11px; }
+@media (max-width: 640px) {
+  .landlord-add-property .multi-image-dropzone { min-height: 142px; }
+  .landlord-add-property .multi-image-uploader-style-3 { font-size: 12px; }
+  .landlord-add-property .multi-image-uploader-style-4,
+  .landlord-add-property .multi-image-uploader-style-5 { font-size: 11px; }
+  .landlord-add-property .multi-image-uploader-style-27 { min-height: 190px; }
+  .landlord-add-property .multi-image-thumbnail { width:64px; height:64px; flex-basis:64px; }
+}
 .landlord-add-property .add-apartment-choice-section { padding-bottom: 12px; margin-bottom: 12px; }
 .landlord-add-property .add-apartment-choice-section .add-apartment-row-6 { margin-bottom: 3px; }
 .landlord-add-property .add-apartment-choice-section .add-apartment-text-5 { margin-bottom: 7px; }

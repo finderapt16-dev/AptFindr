@@ -1,5 +1,5 @@
 import { ArrowLeft, Bell, BriefcaseBusiness, Camera, Check, ChevronRight, Clock, Eye, EyeOff, HelpCircle, Lock, Settings as SettingsIcon, Shield, Trash2, Upload, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,7 @@ export function Settings({ embedded = false } = {}) {
     const [settingsTab, setSettingsTab] = useState("profile");
     const [settingsMenu, setSettingsMenu] = useState("personal");
     const [profile, setProfile] = useState(() => profileStateFromUser(user));
+    const savedProfileRef = useRef(profileStateFromUser(user));
     const [alerts, setAlerts] = useState(() => {
         return {
             newListings: true,
@@ -103,8 +104,8 @@ export function Settings({ embedded = false } = {}) {
                 const lastName = middleInitial
                     ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")
                     : nameParts.slice(1).join(" ");
-                setProfile((current) => ({
-                    ...current,
+                const savedProfile = {
+                    ...profileStateFromUser({ ...user, ...details.user }),
                     fullName: nameParts.join(" "),
                     firstName: nameParts[0] ?? "",
                     lastName,
@@ -115,7 +116,9 @@ export function Settings({ embedded = false } = {}) {
                     address: String(details.user.address ?? ""),
                     department: String(details.adminProfile?.department ?? details.user.department ?? ""),
                     adminLevel: String(details.adminProfile?.admin_level ?? details.user.admin_level ?? ""),
-                }));
+                };
+                savedProfileRef.current = savedProfile;
+                setProfile(savedProfile);
             }
             if (sections.alerts && typeof sections.alerts === "object" && !Array.isArray(sections.alerts)) {
                 setAlerts((current) => ({ ...current, ...sections.alerts }));
@@ -156,6 +159,9 @@ export function Settings({ embedded = false } = {}) {
     const updateProfile = (updater) => {
         setProfile((p) => updater(p));
     };
+    const restoreSavedProfile = () => {
+        setProfile(savedProfileRef.current);
+    };
     const setA = (key, val) => {
         setAlerts((p) => {
             const updated = { ...p, [key]: val };
@@ -190,6 +196,7 @@ export function Settings({ embedded = false } = {}) {
             const synced = await updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: avatar });
             if (!synced)
                 throw new Error("Unable to update the profile photo.");
+            savedProfileRef.current = { ...savedProfileRef.current, avatar };
             toast.success("Profile photo uploaded!");
         }
         catch (error) {
@@ -204,12 +211,17 @@ export function Settings({ embedded = false } = {}) {
             toast.error("Sign in before removing your profile photo.");
             return;
         }
+        if (!profile?.avatar) {
+            toast.info("No profile photo to remove.");
+            return;
+        }
         try {
             const updated = await updateUserProfile({ id: user.id, email: user.email, name: user.name, avatar_url: "" });
             if (!updated) {
                 throw new Error("Unable to remove the profile photo.");
             }
             updateProfile((p) => ({ ...p, avatar: "" }));
+            savedProfileRef.current = { ...savedProfileRef.current, avatar: "" };
             toast.success("Profile photo removed.");
         }
         catch (error) {
@@ -258,8 +270,8 @@ export function Settings({ embedded = false } = {}) {
                     const lastName = middleInitial
                         ? nameParts.filter((part, index) => index !== 0 && part.replace(".", "").toLowerCase() !== middleInitial.toLowerCase()).join(" ")
                         : nameParts.slice(1).join(" ");
-                    setProfile((current) => ({
-                        ...current,
+                    const savedProfile = {
+                        ...profile,
                         fullName: nameParts.join(" "),
                         firstName: nameParts[0] ?? "",
                         lastName,
@@ -267,7 +279,12 @@ export function Settings({ embedded = false } = {}) {
                         email: String(refreshed.user.email ?? ""),
                         mobile: String(refreshed.user.mobile ?? refreshed.user.mobileNumber ?? ""),
                         address: String(refreshed.user.address ?? ""),
-                    }));
+                    };
+                    savedProfileRef.current = savedProfile;
+                    setProfile(savedProfile);
+                }
+                else {
+                    savedProfileRef.current = { ...profile };
                 }
             }
             toast.success("Profile updated successfully!");
@@ -541,7 +558,7 @@ export function Settings({ embedded = false } = {}) {
       </section>}
     </div>);
     if (isTenantAccount) {
-        return <TenantSettings profile={profile} setProfile={setProfile} user={user} onUpload={handleAvatarUpload} onRemove={handleRemoveAvatar} onSave={handleUpdateProfile} loading={preferencesLoading} onDeleteAccount={async () => {
+        return <TenantSettings profile={profile} setProfile={setProfile} user={user} onUpload={handleAvatarUpload} onRemove={handleRemoveAvatar} onSave={handleUpdateProfile} onCancelProfile={restoreSavedProfile} loading={preferencesLoading} onDeleteAccount={async () => {
             if (!user) throw new Error("Sign in before deleting your account.");
             await deleteUserAccount(user.id);
             logout();

@@ -40,6 +40,7 @@ export function Settings({
     onUpload,
     onRemove,
     onSave,
+    onCancelProfile,
     loading,
     onDeleteAccount,
     onChangePassword,
@@ -308,7 +309,7 @@ export function Settings({
                     <button
                         type="button"
                         className="tenant-profile-remove-photo"
-                        disabled={disabled}
+                        disabled={disabled || !profile?.avatar}
                         onClick={() =>
                             void runAction(onRemove)
                         }
@@ -432,15 +433,7 @@ export function Settings({
                         type="button"
                         className="tenant-profile-secondary-button"
                         disabled={disabled}
-                        onClick={() =>
-                            setProfile((current) => ({
-                                ...current,
-                                fullName: "",
-                                middleInitial: "",
-                                mobile: "",
-                                email: "",
-                            }))
-                        }
+                        onClick={onCancelProfile}
                     >
                         Cancel
                     </button>

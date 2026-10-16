@@ -267,7 +267,7 @@ export function MultiImageUploader({ images, onImagesChange, maxImages = 10, max
 
           <div className="multi-image-uploader-style-35">
             <h4 className="multi-image-uploader-style-36">
-              Images ({images.length}/{maxImages})
+              Photos ({images.length}/{maxImages})
             </h4>
             <div className="multi-image-uploader-style-37 multi-image-thumbnail-grid">
               {images.map((img, idx) => (<div key={img.id} draggable={!disabled} onDragStart={() => setDraggedImageId(img.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => reorderImage(img.id)} onDragEnd={() => setDraggedImageId(null)} className={`multi-image-thumbnail ${img.isPrimary ? "multi-image-thumbnail-primary" : "multi-image-thumbnail-standard"}`}>

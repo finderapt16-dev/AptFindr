@@ -1757,8 +1757,8 @@
   border-radius: var(--radius-lg, .5rem);
   min-width: 0;
   padding: calc(var(--spacing, .25rem) * 5);
-  background-color: #f2f6fa;
-  border: 1px solid #f2f6fa;
+  background-color: #f6f9fc;
+  border: 1px solid #cbd5e1;
   box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a;
 }
 
@@ -1789,14 +1789,17 @@
 
 .apartment-detail-report-a-problem-2 {
   margin-top: calc(var(--spacing, .25rem) * 4);
-  color: #666666;
-  border-color: #d9d9d9;
+  color: #334155;
+  border: 1.5px solid #94a3b8;
+  background: #fff;
+  font-weight: 700;
   width: 100%;
 }
 
 @media (hover: hover) {
   .apartment-detail-report-a-problem-2:hover {
-    background-color: #f2f6fa;
+    border-color: #475569;
+    background-color: #eaf2f8;
   }
 }
 

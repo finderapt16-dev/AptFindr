@@ -1,10 +1,9 @@
 import { getUnitAmenities } from "./apartmentAmenities";
-import { DoorOpen } from "lucide-react";
 import { getRoomStatus } from "@/utils/roomAvailability";
-import { getImageUrl } from "@/utils/images";
+import { RoomImageGallery } from "@/components/RoomImageGallery";
 
 const labels = { available: "Available", occupied: "Occupied", maintenance: "Under Maintenance" };
-export function ApartmentUnitList({ rooms, apartment, onSelect, tenantStyle = false }) {
+export function ApartmentUnitList({ rooms, apartment, tenantStyle = false }) {
     const available = rooms.filter(room => getRoomStatus(room) === "available").length;
     return <section className={`market-apartment-unit-section ${tenantStyle ? "tenant-unit-reference" : ""}`}>
       <header><div><h2>Unit Details</h2><p>Current unit availability in this apartment.</p></div><span className="market-unit-status market-unit-status-available">{available} Available</span></header>
@@ -12,11 +11,10 @@ export function ApartmentUnitList({ rooms, apartment, onSelect, tenantStyle = fa
         const status = getRoomStatus(room);
         const included = getUnitAmenities(room, apartment);
         const unitName = room.name ? /^unit\b/i.test(room.name) ? room.name : `Unit ${room.name}` : `Unit ${index + 1}`;
-        const roomImages = [...new Set((Array.isArray(room.images) ? room.images : typeof room.images === "string" ? room.images.split(",") : [])
-          .filter((image) => typeof image === "string" && image.trim()))];
-        return <button type="button" key={room.id || index} className="market-apartment-unit" onClick={() => onSelect(room)}>
-          <div className={`market-apartment-unit-photo${roomImages.length > 1 ? " has-gallery" : ""}`}>
-            {roomImages.length ? <><img src={getImageUrl(roomImages[0])} alt={room.name || `Unit ${index + 1}`}/>{roomImages.length > 1 && <div className="market-apartment-unit-thumbnails" aria-label={`${roomImages.length} photos of ${unitName}`}>{roomImages.slice(1).map((image, imageIndex) => <img key={`${image}-${imageIndex}`} src={getImageUrl(image)} alt=""/>)}</div>}<span className="market-apartment-unit-photo-count">{roomImages.length} {roomImages.length === 1 ? "photo" : "photos"}</span></> : <DoorOpen/>}
+        const roomImages = Array.isArray(room.images) ? room.images : typeof room.images === "string" ? room.images.split(",") : [];
+        return <article key={room.id || index} className="market-apartment-unit">
+          <div className="market-apartment-unit-photo market-apartment-unit-gallery">
+            <RoomImageGallery images={roomImages} roomName={unitName} unitCard/>
           </div>
           <div className="market-apartment-unit-information">
             <div className="market-apartment-unit-heading"><h3>{unitName}</h3><span className={`market-unit-status market-unit-status-${status}`}>{labels[status]}</span></div>
@@ -25,7 +23,7 @@ export function ApartmentUnitList({ rooms, apartment, onSelect, tenantStyle = fa
             <div className="market-apartment-unit-included"><strong>Unit Included</strong>{included.length ? included.map(item => <span key={item}>{item}</span>) : <small>No included items listed.</small>}</div>
             <div className="market-apartment-unit-description"><strong>Description</strong><p>{room.description || "No unit description provided."}</p></div>
           </div>
-        </button>;
+        </article>;
       }) : <p>No unit information available.</p>}</div>
     </section>;
 }
