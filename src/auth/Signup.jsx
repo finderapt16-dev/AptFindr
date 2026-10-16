@@ -196,6 +196,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     try {
       const input = {
         ...normalized,
+        name: normalized.fullName,
         email: normalized.email,
         password: normalized.password,
         role: normalized.role,

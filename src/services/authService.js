@@ -577,7 +577,7 @@ function pendingSignupUser(input, authId, role) {
     return {
         id: authId,
         authId,
-        name: input.name,
+        name: input.name || input.fullName || '',
         email,
         username: resolveProfileUsername(input.username),
         role,
@@ -596,6 +596,7 @@ export async function signupUser(input) {
     const email = normalizeEmailAddress(input.email);
     const username = resolveProfileUsername(input.username);
     const role = isTenantRole(input.role) ? 'tenant' : input.role;
+    const fullName = String(input.name ?? input.fullName ?? '').trim();
     if (role !== 'tenant' && role !== 'landlord')
         throw new SignupFlowError('Public registration supports tenant and landlord accounts only.', 'validation', 'invalid_public_role');
     if (input.termsAccepted !== true)
@@ -615,7 +616,7 @@ export async function signupUser(input) {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
                 username,
-                name: input.name,
+                name: fullName,
                 role,
                 mobile: input.mobile ?? input.mobileNumber,
                 middleInitial: input.middleInitial,

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Expand, Image as ImageIcon, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Maximize, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getImageUrl } from "@/utils/images";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -39,7 +39,7 @@ export function RoomImageGallery({ images = [], roomName = "Unit", compact = fal
         {controls}
         {compact && sources.length > 1 && <div className="tenant-room-photo-dots">{sources.map((source, index) => <button key={source} type="button" aria-label={`Show unit photo ${index + 1}`} aria-pressed={index === activeIndex} onClick={() => setActiveIndex(index)} />)}</div>}
         <span className="room-image-gallery-style-11">{activeIndex === 0 ? "Cover · " : ""}{activeIndex + 1} / {sources.length}</span>
-        <button type="button" aria-label="View unit photos full screen" onClick={() => setFullScreen(true)} className="room-image-gallery-style-12"><Expand className="room-image-gallery-style-13"/>Full screen</button>
+        <button type="button" aria-label="View unit photos full screen" title="View full screen" onClick={() => setFullScreen(true)} className="room-image-gallery-style-12"><Maximize className="room-image-gallery-style-13"/></button>
       </div>
       {sources.length > 1 && <div className="room-image-gallery-style-14" aria-label={`${roomName} image thumbnails`}>
         {sources.map((source, index) => <button type="button" key={`${source}-${index}`} onClick={() => setActiveIndex(index)} className={`room-image-gallery-dynamic-1 ${index === activeIndex ? "room-image-gallery-thumb-active" : "room-image-gallery-thumb-idle"}`}><img src={source} alt={`${roomName} thumbnail ${index + 1}`} className="room-image-gallery-style-15"/></button>)}

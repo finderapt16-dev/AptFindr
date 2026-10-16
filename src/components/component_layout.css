@@ -94,8 +94,8 @@
 .room-image-gallery-style-9 { @apply relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-950; }
 .room-image-gallery-style-10 { @apply h-full w-full object-cover; }
 .room-image-gallery-style-11 { @apply absolute left-3 top-3 rounded-md bg-slate-950/75 px-2.5 py-1 text-[11px] font-bold text-white; }
-.room-image-gallery-style-12 { @apply absolute bottom-3 right-3 flex items-center gap-1.5 rounded-md bg-slate-950/75 px-3 py-2 text-xs font-bold text-white hover:bg-slate-950; }
-.room-image-gallery-style-13 { @apply h-3.5 w-3.5; }
+.room-image-gallery-style-12 { @apply absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full border border-white/35 bg-slate-950/70 p-0 text-white shadow-lg backdrop-blur-sm hover:bg-slate-950/85; }
+.room-image-gallery-style-13 { @apply h-4 w-4; }
 .room-image-gallery-style-14 { @apply flex gap-2 overflow-x-auto pb-1; }
 .room-image-gallery-style-15 { @apply h-full w-full object-cover; }
 .room-image-gallery-style-16 { @apply fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/95 p-4; }

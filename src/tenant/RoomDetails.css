@@ -27,7 +27,6 @@
 .tenant-room-details .room-image-gallery-style-14 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-height: 180px; overflow-y: auto; }
 .tenant-room-details .room-image-gallery-dynamic-1 { width: 100%; height: auto; aspect-ratio: 1.15; border-radius: 8px; }
 .tenant-room-details .room-image-gallery-style-11 { display: none; }
-.tenant-room-details .room-image-gallery-style-12 { font-size: 0; padding: 5px; background: #ffffffb3; color: #475569; }
 .tenant-room-details .tenant-room-photo-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; max-width: 65%; flex-wrap: wrap; justify-content: center; }
 .tenant-room-details .tenant-room-photo-dots button { width: 6px; height: 6px; border: 0; border-radius: 50%; padding: 0; background: #cbd5e1; cursor: pointer; }
 .tenant-room-details .tenant-room-photo-dots button[aria-pressed="true"] { background: #0ba5df; }

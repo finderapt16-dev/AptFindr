@@ -1147,10 +1147,15 @@ export function AdminDashboard() {
     };
     const getLandlordForApt = (apt) => landlords.find((l) => l.id === apt.landlordId) ?? null;
     const pendingLandlordsCount = landlords.filter((landlord) => {
-        if (landlord.isVerified === true || landlord.is_verified === true)
-            return false;
         const status = String(landlord.landlord_status ?? landlord.verification_status ?? landlord.status ?? "").trim().toLowerCase();
-        return !["rejected", "denied", "declined"].includes(status);
+        if (["rejected", "denied", "declined"].includes(status))
+            return false;
+        const landlordId = String(landlord.id ?? "");
+        const hasPendingApartment = allApartments.some((apartment) => String(apartment.landlordId ?? apartment.landlord_id ?? "") === landlordId
+            && getAdminListingState(apartment) === "pending");
+        // A verified landlord can still need action when a newly submitted
+        // apartment is pending review, matching the Landlord page summary.
+        return hasPendingApartment || (landlord.isVerified !== true && landlord.is_verified !== true);
     }).length;
     const pendingApartmentsCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "pending").length;
     const pendingReports = reports.filter((report) => ["pending", "open", "pending_review", "under_review", "in_review", "reviewing"].includes(String(report.status ?? "pending").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
@@ -1170,15 +1175,23 @@ export function AdminDashboard() {
         if (section === "landlords") {
             const landlordId = remembered?.view === "landlord-details" || remembered?.view === "landlord-action" ? remembered.landlordId : "";
             const landlord = landlordId ? landlords.find((item) => text(item.id) === landlordId) ?? null : null;
-            setSelectedLandlord(landlord);
+            if (landlord) {
+                setSelectedLandlord(landlord);
+            }
+            else if (landlordId && text(selectedLandlord?.id) !== landlordId) {
+                void fetchUserById(landlordId).then((loadedLandlord) => {
+                    if (loadedLandlord)
+                        setSelectedLandlord(loadedLandlord);
+                }).catch(() => undefined);
+            }
+            else if (!landlordId) {
+                setSelectedLandlord(null);
+            }
             if (remembered?.view === "landlord-action" && landlord) {
                 openViolationModal(remembered.mode, landlordId, text(landlord.name, "Landlord"), "General", undefined, undefined, "landlords");
             }
             else if (violationModal?.sourceModule === "landlords") {
                 setViolationModal(null);
-            }
-            if (remembered && remembered.view !== "overview" && !landlord) {
-                rememberAdminModuleLocation(user.id, "landlords", { view: "overview" });
             }
         }
         if (section === "reports") {
@@ -1269,11 +1282,17 @@ export function AdminDashboard() {
             setNotifActivityFilter("all");
         }
         restoreAdminModule(requestedSection);
-    }, [navigationDataReady, requestedSection, user?.id]);
+    }, [landlords, navigationDataReady, requestedSection, user?.id]);
     useEffect(() => {
         if (!navigationDataReady || !user?.id)
             return;
         if (activeSection === "landlords") {
+            const rememberedLandlord = getAdminModuleLocation(user.id, "landlords");
+            const isRestoringLandlord = rememberedLandlord?.view === "landlord-details"
+                && Boolean(rememberedLandlord.landlordId)
+                && !selectedLandlord?.id;
+            if (isRestoringLandlord)
+                return;
             if (violationModal?.open && violationModal.sourceModule === "landlords") {
                 rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-action", landlordId: violationModal.landlordId, mode: violationModal.mode });
             }

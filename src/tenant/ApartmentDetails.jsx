@@ -177,6 +177,7 @@ export function ApartmentDetails() {
     const [loading, setLoading] = useState(() => !routeApartment);
     const [accessState, setAccessState] = useState(null);
     const [imageIndex, setImageIndex] = useState(0);
+    const [galleryExpanded, setGalleryExpanded] = useState(false);
     const [mapExpanded, setMapExpanded] = useState(false);
     const [mobileNav, setMobileNav] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
@@ -440,6 +441,7 @@ export function ApartmentDetails() {
             {images.length > 0 && <div className="apartment-property-gallery">
               <div className="apartment-property-main-image">
                 <img src={images[imageIndex]} alt={`${apartment.title} image ${imageIndex + 1}`}/>
+                <button type="button" onClick={() => setGalleryExpanded(true)} className="apartment-gallery-expand apartment-gallery-expand-top" aria-label="View apartment image full screen" title="View full screen"><Maximize size={18}/></button>
                 {images.length > 1 && <><button type="button" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} className="photo-navigation-arrow apartment-gallery-arrow apartment-gallery-arrow-left" aria-label="Previous apartment image"><ChevronLeft size={24}/></button><button type="button" onClick={() => setImageIndex((imageIndex + 1) % images.length)} className="photo-navigation-arrow apartment-gallery-arrow apartment-gallery-arrow-right" aria-label="Next apartment image"><ChevronRight size={24}/></button><div className="apartment-gallery-bottom-controls"><div className="apartment-gallery-dots">{images.map((_, index) => <button key={index} type="button" className={`apartment-gallery-dot ${index === imageIndex ? "active" : ""}`} onClick={() => setImageIndex(index)} aria-label={`View apartment image ${index + 1}`}/>)}</div></div></>}
               </div>
               {images.length > 1 && <div className="apartment-property-thumbnails">
@@ -518,6 +520,12 @@ export function ApartmentDetails() {
           <div className="apartment-detail-map-dialog-canvas"><MapView lat={apartment.lat} lng={apartment.lng} zoom={16} showSingleMarker enableLiveLocation={renter}/></div>
         </section>
       </div>}
+      <Dialog open={galleryExpanded} onOpenChange={setGalleryExpanded}>
+        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>{apartment.title || "Apartment"} photo {imageIndex + 1}{images.length > 1 ? ` of ${images.length}` : ""}</DialogTitle></DialogHeader>
+          <div className="apartment-gallery-fullscreen-image-wrap"><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} image ${imageIndex + 1} full screen`}/></div>
+        </DialogContent>
+      </Dialog>
 
       {selectedRoom && tenantAccount && <RoomDetails room={selectedRoom} apartment={apartment} onClose={() => setSelectedRoom(null)} />}
       {selectedRoom && !tenantAccount && <div className="apartment-detail-overlay-2" onClick={() => setSelectedRoom(null)}>
