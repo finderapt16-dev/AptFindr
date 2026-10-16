@@ -667,11 +667,6 @@ circle:not(.market-trend-donut-segment) {
 ========================================== */
 
 @media (max-width: 1100px) {
-  .market-trends-layout {
-    grid-template-columns:
-      minmax(0, 1.65fr) minmax(270px, .9fr);
-  }
-
   .market-property-card-compact {
     grid-template-columns:
       150px minmax(0, 1fr) 130px;
@@ -688,6 +683,66 @@ circle:not(.market-trend-donut-segment) {
 
   .market-trend-donut-content {
     width: 128px;
+  }
+}
+
+/* A 1024px tablet still shows the 256px desktop sidebar. Keeping the
+   analytics rail beside the property list leaves each panel too narrow, so
+   let the content use the full remaining canvas before the mobile layout. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .market-trends-page {
+    margin-top: 14px;
+    padding-inline: 16px;
+  }
+
+  .market-trends-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .market-trends-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .market-trends-aside > section {
+    min-width: 0;
+    padding: 18px;
+  }
+
+  .market-details {
+    padding: 18px;
+  }
+
+  .market-property-card-compact {
+    grid-template-columns: 128px minmax(0, 1fr) 116px;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .market-property-image {
+    width: 128px;
+    height: 96px;
+  }
+
+  .market-view-details {
+    min-height: 42px;
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+
+  .market-trend-column-chart {
+    min-height: 214px;
+    padding-left: 24px;
+  }
+
+  .market-trend-column-grid {
+    left: 24px;
+  }
+
+  .market-trend-column-list {
+    height: 202px;
+    gap: clamp(8px, 1.5vw, 16px);
   }
 }
 

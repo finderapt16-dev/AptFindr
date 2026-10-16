@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { deleteUser as deleteUserAccount, isTenantRole } from "@/services/authService";
+import { changeAuthPassword, deleteUser as deleteUserAccount, isTenantRole } from "@/services/authService";
 import { fetchUserPreferenceSections, fetchUserProfileDetails, saveUserPreferenceSection, updateUserProfile, uploadUserAvatar } from "@/services/dashboardSupabaseService";
 import { Settings as TenantSettings } from "@/tenant/Settings";
+import { validateSignupPassword } from "@/auth/signupValidation";
 const inputClass = "settings-input";
 const Toggle = ({ checked, onChange, disabled }) => (<button type="button" onClick={() => !disabled && onChange(!checked)} className={`settings-toggle ${checked ? "settings-toggle-on" : "settings-toggle-off"} ${disabled ? "settings-toggle-disabled" : "settings-toggle-enabled"}`}>
     <span className={`settings-toggle-thumb ${checked ? "settings-toggle-thumb-on" : "settings-toggle-thumb-off"}`}/>
@@ -279,8 +280,13 @@ export function Settings({ embedded = false } = {}) {
     const handlePasswordChange = async () => {
         if (!user)
             return;
-        if (passwordForm.next.length < 6) {
-            toast.error("New password must be at least 6 characters.");
+        if (!passwordForm.current) {
+            toast.error("Enter your current password.");
+            return;
+        }
+        const passwordValidationError = validateSignupPassword(passwordForm.next);
+        if (passwordValidationError) {
+            toast.error(passwordValidationError);
             return;
         }
         if (passwordForm.next !== passwordForm.confirm) {
@@ -288,16 +294,35 @@ export function Settings({ embedded = false } = {}) {
             return;
         }
         try {
-            await updateUser(user.id, { password: passwordForm.next });
+            await changeAuthPassword(passwordForm.current, passwordForm.next);
             const passwordLastChanged = new Date().toISOString();
             updateSecurity(() => ({ passwordLastChanged }));
-            await saveUserPreferenceSection(user.id, "security", { passwordLastChanged });
+            try {
+                await saveUserPreferenceSection(user.id, "security", { passwordLastChanged });
+            }
+            catch (preferenceError) {
+                console.warn("Password changed, but its timestamp could not be saved:", preferenceError);
+            }
             setPasswordForm({ current: "", next: "", confirm: "" });
             toast.success("Password updated successfully!");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : "Unable to update password.";
             toast.error(message);
+        }
+    };
+    const handleTenantPasswordChange = async ({ currentPassword, newPassword }) => {
+        if (!user?.id) {
+            throw new Error("Sign in before changing your password.");
+        }
+        await changeAuthPassword(currentPassword, newPassword);
+        const passwordLastChanged = new Date().toISOString();
+        updateSecurity(() => ({ passwordLastChanged }));
+        try {
+            await saveUserPreferenceSection(user.id, "security", { passwordLastChanged });
+        }
+        catch (preferenceError) {
+            console.warn("Password changed, but its timestamp could not be saved:", preferenceError);
         }
     };
     const handleSaveAlerts = async () => {
@@ -496,7 +521,7 @@ export function Settings({ embedded = false } = {}) {
           <Field label="Current Password">
             <PasswordField id="current" value={passwordForm.current} visible={visiblePasswords.current} onChange={(value) => setPasswordForm((p) => ({ ...p, current: value }))} placeholder="Current password"/>
           </Field>
-          <Field label="New Password" hint="At least 6 characters">
+          <Field label="New Password" hint="At least 8 characters with letters and numbers.">
             <PasswordField id="next" value={passwordForm.next} visible={visiblePasswords.next} onChange={(value) => setPasswordForm((p) => ({ ...p, next: value }))} placeholder="New password"/>
           </Field>
           <Field label="Confirm New Password">
@@ -522,7 +547,7 @@ export function Settings({ embedded = false } = {}) {
             logout();
             toast.success("Account deleted successfully");
             navigate("/", { replace: true });
-        }}/>;
+        }} onChangePassword={handleTenantPasswordChange}/>;
     }
     return (<div className={`${isTenantAccount ? "tenant-settings " : ""}${embedded ? "settings-embedded" : "settings-page"}`}>
       <div className={embedded ? "" : "settings-page-inner"}>

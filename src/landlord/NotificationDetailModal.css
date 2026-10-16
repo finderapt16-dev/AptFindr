@@ -575,3 +575,7 @@
     padding: 0 12px;
   }
 }
+
+/* Keep every notification detail, including an appeal invitation, in the
+   same calm, compact visual system. */
+.notification-detail-modal-card{border-radius:12px;border-color:#dfe7ee;box-shadow:0 20px 48px rgb(15 23 42 / 20%)}.notification-detail-modal-row{padding:18px 20px 10px}.notification-detail-modal-button{width:30px;height:30px;background:transparent}.notification-detail-modal-button:hover{background:#f1f5f9}.notification-detail-modal-panel{padding-bottom:12px}.notification-detail-modal-apartment-card{border-color:#dfe7ee;background:#fbfdff}.notification-detail-modal-report-details dl{border-color:#e4eaf0}.notification-detail-modal-text-4{border-radius:8px;background:#eff8ff;color:#425466}.notification-detail-modal-card-2{border-radius:8px}.notification-detail-modal-content{padding-top:2px}.notification-detail-modal-close,.notification-detail-modal-button-2{height:36px;border-radius:8px;font-size:12px}.notification-detail-modal-button-2{background:#16a5e1}.notification-detail-modal-button-2:hover{background:#0e93ca}

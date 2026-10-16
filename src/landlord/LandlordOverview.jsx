@@ -2,18 +2,8 @@
 import "./LandlordOverview.css";
 
 import {
-  Eye,
-  Heart,
-  Star,
-  MapPin,
-  Plus,
-  CalendarDays,
-  ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Info,
-  MoreHorizontal,
+  Eye, Heart, Star, MapPin, Plus, CalendarDays, ChevronDown,
+  TrendingUp, TrendingDown, Minus, Info, MoreHorizontal,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -21,31 +11,59 @@ import { useState } from "react";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { QuietStreetIllustration } from "@/landlord/MyProperties";
 
-// =====================================================
-// ACTIVITY HELPERS
-// =====================================================
+// ============================================
+// DATE AND ACTIVITY HELPERS
+// ============================================
+
+// Calendar-day periods include today.
+const startOfDay = (date) => {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
+
+const addDays = (date, amount) => {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + amount);
+  return copy;
+};
+
+const getActivityDate = (row) => {
+  const raw =
+    row?.viewed_at ??
+    row?.viewedAt ??
+    row?.created_at ??
+    row?.createdAt ??
+    row?.date ??
+    row?.timestamp;
+
+  if (!raw) return null;
+
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 const getApartmentId = (row) =>
   row?.apartment_id ?? row?.apartmentId;
 
-const matchesApartment = (row, apartmentId) =>
-  String(getApartmentId(row)) === String(apartmentId);
+const belongsTo = (row, id) =>
+  String(getApartmentId(row)) === String(id);
 
-const getDate = (row) => {
-  const value =
-    row?.created_at ??
-    row?.createdAt ??
-    row?.viewed_at ??
-    row?.viewedAt ??
-    row?.date ??
-    row?.timestamp;
+const inPeriod = (date, start, end) => {
+  if (!date) return false;
 
-  if (!value) return null;
-
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime()) ? null : date;
+  return (
+    date >= startOfDay(start) &&
+    date < addDays(startOfDay(end), 1)
+  );
 };
+
+const filterActivity = (rows, apartmentId, start, end) =>
+  rows.filter(
+    (row) =>
+      belongsTo(row, apartmentId) &&
+      inPeriod(getActivityDate(row), start, end)
+  );
 
 const getViewWeight = (row) => {
   const value = Number(row?.view_count ?? 1);
@@ -56,231 +74,341 @@ const getViewWeight = (row) => {
 };
 
 const getRatingValue = (row) => {
-  const value =
+  const raw =
     row?.rating ??
     row?.score ??
     row?.stars ??
     row?.value;
 
-  if (value == null || value === "") {
-    return null;
-  }
+  if (raw == null || raw === "") return null;
 
-  const number = Number(value);
+  const value = Number(raw);
 
-  return Number.isFinite(number)
-    ? number
+  return Number.isFinite(value) &&
+    value >= 1 &&
+    value <= 5
+    ? value
     : null;
 };
 
-const startOfDay = (date) => {
-  const result = new Date(date);
-
-  result.setHours(0, 0, 0, 0);
-
-  return result;
-};
-
-const addDays = (date, days) => {
-  const result = new Date(date);
-
-  result.setDate(result.getDate() + days);
-
-  return result;
-};
-
-const average = (values) =>
-  values.length
-    ? values.reduce(
-        (sum, value) => sum + value,
-        0
-      ) / values.length
-    : 0;
-
-const getPercentageChange = (current, previous) => {
-  if (previous === 0) {
-    return null;
-  }
-
-  return ((current - previous) / previous) * 100;
-};
-
-const isBetween = (date, start, end) => {
-  if (!date) return false;
-
-  const value = startOfDay(date).getTime();
-
-  return (
-    value >= startOfDay(start).getTime() &&
-    value <= startOfDay(end).getTime()
-  );
-};
-
-const getRowsInPeriod = (
-  rows,
-  apartmentId,
-  start,
-  end
-) =>
-  rows.filter(
-    (row) =>
-      matchesApartment(row, apartmentId) &&
-      isBetween(getDate(row), start, end)
-  );
-
-const getViews = (rows) =>
+const sumViews = (rows) =>
   rows.reduce(
-    (total, row) => total + getViewWeight(row),
+    (sum, row) => sum + getViewWeight(row),
     0
   );
 
-const getRatings = (rows) =>
+const ratingValues = (rows) =>
   rows
     .map(getRatingValue)
     .filter((value) => value !== null);
 
-// =====================================================
-// DAILY GRAPH CALCULATIONS
-// =====================================================
+const average = (values) =>
+  values.length
+    ? values.reduce((sum, value) => sum + value, 0) /
+      values.length
+    : null;
 
-const getDailyValues = (
-  apartmentId,
+// ============================================
+// PERCENTAGE CHANGE
+// ============================================
+
+const percentageChange = (current, previous) =>
+  previous > 0
+    ? ((current - previous) / previous) * 100
+    : null;
+
+// ============================================
+// CURRENT AND PREVIOUS PERIODS
+// ============================================
+
+const getPeriods = (days, now = new Date()) => {
+  const today = startOfDay(now);
+
+  const currentStart = addDays(
+    today,
+    -(days - 1)
+  );
+
+  const previousEnd = addDays(
+    currentStart,
+    -1
+  );
+
+  const previousStart = addDays(
+    currentStart,
+    -days
+  );
+
+  return {
+    today,
+    currentStart,
+    previousStart,
+    previousEnd,
+  };
+};
+
+// ============================================
+// DAILY CHART DATA
+// ONLY THE CURRENT SELECTED PERIOD
+// ============================================
+
+const dailyCounts = (
   rows,
-  valueGetter,
-  selectedPeriod,
-  today
-) => {
-  const values = [];
-
-  for (
-    let offset = selectedPeriod - 1;
-    offset >= 0;
-    offset--
-  ) {
-    const day = addDays(today, -offset);
-
-    const dailyRows = rows.filter((row) => {
-      const date = getDate(row);
-
-      return (
-        matchesApartment(row, apartmentId) &&
-        date &&
-        startOfDay(date).getTime() === day.getTime()
-      );
-    });
-
-    const value = dailyRows.reduce(
-      (sum, row) => sum + valueGetter(row),
-      0
+  days,
+  today,
+  valueOfRow
+) =>
+  Array.from({ length: days }, (_, index) => {
+    const day = addDays(
+      today,
+      index - (days - 1)
     );
 
-    values.push(value);
-  }
+    return rows.reduce(
+      (sum, row) =>
+        inPeriod(getActivityDate(row), day, day)
+          ? sum + valueOfRow(row)
+          : sum,
+      0
+    );
+  });
 
-  return values;
-};
+const dailyRatings = (rows, days, today) =>
+  Array.from({ length: days }, (_, index) => {
+    const day = addDays(
+      today,
+      index - (days - 1)
+    );
 
-const getRatingDailyValues = (
-  apartmentId,
-  ratingRows,
-  selectedPeriod,
-  today
-) => {
-  const values = [];
+    return average(
+      ratingValues(
+        rows.filter((row) =>
+          inPeriod(getActivityDate(row), day, day)
+        )
+      )
+    );
+  });
 
-  for (
-    let offset = selectedPeriod - 1;
-    offset >= 0;
-    offset--
-  ) {
-    const day = addDays(today, -offset);
+// ============================================
+// CHART DATE LABELS
+// ============================================
 
-    const dailyRatings = ratingRows
-      .filter((row) => {
-        const date = getDate(row);
-
-        return (
-          matchesApartment(row, apartmentId) &&
-          date &&
-          startOfDay(date).getTime() === day.getTime()
-        );
-      })
-      .map(getRatingValue)
-      .filter((value) => value !== null);
-
-    values.push(average(dailyRatings));
-  }
-
-  return values;
-};
-
-// =====================================================
-// DYNAMIC GRAPH DATE LABELS
-// =====================================================
-
-const getChartLabels = (selectedPeriod, today) => {
-  const count = selectedPeriod === 7 ? 7 : 6;
+const chartLabels = (days, today) => {
+  const count = days === 7 ? 7 : 6;
 
   return Array.from(
     { length: count },
     (_, index) => {
       const offset =
-        selectedPeriod === 7
+        days === 7
           ? 6 - index
-          : Math.round(
-              29 - (index * 29) / 5
-            );
+          : Math.round(29 - (index * 29) / 5);
 
       const date = addDays(today, -offset);
 
-      return selectedPeriod === 7
-        ? date.toLocaleDateString("en-US", {
-            weekday: "short",
-          })
-        : date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
+      return date.toLocaleDateString(
+        "en-US",
+        days === 7
+          ? { weekday: "short" }
+          : { month: "short", day: "numeric" }
+      );
     }
   );
 };
 
-// =====================================================
-// SVG GRAPH
-// =====================================================
+// ============================================
+// GRAPH POINTS
+// NULL RATINGS ARE NOT TREATED AS ZERO
+// ============================================
 
-const makeChartPoints = (
+const chartSegments = (
   values,
   width = 314,
   height = 72
 ) => {
-  if (!values.length) return "";
+  const present = values.filter(
+    (value) =>
+      value !== null &&
+      Number.isFinite(value)
+  );
 
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
+  if (!present.length) return [];
 
-  const range = max - min || 1;
+  const high = Math.max(1, ...present);
+  const low = Math.min(0, ...present);
+  const range = high - low || 1;
 
-  return values
-    .map((value, index) => {
-      const x =
-        values.length === 1
-          ? width / 2
-          : (index / (values.length - 1)) * width;
+  const segments = [];
+  let segment = [];
 
-      const y =
-        height -
-        ((value - min) / range) * (height - 10) -
-        5;
+  values.forEach((value, index) => {
+    if (
+      value === null ||
+      !Number.isFinite(value)
+    ) {
+      if (segment.length) {
+        segments.push(segment);
+      }
 
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+      segment = [];
+      return;
+    }
+
+    const x =
+      values.length === 1
+        ? width / 2
+        : (index * width) / (values.length - 1);
+
+    const y =
+      height -
+      ((value - low) / range) * (height - 10) -
+      5;
+
+    segment.push({ x, y });
+  });
+
+  if (segment.length) {
+    segments.push(segment);
+  }
+
+  return segments;
 };
 
-// =====================================================
-// INDIVIDUAL APARTMENT ENGAGEMENT COMPONENT
-// =====================================================
+const ActivityChart = ({ values }) => {
+  const segments = chartSegments(values);
+
+  if (!segments.length) return null;
+
+  return (
+    <svg
+      className="ld-engagement-chart"
+      viewBox="0 0 314 82"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {segments.map((segment, index) =>
+        segment.length > 1 ? (
+          <polyline
+            key={index}
+            fill="none"
+            points={segment
+              .map(
+                ({ x, y }) =>
+                  `${x.toFixed(1)},${y.toFixed(1)}`
+              )
+              .join(" ")}
+          />
+        ) : (
+          <circle
+            key={index}
+            cx={segment[0].x}
+            cy={segment[0].y}
+            r={2.5}
+            fill="currentColor"
+          />
+        )
+      )}
+    </svg>
+  );
+};
+
+// ============================================
+// VIEWS AND FAVORITES PERCENTAGE
+// ============================================
+
+const formatCountTrend = (current, previous) => {
+  if (previous === 0 && current > 0) {
+    return {
+      status: "new",
+      text: "New activity",
+    };
+  }
+
+  if (previous === 0) {
+    return {
+      status: "none",
+      text: "No activity",
+    };
+  }
+
+  const change = percentageChange(
+    current,
+    previous
+  );
+
+  const status =
+    change > 0
+      ? "up"
+      : change < 0
+        ? "down"
+        : "stable";
+
+  const sign = change > 0 ? "+" : "";
+
+  return {
+    status,
+    text: `${sign}${change.toFixed(1)}%`,
+  };
+};
+
+// ============================================
+// AVERAGE RATING COMPARISON
+// INDIVIDUAL RATINGS ARE EQUALLY WEIGHTED
+// ============================================
+
+const formatRatingTrend = (
+  currentRatings,
+  previousRatings
+) => {
+  if (
+    !currentRatings.length &&
+    !previousRatings.length
+  ) {
+    return {
+      status: "none",
+      text: "No ratings",
+    };
+  }
+
+  if (
+    currentRatings.length &&
+    !previousRatings.length
+  ) {
+    return {
+      status: "new",
+      text: "New ratings",
+    };
+  }
+
+  if (!currentRatings.length) {
+    return {
+      status: "none",
+      text: "No ratings this period",
+    };
+  }
+
+  const difference =
+    average(currentRatings) -
+    average(previousRatings);
+
+  const status =
+    difference > 0
+      ? "up"
+      : difference < 0
+        ? "down"
+        : "stable";
+
+  return {
+    status,
+    text: `${
+      difference > 0 ? "+" : ""
+    }${difference.toFixed(1)} stars`,
+  };
+};
+
+// ============================================
+// INDIVIDUAL APARTMENT ENGAGEMENT
+// ============================================
 
 const PropertyEngagement = ({
   apartment,
@@ -291,217 +419,164 @@ const PropertyEngagement = ({
   ratingRows = [],
   isLoadingActivityData = false,
 }) => {
-  const apartmentId = apartment.id;
-
-  const today = startOfDay(new Date());
-
-  // Each apartment calculates its own dates.
-  const currentPeriodStart = addDays(
+  const {
     today,
-    -(selectedPeriod - 1)
-  );
+    currentStart,
+    previousStart,
+    previousEnd,
+  } = getPeriods(selectedPeriod);
 
-  const previousPeriodStart = addDays(
-    today,
-    -(selectedPeriod * 2 - 1)
-  );
+  const id = apartment.id;
 
-  const previousPeriodEnd = addDays(
-    today,
-    -selectedPeriod
-  );
+  // Current selected period
 
-  // ===================================================
-  // CURRENT PERIOD
-  // ===================================================
-
-  const currentViewRows = getRowsInPeriod(
+  const currentViewsRows = filterActivity(
     viewRows,
-    apartmentId,
-    currentPeriodStart,
+    id,
+    currentStart,
     today
   );
 
-  const currentFavoriteRows = getRowsInPeriod(
+  const currentFavoritesRows = filterActivity(
     favoriteRows,
-    apartmentId,
-    currentPeriodStart,
+    id,
+    currentStart,
     today
   );
 
-  const currentRatingRows = getRowsInPeriod(
+  const currentRatingRows = filterActivity(
     ratingRows,
-    apartmentId,
-    currentPeriodStart,
+    id,
+    currentStart,
     today
   );
 
-  // ===================================================
-  // PREVIOUS PERIOD
-  // ===================================================
+  // Previous equivalent period
 
-  const previousViewRows = getRowsInPeriod(
+  const previousViewsRows = filterActivity(
     viewRows,
-    apartmentId,
-    previousPeriodStart,
-    previousPeriodEnd
+    id,
+    previousStart,
+    previousEnd
   );
 
-  const previousFavoriteRows = getRowsInPeriod(
+  const previousFavoritesRows = filterActivity(
     favoriteRows,
-    apartmentId,
-    previousPeriodStart,
-    previousPeriodEnd
+    id,
+    previousStart,
+    previousEnd
   );
 
-  const previousRatingRows = getRowsInPeriod(
+  const previousRatingRows = filterActivity(
     ratingRows,
-    apartmentId,
-    previousPeriodStart,
-    previousPeriodEnd
+    id,
+    previousStart,
+    previousEnd
   );
 
-  // ===================================================
-  // ACTUAL TOTALS
-  // ===================================================
+  // ==========================================
+  // PERIOD TOTALS
+  // ==========================================
 
-  const views = getViews(currentViewRows);
+  const views = sumViews(currentViewsRows);
+  const previousViews = sumViews(previousViewsRows);
 
-  const favorites = currentFavoriteRows.length;
+  const favorites = currentFavoritesRows.length;
+  const previousFavorites =
+    previousFavoritesRows.length;
 
-  const currentRatings = getRatings(
+  const currentRatings = ratingValues(
     currentRatingRows
   );
 
-  const rating = average(currentRatings);
-
-  const previousViews = getViews(
-    previousViewRows
+  const previousRatings = ratingValues(
+    previousRatingRows
   );
 
-  const previousFavorites =
-    previousFavoriteRows.length;
-
-  const previousRatings = getRatings(
-    previousRatingRows
+  const currentRatingAverage = average(
+    currentRatings
   );
 
   const previousRatingAverage = average(
     previousRatings
   );
 
-  // ===================================================
-  // PERCENTAGE COMPARISONS
-  // ===================================================
-
-  const viewsChange = getPercentageChange(
-    views,
-    previousViews
-  );
-
-  const favoritesChange = getPercentageChange(
-    favorites,
-    previousFavorites
-  );
-
-  const ratingChange =
-    currentRatings.length > 0 &&
-    previousRatings.length > 0
-      ? rating - previousRatingAverage
-      : null;
-
-  // ===================================================
-  // DAILY GRAPH DATA
-  // ===================================================
-
-  const viewChart = getDailyValues(
-    apartmentId,
-    viewRows,
-    getViewWeight,
-    selectedPeriod,
-    today
-  );
-
-  const favoriteChart = getDailyValues(
-    apartmentId,
-    favoriteRows,
-    () => 1,
-    selectedPeriod,
-    today
-  );
-
-  const ratingChart = getRatingDailyValues(
-    apartmentId,
-    ratingRows,
-    selectedPeriod,
-    today
-  );
-
-  const chartLabels = getChartLabels(
-    selectedPeriod,
-    today
-  );
-
-  // ===================================================
+  // ==========================================
   // METRIC CARDS
-  // ===================================================
+  // ==========================================
 
   const metrics = [
     {
       label: "Views",
+      Icon: Eye,
       value: views,
-      icon: Eye,
-      values: viewChart,
-      change: viewsChange,
-      changeType: "percent",
-      current: views,
       previous: previousViews,
+      unit: "views",
+      trend: formatCountTrend(
+        views,
+        previousViews
+      ),
+      values: dailyCounts(
+        currentViewsRows,
+        selectedPeriod,
+        today,
+        getViewWeight
+      ),
       empty: views === 0,
-      emptyState: {
-        title: "No views yet",
-        description:
-          "No recorded apartment views during this period.",
-      },
+      emptyTitle: "No views yet",
+      emptyDescription:
+        "No apartment views recorded in the selected period.",
     },
     {
       label: "Favorites",
+      Icon: Heart,
       value: favorites,
-      icon: Heart,
-      values: favoriteChart,
-      change: favoritesChange,
-      changeType: "percent",
-      current: favorites,
       previous: previousFavorites,
+      unit: "favorites",
+      trend: formatCountTrend(
+        favorites,
+        previousFavorites
+      ),
+      values: dailyCounts(
+        currentFavoritesRows,
+        selectedPeriod,
+        today,
+        () => 1
+      ),
       empty: favorites === 0,
-      emptyState: {
-        title: "No favorites yet",
-        description:
-          "No apartments were saved to favorites during this period.",
-      },
+      emptyTitle: "No favorites yet",
+      emptyDescription:
+        "No favorites recorded in the selected period.",
     },
     {
       label: "Average Rating",
-      value: currentRatings.length
-        ? rating.toFixed(1)
-        : "0",
-      icon: Star,
-      values: ratingChart,
-      change: ratingChange,
-      changeType: "rating",
-      current: currentRatings.length,
-      previous: previousRatings.length,
+      Icon: Star,
+      value:
+        currentRatingAverage === null
+          ? "0"
+          : currentRatingAverage.toFixed(1),
+      previous: previousRatingAverage,
+      rating: true,
+      trend: formatRatingTrend(
+        currentRatings,
+        previousRatings
+      ),
+      values: dailyRatings(
+        currentRatingRows,
+        selectedPeriod,
+        today
+      ),
       empty: currentRatings.length === 0,
-      emptyState: {
-        title: "No ratings yet",
-        description:
-          "No apartment ratings were recorded during this period.",
-      },
+      emptyTitle: "No ratings yet",
+      emptyDescription:
+        "No ratings recorded in the selected period.",
     },
   ];
 
-  // ===================================================
-  // ENGAGEMENT UI
-  // ===================================================
+  const labels = chartLabels(
+    selectedPeriod,
+    today
+  );
 
   return (
     <section className="ld-engagement-card">
@@ -517,7 +592,6 @@ const PropertyEngagement = ({
           </p>
         </div>
 
-        {/* INDIVIDUAL DROPDOWN */}
         <div className="ld-engagement-period-selector">
           <CalendarDays
             size={13}
@@ -525,25 +599,20 @@ const PropertyEngagement = ({
           />
 
           <select
+            className="ld-engagement-period-dropdown"
             value={selectedPeriod}
             onChange={(event) =>
               onPeriodChange(
-                apartmentId,
+                id,
                 Number(event.target.value)
               )
             }
             aria-label={`Select engagement period for ${
               apartment.title || "apartment"
             }`}
-            className="ld-engagement-period-dropdown"
           >
-            <option value={7}>
-              Last 7 Days
-            </option>
-
-            <option value={30}>
-              Last 30 Days
-            </option>
+            <option value={7}>Last 7 Days</option>
+            <option value={30}>Last 30 Days</option>
           </select>
 
           <ChevronDown
@@ -562,27 +631,46 @@ const PropertyEngagement = ({
           {metrics.map((metric) => {
             const {
               label,
+              Icon,
               value,
-              icon: Icon,
-              values,
-              change,
-              changeType,
-              current,
               previous,
+              trend,
+              values,
               empty,
-              emptyState,
+              rating,
             } = metric;
 
-            const points = makeChartPoints(values);
+            const TrendIcon =
+              trend.status === "up" ||
+              trend.status === "new"
+                ? TrendingUp
+                : trend.status === "down"
+                  ? TrendingDown
+                  : Minus;
 
-            const isPositive =
-              change !== null && change > 0;
+            const colorClass =
+              trend.status === "up" ||
+              trend.status === "new"
+                ? "is-positive"
+                : trend.status === "down"
+                  ? "is-negative"
+                  : "is-neutral";
 
-            const isNegative =
-              change !== null && change < 0;
-
-            const isNewActivity =
-              previous === 0 && current > 0;
+            const explanation = rating
+              ? `Previous ${selectedPeriod} days: ${
+                  previous === null
+                    ? "No ratings"
+                    : `${previous.toFixed(1)} stars`
+                }. ${
+                  currentRatings.length
+                } rating(s) this period.`
+              : `Previous ${selectedPeriod} days: ${
+                  previous.toLocaleString("en-PH")
+                } ${metric.unit}. ${
+                  value - previous >= 0 ? "+" : ""
+                }${(value - previous).toLocaleString(
+                  "en-PH"
+                )} ${metric.unit} difference.`;
 
             return (
               <article
@@ -604,78 +692,46 @@ const PropertyEngagement = ({
                   </span>
                 </div>
 
-                <div className="ld-engagement-change">
-                  {isNewActivity ? (
-                    <>
-                      <TrendingUp size={12} />
-                      <span>New activity</span>
-                    </>
-                  ) : change === null ? (
-                    <>
-                      <Minus size={12} />
+                {/* PERCENTAGE OR RATING CHANGE */}
 
-                      <span>
-                        {empty
-                          ? "No recorded activity"
-                          : "No previous data"}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      {isPositive ? (
-                        <TrendingUp size={12} />
-                      ) : isNegative ? (
-                        <TrendingDown size={12} />
-                      ) : (
-                        <Minus size={12} />
-                      )}
+                <div
+                  className={`ld-engagement-change ${colorClass}`}
+                >
+                  <TrendIcon size={13} />
 
-                      <span>
-                        {changeType === "rating"
-                          ? `${
-                              change > 0 ? "+" : ""
-                            }${change.toFixed(1)}`
-                          : `${
-                              change > 0 ? "+" : ""
-                            }${change.toFixed(0)}%`}
-                      </span>
-                    </>
-                  )}
+                  <span>{trend.text}</span>
 
                   <small>
                     vs previous {selectedPeriod} days
                   </small>
                 </div>
 
+                {/* ACTUAL DIFFERENCE */}
+
+                <p className="ld-engagement-comparison-detail">
+                  {explanation}
+                </p>
+
+                {/* CURRENT PERIOD DAILY CHART */}
+
                 {empty ? (
                   <div className="ld-no-activity-chart">
                     <strong>
-                      {emptyState.title}
+                      {metric.emptyTitle}
                     </strong>
 
                     <span>
-                      {emptyState.description}
+                      {metric.emptyDescription}
                     </span>
                   </div>
                 ) : (
-                  <svg
-                    className="ld-engagement-chart"
-                    viewBox="0 0 314 82"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
-                  >
-                    <polyline points={points} />
-                  </svg>
+                  <ActivityChart values={values} />
                 )}
 
                 <div className="ld-trend-axis">
-                  {chartLabels.map(
-                    (chartLabel, index) => (
-                      <span key={index}>
-                        {chartLabel}
-                      </span>
-                    )
-                  )}
+                  {labels.map((day, index) => (
+                    <span key={index}>{day}</span>
+                  ))}
                 </div>
               </article>
             );
@@ -686,9 +742,9 @@ const PropertyEngagement = ({
   );
 };
 
-// =====================================================
+// ============================================
 // MAIN LANDLORD DASHBOARD
-// =====================================================
+// ============================================
 
 export const LandlordOverview = ({
   myApartments = [],
@@ -696,16 +752,13 @@ export const LandlordOverview = ({
   aptViews,
   aptFavs,
   ratingSummary,
-
   viewRows = [],
   favoriteRows = [],
   ratingRows = [],
   isLoadingActivityData = false,
-
   handleTogglePublication,
   deletingApartmentId,
   handleDeleteApartment,
-
   openViewers,
   openFavoriters,
 }) => {
@@ -714,19 +767,18 @@ export const LandlordOverview = ({
     setOpenPropertyMenuId,
   ] = useState(null);
 
-  // ===================================================
-  // SEPARATE DATE SELECTION PER APARTMENT
-  // ===================================================
+  // Separate selected period for every apartment
 
   const [
     periodByApartment,
     setPeriodByApartment,
   ] = useState({});
 
-  const setApartmentPeriod = (apartmentId, days) => {
-    if (![7, 30].includes(days)) {
-      return;
-    }
+  const setApartmentPeriod = (
+    apartmentId,
+    days
+  ) => {
+    if (![7, 30].includes(days)) return;
 
     setPeriodByApartment((previous) => ({
       ...previous,
@@ -734,16 +786,11 @@ export const LandlordOverview = ({
     }));
   };
 
-  // ===================================================
-  // MAIN UI
-  // ===================================================
-
   return (
     <div className="ld-simple-dashboard">
       <header className="ld-simple-heading">
         <div>
           <h1>Landlord Dashboard</h1>
-
           <p>
             Monitor your apartment and tenant engagement.
           </p>
@@ -754,7 +801,6 @@ export const LandlordOverview = ({
         <div className="ld-properties-header">
           <div>
             <h2>Your Apartments</h2>
-
             <p>
               Manage your apartments, units, and availability.
             </p>
@@ -769,9 +815,7 @@ export const LandlordOverview = ({
           <div className="ld-empty-properties">
             <QuietStreetIllustration />
 
-            <h3>
-              Add your first apartment
-            </h3>
+            <h3>Add your first apartment</h3>
 
             <p>
               Create an apartment listing to start
@@ -792,101 +836,90 @@ export const LandlordOverview = ({
                 />
               </span>
 
-              <span>
-                Add Apartment
-              </span>
+              <span>Add Apartment</span>
             </Link>
 
             <div className="ld-empty-properties-review">
               <Info size={19} />
-
-              Apartment listings are reviewed before
-              publication.
+              Apartment listings are reviewed
+              before publication.
             </div>
           </div>
         ) : (
           <div className="ld-property-list">
             {myApartments.map((apartment) => {
-              // =========================================
-              // APARTMENT PRICE
-              // =========================================
+              // =====================================
+              // ROOM RENTAL PRICE RANGE
+              // =====================================
 
               const roomPrices = (
                 apartment.rooms || []
               )
                 .map((room) =>
                   Number(
-                    room.price ||
-                      room.monthlyRent ||
-                      room.rent
+                    room.price ??
+                    room.monthlyRent ??
+                    room.rent ??
+                    0
                   )
                 )
                 .filter(
-                  (price) =>
-                    Number.isFinite(price) &&
-                    price > 0
+                  (value) =>
+                    Number.isFinite(value) &&
+                    value > 0
                 );
 
               const savedPriceRange =
                 apartment.features &&
-                !Array.isArray(
-                  apartment.features
-                )
+                !Array.isArray(apartment.features)
                   ? apartment.features.priceRange
                   : null;
 
-              const savedMinimumRent =
+              const savedMin =
                 savedPriceRange?.min == null
                   ? NaN
                   : Number(savedPriceRange.min);
 
-              const savedMaximumRent =
+              const savedMax =
                 savedPriceRange?.max == null
                   ? NaN
                   : Number(savedPriceRange.max);
 
-              const hasSavedPriceRange =
-                Number.isFinite(
-                  savedMinimumRent
-                ) &&
-                savedMinimumRent >= 0 &&
-                Number.isFinite(
-                  savedMaximumRent
-                ) &&
-                savedMaximumRent >=
-                  savedMinimumRent;
+              const hasSavedRange =
+                Number.isFinite(savedMin) &&
+                savedMin >= 0 &&
+                Number.isFinite(savedMax) &&
+                savedMax >= savedMin;
 
-              const minimumRent =
-                hasSavedPriceRange
-                  ? savedMinimumRent
-                  : roomPrices.length
-                    ? Math.min(...roomPrices)
-                    : Number(
-                        apartment.price || 0
-                      );
+              const minimumRent = roomPrices.length
+                ? Math.min(...roomPrices)
+                : hasSavedRange
+                  ? savedMin
+                  : Number(apartment.price || 0);
 
-              const maximumRent =
-                hasSavedPriceRange
-                  ? savedMaximumRent
-                  : roomPrices.length
-                    ? Math.max(...roomPrices)
-                    : Number(
-                        apartment.price || 0
-                      );
+              const maximumRent = roomPrices.length
+                ? Math.max(...roomPrices)
+                : hasSavedRange
+                  ? savedMax
+                  : Number(apartment.price || 0);
 
               const priceRangeLabel =
                 minimumRent > 0 &&
                 maximumRent > 0
-                  ? `₱${minimumRent.toLocaleString(
-                      "en-PH"
-                    )} – ₱${maximumRent.toLocaleString(
-                      "en-PH"
-                    )} / month`
+                  ? minimumRent === maximumRent
+                    ? `₱${minimumRent.toLocaleString(
+                        "en-PH"
+                      )} / month`
+                    : `₱${minimumRent.toLocaleString(
+                        "en-PH"
+                      )} – ₱${maximumRent.toLocaleString(
+                        "en-PH"
+                      )} / month`
                   : "Rent not set";
 
-              // =========================================
-              // ALL-TIME PROPERTY SUMMARY
-              // =========================================
+              // =====================================
+              // ALL-TIME APARTMENT STATISTICS
+              // =====================================
 
               const views = Number(
                 aptViews?.(apartment.id) || 0
@@ -901,7 +934,6 @@ export const LandlordOverview = ({
                   apartment.id
                 );
 
-              // Individual engagement period.
               const selectedPeriod =
                 periodByApartment[
                   String(apartment.id)
@@ -912,7 +944,7 @@ export const LandlordOverview = ({
                   className="ld-property-with-engagement"
                   key={apartment.id}
                 >
-                  {/* APARTMENT SUMMARY CARD */}
+                  {/* APARTMENT SUMMARY */}
 
                   <article className="ld-property-row">
                     <div className="ld-property-image">
@@ -1041,9 +1073,7 @@ export const LandlordOverview = ({
                             )
                           }
                         >
-                          <MoreHorizontal
-                            size={16}
-                          />
+                          <MoreHorizontal size={16} />
                         </button>
 
                         {openPropertyMenuId ===
@@ -1058,7 +1088,7 @@ export const LandlordOverview = ({
                               onClick={() => {
                                 setOpenPropertyMenuId(null);
 
-                                void handleTogglePublication(
+                                void handleTogglePublication?.(
                                   apartment.id,
                                   apartment.isPublished === false
                                 );
@@ -1080,7 +1110,7 @@ export const LandlordOverview = ({
                               onClick={() => {
                                 setOpenPropertyMenuId(null);
 
-                                void handleDeleteApartment(
+                                void handleDeleteApartment?.(
                                   apartment.id
                                 );
                               }}
@@ -1118,7 +1148,7 @@ export const LandlordOverview = ({
                     </div>
                   </article>
 
-                  {/* INDIVIDUAL ENGAGEMENT ANALYTICS */}
+                  {/* APARTMENT ENGAGEMENT */}
 
                   <PropertyEngagement
                     apartment={apartment}

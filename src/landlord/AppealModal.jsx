@@ -1,6 +1,7 @@
 import "./AppealModal.css";
 import { EvidenceUploader } from "@/components/EvidenceUploader";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 const apartmentImage = (apartment) => {
   const image = apartment?.coverImage || apartment?.cover_image || apartment?.imageUrl || apartment?.image_url || apartment?.images?.[0];
@@ -25,9 +26,15 @@ export const AppealModal = ({
   return <div className="appeal-modal-overlay" onClick={closeAppealModal}>
     <div className="appeal-modal-overlay-2"/>
     <section className="appeal-modal-card" role="dialog" aria-modal="true" aria-labelledby="submit-appeal-title" onClick={(event) => event.stopPropagation()}>
+      <header className="appeal-modal-row">
+        <div className="appeal-modal-header-copy">
+          <p className="appeal-modal-kicker">Appeal</p>
+          <h2 id="submit-appeal-title" className="appeal-modal-submit-appeal">{isEvidenceResponse ? "Submit Additional Evidence" : "Submit Appeal"}</h2>
+          <p className="appeal-modal-text">{isEvidenceResponse ? "Add the information requested by the administrator." : "Share your explanation and supporting evidence."}</p>
+        </div>
+        <button type="button" className="appeal-modal-button" onClick={closeAppealModal} disabled={isSubmittingAppeal} aria-label="Close appeal form"><X className="appeal-modal-x-icon" /></button>
+      </header>
       <div className="appeal-modal-panel">
-        <h2 id="submit-appeal-title" className="appeal-modal-submit-appeal">{isEvidenceResponse ? "Submit Additional Evidence" : "Submit Appeal"}</h2>
-
         <div className="appeal-modal-field">
           <label className="appeal-modal-field-label">Related Apartment</label>
           <div className="appeal-modal-apartment-card">

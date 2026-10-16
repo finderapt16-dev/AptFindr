@@ -1935,3 +1935,79 @@
     }
 }
 
+
+/* =========================================
+   ACTIVITY TREND INDICATORS
+   ========================================= */
+
+.ld-engagement-change.is-positive {
+  color: #16a34a;
+}
+
+.ld-engagement-change.is-negative {
+  color: #dc2626;
+}
+
+.ld-engagement-change.is-neutral {
+  color: #64748b;
+}
+
+.ld-engagement-change.is-positive svg,
+.ld-engagement-change.is-negative svg,
+.ld-engagement-change.is-neutral svg {
+  flex-shrink: 0;
+}
+
+.ld-engagement-comparison-detail {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+
+/* ============================================
+   ENGAGEMENT TREND COLORS
+   ============================================ */
+
+.ld-engagement-change.is-positive {
+  color: #16a34a;
+}
+
+.ld-engagement-change.is-negative {
+  color: #dc2626;
+}
+
+.ld-engagement-change.is-neutral {
+  color: #64748b;
+}
+
+.ld-engagement-comparison-detail {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+/* ============================================
+   ENGAGEMENT LINE CHART
+   ============================================ */
+
+.ld-engagement-chart {
+  color: #0ea5e9;
+}
+
+.ld-engagement-chart polyline {
+  fill: none;
+  stroke: #0ea5e9;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ld-engagement-chart circle {
+  fill: #0ea5e9;
+}
+

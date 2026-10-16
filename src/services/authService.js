@@ -889,6 +889,41 @@ export function getAuthUser() {
 export function updateAuthPassword(password) {
     return supabaseClient.auth.updateUser({ password });
 }
+
+/**
+ * Changes the password for the authenticated email/password account.
+ *
+ * Updating Auth must stay separate from application-profile maintenance: a
+ * password can be changed even if an older account is missing an optional
+ * role-profile row. Re-authenticate first so the supplied current password is
+ * actually checked instead of being only a required form field.
+ */
+export async function changeAuthPassword(currentPassword, newPassword) {
+    if (typeof currentPassword !== 'string' || !currentPassword) {
+        throw new Error('Enter your current password.');
+    }
+    if (typeof newPassword !== 'string' || !newPassword) {
+        throw new Error('Enter a new password.');
+    }
+    const { data: authData, error: authUserError } = await supabaseClient.auth.getUser();
+    const email = authData?.user?.email;
+    if (authUserError || !email) {
+        throw new Error('Your session has expired. Please sign in again.');
+    }
+    const { error: verificationError } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+    });
+    if (verificationError) {
+        throw new Error('Your current password is incorrect.');
+    }
+    const { error: updateError } = await supabaseClient.auth.updateUser({
+        password: newPassword,
+    });
+    if (updateError) {
+        throw new Error(updateError.message);
+    }
+}
 // Supabase signs out of every device by default. Pass { scope: 'local' } to end
 // only this browser's session.
 export function signOutAuthSession(options) {
@@ -907,7 +942,11 @@ export async function updateUser(userId, updates) {
         throw new Error('User profile not found.');
     }
     if (Object.keys(payload).length === 0) {
-        await ensureRoleProfile(userId, existing.role, updates);
+        // Password-only updates are Auth changes. Do not make them depend on
+        // unrelated tenant/landlord/admin profile upserts.
+        if (!updates.password) {
+            await ensureRoleProfile(userId, existing.role, updates);
+        }
         return existing;
     }
     const { data, error } = await supabaseClient.from(APP_USERS_TABLE).update(payload).eq('id', userId).select('*').single();

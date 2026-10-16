@@ -582,7 +582,6 @@ export function Login({
                         }
                         placeholder="Enter your username or email"
                         autoComplete="username"
-                        autoCapitalize="none"
                         spellCheck={false}
                         inputMode="text"
                         required

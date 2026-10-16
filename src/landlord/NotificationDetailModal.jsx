@@ -358,16 +358,14 @@ export const NotificationDetailModal = ({
             </h2>
           </div>
 
-          {!isReportNotification && (
-            <button
-              type="button"
-              aria-label="Close notification"
-              onClick={handleClose}
-              className="notification-detail-modal-button"
-            >
-              <X className="notification-detail-modal-x-icon" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="Close notification"
+            onClick={handleClose}
+            className="notification-detail-modal-button"
+          >
+            <X className="notification-detail-modal-x-icon" />
+          </button>
         </div>
 
         {/* ==================================

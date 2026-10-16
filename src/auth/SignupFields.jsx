@@ -92,7 +92,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
 
   return (
     <>
-      <AuthField {...fieldProps("username")} error={errors.username || (usernameCheck.username === username ? usernameCheck.error : "")} label="Username" required placeholder="Enter your username" autoComplete="username" autoCapitalize="none" spellCheck={false} />
+      <AuthField {...fieldProps("username")} error={errors.username || (usernameCheck.username === username ? usernameCheck.error : "")} label="Username" required placeholder="Enter your username" autoComplete="username" spellCheck={false} />
       {!hideEmail && <AuthField {...fieldProps("email")} error={errors.email || (emailCheck.email === email ? emailCheck.error : "")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>

@@ -1,6 +1,7 @@
 import "./SecurityTab.css";
 
 import { Button } from "@/components/ui/button";
+import { PASSWORD_REQUIREMENTS } from "@/auth/signupValidation";
 
 import {
     SettingsField as Field,
@@ -84,9 +85,9 @@ export const SecurityTab = ({
                                 }
                             >
                                 {passwordState.showCurrent ? (
-                                    <EyeOff size={17} />
-                                ) : (
                                     <Eye size={17} />
+                                ) : (
+                                    <EyeOff size={17} />
                                 )}
                             </button>
                         </div>
@@ -94,7 +95,7 @@ export const SecurityTab = ({
 
                     <Field
                         label="New Password"
-                        hint="At least 8 characters with letters, numbers, and symbols."
+                        hint={PASSWORD_REQUIREMENTS}
                     >
                         <div className="security-tab-panel-2">
                             <SettingsInput
@@ -129,9 +130,9 @@ export const SecurityTab = ({
                                 }
                             >
                                 {passwordState.showNew ? (
-                                    <EyeOff size={17} />
-                                ) : (
                                     <Eye size={17} />
+                                ) : (
+                                    <EyeOff size={17} />
                                 )}
                             </button>
                         </div>
@@ -172,9 +173,9 @@ export const SecurityTab = ({
                                 }
                             >
                                 {passwordState.showConfirm ? (
-                                    <EyeOff size={17} />
-                                ) : (
                                     <Eye size={17} />
+                                ) : (
+                                    <EyeOff size={17} />
                                 )}
                             </button>
                         </div>

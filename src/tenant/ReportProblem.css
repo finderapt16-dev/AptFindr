@@ -585,3 +585,50 @@
   .tenant-browse main .report-page .report-section-row-3 { flex-shrink: 0; width: 30px; height: 30px; box-shadow: none; background: #fff; }
   .tenant-browse main .report-page .report-section-row-2 > span:last-child { min-width: 0; }
 }
+
+/* Tablet landscape has the desktop sidebar but not enough remaining width for
+   the three-column action bar. Keep the form's portrait layout untouched. */
+@media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
+  .tenant-browse main .report-page { max-width: 100%; }
+
+  .tenant-browse main .report-page .report-step {
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
+    gap: 22px;
+    padding: 22px 24px;
+  }
+
+  .tenant-browse main .report-page .report-step-row { gap: 14px; }
+  .tenant-browse main .report-page .report-step-row-3 { gap: 10px; }
+
+  .tenant-browse main .report-page .report-section-grid {
+    grid-template-columns: minmax(170px, 0.85fr) minmax(230px, 1.15fr);
+    gap: 12px;
+    padding: 16px 18px;
+  }
+
+  .tenant-browse main .report-page .report-section-row-2 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    max-width: 430px;
+    margin-inline: auto;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .tenant-browse main .report-page .report-section-clear-form,
+  .tenant-browse main .report-page .report-section-button {
+    min-width: 0;
+    height: 42px;
+    font-size: 12px;
+  }
+
+  .tenant-browse main .report-page .report-section-input,
+  .tenant-browse main .report-page .report-section-select {
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .tenant-browse main .report-page .report-section-textarea { min-height: 126px; }
+}

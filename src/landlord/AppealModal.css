@@ -516,3 +516,7 @@
   .appeal-modal-row-5 > button { width: auto; }
   .appeal-modal-apartment-image { width: 88px; }
 }
+
+/* Header and controls shared by the appeal submission and evidence forms. */
+.appeal-modal-row{align-items:flex-start;padding:16px 22px 12px;background:#fff;border-bottom:1px solid #edf1f5}.appeal-modal-header-copy{min-width:0}.appeal-modal-kicker{margin:0;color:#16a5e1;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.appeal-modal-row .appeal-modal-submit-appeal{margin:3px 0 2px;color:#1f2937;font-size:18px;line-height:1.2}.appeal-modal-row .appeal-modal-text{margin:0;color:#718096;font-size:11px;line-height:1.35}.appeal-modal-row .appeal-modal-button{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;padding:0;border:0;border-radius:7px;color:#64748b;background:transparent;cursor:pointer}.appeal-modal-row .appeal-modal-button:hover{background:#f1f5f9}.appeal-modal-row .appeal-modal-button:disabled{cursor:not-allowed}.appeal-modal-card{border-radius:12px}.appeal-modal-panel{padding-top:18px}.appeal-modal-apartment-card>div:last-child{min-width:0}.appeal-modal-apartment-card strong,.appeal-modal-apartment-card p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:420px){.appeal-modal-row{padding:14px 18px 10px}.appeal-modal-row .appeal-modal-text{display:none}}

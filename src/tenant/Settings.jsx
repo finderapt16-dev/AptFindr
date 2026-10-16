@@ -6,6 +6,10 @@ import {
     Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import {
+    PASSWORD_REQUIREMENTS,
+    validateSignupPassword,
+} from "@/auth/signupValidation";
 
 const personalFields = [
     {
@@ -139,9 +143,13 @@ export function Settings({
             return;
         }
 
-        if (passwordForm.newPassword.length < 8) {
+        const passwordValidationError = validateSignupPassword(
+            passwordForm.newPassword
+        );
+
+        if (passwordValidationError) {
             setPasswordError(
-                "New password must be at least 8 characters."
+                passwordValidationError
             );
             return;
         }
@@ -526,9 +534,9 @@ export function Settings({
                                 }
                             >
                                 {showPasswords.current ? (
-                                    <EyeOff size={16} />
-                                ) : (
                                     <Eye size={16} />
+                                ) : (
+                                    <EyeOff size={16} />
                                 )}
                             </button>
 
@@ -587,17 +595,16 @@ export function Settings({
                                 }
                             >
                                 {showPasswords.new ? (
-                                    <EyeOff size={16} />
-                                ) : (
                                     <Eye size={16} />
+                                ) : (
+                                    <EyeOff size={16} />
                                 )}
                             </button>
 
                         </div>
 
                         <p className="tenant-profile-helper">
-                            At least 8 characters with letters,
-                            numbers, and symbols.
+                            {PASSWORD_REQUIREMENTS}
                         </p>
 
                     </div>
@@ -653,9 +660,9 @@ export function Settings({
                                 }
                             >
                                 {showPasswords.confirm ? (
-                                    <EyeOff size={16} />
-                                ) : (
                                     <Eye size={16} />
+                                ) : (
+                                    <EyeOff size={16} />
                                 )}
                             </button>
 
