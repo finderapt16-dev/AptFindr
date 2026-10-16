@@ -107,3 +107,11 @@
   .admin-inspection-review-cover, .admin-inspection-review-no-image { height: 288px; border-radius: 10px; }
   .admin-inspection-review-thumbnails button { height: 90px; border-radius: 10px; }
 }
+
+.admin-inspection-review-title .admin-inspection-review-listing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-inspection-review-listing-meta strong { color: #101828; }

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTenantRole } from "@/services/authService";
-import { getTimeBasedGreeting } from "@/tenant/tenantGreeting";
 import { Notifications } from "@/tenant/Notifications";
 import { useTenantNotifications } from "@/tenant/useTenantNotifications";
 import { fetchApartmentRatings, subscribeToApartmentRatings, summarizeApartmentRatings } from "@/services/apartmentRatingsService";
@@ -238,7 +237,6 @@ export function Dashboard() {
         });
     }, [favoriteApartments, favoriteFilter]);
     const displayName = user?.name?.trim();
-    const tenantGreeting = getTimeBasedGreeting(user?.name);
     const dashboardSubtitle = "Find verified apartments that fit your needs.";
     const handleLogout = () => { logout?.(); navigate("/", { replace: true }); };
     const removeFavorite = async (apartmentId) => {
@@ -353,7 +351,7 @@ export function Dashboard() {
     };
     const renderSettings = () => <AccountSettings embedded/>;
     const sectionMap = {
-        overview: () => (<DashboardOverview tenantGreeting={tenantGreeting} dashboardSubtitle={dashboardSubtitle} favoriteIds={favoriteIds} availableApartments={availableApartments} availableRoomsCount={availableRoomsCount} hasPersonalizationPreferences={hasPersonalizationPreferences} suggestedApartments={suggestedApartments} popularApartments={popularApartments} setActiveSection={selectDashboardSection} navigate={navigate}/>),
+        overview: () => (<DashboardOverview dashboardSubtitle={dashboardSubtitle} favoriteIds={favoriteIds} availableApartments={availableApartments} availableRoomsCount={availableRoomsCount} hasPersonalizationPreferences={hasPersonalizationPreferences} suggestedApartments={suggestedApartments} popularApartments={popularApartments} setActiveSection={selectDashboardSection} navigate={navigate}/>),
         favorites: () => (<FavoritesOverview favoriteApartments={favoriteApartments} visibleFavoriteApartments={visibleFavoriteApartments} favoriteFilter={favoriteFilter} setFavoriteFilter={setFavoriteFilter} favoriteView={favoriteView} setFavoriteView={setFavoriteView} removingFavoriteId={removingFavoriteId} removeFavorite={removeFavorite} ratingSummary={ratingSummary} ratingsLoading={ratingsLoading} navigate={navigate}/>),
         suggested: () => (<SuggestedSection hasPersonalizationPreferences={hasPersonalizationPreferences} preferencesLoading={preferencesLoading} suggestedApartments={suggestedApartments} ratingSummary={ratingSummary} ratingsLoading={ratingsLoading} navigate={navigate}/>),
         popular: () => (<PopularSection popularApartments={popularApartments} ratingSummary={ratingSummary} ratingsLoading={ratingsLoading} navigate={navigate}/>),
@@ -452,14 +450,13 @@ export function Dashboard() {
     </div>);
 }
 
-const DashboardOverview = ({ tenantGreeting, dashboardSubtitle, favoriteIds, availableApartments, availableRoomsCount, hasPersonalizationPreferences, suggestedApartments, popularApartments, setActiveSection, navigate, }) => (<div className="overview-section-container">
+const DashboardOverview = ({ dashboardSubtitle, favoriteIds, availableApartments, availableRoomsCount, hasPersonalizationPreferences, suggestedApartments, popularApartments, setActiveSection, navigate, }) => (<div className="overview-section-container">
     <section className="overview-section-section">
       <div className="overview-section-panel">
         <div className="overview-section-your-dashboard">
           <LayoutDashboard className="overview-section-layout-dashboard-icon"/>
           Your Dashboard
         </div>
-        <h1 className="overview-section-title">{tenantGreeting}</h1>
         <p className="overview-section-text">{dashboardSubtitle}</p>
       </div>
       <div className="overview-section-panel-2"/>

@@ -37,6 +37,33 @@ const safeExternalUrl = (value) => {
 const listFromUnknown = (value) => Array.isArray(value)
     ? value.filter((item) => typeof item === "string" && item.trim().length > 0)
     : typeof value === "string" ? value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean) : [];
+const formatMonthlyRentRange = (apartment) => {
+    const roomPrices = (apartment.rooms ?? [])
+        .map((room) => Number(room.price))
+        .filter((price) => Number.isFinite(price) && price > 0);
+    const savedRange = apartment.features && !Array.isArray(apartment.features)
+        ? apartment.features.priceRange
+        : null;
+    const savedMinimum = Number(savedRange?.min);
+    const savedMaximum = Number(savedRange?.max);
+    const prices = roomPrices.length > 0
+        ? roomPrices
+        : Number.isFinite(savedMinimum) && savedMinimum > 0 && Number.isFinite(savedMaximum) && savedMaximum >= savedMinimum
+            ? [savedMinimum, savedMaximum]
+            : Number(apartment.price) > 0 ? [Number(apartment.price)] : [];
+    if (prices.length === 0)
+        return "Price unavailable";
+    const minimum = Math.min(...prices);
+    const maximum = Math.max(...prices);
+    const formatPrice = (price) => `₱${price.toLocaleString("en-PH")}`;
+    return `${formatPrice(minimum)}${minimum === maximum ? "" : `-${formatPrice(maximum)}`} / month`;
+};
+const formatPostedDate = (value) => {
+    const date = new Date(value ?? "");
+    return Number.isNaN(date.getTime())
+        ? "Date unavailable"
+        : new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(date);
+};
 
 function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, locationText, mapPinAvailable, rules, navigate, onBack, user, onLogout }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -382,6 +409,8 @@ export function ApartmentDetails() {
     if (!ownListing && user?.role !== "admin" && !isTenantVisibleApartment({ ...apartment, landlordVerified: verified }))
         return <div className="apartment-detail-grid"><div><AlertTriangle className="apartment-detail-alert-triangle-icon"/><h1 className="apartment-detail-listing-not-available">Listing not available</h1><p className="apartment-detail-text">This apartment becomes visible after the apartment is approved, published, active, and its landlord is verified.</p><Button className="apartment-detail-go-back" onClick={handleBack}>Go Back</Button></div></div>;
     const locationText = formatApartmentLocation(apartment);
+    const monthlyRentRange = formatMonthlyRentRange(apartment);
+    const postedDate = formatPostedDate(apartment.createdAt ?? apartment.created_at);
     const locationDetails = [
         { label: "Complete Address", value: apartment.address },
         { label: "City / District", value: [apartment.city, apartment.state].filter(Boolean).join(", ") },
@@ -455,7 +484,7 @@ export function ApartmentDetails() {
                 </InlinePropertyInfo><div className={`apartment-detail-row-3 ${landlordPortal ? "apartment-detail-panel-3" : "apartment-detail-panel-4"}`}>
                     <span className="apartment-detail-row-4"><MapPin className={`apartment-detail-map-pin-icon ${landlordPortal ? "apartment-detail-map-pin-icon-2" : "apartment-detail-map-pin-icon-2"}`}/>
                     <span className="apartment-detail-span-2">{locationText}</span></span>
-                    </div></div>
+                    </div>{(renter || landlordMarketDetail) && <p className="tenant-apartment-listing-meta"><strong>{monthlyRentRange}</strong><span aria-hidden="true">•</span><span>Posted on {postedDate}</span></p>}</div>
                             </header>
 
         <InlinePropertyInfo label="Apartment Image" fields={[]} apartment={editableApartment} enabled={editableInfo} onSave={savePropertyInfo} photos>

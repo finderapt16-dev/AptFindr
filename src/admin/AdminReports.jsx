@@ -42,7 +42,7 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     const summaryCards = [
         { label: "Total Reports", value: reports.length, note: "All submitted reports", icon: FileX, tone: "total", filterValue: "all" },
-        { label: "Under Review", value: reports.filter((report) => ["under_review", "in_progress"].includes(reportStatus(report))).length, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
+        { label: "Under Review", value: reports.filter((report) => reportStatus(report) === "under_review").length, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
         { label: "Resolved", value: reports.filter((report) => reportStatus(report) === "resolved").length, note: "Closed cases", icon: CheckCircle2, tone: "resolved", filterValue: "resolved" },
         { label: "Dismissed", value: reports.filter((report) => reportStatus(report) === "dismissed").length, note: "Closed without action", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
     ];

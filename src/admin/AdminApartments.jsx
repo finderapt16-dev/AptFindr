@@ -8,7 +8,7 @@ import { canPublishForLandlord, formatOptionalDate, getLandlordVerificationStatu
 const canInspectApartment = (apartment) => apartment?.isPublished === true
     || apartment?.is_published === true
     || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
-export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, resolveReport, dismissReport, }) {
+export function AdminApartments({ allApartments, getApartmentReportCount, setActiveSection, unreadNotifsCount, aptSearch, setAptSearch, filteredApts, aptFilter, getLandlordForApt, setSelectedApt, onApartmentViewed, navigate, apartmentDetailBasePath, portalBasePath, setAptFilter, violations, openViolationModal, selectedApt, reports, resolveReport, dismissReport, }) {
     const reportedCount = allApartments.filter((a) => getApartmentReportCount(a.id) > 0).length;
     const landlordsById = new Map();
     allApartments.forEach((apartment) => {
@@ -64,7 +64,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                 const location = formatApartmentLocation(apartment);
                 const canInspect = canInspectApartment(apartment);
                 const roomCount = apartment.rooms?.length || apartment.bedrooms || 0;
-                return (<article key={apartment.id} onClick={() => setSelectedApt(apartment)} className="admin-apartments-article">
+                return (<article key={apartment.id} onClick={() => { onApartmentViewed?.(apartment); setSelectedApt(apartment); }} className="admin-apartments-article">
                   <div className="admin-apartments-panel-2">
                     {apartment.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="admin-apartments-image-with-fallback"/> : <div className="admin-apartments-row-5"><Building2 className="admin-apartments-building2-icon-2"/></div>}
                   </div>
@@ -83,7 +83,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                     <div><p className="admin-apartments-listing-status">Listing Status</p><span className="admin-apartments-card-4"><ShieldCheck className="admin-apartments-shield-check-icon"/>{status}</span>{reportCount > 0 && <p className="admin-apartments-text-3"><Flag className="admin-apartments-flag-icon"/>{reportCount} {reportCount === 1 ? "report" : "reports"}</p>}</div>
                   </div>
                   <div className="admin-apartments-row-9">
-                    <Button variant="outline" size="sm" disabled={!canInspect} title={canInspect ? "Inspect apartment" : "Verify the apartment before inspection"} onClick={(event) => { event.stopPropagation(); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
+                    <Button variant="outline" size="sm" disabled={!canInspect} title={canInspect ? "Inspect apartment" : "Verify the apartment before inspection"} onClick={(event) => { event.stopPropagation(); onApartmentViewed?.(apartment); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
                   </div>
                 </article>);
             })}
@@ -126,7 +126,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
             const aptViolations = violations.filter((v) => v.apartment_id === apt.id || (!v.apartment_id && v.apartmentTitle === apt.title));
             const aptReportCount = getApartmentReportCount(apt.id);
             const isAvailable = new Date(apt.availableDate) <= new Date();
-            return (<div key={apt.id} className="admin-apartments-card-6" onClick={() => setSelectedApt(apt)}>
+            return (<div key={apt.id} className="admin-apartments-card-6" onClick={() => { onApartmentViewed?.(apt); setSelectedApt(apt); }}>
             <div className="admin-apartments-panel-6">
               {apt.images?.[0]
                     ? <img src={apt.images[0]} alt={apt.title} className="admin-apartments-image"/>
@@ -163,7 +163,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                 </div>
               </div>
               <div className="admin-apartments-row-19" onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="outline" onClick={() => setSelectedApt(apt)} className="admin-apartments-inspect-2">
+                <Button size="sm" variant="outline" onClick={() => { onApartmentViewed?.(apt); setSelectedApt(apt); }} className="admin-apartments-inspect-2">
                   <Eye className="admin-apartments-eye-icon-2"/>Inspect
                 </Button>
                 {landlord && <>

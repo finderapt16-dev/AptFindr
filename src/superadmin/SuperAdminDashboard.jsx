@@ -29,6 +29,7 @@ import { AdminRequestChangesDialog } from './SuperAdminRequestChangesDialog';
 import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './superAdminDashboardHelpers';
 import { AdminReports } from '@/admin/AdminReports';
 import { AdminSidebar } from './SuperAdminSidebar';
+import { useNewApartmentBadge } from "@/admin/useNewApartmentBadge";
 import { SuperAdminUserManagement } from './SuperAdminUserManagement';
 import { MaintenanceControl } from './SuperAdminMaintenanceControl';
 const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map(async (account) => {
@@ -1157,8 +1158,14 @@ export function AdminDashboard() {
         // apartment is pending review, matching the Landlord page summary.
         return hasPendingApartment || (landlord.isVerified !== true && landlord.is_verified !== true);
     }).length;
-    const pendingApartmentsCount = allApartments.filter((apartment) => getAdminListingState(apartment) === "pending").length;
-    const pendingReports = reports.filter((report) => ["pending", "open", "pending_review", "under_review", "in_review", "reviewing"].includes(String(report.status ?? "pending").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
+    const { markApartmentViewed, unseenNewPublishedApartmentCount } = useNewApartmentBadge({
+        userId: user?.id,
+        apartments: allApartments,
+        getListingState: getAdminListingState,
+    });
+    const pendingApartmentsCount = unseenNewPublishedApartmentCount;
+    // The super-admin Reports page displays only these states as Under Review.
+    const pendingReports = reports.filter((report) => ["under_review", "in_review", "reviewing"].includes(String(report.status ?? "pending").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
     const activeAppealsCount = appeals.filter((appeal) => ["pending", "pending_review", "under_review", "needs_information", "additional_evidence_submitted"].includes(String(appeal.status ?? "pending_review").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
     const unreadNotifsCount = adminNotifs.filter((n) => {
@@ -1490,7 +1497,7 @@ export function AdminDashboard() {
     // ── Section: Landlords ────────────────────────────────────────────────────
     const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
-    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
+    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────

@@ -235,6 +235,14 @@
   color: #078be0;
 }
 
+.admin-inspection-review-title .admin-inspection-review-listing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-inspection-review-listing-meta strong { color: #101828; }
+
 .admin-inspection-review-thumbnails button.is-active {
   outline: 2px solid #0b94f5;
   outline-offset: 1px;

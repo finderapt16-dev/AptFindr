@@ -18,6 +18,7 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
   const roomPrices = rooms.map((room) => Number(room.price || 0)).filter((price) => price > 0);
   const lowestPrice = roomPrices.length ? Math.min(...roomPrices) : Number(apartment.price || 0);
   const highestPrice = roomPrices.length ? Math.max(...roomPrices) : Number(apartment.price || 0);
+  const priceRange = lowestPrice ? `₱${amount(lowestPrice)}${highestPrice && highestPrice !== lowestPrice ? `-₱${amount(highestPrice)}` : ""} / month` : "Price not set";
   const landlordAvatarUrl = String(landlord?.avatar_url ?? landlord?.avatar ?? "").trim();
   const submitRequest = async () => {
     if (!message.trim()) return;
@@ -45,7 +46,7 @@ export function AdminApartmentInspectionReview({ apartment, images, rooms, landl
               {images.length > 1 && <div className="admin-inspection-review-thumbnails">{images.slice(0, 4).map((image, index) => <button type="button" key={`${image}-thumbnail-${index}`} onClick={() => onSelectImage(index)}><ImageWithFallback src={image} alt={`Property image ${index + 1}`} /></button>)}</div>}
             </div>
             <div className="admin-inspection-review-summary">
-              <div className="admin-inspection-review-title"><div><h3>{apartment.title || "Untitled apartment"}</h3><p>{location}</p></div><span className={isPublished ? "published" : "pending"}>{statusLabel}</span></div>
+              <div className="admin-inspection-review-title"><div><h3>{apartment.title || "Untitled apartment"}</h3><p>{location}</p><p className="admin-inspection-review-listing-meta"><strong>{priceRange}</strong><span aria-hidden="true">•</span><span>Posted on {submittedOn}</span></p></div><span className={isPublished ? "published" : "pending"}>{statusLabel}</span></div>
               <dl>
                 <div><dt>Property Type</dt><dd>{propertyType}</dd></div><div><dt>Total Rooms</dt><dd>{rooms.length || apartment.bedrooms || 0} rooms</dd></div>
                 <div><dt>Price Range</dt><dd>{lowestPrice ? `₱${amount(lowestPrice)}${highestPrice && highestPrice !== lowestPrice ? ` - ₱${amount(highestPrice)}` : ""} / month` : "Not set"}</dd></div>
