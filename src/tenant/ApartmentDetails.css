@@ -1674,6 +1674,8 @@
 /* Tenant-only actions and rating dialog. */
 .tenant-apartment-rate-button,
 .tenant-apartment-favorite-button { min-height: 36px; gap: 7px; border-color: #64748b; color: #1e293b; background: #fff; }
+.tenant-apartment-rate-action { display: grid; justify-items: center; gap: 3px; }
+.tenant-apartment-rate-hint { max-width: 150px; color: #64748b; font-size: 10px; line-height: 1.2; text-align: center; }
 .tenant-apartment-rate-button svg,
 .tenant-apartment-favorite-button svg { width: 18px; height: 18px; }
 .tenant-rating-dialog.ui-dialog-content { width: min(360px, calc(100vw - 32px)); max-width: 360px; padding: 24px; border-radius: 8px; }
@@ -1682,7 +1684,6 @@
 .tenant-rating-stars svg { width: 30px; height: 30px; }
 .tenant-rating-stars .is-selected { fill: #f59e0b; color: #f59e0b; }
 .tenant-rating-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.tenant-rating-actions-with-remove > :first-child { grid-column: 1 / -1; }
 .tenant-rating-success { display: grid; justify-items: center; gap: 16px; padding-top: 12px; text-align: center; }
 .tenant-rating-success svg { width: 44px; height: 44px; color: #4ade80; }
 
@@ -3465,6 +3466,8 @@
     font-weight: 700;
   }
 
+  .tenant-apartment-rate-action { width: 100%; }
+
   .tenant-apartment-rate-button svg { color: #f59e0b; }
   .tenant-apartment-favorite-button svg { color: #f43f5e; }
 
@@ -3722,6 +3725,10 @@
 .tenant-apartment-rate-button svg {
   color: #f59e0b;
   fill: none;
+}
+
+.tenant-apartment-rate-button svg.is-rated {
+  fill: currentColor;
 }
 
 .tenant-apartment-favorite-button svg {

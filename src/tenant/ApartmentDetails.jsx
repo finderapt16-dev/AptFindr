@@ -5,7 +5,7 @@ import { MultiImageUploader } from "@/components/MultiImageUploader";
 import { PropertyLocationPicker } from "@/landlord/PropertyLocationPicker";
 import { apartmentToFormValues } from "@/utils/apartmentMappers";
 import { updateApartment, persistApartmentImages, fetchApartmentDetailAccessState, fetchApartmentWithImages, getLandlordVerification, recordApartmentView } from "@/data/apartments";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { MapView } from "@/components/MapView";
@@ -193,6 +193,7 @@ export function ApartmentDetails() {
     const [ratingOpen, setRatingOpen] = useState(false);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
     const [pendingRating, setPendingRating] = useState(0);
+    const ratingTapTimer = useRef(null);
     const listingUpdatedAt = id ? contextApartments.find((item) => item.id === id)?.updatedAt : undefined;
     const returnTo = (() => {
         const value = routeLocation.state?.returnTo;
@@ -292,6 +293,10 @@ export function ApartmentDetails() {
     const setTenantRating = async (rating) => { if (!apartment || !user?.id)
         return; setRatingSaving(true); try {
         await saveApartmentRating(apartment.id, user.id, rating);
+        setRatings(current => {
+            const withoutCurrentUser = current.filter((entry) => entry.tenant_id !== user.id);
+            return [...withoutCurrentUser, { apartment_id: apartment.id, tenant_id: user.id, rating }];
+        });
         setRatingSubmitted(true);
         toast.success("Rating saved.");
     }
@@ -304,7 +309,9 @@ export function ApartmentDetails() {
     const clearTenantRating = async () => { if (!apartment || !user?.id)
         return; setRatingSaving(true); try {
         await removeApartmentRating(apartment.id, user.id);
+        setRatings(current => current.filter((rating) => rating.tenant_id !== user.id));
         setPendingRating(0);
+        setRatingSubmitted(false);
         setRatingOpen(false);
         toast.success("Rating removed.");
     }
@@ -314,6 +321,28 @@ export function ApartmentDetails() {
     finally {
         setRatingSaving(false);
     } };
+    const openRatingDialog = () => {
+        setPendingRating(currentRating);
+        setRatingSubmitted(false);
+        setRatingOpen(true);
+    };
+    const handleRateButtonClick = () => {
+        if (ratingSaving) return;
+        if (!currentRating) return openRatingDialog();
+        if (ratingTapTimer.current) {
+            window.clearTimeout(ratingTapTimer.current);
+            ratingTapTimer.current = null;
+            void clearTenantRating();
+            return;
+        }
+        ratingTapTimer.current = window.setTimeout(() => {
+            ratingTapTimer.current = null;
+            openRatingDialog();
+        }, 280);
+    };
+    useEffect(() => () => {
+        if (ratingTapTimer.current) window.clearTimeout(ratingTapTimer.current);
+    }, []);
     const handleBack = () => {
         if (landlordMarketDetail)
             return navigate("/browse");
@@ -431,7 +460,7 @@ export function ApartmentDetails() {
             : <div className="apartment-detail-panel"><Sidebar active="apartments" unreadCount={unreadCount}/></div>}
       {mobileNav && !renter && <div className="app-sidebar-overlay"><button aria-label="Close navigation" className="apartment-detail-close-navigation" onClick={() => setMobileNav(false)}/><div className="app-sidebar-drawer is-open">{renderSidebar()}<button aria-label="Close navigation" onClick={() => setMobileNav(false)} className="app-sidebar-close"><X className="apartment-detail-x-icon"/></button></div></div>}
       <div className="app-shell-main"><main className="app-shell-content app-shell-content-mobile-nav"><div className="apartment-detail-container">
-        <div className="apartment-detail-content apartment-detail-mobile-actions"><div className="apartment-detail-row"><Button variant="ghost" onClick={handleBack} className={`apartment-detail-button ${landlordPortal ? "apartment-detail-button-2" : ""}`}><ArrowLeft className="apartment-detail-arrow-left-icon"/><span className="apartment-detail-span">{landlordMarketDetail ? "Back to Market Overview" : backLabel ?? (ownListing ? "Back to My Properties" : "Back to Browse")}</span></Button></div><div className="apartment-detail-row-2">{tenantAccount && <><Button variant="outline" onClick={() => { setPendingRating(currentRating); setRatingSubmitted(false); setRatingOpen(true); }} className="tenant-apartment-rate-button"><Star/>Rate</Button><Button variant="outline" onClick={() => void toggleFavorite(apartment.id)} title={favorite ? "Remove favorite" : "Add favorite"} className="tenant-apartment-favorite-button"><Heart className={`apartment-detail-heart-icon ${favorite ? "apartment-detail-heart-icon-2" : ""}`}/>{favorite ? "Favorited" : "Favorite"}</Button></>}</div></div>
+        <div className="apartment-detail-content apartment-detail-mobile-actions"><div className="apartment-detail-row"><Button variant="ghost" onClick={handleBack} className={`apartment-detail-button ${landlordPortal ? "apartment-detail-button-2" : ""}`}><ArrowLeft className="apartment-detail-arrow-left-icon"/><span className="apartment-detail-span">{landlordMarketDetail ? "Back to Market Overview" : backLabel ?? (ownListing ? "Back to My Properties" : "Back to Browse")}</span></Button></div><div className="apartment-detail-row-2">{tenantAccount && <><div className="tenant-apartment-rate-action"><Button variant="outline" onClick={handleRateButtonClick} className="tenant-apartment-rate-button" title={currentRating > 0 ? "Double tap to remove your rating" : "Rate this apartment"}><Star className={currentRating > 0 ? "is-rated" : ""} fill={currentRating > 0 ? "currentColor" : "none"}/>Rate</Button>{currentRating > 0 && <span className="tenant-apartment-rate-hint">Double tap to remove your rating</span>}</div><Button variant="outline" onClick={() => void toggleFavorite(apartment.id)} title={favorite ? "Remove favorite" : "Add favorite"} className="tenant-apartment-favorite-button"><Heart className={`apartment-detail-heart-icon ${favorite ? "apartment-detail-heart-icon-2" : ""}`}/>{favorite ? "Favorited" : "Favorite"}</Button></>}</div></div>
 
         <header className="apartment-detail-header"><div className="apartment-detail-panel-2">
             <InlinePropertyInfo label="Apartment name" fields={[{ key: "title", label: "Apartment name", required: true }]} apartment={apartment} enabled={editableInfo} onSave={savePropertyInfo}>
@@ -551,6 +580,6 @@ export function ApartmentDetails() {
           </div>
         </div>
       </div>}
-      <Dialog open={ratingOpen} onOpenChange={setRatingOpen}><DialogContent className="tenant-rating-dialog"><DialogHeader><DialogTitle>{ratingSubmitted ? "Rating Submitted" : `Rate ${apartment.title || "this apartment"}`}</DialogTitle><DialogDescription>{ratingSubmitted ? "Thank you for rating this apartment." : "How would you rate this apartment?"}</DialogDescription></DialogHeader>{ratingSubmitted ? <div className="tenant-rating-success"><CheckCircle2/><Button onClick={() => setRatingOpen(false)}>Close</Button></div> : <><div className="tenant-rating-stars">{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`Rate ${value} stars`} onClick={() => setPendingRating(value)}><Star className={value <= pendingRating ? "is-selected" : ""}/><span>{value}</span></button>)}</div><div className={`tenant-rating-actions ${currentRating > 0 ? "tenant-rating-actions-with-remove" : ""}`}>{currentRating > 0 && <Button variant="outline" onClick={() => void clearTenantRating()} disabled={ratingSaving}>Remove Rating</Button>}<Button variant="outline" onClick={() => setRatingOpen(false)} disabled={ratingSaving}>Cancel</Button><Button onClick={() => void setTenantRating(pendingRating)} disabled={ratingSaving || !pendingRating}>{ratingSaving ? "Submitting..." : "Submit Rating"}</Button></div></>}</DialogContent></Dialog>
+      <Dialog open={ratingOpen} onOpenChange={setRatingOpen}><DialogContent className="tenant-rating-dialog"><DialogHeader><DialogTitle>{ratingSubmitted ? "Rating Submitted" : `Rate ${apartment.title || "this apartment"}`}</DialogTitle><DialogDescription>{ratingSubmitted ? "Thank you for rating this apartment." : "How would you rate this apartment?"}</DialogDescription></DialogHeader>{ratingSubmitted ? <div className="tenant-rating-success"><CheckCircle2/><Button onClick={() => setRatingOpen(false)}>Close</Button></div> : <><div className="tenant-rating-stars">{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`Rate ${value} stars`} onClick={() => setPendingRating(value)}><Star className={value <= pendingRating ? "is-selected" : ""}/><span>{value}</span></button>)}</div><div className="tenant-rating-actions"><Button variant="outline" onClick={() => setRatingOpen(false)} disabled={ratingSaving}>Cancel</Button><Button onClick={() => void setTenantRating(pendingRating)} disabled={ratingSaving || !pendingRating}>{ratingSaving ? "Submitting..." : "Submit Rating"}</Button></div></>}</DialogContent></Dialog>
     </div>);
 }
