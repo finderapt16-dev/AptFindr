@@ -1,6 +1,7 @@
 import { Suspense } from "react";
+import { AppLoadingScreen } from "./AppLoadingScreen";
 export function PageLoader({ children }) {
-    return (<Suspense fallback={<div className="page-loader-fallback">Loading page...</div>}>
+    return (<Suspense fallback={<AppLoadingScreen/>}>
       {children}
     </Suspense>);
 }

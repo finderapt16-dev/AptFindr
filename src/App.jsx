@@ -2,6 +2,7 @@ import { lazy, useEffect, useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router-dom";
 import { AppRuntime } from "./components/AppRuntime";
 import { PageLoader } from "./components/PageLoader";
+import { AppLoadingScreen } from "./components/AppLoadingScreen";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { ApartmentsProvider } from "./contexts/ApartmentsContext";
 import { Root } from "./components/Root";
@@ -64,7 +65,7 @@ function PublicLandingRoute() {
         if (!isLoading) setInitialCheckDone(true);
     }, [isLoading]);
     if (location.pathname === "/login" && isLoading && !initialCheckDone) {
-        return <div className="auth-status-page auth-session-loading">Checking your session...</div>;
+        return <AppLoadingScreen label="Checking your session" detail="Making sure your account is ready."/>;
     }
     if (location.pathname === "/login" && user?.role) {
         const destination = dashboardPathForRole(user.role);

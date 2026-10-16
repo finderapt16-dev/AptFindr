@@ -2,12 +2,11 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { dashboardPathForRole } from "../services/authService";
 import { SuperAdminMfaGate } from "./SuperAdminMfaGate";
+import { AppLoadingScreen } from "../components/AppLoadingScreen";
 export default function ProtectedRoute({ children, allowedRoles }) {
     const { user, isAuthenticated, isLoading } = useAuth();
     if (isLoading) {
-        return (<div className="auth-status-page auth-session-loading">
-        Checking your session...
-      </div>);
+        return <AppLoadingScreen label="Checking your session" detail="Making sure your account is ready."/>;
     }
     if (!isAuthenticated) {
         // Returning to a protected browser-history entry after sign-out should

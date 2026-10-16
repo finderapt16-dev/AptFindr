@@ -4,6 +4,7 @@ import { ApartmentsProvider } from "../contexts/ApartmentsContext";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchMaintenanceSettings, isMaintenanceActive, subscribeToMaintenanceSettings } from "@/services/maintenanceService";
 import { useEffect, useState } from "react";
+import { AppLoadingScreen } from "./AppLoadingScreen";
 function RootContent() {
     const location = useLocation();
     const outlet = useOutlet();
@@ -58,7 +59,7 @@ function RootContent() {
           <div className="app-root-orb app-root-orb-bottom"/>
         </div>)}
       <main key={location.pathname}>
-        {!maintenanceReady ? <div className="auth-status-page auth-session-loading">Checking portal availability...</div> : maintenanceActive ? <div className="maintenance-page"><section className="maintenance-card"><img className="maintenance-wordmark" src="/aptfindr-wordmark.png?v=2" alt="AptFindr"/><h1 className="maintenance-title">{maintenance.title || "Under Maintenance"}</h1><p className="maintenance-message">{maintenance.message || "We're currently performing scheduled maintenance to improve your experience."}</p><p className="maintenance-followup">Please check back again shortly.</p>{maintenance.ends_at && <p className="maintenance-time">Expected availability: {new Date(maintenance.ends_at).toLocaleString("en-PH")}</p>}<div className="maintenance-actions"><button type="button" className="maintenance-home" onClick={() => void returnHome()}>Back to Home</button><button type="button" className="maintenance-refresh" onClick={() => window.location.reload()}>Refresh Page</button></div><footer className="maintenance-footer">Thank you for your patience.</footer></section></div> : outlet}
+        {!maintenanceReady ? <AppLoadingScreen label="Checking portal availability" detail="Confirming that this portal is ready to use."/> : maintenanceActive ? <div className="maintenance-page"><section className="maintenance-card"><img className="maintenance-wordmark" src="/aptfindr-wordmark.png?v=2" alt="AptFindr"/><h1 className="maintenance-title">{maintenance.title || "Under Maintenance"}</h1><p className="maintenance-message">{maintenance.message || "We're currently performing scheduled maintenance to improve your experience."}</p><p className="maintenance-followup">Please check back again shortly.</p>{maintenance.ends_at && <p className="maintenance-time">Expected availability: {new Date(maintenance.ends_at).toLocaleString("en-PH")}</p>}<div className="maintenance-actions"><button type="button" className="maintenance-home" onClick={() => void returnHome()}>Back to Home</button><button type="button" className="maintenance-refresh" onClick={() => window.location.reload()}>Refresh Page</button></div><footer className="maintenance-footer">Thank you for your patience.</footer></section></div> : outlet}
       </main>
       <Toaster
         position="top-center"

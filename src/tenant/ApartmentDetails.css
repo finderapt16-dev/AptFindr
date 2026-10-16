@@ -3046,6 +3046,7 @@
 }
 
 .apartment-gallery-fullscreen-image-wrap {
+  position: relative;
   display: grid;
   min-height: min(68vh, 720px);
   max-height: calc(100vh - 130px);
@@ -3062,6 +3063,28 @@
   max-height: calc(100vh - 130px);
   object-fit: contain;
 }
+
+.apartment-gallery-fullscreen-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 999px;
+  background: rgb(15 23 42 / 72%);
+  color: #fff;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.apartment-gallery-fullscreen-arrow:hover { background: rgb(15 23 42 / 92%); }
+.apartment-gallery-fullscreen-arrow:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.apartment-gallery-fullscreen-arrow-left { left: 16px; }
+.apartment-gallery-fullscreen-arrow-right { right: 16px; }
 
 .apartment-property-thumbnails {
   display: grid;
