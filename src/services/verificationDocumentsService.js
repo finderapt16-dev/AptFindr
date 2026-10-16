@@ -116,41 +116,56 @@ export async function removeVerificationDocument(document) {
         throw new Error(storageError.message || "Unable to remove the stored file.");
 }
 
-export async function fetchLandlordBusinessPermits(landlordId) {
-    const [propertiesResult, documentsResult, renewalsResult] = await Promise.all([
-        supabase.from("apartments").select("id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
-        supabase.from("apartment_verification_documents").select("*").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
-        supabase.from("landlord_permit_renewals").select("*").eq("landlord_id", landlordId).order("submitted_at", { ascending: false }),
+async function getAuthenticatedLandlordAccountId() {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError)
+        throw new Error(authError.message || "Unable to verify your session.");
+    const authId = authData.user?.id;
+    if (!authId)
+        throw new Error("Sign in to view business permit information.");
+
+    // `apartments.landlord_id` references the AptFindr account ID, while
+    // Supabase Auth identifies the current session with `auth_id`. Resolve the
+    // former from the authenticated session instead of accepting an ID from UI
+    // state, which also handles legacy accounts where both IDs are the same.
+    let { data: account, error } = await supabase
+        .from("app_users")
+        .select("id, role")
+        .eq("auth_id", authId)
+        .maybeSingle();
+    if (!account && !error) {
+        const legacyResult = await supabase
+            .from("app_users")
+            .select("id, role")
+            .eq("id", authId)
+            .maybeSingle();
+        account = legacyResult.data;
+        error = legacyResult.error;
+    }
+    if (error)
+        throw new Error(error.message || "Unable to identify the signed-in landlord.");
+    if (!account || String(account.role).toLowerCase() !== "landlord")
+        throw new Error("Only the signed-in landlord can view business permit information.");
+    return String(account.id);
+}
+
+export async function fetchLandlordBusinessPermits() {
+    const landlordId = await getAuthenticatedLandlordAccountId();
+    const [propertiesResult, documentsResult] = await Promise.all([
+        supabase.from("apartments").select("id, landlord_id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
+        supabase.from("apartment_verification_documents").select("id, apartment_id, landlord_id, file_name, storage_path, created_at").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
     ]);
     if (propertiesResult.error) throw new Error(propertiesResult.error.message);
     if (documentsResult.error) throw new Error(documentsResult.error.message);
-    if (renewalsResult.error && !["42P01", "PGRST205"].includes(renewalsResult.error.code)) throw new Error(renewalsResult.error.message);
     const properties = propertiesResult.data ?? [];
     const documents = documentsResult.data ?? [];
-    const renewalEntries = await Promise.all((renewalsResult.data ?? []).filter(renewal => renewal.status !== "superseded").map(async renewal => {
-        const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(String(renewal.document_path), 15 * 60);
-        if (error) throw new Error(error.message || "Unable to open business permit.");
-        return {
-            id: String(renewal.id),
-            apartmentId: "",
-            businessName: "Business Permit Renewal",
-            apartmentName: `Permit Year ${renewal.permit_year}`,
-            businessAccount: "",
-            permitNumber: renewal.permit_number || "",
-            permitYear: renewal.permit_year,
-            renewalStatus: renewal.status,
-            issuedAt: renewal.permit_issued_at || "",
-            permitExpiry: renewal.expires_at || "",
-            fileName: renewal.document_name || "",
-            fileSize: null,
-            storagePath: renewal.document_path || "",
-            documentUrl: data?.signedUrl ?? "",
-            submittedAt: renewal.submitted_at || "",
-        };
-    }));
-    const entries = properties.flatMap(property => {
+
+    // Do not trust a document's landlord_id alone. A permit is visible only
+    // when its apartment was fetched as owned by this authenticated landlord.
+    const ownedProperties = properties.filter(property => String(property.landlord_id) === landlordId);
+    const entries = ownedProperties.flatMap(property => {
         const verification = property.features?.verification ?? {};
-        const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id));
+        const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id) && String(document.landlord_id) === landlordId);
         if (!propertyDocuments.length && !verification.businessPermit) return [];
         return (propertyDocuments.length ? propertyDocuments : [null]).map(document => ({
             id: String(document?.id ?? property.id),
@@ -162,7 +177,10 @@ export async function fetchLandlordBusinessPermits(landlordId) {
             issuedAt: verification.dateIssued || verification.issuedAt || "",
             permitExpiry: verification.permitExpiry || "",
             fileName: document?.file_name || "",
-            fileSize: document?.file_size ?? document?.size_bytes ?? null,
+            // File-size columns differ across existing deployments. The permit
+            // viewer already supports an unavailable size, so do not require a
+            // column that is not part of the core document relationship.
+            fileSize: null,
             storagePath: document?.storage_path || "",
         }));
     });
@@ -172,5 +190,5 @@ export async function fetchLandlordBusinessPermits(landlordId) {
         if (error) throw new Error(error.message || "Unable to open business permit.");
         return { ...entry, documentUrl: data?.signedUrl ?? "" };
     }));
-    return [...renewalEntries, ...propertyEntries];
+    return propertyEntries;
 }
