@@ -1058,7 +1058,7 @@ export function AddApartment() {
                         <LocateFixed aria-hidden="true"/>{locatingLiveLocation ? "Finding location..." : "Use my live location"}
                       </Button>
                     </div>
-                    <p className="add-apartment-text-6">Click or drag the map pin to select your apartment's exact location. The address details will update based on your selected point.</p>
+                    <p className="add-apartment-text-6">Click or drag the map pin to select your apartment's exact location. Address details will update from OpenStreetMap. If no street is found, enter it manually in the Street field.</p>
                     <div className="add-apartment-card-7">
                       <PropertyLocationPicker lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {
                 setFormData((current) => ({
