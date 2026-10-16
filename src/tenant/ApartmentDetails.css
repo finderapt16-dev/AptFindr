@@ -1682,6 +1682,7 @@
 .tenant-rating-stars svg { width: 30px; height: 30px; }
 .tenant-rating-stars .is-selected { fill: #f59e0b; color: #f59e0b; }
 .tenant-rating-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tenant-rating-actions-with-remove > :first-child { grid-column: 1 / -1; }
 .tenant-rating-success { display: grid; justify-items: center; gap: 16px; padding-top: 12px; text-align: center; }
 .tenant-rating-success svg { width: 44px; height: 44px; color: #4ade80; }
 
@@ -3260,6 +3261,7 @@
 .landlord-view-property-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(290px, .8fr); gap: 18px; align-items: start; }
 .landlord-view-left, .landlord-view-right { display: grid; gap: 14px; }.landlord-view-card { padding: 15px; border: 1px solid #dce3ea; border-radius: 8px; background: #fff; }.landlord-view-card h2 { margin: 0; font-size: 15px; }.landlord-view-card > p { margin: 3px 0 10px; color: #718096; font-size: 11px; }
 .landlord-view-main-photo { position: relative; height: 300px; overflow: hidden; border-radius: 6px; background: #a9a9a9; }.landlord-view-main-photo img { width: 100%; height: 100%; object-fit: cover; }.landlord-view-main-photo > svg { position: absolute; inset: 0; width: 44px; height: 44px; margin: auto; color: #fff; }
+.landlord-view-expand { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; width: 40px; height: 40px; padding: 0; place-items: center; border: 1px solid rgb(255 255 255 / 36%); border-radius: 50%; background: rgb(15 23 42 / 70%); color: #fff; box-shadow: 0 2px 8px rgb(15 23 42 / 28%); cursor: pointer; backdrop-filter: blur(4px); }.landlord-view-expand:hover { background: rgb(15 23 42 / 86%); }.landlord-view-expand:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
 .landlord-view-arrow { position: absolute; top: 50%; display: grid; place-items: center; width: 27px; height: 27px; padding: 0; border: 1px solid #7890a2; border-radius: 50%; background: rgb(255 255 255 / .65); color: #547080; transform: translateY(-50%); cursor: pointer; }.landlord-view-arrow svg { width: 17px; height: 17px; }.landlord-view-arrow.is-left { left: 8px; }.landlord-view-arrow.is-right { right: 8px; }
 .landlord-view-thumbnails { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }.landlord-view-thumbnails button { height: 86px; overflow: hidden; padding: 0; border: 1px solid #dce3ea; border-radius: 5px; background: #aaa; cursor: pointer; }.landlord-view-thumbnails button.is-active { border: 2px solid #16a5e1; }.landlord-view-thumbnails img { width: 100%; height: 100%; object-fit: cover; }
 .landlord-view-card input, .landlord-view-card textarea { width: 100%; border: 1px solid #d6dee7; border-radius: 5px; background: #fff; color: #334155; font: inherit; font-size: 12px; box-sizing: border-box; }.landlord-view-card input { height: 35px; padding: 0 10px; }.landlord-view-card textarea { min-height: 82px; padding: 10px; resize: none; line-height: 1.45; }
@@ -3755,11 +3757,11 @@
   min-height: 32px;
   margin-top: 6px;
   padding: 4px 12px !important;
-  border-color: #93c5fd;
+  border-color: #86efac;
   border-width: 2px;
   border-radius: 9px;
-  background: #eff6ff;
-  color: #0284c7;
+  background: #f0fdf4;
+  color: #16a34a;
   font-size: 14px;
   font-weight: 700;
   line-height: 18px;
@@ -3769,21 +3771,14 @@
 }
 
 :is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge .verified-badge-seal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 19px;
-  width: 19px;
-  height: 19px;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  background: #fff;
+  display: none;
 }
 
 :is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge .verified-badge-check {
   display: block;
   width: 12px;
   height: 12px;
+  stroke-width: 3;
 }
 
 :is(.market-trends-detail, .tenant-detail-colors) .apartment-detail-verified-badge > span:last-child {

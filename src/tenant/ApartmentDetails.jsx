@@ -46,6 +46,7 @@ const listFromUnknown = (value) => Array.isArray(value)
 function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, locationText, mapPinAvailable, rules, navigate, onBack, user, onLogout }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
+    const [galleryExpanded, setGalleryExpanded] = useState(false);
     const roomsForDisplay = sortRoomsByAvailability(apartment.rooms ?? []);
     const navigateToDashboardSection = (section) =>
         navigate(section === "overview" ? "/landlord/dashboard" : `/landlord/dashboard?section=${section}`);
@@ -91,7 +92,7 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
             </header>
             <div className="landlord-view-property-grid">
               <div className="landlord-view-left">
-                <section className="landlord-view-card landlord-view-gallery"><h2>Apartment Photos</h2><p>Last updated apartment photos</p><div className="landlord-view-main-photo">{images[imageIndex] ? <img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} photo ${imageIndex + 1}`}/> : <Building2/>}{images.length > 1 && <><button type="button" aria-label="Previous apartment image" className="photo-navigation-arrow landlord-view-arrow is-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)}><ChevronLeft/></button><button type="button" aria-label="Next apartment image" className="photo-navigation-arrow landlord-view-arrow is-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)}><ChevronRight/></button></>}</div><div className="landlord-view-thumbnails">{Array.from({ length: Math.max(4, images.length) }, (_, index) => <button type="button" key={index} className={index === imageIndex ? "is-active" : ""} onClick={() => images[index] && setImageIndex(index)}>{images[index] ? <img src={images[index]} alt={`Apartment thumbnail ${index + 1}`}/> : null}</button>)}</div></section>
+                <section className="landlord-view-card landlord-view-gallery"><h2>Apartment Photos</h2><p>Last updated apartment photos</p><div className="landlord-view-main-photo">{images[imageIndex] ? <><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} photo ${imageIndex + 1}`}/><button type="button" className="landlord-view-expand" onClick={() => setGalleryExpanded(true)} aria-label="View apartment image full screen" title="View full screen"><Maximize size={18}/></button></> : <Building2/>}{images.length > 1 && <><button type="button" aria-label="Previous apartment image" className="photo-navigation-arrow landlord-view-arrow is-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)}><ChevronLeft/></button><button type="button" aria-label="Next apartment image" className="photo-navigation-arrow landlord-view-arrow is-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)}><ChevronRight/></button></>}</div><div className="landlord-view-thumbnails">{Array.from({ length: Math.max(4, images.length) }, (_, index) => <button type="button" key={index} className={index === imageIndex ? "is-active" : ""} onClick={() => images[index] && setImageIndex(index)}>{images[index] ? <img src={images[index]} alt={`Apartment thumbnail ${index + 1}`}/> : null}</button>)}</div></section>
                 
                 <section className="landlord-view-card landlord-view-location"><h2>Location</h2><p>Locate the apartment's location on the map.</p><div className="landlord-view-address"><label>Address<input value={apartment.address || "Not specified"} readOnly/></label><label>City / ZIP<input value={[apartment.city, apartment.zip].filter(Boolean).join(", ") || "Not specified"} readOnly/></label></div>{mapPinAvailable ? <div className="landlord-view-map"><MapView lat={apartment.lat} lng={apartment.lng} zoom={15} showSingleMarker/></div> : <div className="landlord-view-map-empty"><MapPin/><span>{locationText}</span></div>}</section>
               </div>
@@ -108,6 +109,12 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
               </div>
             </div>
       {selectedRoom && <RoomDetails room={roomsForDisplay.find(room => room.id === selectedRoom.id) ?? selectedRoom} apartment={apartment} onClose={() => setSelectedRoom(null)} />}
+      <Dialog open={galleryExpanded} onOpenChange={setGalleryExpanded}>
+        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>{apartment.title || "Apartment"} photo {imageIndex + 1}{images.length > 1 ? ` of ${images.length}` : ""}</DialogTitle></DialogHeader>
+          <div className="apartment-gallery-fullscreen-image-wrap"><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} photo ${imageIndex + 1} full screen`}/></div>
+        </DialogContent>
+      </Dialog>
     </div>;
 }
 
@@ -297,6 +304,8 @@ export function ApartmentDetails() {
     const clearTenantRating = async () => { if (!apartment || !user?.id)
         return; setRatingSaving(true); try {
         await removeApartmentRating(apartment.id, user.id);
+        setPendingRating(0);
+        setRatingOpen(false);
         toast.success("Rating removed.");
     }
     catch (error) {
@@ -477,7 +486,6 @@ export function ApartmentDetails() {
                                             </div>
                                             <span>{averageRating.toFixed(1)}</span>
                                         </> : <span>No tenant ratings yet</span>}
-                                        {currentRating > 0 && <button type="button" disabled={ratingSaving} onClick={() => void clearTenantRating()} className="apartment-detail-remove-my-rating">Remove my rating</button>}
                                     </div>}
                                 </div>
                             </div>
@@ -506,7 +514,7 @@ export function ApartmentDetails() {
           </InlinePropertyInfo>
           <section className="apartment-detail-section-3 apartment-detail-contract-duration"><h2>Contract Duration</h2><div className="apartment-detail-house-rule-list"><span>{contractDuration}</span></div></section>
           <section className="apartment-detail-section-3"><h2 className="apartment-detail-utilities-title">Utilities Included</h2><div className="apartment-detail-utilities">{(includedUtilities.length ? includedUtilities : ["No utilities included."]).map((utility) => <span key={utility}>{utility}</span>)}</div></section>
-          {renter && <section className="apartment-detail-section-5 tenant-apartment-rating-summary"><h2 className="apartment-detail-tenant-rating">Tenant Rating</h2><p className="apartment-detail-text-12">{ratings.length ? `★ ${averageRating.toFixed(1)} based on ${ratings.length} rating${ratings.length === 1 ? "" : "s"}` : "No ratings yet"}</p>{currentRating > 0 && <button type="button" disabled={ratingSaving} onClick={() => void clearTenantRating()} className="apartment-detail-remove-my-rating">Remove my rating</button>}</section>}
+          {renter && <section className="apartment-detail-section-5 tenant-apartment-rating-summary"><h2 className="apartment-detail-tenant-rating">Tenant Rating</h2><p className="apartment-detail-text-12">{ratings.length ? `★ ${averageRating.toFixed(1)} based on ${ratings.length} rating${ratings.length === 1 ? "" : "s"}` : "No ratings yet"}</p></section>}
           {renter && <section className="apartment-detail-section-6"><div className="apartment-detail-row-9"><AlertTriangle className="apartment-detail-alert-triangle-icon-2"/><div className="apartment-detail-panel-2"><h2 className="apartment-detail-report-a-problem">Report a Problem</h2><p className="apartment-detail-text-13">Let us know about any issues you encountered with an apartment listing.</p></div></div><Button variant="outline" onClick={() => navigate(`/tenant/dashboard?section=report&apartment=${encodeURIComponent(apartment.id)}`)} className="apartment-detail-report-a-problem-2">Report a Problem</Button></section>}
         </aside></div>
       </div></main>
@@ -543,6 +551,6 @@ export function ApartmentDetails() {
           </div>
         </div>
       </div>}
-      <Dialog open={ratingOpen} onOpenChange={setRatingOpen}><DialogContent className="tenant-rating-dialog"><DialogHeader><DialogTitle>{ratingSubmitted ? "Rating Submitted" : `Rate ${apartment.title || "this apartment"}`}</DialogTitle><DialogDescription>{ratingSubmitted ? "Thank you for rating this apartment." : "How would you rate this apartment?"}</DialogDescription></DialogHeader>{ratingSubmitted ? <div className="tenant-rating-success"><CheckCircle2/><Button onClick={() => setRatingOpen(false)}>Close</Button></div> : <><div className="tenant-rating-stars">{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`Rate ${value} stars`} onClick={() => setPendingRating(value)}><Star className={value <= pendingRating ? "is-selected" : ""}/><span>{value}</span></button>)}</div><div className="tenant-rating-actions"><Button variant="outline" onClick={() => setRatingOpen(false)} disabled={ratingSaving}>Cancel</Button><Button onClick={() => void setTenantRating(pendingRating)} disabled={ratingSaving || !pendingRating}>{ratingSaving ? "Submitting..." : "Submit Rating"}</Button></div></>}</DialogContent></Dialog>
+      <Dialog open={ratingOpen} onOpenChange={setRatingOpen}><DialogContent className="tenant-rating-dialog"><DialogHeader><DialogTitle>{ratingSubmitted ? "Rating Submitted" : `Rate ${apartment.title || "this apartment"}`}</DialogTitle><DialogDescription>{ratingSubmitted ? "Thank you for rating this apartment." : "How would you rate this apartment?"}</DialogDescription></DialogHeader>{ratingSubmitted ? <div className="tenant-rating-success"><CheckCircle2/><Button onClick={() => setRatingOpen(false)}>Close</Button></div> : <><div className="tenant-rating-stars">{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" aria-label={`Rate ${value} stars`} onClick={() => setPendingRating(value)}><Star className={value <= pendingRating ? "is-selected" : ""}/><span>{value}</span></button>)}</div><div className={`tenant-rating-actions ${currentRating > 0 ? "tenant-rating-actions-with-remove" : ""}`}>{currentRating > 0 && <Button variant="outline" onClick={() => void clearTenantRating()} disabled={ratingSaving}>Remove Rating</Button>}<Button variant="outline" onClick={() => setRatingOpen(false)} disabled={ratingSaving}>Cancel</Button><Button onClick={() => void setTenantRating(pendingRating)} disabled={ratingSaving || !pendingRating}>{ratingSaving ? "Submitting..." : "Submit Rating"}</Button></div></>}</DialogContent></Dialog>
     </div>);
 }
