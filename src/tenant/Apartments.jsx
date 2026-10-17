@@ -1346,22 +1346,15 @@ if (browseMode === "popular") {
                     <main className="app-shell-main">
                         <div className="app-shell-content app-shell-content-mobile-nav">
                             <section className="apartment-browse-section-3">
-    <div className="apartment-browse-panel-11">
-        <h1 className="apartment-browse-available-apartments">
-            Available Apartments
-        </h1>
+ <div className="apartment-browse-panel-11">
+    <h1 className="apartment-browse-available-apartments">
+        Apartments in La Paz
+    </h1>
 
-        <p className="apartment-browse-text-7">
-            {activeNearbySearch
-                ? `${filteredApartments.length} apartments within 500 m of ${activeNearbySearch.target} · nearest first`
-                : `${filteredApartments.length} ${
-                      filteredApartments.length === 1
-                          ? "apartment"
-                          : "apartments"
-                  } found in La Paz`}
-        </p>
-
-    </div>
+    <p className="apartment-browse-text-7">
+        Browse verified monthly rentals within La Paz, Iloilo City
+    </p>
+</div>
 </section>
 
         {/* Search is intentionally outside the Available Apartments section. */}

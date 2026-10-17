@@ -11,7 +11,7 @@ const mainItems = [
 ];
 
 const manageItems = [
-  { label: "Add Property", section: "add-property", icon: CirclePlus, href: "/add-apartment" },
+  { label: "Add Apartment", section: "add-apartment", icon: CirclePlus, href: "/add-apartment" },
 ];
 
 const accountItems = [
