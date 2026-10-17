@@ -45,13 +45,11 @@
   padding: 16px 20px;
 }
 
-/* The full case-file layout usually fits on tall desktop screens. On shorter
-   screens it must remain reachable, so allow normal vertical page scrolling
-   while keeping horizontal overflow out of the review workspace. */
-@media (min-width: 761px) {
+/* Appeal Details is a compact desktop workspace. Its content is sized to fit
+   the viewport rather than creating an internal page scrollbar. */
+@media (min-width: 901px) {
   .admin-portal-shell.admin-appeal-review-shell .app-shell-main {
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow: hidden !important;
   }
 }
 
@@ -1595,4 +1593,354 @@
   .admin-portal-shell .admin-dashboard-section-10 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Admin navigation — matched to the supplied Figma reference. */
+@media (min-width: 761px) {
+  .admin-portal-shell .app-shell-sidebar {
+    width: 256px !important;
+    min-width: 256px !important;
+    background: #ffffff !important;
+    border-right: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+.admin-portal-shell .app-sidebar.admin-figma-sidebar {
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 16px !important;
+  color: #1f1f1f !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-brand {
+  width: 160px;
+  height: 50px;
+  padding: 0 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-brand img {
+  display: block;
+  width: 160px;
+  height: 50px;
+  max-height: none;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.admin-portal-shell .admin-figma-sidebar-profile {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 68px;
+  margin-top: 20px;
+  padding: 16px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  background: #0ea5e9;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-profile-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-profile-copy strong {
+  color: #1f1f1f !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 15px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-profile-copy small {
+  color: #6b7280 !important;
+  font-size: 10px !important;
+  line-height: 12px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group {
+  width: 100%;
+  padding: 0 !important;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 0 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-profile + .admin-figma-sidebar-group {
+  margin-top: 40px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group + .admin-figma-sidebar-group {
+  margin-top: 32px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group > p {
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  color: #6b7280 !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 0 !important;
+  text-transform: uppercase;
+}
+
+.admin-portal-shell .admin-figma-sidebar-group > p::after,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item::before {
+  content: none !important;
+  display: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px !important;
+  color: #1f1f1f !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 400;
+  line-height: 15px;
+  transform: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item > svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 16px;
+  color: #111111 !important;
+  stroke-width: 1.8;
+  transform: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active {
+  color: #0ea5e9 !important;
+  background: #f0f9ff !important;
+  border-color: #bae6fd !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item:hover > svg,
+.admin-portal-shell .admin-figma-sidebar .admin-figma-sidebar-item.is-active > svg {
+  color: #0ea5e9 !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-item small {
+  min-width: 16px;
+  height: 16px;
+  margin-left: auto;
+  padding: 0 5px;
+  color: #ffffff;
+  background: #0ea5e9;
+  border: 0;
+  font-size: 10px;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout {
+  width: 100%;
+  padding: 0 !important;
+  margin-top: auto;
+  position: static;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #1f1f1f !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 15px;
+  transform: none !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button svg {
+  width: 16px;
+  height: 16px;
+  color: #111111 !important;
+  stroke-width: 1.8;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button:hover {
+  color: #0ea5e9 !important;
+  background: #f0f9ff !important;
+  border-color: #bae6fd !important;
+}
+
+.admin-portal-shell .admin-figma-sidebar-logout .admin-figma-sidebar-logout-button:hover svg {
+  color: #0ea5e9 !important;
+}
+
+/* Notifications: spacious inbox layout based on the approved admin reference. */
+.admin-portal-shell .admin-dashboard-container-3 {
+  width: min(calc(100% - 64px), 1400px);
+  max-width: 1400px;
+  margin: 12px auto 40px;
+}
+.admin-portal-shell .admin-dashboard-container-3 > header {
+  min-height: 136px;
+  margin: 0 0 24px;
+  padding: 32px 64px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+}
+.admin-portal-shell .admin-dashboard-notifications {
+  color: #09090b;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+.admin-portal-shell .admin-dashboard-text-6 {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+}
+.admin-portal-shell .admin-dashboard-section-5 { overflow: visible; }
+.admin-portal-shell .admin-dashboard-notification-toolbar {
+  min-height: 48px;
+  height: 48px;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.admin-portal-shell .admin-dashboard-card-2 { gap: 8px; }
+.admin-portal-shell .admin-dashboard-button-7 {
+  min-width: 115px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-portal-shell .admin-dashboard-card-2 .admin-dashboard-button-7:nth-child(2) { min-width: 115px; }
+.admin-portal-shell .admin-dashboard-button-7 .admin-dashboard-icon-icon-3,
+.admin-portal-shell .admin-dashboard-button-6 .admin-dashboard-check-check-icon { display: none; }
+.admin-portal-shell .admin-dashboard-button-8 { background: #16a5e1; color: #fff; }
+.admin-portal-shell .admin-dashboard-button-9 { border: 1px solid #d1d5db; background: #fff; color: #111827; }
+.admin-portal-shell .admin-dashboard-button-6 {
+  min-width: 156px;
+  height: 48px;
+  padding: 0 20px;
+  border-color: #d1d5db;
+  border-radius: 10px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-portal-shell .admin-dashboard-card-3 {
+  overflow: hidden;
+  border: 1px solid #d9dee5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: none;
+}
+.admin-portal-shell .admin-dashboard-article-2 {
+  position: relative;
+  display: block;
+  min-height: 77px;
+  padding: 14px 128px 14px 20px;
+  border-bottom: 1px solid #cbd5df;
+  background: #fff;
+}
+.admin-portal-shell .admin-dashboard-article-2:last-child { border-bottom: 0; }
+.admin-portal-shell .admin-dashboard-article-3 { background: #eaf5ff; }
+.admin-portal-shell .admin-dashboard-article-2:hover { background: #f8fbfd; }
+.admin-portal-shell .admin-dashboard-article-3:hover { background: #e1f1fc; }
+.admin-portal-shell .admin-dashboard-panel-7 { display: block; min-width: 0; }
+.admin-portal-shell .admin-dashboard-unread,
+.admin-portal-shell .admin-dashboard-row-18 { display: none; }
+.admin-portal-shell .admin-dashboard-heading,
+.admin-portal-shell .admin-dashboard-heading-2,
+.admin-portal-shell .admin-dashboard-heading-3 {
+  margin: 0;
+  color: #09090b;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.admin-portal-shell .admin-dashboard-text-8 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #68758a;
+  font-size: 14px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-portal-shell .admin-dashboard-notification-date {
+  position: absolute;
+  top: 50%;
+  right: 76px;
+  display: block;
+  margin: 0;
+  color: #68758a;
+  font-size: 14px;
+  line-height: 20px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.admin-portal-shell .admin-dashboard-row-20 {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+}
+.admin-portal-shell .admin-dashboard-row-20 > :not(.admin-notification-menu-trigger) { display: none; }
+.admin-portal-shell .admin-notification-menu-trigger {
+  width: 28px;
+  height: 36px;
+  padding: 0;
+  border-radius: 6px;
+  color: #64748b;
+}
+.admin-portal-shell .admin-notification-menu-trigger:hover { background: #edf5f9; color: #0f172a; }
+
+@media (max-width: 760px) {
+  .admin-portal-shell .admin-dashboard-container-3 { width: calc(100% - 24px); margin: 12px; }
+  .admin-portal-shell .admin-dashboard-container-3 > header { min-height: 0; padding: 24px 20px; }
+  .admin-portal-shell .admin-dashboard-notification-toolbar { height: auto; min-height: 48px; align-items: flex-start; flex-wrap: wrap; }
+  .admin-portal-shell .admin-dashboard-button-6 { margin-left: auto; }
+  .admin-portal-shell .admin-dashboard-article-2 { min-height: 88px; padding: 14px 52px 14px 16px; }
+  .admin-portal-shell .admin-dashboard-notification-date { position: static; margin-top: 4px; transform: none; font-size: 12px; }
+  .admin-portal-shell .admin-dashboard-row-20 { right: 10px; }
 }

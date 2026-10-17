@@ -1,4 +1,5 @@
 import { MapView } from "@/components/MapView";
+import { AppLogo } from "@/components/AppLogo";
 import { AdminApartmentInspectionReview } from "@/superadmin/SuperAdminApartmentInspectionReview";
 import { AdminSidebar } from "@/superadmin/SuperAdminSidebar";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
@@ -635,7 +636,7 @@ export function AdminApartmentDetail() {
             <button type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger"><Menu className="admin-apartment-detail-menu-icon" /></button>
             <div className="app-shell-main"><main className="app-shell-content app-shell-content-mobile-nav admin-inspection-loading-page">
               <div className="admin-inspection-loading" role="status" aria-live="polite">
-                <span className="admin-inspection-loading-mark"><Building2 aria-hidden="true" /></span>
+                <span className="admin-inspection-loading-mark"><AppLogo className="admin-inspection-loading-logo" /></span>
                 <strong>Loading apartment details</strong>
                 <p>Preparing the listing for review…</p>
                 <span className="admin-inspection-loading-bar" aria-hidden="true"><i /></span>
@@ -764,7 +765,7 @@ export function AdminApartmentDetail() {
         { label: "Appeals", section: "appeals", icon: AlertTriangle },
     ];
     const Sidebar = () => <div className="admin-apartment-detail-content">
-    <div className="admin-apartment-detail-panel-3"><div className="admin-apartment-detail-row-2"><span className="admin-apartment-detail-card-4"><img src="/aptfindr-logo.png?v=8" alt="" className="admin-apartment-detail-image" aria-hidden="true"/></span><span><strong className="admin-apartment-detail-apt-findr">AptFindr</strong><small className="admin-apartment-detail-small">{"Admin Portal"}</small></span></div></div>
+    <div className="admin-apartment-detail-panel-3"><div className="admin-apartment-detail-row-2"><span className="admin-apartment-detail-card-4"><img src="/aptfindr-logo.svg" alt="" className="admin-apartment-detail-image" aria-hidden="true"/></span><span><strong className="admin-apartment-detail-apt-findr">AptFindr</strong><small className="admin-apartment-detail-small">{"Admin Portal"}</small></span></div></div>
     <div className="admin-apartment-detail-panel-4"><div className="admin-apartment-detail-card-5"><span className="admin-apartment-detail-row-3">{user?.name?.[0]?.toUpperCase() ?? "A"}</span><span className="admin-apartment-detail-span"><strong className="admin-apartment-detail-strong">{user?.name ?? ("Admin")}</strong><small className="admin-apartment-detail-small-2">{user?.email ?? ""}</small></span><ShieldCheck className="admin-apartment-detail-shield-check-icon"/></div></div>
     <nav className="admin-apartment-detail-nav"><p className="admin-apartment-detail-main">Main</p>{adminNavItems.map(({ label, section, icon: Icon }) => <button key={section} onClick={() => navigateToAdminModule(section)} className={`admin-apartment-detail-button ${section === "apartments" ? "admin-apartment-detail-button-2" : "admin-apartment-detail-button-3"}`}><Icon className="admin-apartment-detail-icon-icon"/>{label}</button>)}</nav>
     <nav className="admin-apartment-detail-nav-2"><p className="admin-apartment-detail-account">Account</p><button onClick={() => navigateToAdminModule("admininfo")} className="admin-apartment-detail-settings"><Settings className="admin-apartment-detail-settings-icon"/>Settings</button></nav>

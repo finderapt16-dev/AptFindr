@@ -130,9 +130,9 @@ function LandlordPropertyView({ apartment, images, imageIndex, setImageIndex, lo
               </div>
             </div>
       <Dialog open={galleryExpanded} onOpenChange={setGalleryExpanded}>
-        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined}>
+        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined} showCloseButton={false}>
           <DialogHeader><DialogTitle>{apartment.title || "Apartment"} photo {imageIndex + 1}{images.length > 1 ? ` of ${images.length}` : ""}</DialogTitle></DialogHeader>
-          <div className="apartment-gallery-fullscreen-image-wrap"><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} photo ${imageIndex + 1} full screen`}/>{images.length > 1 && <><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} aria-label="Previous apartment image"><ChevronLeft/></button><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)} aria-label="Next apartment image"><ChevronRight/></button></>}</div>
+          <div className="apartment-gallery-fullscreen-image-wrap"><button type="button" className="apartment-gallery-fullscreen-close" onClick={() => setGalleryExpanded(false)} aria-label="Close full-screen photo"><X /></button><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} photo ${imageIndex + 1} full screen`}/>{images.length > 1 && <><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} aria-label="Previous apartment image"><ChevronLeft/></button><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)} aria-label="Next apartment image"><ChevronRight/></button></>}</div>
         </DialogContent>
       </Dialog>
     </div>;
@@ -574,9 +574,9 @@ export function ApartmentDetails() {
         </section>
       </div>}
       <Dialog open={galleryExpanded} onOpenChange={setGalleryExpanded}>
-        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined}>
+        <DialogContent className="apartment-gallery-fullscreen-dialog" aria-describedby={undefined} showCloseButton={false}>
           <DialogHeader><DialogTitle>{apartment.title || "Apartment"} photo {imageIndex + 1}{images.length > 1 ? ` of ${images.length}` : ""}</DialogTitle></DialogHeader>
-          <div className="apartment-gallery-fullscreen-image-wrap"><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} image ${imageIndex + 1} full screen`}/>{images.length > 1 && <><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} aria-label="Previous apartment image"><ChevronLeft/></button><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)} aria-label="Next apartment image"><ChevronRight/></button></>}</div>
+          <div className="apartment-gallery-fullscreen-image-wrap"><button type="button" className="apartment-gallery-fullscreen-close" onClick={() => setGalleryExpanded(false)} aria-label="Close full-screen photo"><X /></button><img src={images[imageIndex]} alt={`${apartment.title || "Apartment"} image ${imageIndex + 1} full screen`}/>{images.length > 1 && <><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-left" onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} aria-label="Previous apartment image"><ChevronLeft/></button><button type="button" className="apartment-gallery-fullscreen-arrow apartment-gallery-fullscreen-arrow-right" onClick={() => setImageIndex((imageIndex + 1) % images.length)} aria-label="Next apartment image"><ChevronRight/></button></>}</div>
         </DialogContent>
       </Dialog>
 

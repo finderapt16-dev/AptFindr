@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
-import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
+import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordProfile, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
@@ -21,11 +21,11 @@ import { toast } from "sonner";
 import { AdminApartments } from './AdminApartments';
 import { AdminAppeals } from './AdminAppeals';
 import { AdminLandlordVerification } from './AdminLandlordVerification';
-import { AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
+import { AdminLandlordProfileLoading, AdminLandlordVerificationReview } from './AdminLandlordVerificationReview';
 import { AdminApartmentVerification } from './AdminApartmentVerification';
 import { AdminVerificationDocumentViewer } from './AdminVerificationDocumentViewer';
 import { AdminRequestChangesDialog } from './AdminRequestChangesDialog';
-import { ArchiveEmpty, formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, NotificationEmpty, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
+import { formatOptionalDate, getLandlordVerificationStatus, isAdminModule, NOTICE_TYPES, SettingsField, SettingsSectionTitle, text, toAdminProfileState, toEvidenceItem, VIOLATION_TYPES } from './adminDashboardHelpers';
 import { AdminReports } from './AdminReports';
 import { AdminSidebar } from './AdminSidebar';
 import { useNewApartmentBadge } from "@/admin/useNewApartmentBadge";
@@ -35,8 +35,7 @@ const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map
     try {
         // Match the record shown after clicking "View Verification",
         // including any permit stored with a legacy property submission.
-        const details = await fetchLandlordWithDetails(account.id);
-        const profile = details?.profile;
+        const profile = await fetchLandlordProfile(account.id);
         return {
             ...account,
             business_permit_number: profile?.business_permit_number ?? account.business_permit_number,
@@ -49,12 +48,76 @@ const attachLandlordPermitNumbers = async (accounts) => Promise.all(accounts.map
     }
 }));
 const ADMIN_DASHBOARD_REFRESH_DELAY_MS = 1500;
+const notificationAge = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()))
+        return "";
+    const elapsed = Math.max(0, Date.now() - date.getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1)
+        return "Just now";
+    if (minutes < 60)
+        return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24)
+        return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7)
+        return `${days} ${days === 1 ? "day" : "days"} ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5)
+        return `${weeks} ${weeks === 1 ? "week" : "weeks"} ago`;
+    const months = Math.floor(days / 30);
+    return `${months} ${months === 1 ? "month" : "months"} ago`;
+};
 export function AdminDashboard() {
     const { user, verifyLandlord, updateUser, refreshUsers, logout } = useAuth();
     const navigate = useNavigate();
     const routeLocation = useLocation();
     const portalBasePath = routeLocation.pathname === "/admin" ? "/admin" : "/dashboard";
     const apartmentDetailBasePath = "/admin/apartment";
+    const landlordProfileReturn = (() => {
+        const candidate = routeLocation.state?.landlordProfileReturn;
+        const apartmentId = String(candidate?.apartmentId ?? "").trim();
+        const landlordId = String(candidate?.landlordId ?? "").trim();
+        const reviewPath = String(candidate?.reviewPath ?? "");
+        if (candidate?.source === "admin-apartment-review" && apartmentId && reviewPath === `${apartmentDetailBasePath}/${encodeURIComponent(apartmentId)}`) {
+            return {
+                source: "admin-apartment-review",
+                reviewPath,
+                returnTo: typeof candidate.returnTo === "string" && candidate.returnTo.startsWith("/") ? candidate.returnTo : undefined,
+                backLabel: typeof candidate.backLabel === "string" && candidate.backLabel.trim() ? candidate.backLabel : undefined,
+            };
+        }
+        const appealId = String(candidate?.appealId ?? "").trim();
+        const appealPath = String(candidate?.appealPath ?? "");
+        if (candidate?.source === "appealDetails" && appealId && apartmentId && landlordId && appealPath === "/admin?section=appeals") {
+            return { source: "appealDetails", appealId, apartmentId, landlordId, appealPath };
+        }
+        const reportId = String(candidate?.reportId ?? "").trim();
+        const reportPath = String(candidate?.reportPath ?? "");
+        if (candidate?.source !== "admin-report-details" || !reportId || !apartmentId || !landlordId || reportPath !== "/admin?section=reports")
+            return null;
+        return { source: "admin-report-details", reportId, apartmentId, landlordId, reportPath };
+    })();
+    const reportDetailsReturn = (() => {
+        const candidate = routeLocation.state?.reportDetailsReturn;
+        const reportId = String(candidate?.reportId ?? "").trim();
+        const apartmentId = String(candidate?.apartmentId ?? "").trim();
+        const landlordId = String(candidate?.landlordId ?? "").trim();
+        if (candidate?.source !== "admin-report-details" || !reportId || !apartmentId || !landlordId)
+            return null;
+        return { reportId, apartmentId, landlordId };
+    })();
+    const appealDetailsReturn = (() => {
+        const candidate = routeLocation.state?.appealDetailsReturn;
+        const appealId = String(candidate?.appealId ?? "").trim();
+        const apartmentId = String(candidate?.apartmentId ?? "").trim();
+        const landlordId = String(candidate?.landlordId ?? "").trim();
+        if (candidate?.source !== "appealDetails" || !appealId || !apartmentId || !landlordId)
+            return null;
+        return { appealId, apartmentId, landlordId };
+    })();
     const [searchParams] = useSearchParams();
     const requestedSectionValue = searchParams.get("section");
     const requestedSection = requestedSectionValue || "overview";
@@ -84,6 +147,8 @@ export function AdminDashboard() {
     const [selectedReport, setSelectedReport] = useState(null);
     const [selectedReportDetails, setSelectedReportDetails] = useState(null);
     const [selectedReportEvidence, setSelectedReportEvidence] = useState([]);
+    const handledReportDetailsReturn = useRef(null);
+    const handledAppealDetailsReturn = useRef(null);
     const [dismissReportModal, setDismissReportModal] = useState(null);
     const [viewingUserProfile, setViewingUserProfile] = useState(null);
     const [reportSearch, setReportSearch] = useState("");
@@ -143,7 +208,6 @@ export function AdminDashboard() {
     const [isLoadingActivity, setIsLoadingActivity] = useState(false);
     // admin notifications (new property submissions)
     const [adminNotifs, setAdminNotifs] = useState([]);
-    const didAutoMarkNotificationsRef = useRef(false);
     const [notifSearch, setNotifSearch] = useState("");
     const [notifFilter, setNotifFilter] = useState("all");
     const [notifTypeFilter, setNotifTypeFilter] = useState("all");
@@ -342,7 +406,6 @@ export function AdminDashboard() {
     }, [notifSearch, notifFilter, notifTypeFilter, notifActivityFilter]);
     // apartments
     const [aptSearch, setAptSearch] = useState("");
-    const [selectedApt, setSelectedApt] = useState(null);
     const [aptFilter, setAptFilter] = useState("all");
     const [publishingApartmentId, setPublishingApartmentId] = useState(null);
     // landlord details modal
@@ -482,7 +545,6 @@ export function AdminDashboard() {
             setLandlords((current) => current.map((item) => text(item.id) === landlordId ? { ...item, ...verifiedLandlordFields } : item));
             setSelectedLandlord((current) => current?.id === landlordId ? { ...current, ...verifiedLandlordFields } : current);
             setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...updatedApartment } : item));
-            setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
             setSelectedLandlordProperty((current) => current?.id === apartment.id ? { ...current, ...updatedApartment } : current);
             setSelectedLandlordDetails((current) => current ? {
                 ...current,
@@ -566,8 +628,23 @@ export function AdminDashboard() {
                 setAppeals(loadedAppeals);
                 setArchivedReports(loadedArchivedReports);
                 setArchivedAppeals(loadedArchivedAppeals);
-                setLandlords(await attachLandlordPermitNumbers(loadedUsers.filter((account) => account.role === "landlord")));
+                const loadedLandlords = loadedUsers.filter((account) => account.role === "landlord");
+                setLandlords(loadedLandlords);
                 setAdminAccounts(loadedUsers.filter((account) => account.role === "admin"));
+                const rememberedLandlord = user?.id ? getAdminModuleLocation(user.id, "landlords") : null;
+                const restoredLandlordId = rememberedLandlord?.view === "landlord-details" || rememberedLandlord?.view === "landlord-action"
+                    ? text(rememberedLandlord.landlordId)
+                    : "";
+                if (restoredLandlordId) {
+                    const restoredLandlord = loadedLandlords.find((account) => text(account.id) === restoredLandlordId);
+                    if (restoredLandlord) setSelectedLandlord(restoredLandlord);
+                }
+                // Permit numbers enhance the overview, but should never delay
+                // opening a landlord profile. Only fetch the small profile row
+                // here; full records load after a profile is selected.
+                void attachLandlordPermitNumbers(loadedLandlords).then((enrichedLandlords) => {
+                    if (active) setLandlords(enrichedLandlords);
+                }).catch((error) => console.warn("Unable to enrich landlord permit numbers:", error));
             } catch (error) {
                 console.error("Unable to load admin dashboard data:", error);
             } finally {
@@ -598,18 +675,43 @@ export function AdminDashboard() {
         }
     }, [activeSection, loadAdminNotifications]);
     useEffect(() => {
-        if (activeSection !== "notifications") {
-            didAutoMarkNotificationsRef.current = false;
+        if (!reportDetailsReturn || requestedSection !== "reports")
             return;
+        const returnKey = `${routeLocation.key}:${reportDetailsReturn.reportId}`;
+        if (handledReportDetailsReturn.current === returnKey)
+            return;
+        const returnedReport = [...reports, ...archivedReports]
+            .find((report) => text(report.id) === reportDetailsReturn.reportId) ?? null;
+        if (!returnedReport)
+            return;
+        handledReportDetailsReturn.current = returnKey;
+        setSelectedReport(returnedReport);
+        if (user?.id) {
+            rememberAdminModuleLocation(user.id, "reports", {
+                view: "report-review",
+                reportId: reportDetailsReturn.reportId,
+            });
         }
-        const hasUnreadNotifications = adminNotifs.some((notification) => !notification.is_deleted && !isNotificationRead(notification));
-        if (!user?.id || !hasUnreadNotifications || didAutoMarkNotificationsRef.current)
+    }, [archivedReports, reportDetailsReturn?.reportId, reports, requestedSection, routeLocation.key, user?.id]);
+    useEffect(() => {
+        if (!appealDetailsReturn || requestedSection !== "appeals")
             return;
-        // Opening the notification center acknowledges the current batch, so
-        // the sidebar badge remains an accurate count of new notifications.
-        didAutoMarkNotificationsRef.current = true;
-        void markNotifsRead();
-    }, [activeSection, adminNotifs, user?.id]);
+        const returnKey = `${routeLocation.key}:${appealDetailsReturn.appealId}`;
+        if (handledAppealDetailsReturn.current === returnKey)
+            return;
+        const returnedAppeal = [...appeals, ...archivedAppeals]
+            .find((appeal) => text(appeal.id) === appealDetailsReturn.appealId) ?? null;
+        if (!returnedAppeal)
+            return;
+        handledAppealDetailsReturn.current = returnKey;
+        setSelectedAppeal(returnedAppeal);
+        if (user?.id) {
+            rememberAdminModuleLocation(user.id, "appeals", {
+                view: "appeal-review",
+                appealId: appealDetailsReturn.appealId,
+            });
+        }
+    }, [appealDetailsReturn?.appealId, appeals, archivedAppeals, requestedSection, routeLocation.key, user?.id]);
     useEffect(() => {
         if (user?.role !== "admin")
             return;
@@ -655,7 +757,6 @@ export function AdminDashboard() {
                         : null;
                     if (!refreshedApartment)
                         return;
-                    setSelectedApt((current) => current?.id === refreshedApartment.id ? { ...current, ...refreshedApartment } : current);
                     setSelectedLandlordProperty((current) => current?.id === refreshedApartment.id ? { ...current, ...refreshedApartment } : current);
                     setSelectedLandlordDetails((current) => current ? {
                         ...current,
@@ -794,7 +895,7 @@ export function AdminDashboard() {
         return () => {
             active = false;
         };
-    }, [selectedLandlord]);
+    }, [selectedLandlord?.id]);
     // The landlord overview only loads the apartment list. Load the complete
     // Add Apartment submission (image rows, rooms, form features, and permit
     // documents) when an administrator opens a specific verification review.
@@ -1374,7 +1475,7 @@ export function AdminDashboard() {
         return (<div className="admin-dashboard-container-3">
         <header>
           <h1 className="admin-dashboard-notifications">{activeSection === "support" ? "Help & Support" : "Notifications"}</h1>
-          <p className="admin-dashboard-text-6">{activeSection === "support" ? "Review submitted support requests and open their details." : "Review system updates and items relevant to administration."}</p>
+          <p className="admin-dashboard-text-6">{activeSection === "support" ? "Review submitted support requests and open their details." : "Stay updated with landlord applications, property submissions, reports, and appeals."}</p>
         </header>
         <div className="admin-dashboard-row-17">
           <label className="admin-dashboard-label">
@@ -1399,9 +1500,7 @@ export function AdminDashboard() {
           </div>
           {notifTypeFilter === "activities" && <select value={notifActivityFilter} onChange={(event) => setNotifActivityFilter(event.target.value)} className="admin-dashboard-select"><option value="all">All activity types</option>{activityTypes.map((type) => <option key={type} value={type}>{formatNotificationType(type)}</option>)}</select>}
 
-          {notificationCenterItems.length === 0 ? (<NotificationEmpty title="No notifications found." message="New administrative notifications will appear here."/>) : filteredNotifs.length === 0 ? (notifFilter === "unread" && !notifSearch && notifTypeFilter === "all"
-                ? <NotificationEmpty title="You're all caught up." message="You have no unread notifications."/>
-                : notifFilter === "archived" ? <ArchiveEmpty kind="notifications" icon={Bell}/> : <NotificationEmpty title="No notifications found." message="Try adjusting your search or filter."/>) : (<div className="admin-dashboard-card-3">
+          {notificationCenterItems.length === 0 || filteredNotifs.length === 0 ? null : (<div className="admin-dashboard-card-3">
               {visibleNotifs.map((notification) => {
                     const tone = notificationTone(notification);
                     const Icon = tone.icon;
@@ -1465,7 +1564,7 @@ export function AdminDashboard() {
                         <span><strong>Apartments:</strong> {String(apartmentNames ?? "Not provided")}</span>
                         <span><strong>Notification:</strong> {String(permitPayload.notification_status ?? "Notification Created")}</span>
                       </div>}
-                      <time className="admin-dashboard-notification-date" dateTime={notification.createdAt ?? notification.created_at ?? undefined}>Received {formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
+                      <time className="admin-dashboard-notification-date" dateTime={notification.createdAt ?? notification.created_at ?? undefined} title={formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}>{notificationAge(notification.createdAt ?? notification.created_at)}</time>
                     </div>
                     <div className="admin-dashboard-row-20">
                       {!archived && isSupportRequest && <Button size="sm" variant="outline" disabled={supportRequestLoading} onClick={() => void openSupportRequest(notification)} className="admin-dashboard-button-10"><Eye className="admin-dashboard-eye-icon"/>{supportRequestLoading ? "Loading..." : "View Details"}</Button>}
@@ -1495,7 +1594,7 @@ export function AdminDashboard() {
     // ── Section: Landlords ────────────────────────────────────────────────────
     const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
-    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
+    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────
@@ -1793,16 +1892,59 @@ export function AdminDashboard() {
       </div>);
     };
     const renderLandlordDetails = () => {
-        if (!selectedLandlord || !selectedLandlordDetails)
+        if (!selectedLandlord)
             return renderLandlords();
+        const closeLandlordDetails = () => {
+            if (landlordProfileReturn) {
+                if (landlordProfileReturn.source === "appealDetails") {
+                    if (user?.id) {
+                        rememberAdminModuleLocation(user.id, "appeals", {
+                            view: "appeal-review",
+                            appealId: landlordProfileReturn.appealId,
+                        });
+                    }
+                    navigate(landlordProfileReturn.appealPath, {
+                        replace: true,
+                        state: { appealDetailsReturn: landlordProfileReturn },
+                    });
+                    return;
+                }
+                if (landlordProfileReturn.source === "admin-report-details") {
+                    if (user?.id) {
+                        rememberAdminModuleLocation(user.id, "reports", {
+                            view: "report-review",
+                            reportId: landlordProfileReturn.reportId,
+                        });
+                    }
+                    navigate(landlordProfileReturn.reportPath, {
+                        replace: true,
+                        state: { reportDetailsReturn: landlordProfileReturn },
+                    });
+                    return;
+                }
+                navigate(landlordProfileReturn.reviewPath, {
+                    replace: true,
+                    state: {
+                        returnTo: landlordProfileReturn.returnTo,
+                        backLabel: landlordProfileReturn.backLabel,
+                    },
+                });
+                return;
+            }
+            setSelectedLandlordProperty(null);
+            setSelectedLandlord(null);
+        };
         return <AdminLandlordVerificationReview
           landlord={selectedLandlord}
           details={selectedLandlordDetails}
-          isLoading={isLoadingLandlordDetails}
-          onBack={() => { setSelectedLandlordProperty(null); setSelectedLandlord(null); }}
+          isLoading={isLoadingLandlordDetails || !selectedLandlordDetails}
+          onBack={closeLandlordDetails}
           onViewProperty={(propertyId) => setSelectedLandlordProperty(selectedLandlordDetails.properties.find((property) => text(property.id) === text(propertyId)) ?? null)}
         />;
     };
+    const pendingLandlordProfileId = !navigationDataReady && activeSection === "landlords" && !selectedLandlord && user?.id
+        ? text(getAdminModuleLocation(user.id, "landlords")?.landlordId)
+        : "";
     const renderApartmentVerification = () => {
         if (!selectedLandlord || !selectedLandlordDetails || !selectedLandlordProperty)
             return renderLandlordDetails();
@@ -1906,8 +2048,9 @@ export function AdminDashboard() {
           <main className="app-shell-content app-shell-content-mobile-nav">
             {violationModal?.open && violationModal.sourceModule === activeSection
             ? renderAdministrativeAction()
-            : activeSection === "landlords" && selectedLandlord && selectedLandlordDetails
+            : activeSection === "landlords" && selectedLandlord
                 ? selectedLandlordProperty ? isViewingLandlordDocument ? renderLandlordDocument() : renderApartmentVerification() : renderLandlordDetails()
+                : pendingLandlordProfileId ? <AdminLandlordProfileLoading />
                 : (sectionMap[activeSection] ?? renderLandlords)()}
           </main>
         </div>

@@ -48,7 +48,6 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
   const isApproved = !isRejected && (isPublished || apartment.isVerified === true || apartment.is_verified === true || ["approved", "verified", "published"].includes(statusValue));
   const statusLabel = isRejected ? "Rejected" : isPublished ? "Published" : isApproved ? "Approved" : "Pending Review";
   const permitNumber = verification.businessPermit ?? profile?.business_permit_number ?? profile?.permit_number ?? landlord?.business_permit_number ?? landlord?.permit_number ?? landlord?.permitNumber;
-  const accountNumber = verification.businessAccount ?? profile?.business_account_number ?? profile?.account_number ?? "Not provided";
   const businessPermitDocument = documents.find((document) => document.documentType === "mayors_business_permit") ?? documents.find((document) => document.documentType === "proof_of_ownership");
   const documentUrl = businessPermitDocument?.previewUrl ?? profile?.verification_document_url ?? profile?.business_permit_url ?? apartment.business_permit_url;
 
@@ -102,7 +101,6 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
             <dl className="admin-apartment-verification__document-info">
               <div><dt>Document Type</dt><dd>Business Permit</dd></div>
               <div><dt>Permit Number</dt><dd>{value(permitNumber)}</dd></div>
-              <div><dt>Account Number</dt><dd>{value(accountNumber)}</dd></div>
               <div><dt>Date Issued</dt><dd>{formatDate(verification.issuedAt ?? profile?.permit_issued_at ?? profile?.created_at ?? property?.created_at)}</dd></div>
               <div><dt>Issued By</dt><dd>{value(verification.issuedBy ?? profile?.permit_issued_by ?? "City of Iloilo")}</dd></div>
             </dl>

@@ -49,11 +49,13 @@ export function RoomImageGallery({ images = [], roomName = "Unit", compact = fal
 
     {fullScreen && compact && <Dialog open onOpenChange={setFullScreen}><DialogContent className="tenant-room-fullscreen" aria-describedby={undefined} onKeyDown={event => { if (event.key === "ArrowLeft") previous(); if (event.key === "ArrowRight") next(); }}><DialogTitle className="ui-sr-only">{roomName} full-screen photos</DialogTitle><img src={sources[activeIndex]} alt={`${roomName} photo ${activeIndex + 1} full screen`} />{controls}<span className="tenant-room-fullscreen-count">{activeIndex + 1} / {sources.length}</span></DialogContent></Dialog>}
     {fullScreen && !compact && <div className="room-image-gallery-style-16" role="dialog" aria-modal="true" aria-label={`${roomName} full-screen photos`} onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
-      <button type="button" aria-label="Close full-screen preview" onClick={() => setFullScreen(false)} className="room-image-gallery-style-17"><X className="room-image-gallery-style-18"/></button>
       <div className="room-image-gallery-style-19" onClick={(event) => event.stopPropagation()}>
-        <img src={sources[activeIndex]} alt={`${roomName} photo ${activeIndex + 1} full screen`} className="room-image-gallery-style-20"/>
-        {controls}
-        <span className="room-image-gallery-style-21 room-image-gallery-centered-x">{activeIndex + 1} / {sources.length}</span>
+        <header className="room-image-gallery-fullscreen-header"><h2>{roomName} photo {activeIndex + 1} of {sources.length}</h2></header>
+        <div className="room-image-gallery-fullscreen-image-wrap">
+          <img src={sources[activeIndex]} alt={`${roomName} photo ${activeIndex + 1} full screen`} className="room-image-gallery-style-20"/>
+          <button type="button" aria-label="Close full-screen preview" onClick={() => setFullScreen(false)} className="room-image-gallery-style-17 room-image-gallery-fullscreen-close"><X className="room-image-gallery-style-18"/></button>
+          {controls}
+        </div>
       </div>
     </div>}
   </>;

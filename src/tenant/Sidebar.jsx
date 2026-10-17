@@ -13,7 +13,7 @@ const NAV_MAIN = [
     },
     {
         icon: Heart,
-        label: "My Favorites",
+        label: "Favorites",
         section: "favorites",
         href: "/favorites",
     },
@@ -40,11 +40,11 @@ const NAV_ACCOUNT = [
         section: "help",
     },
 ];
-export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifications, activeSection, setActiveSection, setSidebarOpen, displayName, favoriteIds, handleLogout, mode = "page", }) {
+export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifications, activeSection, setActiveSection, setSidebarOpen, favoriteIds, handleLogout, mode = "page", }) {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const { unreadFavoriteCount } = useFavorites();
-    const resolvedDisplayName = user?.username?.trim() || "Username unavailable";
+    const resolvedDisplayName = user?.name?.trim() || "Username unavailable";
     const resolvedUnreadCount = tenantNotifications?.unreadCount ?? unreadCount;
     const currentSection = mode === "dashboard"
         ? activeSection
@@ -97,17 +97,17 @@ export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifica
         {itemContent}
       </button>);
     };
-    return (<aside className="app-sidebar">
+    return (<aside className="app-sidebar tenant-figma-sidebar">
       <div className="app-sidebar-brand">
         <Link to="/browse" state={{ resetBrowseMode: true }} onClick={closeSidebar} className="tenant-sidebar-row">
-          <img src="/aptfindr-wordmark.png?v=2" alt="AptFindr" className="tenant-sidebar-wordmark"/>
+          <img src="/aptfindr-wordmark.svg" alt="AptFindr" className="tenant-sidebar-wordmark"/>
         </Link>
       </div>
 
       <div className="tenant-sidebar-panel">
-        <div className="app-sidebar-profile">
+        <button type="button" className="app-sidebar-profile app-sidebar-profile-button" onClick={() => openSection("settings")} aria-label="Open personal information settings">
           <div className="tenant-sidebar-row-2">
-            {user?.avatar ? (<img src={user.avatar} alt="Profile" className="tenant-sidebar-image"/>) : (user?.username?.[0]?.toUpperCase() ?? "U")}
+            {user?.avatar ? (<img src={user.avatar} alt="Profile" className="tenant-sidebar-image"/>) : (user?.name?.[0]?.toUpperCase() ?? "U")}
           </div>
 
           <div className="tenant-sidebar-panel-2">
@@ -118,7 +118,7 @@ export function Sidebar({ active = "apartments", unreadCount = 0, tenantNotifica
               {user?.email ?? "Tenant Portal"}
             </p>
           </div>
-        </div>
+        </button>
       </div>
 
       <nav className="tenant-sidebar-nav">

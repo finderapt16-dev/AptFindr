@@ -24,6 +24,7 @@ const propertyStatus = (property) => {
 };
 
 export function AdminLandlordVerificationReview({ landlord, details, isLoading, onBack, onViewProperty }) {
+  const isInitialLoad = !details;
   const profile = details?.profile ?? {};
   const properties = details?.properties ?? [];
   const landlordIsVerified = landlord.isVerified === true || landlord.is_verified === true || profile.is_verified === true;
@@ -36,7 +37,6 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
     return {
       property,
       permitNumber: verification.businessPermit ?? profile.business_permit_number ?? profile.permit_number ?? landlord.business_permit_number ?? landlord.permit_number ?? landlord.permitNumber,
-      businessAccount: verification.businessAccount ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber,
       issuedAt: verification.issuedAt ?? property.createdAt ?? property.created_at,
       status: propertyStatus(property),
     };
@@ -49,7 +49,9 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
         <h1>Landlord Profile &amp; Listing</h1>
         <p>Review landlord information, apartment listings, and business permits.</p>
       </header>
-      {isLoading && <p className="admin-landlord-profile-listing__loading">Loading the latest landlord information...</p>}
+      {isLoading && <p className="admin-landlord-profile-listing__loading" role="status" aria-live="polite"><span aria-hidden="true" />Loading landlord profile...</p>}
+
+      {isInitialLoad ? <LandlordProfileSkeleton /> : <>
 
       <section className="admin-landlord-profile-listing__information">
         <h2>Landlord Information</h2>
@@ -67,11 +69,11 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
         <h2 id="landlord-properties-heading" className="sr-only">Apartment listings</h2>
         <div className="admin-landlord-profile-listing__table-scroll">
           <table>
-            <thead><tr><th>Apartment Name</th><th>Permit Number</th><th>Business Account Number</th><th>Date Issued</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>{rows.map(({ property, permitNumber, businessAccount, issuedAt, status }) => (
+            <thead><tr><th>Apartment Name</th><th>Permit Number</th><th>Date Issued</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>{rows.map(({ property, permitNumber, issuedAt, status }) => (
               <tr key={property.id}>
                 <td><strong>{value(property.title, "Untitled apartment")}</strong><small><MapPin aria-hidden="true" />{propertyLocation(property)}</small></td>
-                <td>{value(permitNumber, "—")}</td><td>{value(businessAccount, "—")}</td><td>{formatDate(issuedAt)}</td>
+                <td>{value(permitNumber, "—")}</td><td>{formatDate(issuedAt)}</td>
                 <td><span className={`admin-landlord-profile-listing__status ${status}`}>{status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Pending"}</span></td>
                 <td><button type="button" onClick={() => onViewProperty(property.id)}>View Details</button></td>
               </tr>
@@ -80,6 +82,34 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
         </div>
         {!rows.length && <p className="admin-landlord-profile-listing__empty">This landlord has no apartment listings yet.</p>}
       </section>
+      </>}
     </div>
   );
+}
+
+function LandlordProfileSkeleton() {
+  return <div className="admin-landlord-profile-listing__skeleton" aria-hidden="true">
+    <section className="admin-landlord-profile-listing__information">
+      <i className="admin-landlord-profile-listing__skeleton-avatar" />
+      <div className="admin-landlord-profile-listing__skeleton-person"><i /><i /></div>
+      <div className="admin-landlord-profile-listing__skeleton-details">
+        {[0, 1, 2, 3, 4].map((row) => <div key={row}><i /><i /></div>)}
+      </div>
+    </section>
+    <section className="admin-landlord-profile-listing__properties">
+      <div className="admin-landlord-profile-listing__skeleton-table-head">{[0, 1, 2, 3, 4, 5].map((column) => <i key={column} />)}</div>
+      {[0, 1].map((row) => <div className="admin-landlord-profile-listing__skeleton-table-row" key={row}>{[0, 1, 2, 3, 4, 5].map((column) => <i key={column} />)}</div>)}
+    </section>
+  </div>;
+}
+
+export function AdminLandlordProfileLoading() {
+  return <div className="admin-landlord-profile-listing" aria-busy="true">
+    <header className="admin-landlord-profile-listing__heading">
+      <h1>Landlord Profile &amp; Listing</h1>
+      <p>Opening the selected landlord profile.</p>
+    </header>
+    <p className="admin-landlord-profile-listing__loading" role="status" aria-live="polite"><span aria-hidden="true" />Loading landlord profile...</p>
+    <LandlordProfileSkeleton />
+  </div>;
 }

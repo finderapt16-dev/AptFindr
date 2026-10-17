@@ -172,7 +172,6 @@ export async function fetchLandlordBusinessPermits() {
             apartmentId: String(property.id),
             businessName: verification.businessName || verification.propertyName || property.title || "",
             apartmentName: property.title || verification.propertyName || "",
-            businessAccount: verification.businessAccount || "",
             permitNumber: verification.businessPermit || "",
             issuedAt: verification.dateIssued || verification.issuedAt || "",
             permitExpiry: verification.permitExpiry || "",

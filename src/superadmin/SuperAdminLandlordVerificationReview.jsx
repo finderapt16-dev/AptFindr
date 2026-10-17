@@ -36,7 +36,6 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
     return {
       property,
       permitNumber: verification.businessPermit ?? profile.business_permit_number ?? profile.permit_number ?? landlord.business_permit_number ?? landlord.permit_number ?? landlord.permitNumber,
-      businessAccount: verification.businessAccount ?? profile.permit_number ?? landlord.permit_number ?? landlord.permitNumber,
       issuedAt: verification.issuedAt ?? property.createdAt ?? property.created_at,
       status: propertyStatus(property),
     };
@@ -67,11 +66,11 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
         <h2 id="landlord-properties-heading" className="sr-only">Apartment listings</h2>
         <div className="admin-landlord-profile-listing__table-scroll">
           <table>
-            <thead><tr><th>Apartment Name</th><th>Permit Number</th><th>Business Account Number</th><th>Date Issued</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>{rows.map(({ property, permitNumber, businessAccount, issuedAt, status }) => (
+            <thead><tr><th>Apartment Name</th><th>Permit Number</th><th>Date Issued</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>{rows.map(({ property, permitNumber, issuedAt, status }) => (
               <tr key={property.id}>
                 <td><strong>{value(property.title, "Untitled apartment")}</strong><small><MapPin aria-hidden="true" />{propertyLocation(property)}</small></td>
-                <td>{value(permitNumber, "—")}</td><td>{value(businessAccount, "—")}</td><td>{formatDate(issuedAt)}</td>
+                <td>{value(permitNumber, "—")}</td><td>{formatDate(issuedAt)}</td>
                 <td><span className={`admin-landlord-profile-listing__status ${status}`}>{status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Pending"}</span></td>
                 <td><button type="button" onClick={() => onViewProperty(property.id)}>View Details</button></td>
               </tr>

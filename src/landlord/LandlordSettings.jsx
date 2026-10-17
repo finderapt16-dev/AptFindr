@@ -80,7 +80,6 @@ function BusinessPermitInformation() {
         <dl className="landlord-settings-permit-details">
           <div><dt>Apartment Name</dt><dd>{permit.apartmentName || permit.businessName || "Not provided"}</dd></div>
           <div><dt>Permit Number</dt><dd>{permit.permitNumber || "Not provided"}</dd></div>
-          <div><dt>Business Account Number</dt><dd>{permit.businessAccount || "Not provided"}</dd></div>
           <div><dt>Issued Date</dt><dd>{formatPermitDate(permit.issuedAt)}</dd></div>
         </dl>
         <div className="landlord-settings-permit-file">

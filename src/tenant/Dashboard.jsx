@@ -236,7 +236,6 @@ export function Dashboard() {
             return (Number.isNaN(bDate) ? 0 : bDate) - (Number.isNaN(aDate) ? 0 : aDate);
         });
     }, [favoriteApartments, favoriteFilter]);
-    const displayName = user?.name?.trim();
     const dashboardSubtitle = "Find verified apartments that fit your needs.";
     const handleLogout = () => { logout?.(); navigate("/", { replace: true }); };
     const removeFavorite = async (apartmentId) => {
@@ -424,7 +423,7 @@ export function Dashboard() {
     return (<div className="tenant-browse app-shell">
       <div className="app-shell-frame">
         <aside className="app-shell-sidebar">
-          <Sidebar mode="dashboard" displayName={displayName} favoriteIds={favoriteIds} tenantNotifications={tenantNotifications} activeSection={activeSection} setActiveSection={selectDashboardSection} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout}/>
+          <Sidebar mode="dashboard" favoriteIds={favoriteIds} tenantNotifications={tenantNotifications} activeSection={activeSection} setActiveSection={selectDashboardSection} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout}/>
         </aside>
 
         {sidebarOpen && (<div className="app-sidebar-overlay" onClick={() => setSidebarOpen(false)}/>)}
@@ -433,7 +432,7 @@ export function Dashboard() {
           <button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="app-sidebar-close">
             <X className="tenant-dashboard-x-icon"/>
           </button>
-          <Sidebar mode="dashboard" displayName={displayName} favoriteIds={favoriteIds} tenantNotifications={tenantNotifications} activeSection={activeSection} setActiveSection={selectDashboardSection} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout}/>
+          <Sidebar mode="dashboard" favoriteIds={favoriteIds} tenantNotifications={tenantNotifications} activeSection={activeSection} setActiveSection={selectDashboardSection} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout}/>
         </aside>
 
         <button aria-label={navigationCount ? `Open navigation, ${navigationCount} total items: ${unreadNotificationCount} unread notifications and ${unreadFavoriteCount} new favorites` : "Open navigation"} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger">

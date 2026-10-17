@@ -86,10 +86,13 @@ export function AdminSidebar({
   return (
     <div className="app-sidebar admin-figma-sidebar">
       <div className="admin-figma-sidebar-brand">
-        <img alt="AptFindr" src="/aptfindr-wordmark.png?v=2" />
+        <img alt="AptFindr" src="/aptfindr-wordmark.svg" />
       </div>
 
-      <div className="admin-figma-sidebar-profile">
+      <button type="button" className="admin-figma-sidebar-profile app-sidebar-profile-button" onClick={() => {
+        navigateToAdminModule("admininfo");
+        onNavigate?.();
+      }} aria-label="Open personal information settings">
         <span className="admin-figma-sidebar-avatar" aria-hidden="true">
           {user?.avatar ? <img alt="" src={user.avatar} /> : (user?.name?.[0]?.toUpperCase() ?? "A")}
         </span>
@@ -97,7 +100,7 @@ export function AdminSidebar({
           <strong>{user?.name || "AptFindr Administrator"}</strong>
           <small>{user?.email || "admin@aptfindr.com"}</small>
         </span>
-      </div>
+      </button>
 
       {renderGroup("Main", MAIN_ITEMS)}
       {renderGroup("Management", MANAGEMENT_ITEMS)}

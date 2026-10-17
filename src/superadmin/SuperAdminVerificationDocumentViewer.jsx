@@ -18,7 +18,6 @@ export function AdminVerificationDocumentViewer({ landlord, profile, property, d
   const documentUrl = businessPermitDocument?.previewUrl ?? profile?.verification_document_url ?? profile?.business_permit_url;
   const isPdfDocument = businessPermitDocument?.mimeType === "application/pdf" || /\.pdf(?:\?|$)/i.test(documentUrl ?? "");
   const permitNumber = verification.businessPermit ?? profile?.business_permit_number ?? profile?.permit_number ?? landlord?.business_permit_number ?? landlord?.permit_number;
-  const accountNumber = verification.businessAccount ?? profile?.business_account_number ?? profile?.account_number;
   const address = landlord?.address ?? landlord?.business_address ?? profile?.address ?? profile?.business_address ?? [landlord?.barangay, landlord?.city].filter(Boolean).join(", ");
   const submittedOn = property?.createdAt ?? property?.created_at ?? profile?.created_at;
   const setZoomWithinRange = (nextZoom) => setZoom(Math.max(70, Math.min(150, nextZoom)));
@@ -74,7 +73,6 @@ export function AdminVerificationDocumentViewer({ landlord, profile, property, d
         <hr />
         <dl>
           <div><dt>Permit Number</dt><dd>{value(permitNumber)}</dd></div>
-          <div><dt>Account Number</dt><dd>{value(accountNumber)}</dd></div>
           <div><dt>Business Owner</dt><dd>{value(landlord?.name ?? landlord?.full_name)}</dd></div>
           <div><dt>Business Address</dt><dd>{value(address)}</dd></div>
           <div><dt>Date Issued</dt><dd>{formatDate(verification.issuedAt ?? verification.dateIssued ?? profile?.permit_issued_at)}</dd></div>

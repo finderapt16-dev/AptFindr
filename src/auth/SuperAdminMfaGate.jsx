@@ -79,7 +79,7 @@ export function SuperAdminMfaGate({ children }) {
   return (
     <main className="super-admin-mfa-page">
       <section className="super-admin-mfa-panel" aria-labelledby="super-admin-mfa-title">
-        <img src="/aptfindr-wordmark.png?v=2" alt="AptFindr" />
+        <img src="/aptfindr-wordmark.svg" alt="AptFindr" />
         <span className="super-admin-mfa-icon"><ShieldCheck aria-hidden="true" /></span>
         <h1 id="super-admin-mfa-title">Super Admin Verification</h1>
         <p>Multi-factor authentication is required before accessing administrative data and controls.</p>

@@ -20,7 +20,7 @@ import { deletePropertyDraft, fetchPropertyDraft, savePropertyDraft, } from "@/s
 import { reverseGeocodeAddPropertyLocationWithinLaPaz } from "@/services/geocodingService";
 import { DEFAULT_LA_PAZ_MAP_CENTER, hasValidApartmentCoordinates, } from "@/utils/mapCoordinates";
 import { supabase } from "@/services/supabaseClient";
-import { AlertCircle, ArrowLeft, ArrowRight, Building2, Camera, Check, Cloud, CloudUpload, FileText, LocateFixed, MapPin, RotateCcw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, Check, Cloud, CloudUpload, FileText, LocateFixed, MapPin, RotateCcw, ShieldCheck, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -97,7 +97,6 @@ const INITIAL_FORM_DATA = {
 };
 const INITIAL_VERIFICATION_DATA = {
     businessPermit: "",
-    businessAccount: "",
     permitIssuedAt: "",
     permitExpiry: "",
 };
@@ -509,13 +508,11 @@ export function AddApartment() {
         }
         if (!String(verificationData.businessPermit).trim())
             errors.businessPermit = "Business permit number is required.";
-        if (!String(verificationData.businessAccount).trim())
-            errors.businessAccount = "Business account number is required.";
         if (!String(verificationData.permitIssuedAt).trim())
             errors.permitIssuedAt = "Permit issue date is required.";
         if (!contractDuration)
             errors.contractDuration = "Select a contract duration.";
-        const firstStep = errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
+        const firstStep = errors.businessPermit || errors.permitIssuedAt || errors.permitExpiry
             ? 1
             : errors.title || errors.description || errors.images
                 ? 2
@@ -530,7 +527,7 @@ export function AddApartment() {
         const { errors } = validateAllFields();
         const belongsToStep = (field) => {
             if (step === 1)
-                return ["businessPermit", "businessAccount", "permitIssuedAt", "permitExpiry"].includes(field);
+                return ["businessPermit", "permitIssuedAt", "permitExpiry"].includes(field);
             if (step === 2)
                 return ["title", "description", "images"].includes(field);
             if (step === 3)
@@ -667,7 +664,6 @@ export function AddApartment() {
                     propertyName: formData.title || "",
                     propertyAddress: [persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", "),
                     businessPermit: verificationData.businessPermit,
-                    businessAccount: verificationData.businessAccount,
                     issuedAt: verificationData.permitIssuedAt,
                     permitExpiry: verificationData.permitExpiry,
                 },
@@ -734,7 +730,7 @@ export function AddApartment() {
                 role: "landlord",
                 email: user.email,
                 name: user.name,
-                permit_number: verificationData.businessAccount.trim(),
+                permit_number: verificationData.businessPermit.trim(),
                 business_permit_number: verificationData.businessPermit.trim(),
                 permit_issued_at: verificationData.permitIssuedAt || null,
                 permit_expiry: verificationData.permitExpiry || null,
@@ -919,16 +915,6 @@ export function AddApartment() {
                     clearValidationError("businessPermit");
             }} aria-invalid={Boolean(validationErrors.businessPermit)} placeholder="e.g., B-2024-0001" className={fieldClass("businessPermit")}/>
                       <FieldError field="businessPermit"/>
-                    </div>
-
-                    <div className="add-apartment-panel-9">
-                      <Label>Business Account Number <span aria-hidden="true">*</span></Label>
-                      <Input value={verificationData.businessAccount} onChange={(e) => {
-                setVerificationData({ ...verificationData, businessAccount: e.target.value });
-                if (e.target.value.trim())
-                    clearValidationError("businessAccount");
-            }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
-                      <FieldError field="businessAccount"/>
                     </div>
 
                     <div className="add-apartment-panel-9">

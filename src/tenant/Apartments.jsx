@@ -3,8 +3,6 @@ import { Preferences } from "./Preferences";
 import { hasListingsInPreferredArea } from "@/utils/preferredArea";
 import {
     Building2,
-    ChevronLeft,
-    ChevronRight,
     Eye,
     Grid2X2,
     Heart,
@@ -14,7 +12,6 @@ import {
     RefreshCw,
     Search,
     SlidersHorizontal,
-    Square,
     TriangleAlert,
 } from "lucide-react";
 

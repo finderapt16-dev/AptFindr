@@ -41,8 +41,7 @@ const signPermitDocument = async (path) => {
     return data?.signedUrl ?? "";
 };
 
-export async function submitBusinessPermitUpdate({ landlordId, apartmentId, permit, permitYear, permitNumber, businessAccount, issuedAt, files }) {
-    void businessAccount;
+export async function submitBusinessPermitUpdate({ landlordId, apartmentId, permit, permitYear, permitNumber, issuedAt, files }) {
     const file = files?.[0];
     if (!file) throw new Error("Upload a business permit document.");
     const submissionId = safeRandomId();

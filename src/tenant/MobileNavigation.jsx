@@ -15,7 +15,7 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
     const navigationCount = unreadNotificationCount + unreadFavoriteCount;
     const navigationBadge = navigationCount > 99 ? "99+" : navigationCount;
     const portalLabel = user?.email ?? "";
-    const displayName = user?.username?.trim();
+    const displayName = user?.name?.trim();
     useEffect(() => {
         if (!open)
             return;
@@ -61,29 +61,29 @@ export function MobileNavigation({ active = "apartments", unreadCount = 0 }) {
               <X className="tenant-mobile-navigation-x-icon"/>
             </button>
 
-            <div className="app-sidebar">
+            <div className="app-sidebar tenant-figma-sidebar">
               <div className="app-sidebar-brand">
                 <Link to="/browse" state={{ resetBrowseMode: true }} onClick={() => setOpen(false)} className="tenant-mobile-navigation-row">
-                  <img src="/aptfindr-wordmark.png?v=2" alt="AptFindr" className="tenant-mobile-navigation-wordmark"/>
+                  <img src="/aptfindr-wordmark.svg" alt="AptFindr" className="tenant-mobile-navigation-wordmark"/>
                 </Link>
               </div>
 
               <div className="tenant-mobile-navigation-panel">
-                <div className="app-sidebar-profile">
+                <Link to="/tenant/dashboard?section=settings" onClick={() => setOpen(false)} className="app-sidebar-profile app-sidebar-profile-button" aria-label="Open personal information settings">
                   <div className="tenant-mobile-navigation-row-2">
-                    {user?.avatar ? <img src={user.avatar} alt="Profile" className="tenant-mobile-navigation-image-2"/> : user?.username?.[0]?.toUpperCase() ?? "U"}
+                    {user?.avatar ? <img src={user.avatar} alt="Profile" className="tenant-mobile-navigation-image-2"/> : user?.name?.[0]?.toUpperCase() ?? "U"}
                   </div>
                   <div className="tenant-mobile-navigation-panel-2">
                     <p className="tenant-mobile-navigation-text">{displayName || "Username unavailable"}</p>
                     <p className="tenant-mobile-navigation-text-2">{portalLabel}</p>
                   </div>
-                </div>
+                </Link>
               </div>
 
               <nav className="tenant-mobile-navigation-nav">
                 <p className="tenant-mobile-navigation-main">Main</p>
                 <NavLink icon={Search} label="Apartments" to="/browse" section="apartments"/>
-                <NavLink icon={Heart} label="My Favorites" to="/favorites" section="favorites" badge={unreadFavoriteCount}/>
+                <NavLink icon={Heart} label="Favorites" to="/favorites" section="favorites" badge={unreadFavoriteCount}/>
                 <NavLink icon={Bell} label="Notifications" to="/tenant/dashboard?section=notifications" section="notifications" badge={unreadCount}/>
               </nav>
 

@@ -147,6 +147,11 @@
 .tenant-browse form:first-of-type input { border-color: var(--tenant-border) !important; color: var(--tenant-ink) !important; font-size: 16px; }
 .tenant-browse form:first-of-type input:focus { border-color: var(--tenant-accent) !important; box-shadow: 0 0 0 3px rgba(139,115,91,.12) !important; }
 .tenant-browse form:first-of-type button { border-color: var(--tenant-border) !important; color: var(--tenant-ink) !important; background: #fff !important; box-shadow: none !important; }
+.tenant-browse form:first-of-type .tenant-profile-primary-button {
+  border-color: #0EA5E9 !important;
+  background: #0EA5E9 !important;
+  color: #fff !important;
+}
 .tenant-browse form:first-of-type button svg { color: var(--tenant-accent); }
 
 .tenant-browse main section:nth-of-type(1):not(.apartment-browse-section-3):not(.tenant-favorites-hero):not(.favorites-section-section):not(.tenant-notifications-section):not(.tenant-profile-summary):not(.report-step) {

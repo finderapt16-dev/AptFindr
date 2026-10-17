@@ -1,7 +1,7 @@
 import "./ManageRooms.css";
 import { AddUnitDialog } from "./AddUnitDialog";
 import { getRoomStatus, sortRoomsByAvailability } from "@/utils/roomAvailability";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, DoorOpen, ImagePlus, Loader2, MoreVertical, Pencil, Plus, Star, Upload, Users, Wrench, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, DoorOpen, Loader2, Pencil, Plus, Upload, X } from "lucide-react";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { LandlordMenuTrigger } from "@/landlord/LandlordMenuTrigger";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -9,7 +9,6 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { apartmentToFormValues } from "@/utils/apartmentMappers";
 import { safeRandomId } from "@/utils/safeRandomId";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApartmentsContext } from "@/contexts/ApartmentsContext";
 import { useAuth } from "@/contexts/AuthContext";

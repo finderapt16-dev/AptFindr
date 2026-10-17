@@ -1233,7 +1233,7 @@ export function Landing() {
                         >
 
                             <img
-                                src="/aptfindr-wordmark.png?v=2"
+                                src="/aptfindr-wordmark.svg"
                                 alt="AptFindr"
                                 className="landing-brand-wordmark"
                             />

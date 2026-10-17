@@ -4,11 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "npm run icons:pwa && vite build",
+    "build": "vite build",
     "create:super-admin": "node scripts/create-super-admin.mjs",
     "dev": "vite",
-    "test": "node --test tests/*.test.mjs",
-    "icons:pwa": "node scripts/generate-pwa-icons.mjs"
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "1.1.6",
@@ -31,7 +30,6 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
     "@vitejs/plugin-react": "^6.0.2",
-    "sharp": "^0.35.5",
     "tailwindcss": "4.1.12",
     "vite": "^8.0.16"
   },

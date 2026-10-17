@@ -52,7 +52,11 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     if (selectedReport) {
         const listedApartment = getReportApartment(selectedReport);
         const reportApartment = listedApartment ? { ...selectedReportDetails?.apartment, ...listedApartment } : selectedReportDetails?.apartment;
-        return <ReportReviewDetail key={selectedReport.id} report={selectedReport} apartment={reportApartment} details={selectedReportDetails} evidence={selectedReportEvidence} onBack={() => setSelectedReport(null)} onViewApartment={() => reportApartment?.id && navigate(`${apartmentDetailBasePath}/${reportApartment.id}`, { state: { returnTo: `${portalBasePath}?section=reports`, backLabel: "Back to Reports" } })} onUpdated={onReportUpdated} resolveReport={resolveReport} dismissReport={dismissReport} archived={reportArchiveView} onArchive={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: getReportApartmentTitle(selectedReport) })}/>;
+        const reportId = text(selectedReport.id);
+        const apartmentId = text(reportApartment?.id);
+        const landlordId = text(reportApartment?.landlordId ?? reportApartment?.landlord_id ?? selectedReportDetails?.landlord?.id);
+        const reportPath = `${portalBasePath}?section=reports`;
+        return <ReportReviewDetail key={selectedReport.id} report={selectedReport} apartment={reportApartment} details={selectedReportDetails} evidence={selectedReportEvidence} onBack={() => setSelectedReport(null)} onViewApartment={() => apartmentId && navigate(`${apartmentDetailBasePath}/${apartmentId}`, { state: { returnTo: reportPath, backLabel: "Back to Report Details", reportDetailsOrigin: { source: "admin-report-details", reportId, apartmentId, landlordId, reportPath } } })} onUpdated={onReportUpdated} resolveReport={resolveReport} dismissReport={dismissReport} archived={reportArchiveView} onArchive={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: getReportApartmentTitle(selectedReport) })}/>;
     }
     return (<div className="reports-reference admin-case-list">
       <header className="reports-reference-header"><h1>Report</h1><p>Review and manage reports submitted by tenants regarding apartment listings.</p></header>

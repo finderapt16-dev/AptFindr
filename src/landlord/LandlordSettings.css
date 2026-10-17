@@ -97,7 +97,7 @@
 .landlord-settings-actions button { min-width: 92px; height: 32px; border-radius: 5px; padding: 0 14px; font-size: 11px; font-weight: 700; cursor: pointer; }
 .landlord-settings-actions button:disabled { cursor: not-allowed; opacity: .6; }
 .landlord-settings-cancel { border: 1px solid #d9e0e8; background: #fff; color: #475569; }
-.landlord-settings-save { border: 1px solid #08a1df; background: #18a8e5; color: #fff; }
+.landlord-settings-save { border: 1px solid #0EA5E9; background: #0EA5E9; color: #fff; }
 
 .landlord-settings-business-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .landlord-settings-read-only { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 10px; font-weight: 600; }

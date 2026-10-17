@@ -1,5 +1,5 @@
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
-import { Bell, Check, CheckCircle2, MoreVertical, Trash2 } from "lucide-react";
+import { Bell, Check, CheckCircle2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";

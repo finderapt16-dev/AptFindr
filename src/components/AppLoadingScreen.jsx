@@ -5,7 +5,6 @@ export function AppLoadingScreen({ label = "Loading your page", detail = "Gettin
       <section className="app-loading-card">
         <div className="app-loading-mark" aria-hidden="true">
           <AppLogo className="app-loading-logo"/>
-          <span className="app-loading-pulse"/>
         </div>
         <div className="app-loading-copy">
           <strong>{label}</strong>

@@ -5,7 +5,8 @@
 .admin-landlord-profile-listing__heading { margin: 20px 0 28px; }
 .admin-landlord-profile-listing__heading h1 { margin: 0; color: #0b1035; font-size: clamp(26px, 3vw, 34px); line-height: 1.15; letter-spacing: -.03em; }
 .admin-landlord-profile-listing__heading p { margin: 8px 0 0; color: #63759a; font-size: 16px; line-height: 1.45; }
-.admin-landlord-profile-listing__loading { margin: -14px 0 18px; color: #0284c7; font-size: 14px; }
+.admin-landlord-profile-listing__loading { display: inline-flex; align-items: center; gap: 8px; margin: -14px 0 18px; color: #0284c7; font-size: 14px; }
+.admin-landlord-profile-listing__loading span { width: 14px; height: 14px; border: 2px solid #bae6fd; border-top-color: #0284c7; border-radius: 50%; animation: admin-landlord-profile-spin .7s linear infinite; }
 .admin-landlord-profile-listing__information, .admin-landlord-profile-listing__properties { border: 1px solid #dbe3ee; border-radius: 14px; background: #fff; box-shadow: 0 10px 32px rgb(30 64 175 / 7%); }
 .admin-landlord-profile-listing__information { padding: 26px 32px 18px; }
 .admin-landlord-profile-listing__information h2 { margin: 0 0 14px; color: #0b1035; font-size: 24px; line-height: 1.2; }
@@ -40,4 +41,26 @@
 .admin-landlord-profile-listing__properties button:hover { background: #0ea5e9; color: #fff; }
 .admin-landlord-profile-listing__properties button:active { transform: scale(.98); }
 .admin-landlord-profile-listing__empty { margin: 0; padding: 34px; color: #64748b; text-align: center; }
+.admin-landlord-profile-listing__skeleton { display: grid; gap: 18px; }
+.admin-landlord-profile-listing__skeleton .admin-landlord-profile-listing__properties { overflow-x: auto; }
+.admin-landlord-profile-listing__skeleton i { display: block; border-radius: 8px; background: linear-gradient(90deg, #edf2f7 20%, #f8fafc 38%, #edf2f7 55%); background-size: 200% 100%; animation: admin-landlord-profile-shimmer 1.25s ease-in-out infinite; }
+.admin-landlord-profile-listing__skeleton .admin-landlord-profile-listing__information { display: grid; grid-template-columns: 54px minmax(180px, .4fr); column-gap: 12px; padding: 26px 32px 18px; }
+.admin-landlord-profile-listing__skeleton-avatar { width: 54px; height: 54px; border-radius: 50% !important; }
+.admin-landlord-profile-listing__skeleton-person { display: grid; align-content: center; gap: 8px; }
+.admin-landlord-profile-listing__skeleton-person i:first-child { width: min(180px, 90%); height: 17px; }
+.admin-landlord-profile-listing__skeleton-person i:last-child { width: min(240px, 100%); height: 12px; }
+.admin-landlord-profile-listing__skeleton-details { grid-column: 1 / -1; display: grid; margin-top: 18px; }
+.admin-landlord-profile-listing__skeleton-details > div { display: grid; grid-template-columns: 310px minmax(0, 1fr); align-items: center; min-height: 58px; border-top: 1px solid #e6edf5; }
+.admin-landlord-profile-listing__skeleton-details i { height: 15px; }
+.admin-landlord-profile-listing__skeleton-details i:first-child { width: 170px; }
+.admin-landlord-profile-listing__skeleton-details i:last-child { width: min(280px, 75%); }
+.admin-landlord-profile-listing__skeleton-table-head, .admin-landlord-profile-listing__skeleton-table-row { display: grid; grid-template-columns: 1.3fr repeat(4, 1fr) 1.05fr; gap: 26px; align-items: center; min-width: 970px; padding: 17px 20px; }
+.admin-landlord-profile-listing__skeleton-table-head { background: #f4f8fd; }
+.admin-landlord-profile-listing__skeleton-table-head i { height: 13px; }
+.admin-landlord-profile-listing__skeleton-table-row { min-height: 72px; border-top: 1px solid #e2e8f0; }
+.admin-landlord-profile-listing__skeleton-table-row i { height: 15px; }
+.admin-landlord-profile-listing__skeleton-table-row i:last-child { height: 38px; border: 1px solid #d7eefa; background: #fff; animation: none; }
+@keyframes admin-landlord-profile-shimmer { to { background-position: -200% 0; } }
+@keyframes admin-landlord-profile-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .admin-landlord-profile-listing__loading span, .admin-landlord-profile-listing__skeleton i { animation: none; } }
 @media (max-width: 700px) { .admin-landlord-profile-listing__heading { margin-bottom: 20px; } .admin-landlord-profile-listing__heading p { font-size: 14px; } .admin-landlord-profile-listing__information { padding: 20px 16px 12px; } .admin-landlord-profile-listing__information h2 { font-size: 21px; } .admin-landlord-profile-listing__information dl > div { grid-template-columns: 1fr; gap: 8px; padding: 12px 0; } .admin-landlord-profile-listing__information dt { font-size: 14px; } .admin-landlord-profile-listing__information dd { padding-left: 58px; font-size: 15px; } .admin-landlord-profile-listing__information em { min-height: 30px; padding: 0 14px; font-size: 12px; } .admin-landlord-profile-listing__properties { border-radius: 10px; } .admin-landlord-profile-listing th, .admin-landlord-profile-listing td { padding: 14px 16px; } }

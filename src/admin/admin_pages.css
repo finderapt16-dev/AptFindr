@@ -20703,6 +20703,29 @@
 .admin-appeal-reference-actions .ui-button.ui-button-outline { border-color:#008ff0; color:#008ff0; background:#fff; }
 .admin-appeal-reference-actions .ui-button.ui-button-destructive { border-color:#ff2222; color:#f51414; background:#ffeded; }
 .admin-appeal-reference-decision-summary { margin:0; padding:16px; border-radius:8px; color:#475569; background:#f8fafc; font-size:14px; line-height:1.5; }
+/* Keep the focused appeal review entirely visible in a desktop workspace.
+   The compact rules avoid an internal scrollbar without affecting the
+   responsive single-column layout used on tablets and phones. */
+@media (min-width:901px) {
+  .admin-appeal-reference-layout { margin:0 auto; }
+  .admin-appeal-reference-layout .admin-appeal-review-heading { margin:10px 0 14px; }
+  .admin-appeal-reference-grid { gap:16px; }
+  .admin-appeal-reference-column { gap:14px; }
+  .admin-appeal-reference-card { padding:18px; }
+  .admin-appeal-reference-card h2 { margin-bottom:12px; font-size:19px; line-height:23px; }
+  .admin-appeal-reference-apartment { gap:14px; }
+  .admin-appeal-reference-apartment-image { width:180px; height:136px; }
+  .admin-appeal-reference-details { gap:10px; }
+  .admin-appeal-reference-details dt { font-size:13px; line-height:18px; }
+  .admin-appeal-reference-details dd { font-size:15px; line-height:20px; }
+  .admin-appeal-reference-outline-action { min-height:44px; margin-top:14px; padding:9px 16px; font-size:15px; }
+  .admin-appeal-reference-evidence { margin-top:14px; }
+  .admin-appeal-reference-file { min-height:56px; margin-top:6px; padding:8px 12px; }
+  .admin-appeal-reference-file > svg { width:34px; height:34px; padding:8px; }
+  .admin-appeal-reference-decision { padding-bottom:14px; }
+  .admin-appeal-reference-actions { gap:12px; }
+  .admin-appeal-reference-actions .ui-button { min-height:44px; font-size:15px; }
+}
 @media (max-width:900px) { .admin-appeal-reference-layout { width:min(100% - 32px, 680px); } .admin-appeal-reference-grid { grid-template-columns:1fr; } }
 @media (max-width:560px) { .admin-appeal-reference-layout { margin-top:20px; } .admin-appeal-reference-card { padding:18px; } .admin-appeal-reference-apartment { flex-direction:column; } .admin-appeal-reference-apartment-image { width:100%; height:190px; } .admin-appeal-reference-details div { grid-template-columns:1fr; gap:3px; } .admin-appeal-reference-file { width:100%; } }
 

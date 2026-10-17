@@ -116,7 +116,7 @@ export function AdminAppeals({ landlords, reports, archivedReports, allApartment
               <ImageWithFallback src={imageFor(context.apartment)} alt={apartmentName} className="admin-appeal-reference-apartment-image" />
               <dl className="admin-appeal-reference-details"><div><dt>Location:</dt><dd>{context.apartment ? formatApartmentLocation(context.apartment) || "Location unavailable" : context.source.related_label || "Location unavailable"}</dd></div><div><dt>Landlord:</dt><dd>{landlord?.name || "Landlord unavailable"}</dd></div></dl>
             </div>
-            {context.apartmentId && <Button variant="outline" onClick={() => navigate(`${apartmentDetailBasePath}/${context.apartmentId}`, { state: { returnTo: `${portalBasePath}?section=appeals`, backLabel: "Back to Appeals" } })} className="admin-appeal-reference-outline-action"><Eye size={16}/>View Apartment</Button>}
+            {context.apartmentId && <Button variant="outline" onClick={() => navigate(`${apartmentDetailBasePath}/${context.apartmentId}`, { state: { returnTo: `${portalBasePath}?section=appeals`, backLabel: "Back to Appeal Details", appealDetailsOrigin: { source: "appealDetails", appealId: String(selectedAppeal.id), apartmentId: String(context.apartmentId), landlordId: String(selectedAppeal.landlord_id ?? context.apartment?.landlordId ?? context.apartment?.landlord_id ?? landlord?.id ?? ""), appealPath: `${portalBasePath}?section=appeals` } } })} className="admin-appeal-reference-outline-action"><Eye size={16}/>View Apartment</Button>}
           </section>
 
           <section className="admin-appeal-reference-card">

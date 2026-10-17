@@ -30,7 +30,6 @@ import {
     Power,
     RefreshCw,
     Search,
-    Shield,
     Trash2,
     User,
     Users,

@@ -3056,6 +3056,94 @@
   opacity: .82;
 }
 
+.apartment-gallery-fullscreen-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 999px;
+  background: rgb(15 23 42 / 82%);
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.apartment-gallery-fullscreen-close svg {
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.apartment-gallery-fullscreen-close:hover {
+  background: rgb(15 23 42 / 96%);
+}
+
+.apartment-gallery-fullscreen-close:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .ui-dialog-content.apartment-gallery-fullscreen-dialog {
+    box-sizing: border-box;
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .apartment-gallery-fullscreen-dialog .ui-dialog-header {
+    min-height: 28px;
+    padding-right: 0;
+    flex: 0 0 auto;
+  }
+
+  .apartment-gallery-fullscreen-dialog h2 {
+    font-size: 12px;
+  }
+
+  .apartment-gallery-fullscreen-image-wrap {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+
+  .apartment-gallery-fullscreen-image-wrap img {
+    max-height: none;
+  }
+
+  .apartment-gallery-fullscreen-close {
+    top: 16px;
+    right: 16px;
+    z-index: 20;
+    width: 44px;
+    height: 44px;
+    background: rgb(15 23 42 / 72%);
+    color: #ffffff;
+    border-color: rgb(255 255 255 / 45%);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 40%);
+  }
+
+  .apartment-gallery-fullscreen-close svg {
+    width: 30px;
+    height: 30px;
+    stroke-width: 2.5;
+  }
+}
+
 .apartment-gallery-fullscreen-dialog h2 {
   padding-right: 32px;
   color: #fff;

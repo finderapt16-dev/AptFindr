@@ -1,4 +1,5 @@
 import { MapView } from "@/components/MapView";
+import { AppLogo } from "@/components/AppLogo";
 import { AdminApartmentInspectionReview } from "@/admin/AdminApartmentInspectionReview";
 import { AdminSidebar } from "@/admin/AdminSidebar";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
@@ -141,7 +142,7 @@ export function AdminApartmentDetail() {
     const navigate = useNavigate();
     const routeLocation = useLocation();
     const { user, logout } = useAuth();
-    const portalBasePath = "/dashboard";
+    const portalBasePath = "/admin";
     const apartmentDetailBasePath = "/admin/apartment";
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [apartment, setApartment] = useState(null);
@@ -169,6 +170,26 @@ export function AdminApartmentDetail() {
     const [verificationDocuments, setVerificationDocuments] = useState([]);
     const [showAllDocuments, setShowAllDocuments] = useState(false);
     const [isUpdatingPublication, setIsUpdatingPublication] = useState(false);
+    const reportDetailsOrigin = (() => {
+        const candidate = routeLocation.state?.reportDetailsOrigin;
+        const reportId = String(candidate?.reportId ?? "").trim();
+        const apartmentId = String(candidate?.apartmentId ?? "").trim();
+        const landlordId = String(candidate?.landlordId ?? "").trim();
+        const reportPath = String(candidate?.reportPath ?? "");
+        if (candidate?.source !== "admin-report-details" || !reportId || !apartmentId || !landlordId || apartmentId !== String(id ?? "") || reportPath !== "/admin?section=reports")
+            return null;
+        return { reportId, apartmentId, landlordId, reportPath };
+    })();
+    const appealDetailsOrigin = (() => {
+        const candidate = routeLocation.state?.appealDetailsOrigin;
+        const appealId = String(candidate?.appealId ?? "").trim();
+        const apartmentId = String(candidate?.apartmentId ?? "").trim();
+        const landlordId = String(candidate?.landlordId ?? "").trim();
+        const appealPath = String(candidate?.appealPath ?? "");
+        if (candidate?.source !== "appealDetails" || !appealId || !apartmentId || !landlordId || apartmentId !== String(id ?? "") || appealPath !== "/admin?section=appeals")
+            return null;
+        return { appealId, apartmentId, landlordId, appealPath };
+    })();
     const returnTo = (() => {
         const value = routeLocation.state?.returnTo;
         return typeof value === "string" && value.startsWith("/") ? value : `${portalBasePath}?section=apartments`;
@@ -178,10 +199,24 @@ export function AdminApartmentDetail() {
         return typeof value === "string" && value.trim() ? value : "Back to Apartments";
     })();
     const handleBack = () => {
+        if (reportDetailsOrigin) {
+            navigate(reportDetailsOrigin.reportPath, {
+                replace: true,
+                state: { reportDetailsReturn: reportDetailsOrigin },
+            });
+            return;
+        }
+        if (appealDetailsOrigin) {
+            navigate(appealDetailsOrigin.appealPath, {
+                replace: true,
+                state: { appealDetailsReturn: appealDetailsOrigin },
+            });
+            return;
+        }
         if (user?.id && returnTo.includes("section=apartments")) {
             rememberAdminModuleLocation(user.id, "apartments", { view: "overview" });
         }
-        navigate(returnTo);
+        navigate(returnTo, { replace: true });
     };
     const navigateSmoothly = (destination, options) => {
         const startViewTransition = typeof document !== "undefined" ? document.startViewTransition : undefined;
@@ -202,8 +237,13 @@ export function AdminApartmentDetail() {
     };
     const handleViewLandlordProfile = () => {
         const landlordId = landlord?.id ?? apartment?.landlordId;
+        const apartmentId = String(apartment?.id ?? id ?? "");
         if (!landlordId) {
             toast.error("Landlord information is unavailable");
+            return;
+        }
+        if (!apartmentId) {
+            toast.error("Apartment information is unavailable");
             return;
         }
         if (user?.id) {
@@ -212,7 +252,35 @@ export function AdminApartmentDetail() {
                 landlordId: String(landlordId),
             });
         }
-        navigateSmoothly(`${portalBasePath}?section=landlords`);
+        const reviewPath = `${apartmentDetailBasePath}/${encodeURIComponent(apartmentId)}`;
+        const landlordProfileReturn = appealDetailsOrigin
+            ? {
+                source: "appealDetails",
+                appealId: appealDetailsOrigin.appealId,
+                apartmentId: appealDetailsOrigin.apartmentId,
+                landlordId: String(landlordId),
+                appealPath: appealDetailsOrigin.appealPath,
+            }
+            : reportDetailsOrigin
+            ? {
+                source: "admin-report-details",
+                reportId: reportDetailsOrigin.reportId,
+                apartmentId: reportDetailsOrigin.apartmentId,
+                landlordId: String(landlordId),
+                reportPath: reportDetailsOrigin.reportPath,
+            }
+            : {
+                source: "admin-apartment-review",
+                apartmentId,
+                reviewPath,
+                returnTo,
+                backLabel,
+            };
+        navigateSmoothly(`/admin?section=landlords`, {
+            state: {
+                landlordProfileReturn,
+            },
+        });
     };
     const inspectionSidebar = <AdminSidebar
       activeSection="apartments"
@@ -635,7 +703,7 @@ export function AdminApartmentDetail() {
             <button type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="app-sidebar-trigger"><Menu className="admin-apartment-detail-menu-icon" /></button>
             <div className="app-shell-main"><main className="app-shell-content app-shell-content-mobile-nav admin-inspection-loading-page">
               <div className="admin-inspection-loading" role="status" aria-live="polite">
-                <span className="admin-inspection-loading-mark"><Building2 aria-hidden="true" /></span>
+                <span className="admin-inspection-loading-mark"><AppLogo className="admin-inspection-loading-logo" /></span>
                 <strong>Loading apartment details</strong>
                 <p>Preparing the listing for review…</p>
                 <span className="admin-inspection-loading-bar" aria-hidden="true"><i /></span>
@@ -764,7 +832,7 @@ export function AdminApartmentDetail() {
         { label: "Appeals", section: "appeals", icon: AlertTriangle },
     ];
     const Sidebar = () => <div className="admin-apartment-detail-content">
-    <div className="admin-apartment-detail-panel-3"><div className="admin-apartment-detail-row-2"><span className="admin-apartment-detail-card-4"><img src="/aptfindr-logo.png?v=8" alt="" className="admin-apartment-detail-image" aria-hidden="true"/></span><span><strong className="admin-apartment-detail-apt-findr">AptFindr</strong><small className="admin-apartment-detail-small">{"Admin Portal"}</small></span></div></div>
+    <div className="admin-apartment-detail-panel-3"><div className="admin-apartment-detail-row-2"><span className="admin-apartment-detail-card-4"><img src="/aptfindr-logo.svg" alt="" className="admin-apartment-detail-image" aria-hidden="true"/></span><span><strong className="admin-apartment-detail-apt-findr">AptFindr</strong><small className="admin-apartment-detail-small">{"Admin Portal"}</small></span></div></div>
     <div className="admin-apartment-detail-panel-4"><div className="admin-apartment-detail-card-5"><span className="admin-apartment-detail-row-3">{user?.name?.[0]?.toUpperCase() ?? "A"}</span><span className="admin-apartment-detail-span"><strong className="admin-apartment-detail-strong">{user?.name ?? ("Admin")}</strong><small className="admin-apartment-detail-small-2">{user?.email ?? ""}</small></span><ShieldCheck className="admin-apartment-detail-shield-check-icon"/></div></div>
     <nav className="admin-apartment-detail-nav"><p className="admin-apartment-detail-main">Main</p>{adminNavItems.map(({ label, section, icon: Icon }) => <button key={section} onClick={() => navigateToAdminModule(section)} className={`admin-apartment-detail-button ${section === "apartments" ? "admin-apartment-detail-button-2" : "admin-apartment-detail-button-3"}`}><Icon className="admin-apartment-detail-icon-icon"/>{label}</button>)}</nav>
     <nav className="admin-apartment-detail-nav-2"><p className="admin-apartment-detail-account">Account</p><button onClick={() => navigateToAdminModule("admininfo")} className="admin-apartment-detail-settings"><Settings className="admin-apartment-detail-settings-icon"/>Settings</button></nav>

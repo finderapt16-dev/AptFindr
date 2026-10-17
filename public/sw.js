@@ -1,4 +1,4 @@
-const VERSION = "v27";
+const VERSION = "v28";
 const SHELL_CACHE = `aptfindr-shell-${VERSION}`;
 const RUNTIME_CACHE = `aptfindr-runtime-${VERSION}`;
 const APP_SHELL = [
@@ -6,13 +6,8 @@ const APP_SHELL = [
   "/index.html",
   "/offline.html",
   "/manifest.webmanifest",
-  "/aptfindr-logo.png",
-  "/aptfindr-wordmark.png",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-maskable-192.png",
-  "/icons/icon-maskable-512.png",
-  "/icons/apple-touch-icon.png",
+  "/aptfindr-logo.svg",
+  "/aptfindr-wordmark.svg",
 ];
 
 async function cacheAppShell() {

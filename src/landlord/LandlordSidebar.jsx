@@ -1,17 +1,17 @@
 import "./LandlordSidebar.css";
-import { Bell, HelpCircle, LayoutGrid, ListPlus, LogOut, Settings, TrendingUp } from "lucide-react";
+import { Bell, Building2, CirclePlus, HelpCircle, LogOut, Settings, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LogoutConfirmation } from "@/components/LogoutConfirmation";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
 const mainItems = [
-  { label: "My Apartments", section: "overview", icon: LayoutGrid },
+  { label: "My Apartments", section: "overview", icon: Building2 },
   { label: "Market Trends", section: "market", icon: TrendingUp, href: "/browse" },
   { label: "Notifications", section: "notifications", icon: Bell },
 ];
 
 const manageItems = [
-  { label: "Add Apartment", section: "add-property", icon: ListPlus, href: "/add-apartment" },
+  { label: "Add Property", section: "add-property", icon: CirclePlus, href: "/add-apartment" },
 ];
 
 const accountItems = [
@@ -44,18 +44,18 @@ export function LandlordSidebar({ user, activeSection, unreadNotifications, need
     return <button key={section} type="button" onClick={() => selectSection(section)} aria-current={isActive ? "page" : undefined} className="app-sidebar-nav-item landlord-sidebar-nav-item">{content}</button>;
   };
 
-  return <aside className="app-sidebar landlord-sidebar">
+  return <aside className="app-sidebar landlord-sidebar landlord-figma-sidebar">
     <button type="button" onClick={() => selectSection("overview")} className="app-sidebar-brand landlord-sidebar-brand">
       <span className="landlord-sidebar-brand-row">
-        <img src="/aptfindr-wordmark.png?v=2" alt="AptFindr" className="landlord-sidebar-wordmark" />
+        <img src="/aptfindr-wordmark.svg" alt="AptFindr" className="landlord-sidebar-wordmark" />
       </span>
     </button>
 
     <div className="landlord-sidebar-profile-wrap">
-      <div className="app-sidebar-profile landlord-sidebar-profile">
-        <span className="landlord-sidebar-avatar">{user?.avatar ? <img src={user.avatar} alt="Profile" /> : (user?.username?.[0]?.toUpperCase() ?? "L")}</span>
-        <span className="landlord-sidebar-profile-copy"><strong>{user?.username || "Username unavailable"}</strong><small>{user?.email ?? ""}</small></span>
-      </div>
+      <button type="button" className="app-sidebar-profile app-sidebar-profile-button landlord-sidebar-profile" onClick={() => selectSection("settings")} aria-label="Open personal information settings">
+        <span className="landlord-sidebar-avatar">{user?.avatar ? <img src={user.avatar} alt="Profile" /> : (user?.name?.[0]?.toUpperCase() ?? "L")}</span>
+        <span className="landlord-sidebar-profile-copy"><strong>{user?.name || "Username unavailable"}</strong><small>{user?.email ?? ""}</small></span>
+      </button>
     </div>
 
     <nav className="landlord-sidebar-nav" aria-label="Main navigation">

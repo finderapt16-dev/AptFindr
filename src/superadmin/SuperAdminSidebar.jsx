@@ -98,7 +98,7 @@ export function AdminSidebar({
   return (
     <div className="app-sidebar admin-figma-sidebar">
       <div className="admin-figma-sidebar-brand">
-        <img alt="AptFindr" src="/aptfindr-wordmark.png?v=2" />
+        <img alt="AptFindr" src="/aptfindr-wordmark.svg" />
       </div>
 
       <div className="admin-figma-sidebar-profile">
