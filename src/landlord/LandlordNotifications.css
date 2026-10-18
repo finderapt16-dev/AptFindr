@@ -5,22 +5,6 @@
   color: #27313d;
 }
 
-.landlord-notifications__header { margin: 8px 0 20px; }
-.landlord-notifications__header h1 {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.25;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #2d343d;
-}
-.landlord-notifications__header p {
-  margin: 5px 0 0;
-  font-size: 11px;
-  line-height: 1.45;
-  color: #9aa3ad;
-}
-
 .landlord-notifications__panel {
   overflow: visible;
   border: 1px solid #e8edf1;
@@ -212,34 +196,6 @@
   .landlord-notification__menu { right: -3px; }
 }
 
-/* Shared compact notification treatment. */
-.landlord-notifications__header {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-  height: auto;
-  min-height: 160px;
-  margin: 0 0 16px;
-  padding: 24px;
-  border: 1px solid #e1e7ec;
-  border-radius: 12px;
-  background-image: linear-gradient(to right, #f2f6fa 0%, #ffffff 100%);
-  background: #ffffff;
-  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.025);
-}
-
-.landlord-notifications__header h1 {
-  font-size: 30px;
-  line-height: 1.2;
-}
-
-.landlord-notifications__header p {
-  margin-top: 12px;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
 .landlord-notifications__panel {
   overflow: visible;
   border: 0;
@@ -308,76 +264,9 @@
 }
 
 @media (max-width: 640px) {
-  .landlord-notifications__header {
-    min-height: 160px;
-    padding: 24px;
-  }
   .landlord-notifications__toolbar { flex-direction: row; align-items: center; gap: 8px; }
   .landlord-notifications__mark-read { align-self: auto; }
   .landlord-notification__content { grid-template-columns: minmax(0, 1fr) 70px; }
-}
-
-@media (min-width: 768px) {
-  .landlord-notifications__header { padding-inline: 28px; }
-  .landlord-notifications__header h1 { font-size: 34px; }
-}
-
-/* Match the landlord dashboard header on desktop. */
-@media (min-width: 681px) {
-  .landlord-notifications__header {
-    min-height: 130px;
-    margin: 15px 0 24px;
-    padding: 40px 64px;
-    border: 1px solid #d9d9d9;
-    border-radius: 6px;
-    background: #ffffff;
-    box-shadow: none;
-  }
-
-  .landlord-notifications__header h1 {
-    margin: 0;
-    color: #1f1f1f;
-    font-size: 24px;
-    line-height: 1.2;
-    font-weight: 700;
-  }
-
-  .landlord-notifications__header p {
-    margin: 5px 0 0;
-    color: #64748b;
-    font-size: 14px;
-    line-height: 20px;
-  }
-}
-
-/* Mobile header matches the landlord dashboard header. */
-@media (max-width: 680px) {
-  .landlord-notifications__header {
-    min-height: 0;
-    margin: 0 0 16px;
-    padding: 18px 20px;
-    box-sizing: border-box;
-    border: 0;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-  }
-
-  .landlord-notifications__header h1 {
-    margin: 0;
-    color: #0f172a;
-    font-size: 20px;
-    line-height: 1.18;
-    font-weight: 700;
-  }
-
-  .landlord-notifications__header p {
-    max-width: 285px;
-    margin: 7px 0 0;
-    color: #52657a;
-    font-size: 14px;
-    line-height: 1.45;
-  }
 }
 
 /* Match the taller, easier-to-scan notification rhythm used by the Admin inbox. */

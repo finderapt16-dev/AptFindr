@@ -19,7 +19,7 @@ export const LandlordHelpSupport = ({ supportSubmitted, setSupportSubmitted, sup
   const [openTopic, setOpenTopic] = useState(null);
   const [supportOpen, setSupportOpen] = useState(false);
   return <div className="landlord-help-page">
-    <header className="landlord-help-header"><h1 className="landlord-help-title">Help &amp; Support</h1><p className="landlord-help-subtitle">Find guidance for managing listings, units, verification, and tenant activity.</p></header>
+    <header className="landlord-page-header landlord-help-header"><h1 className="landlord-page-header__title landlord-help-title">Help &amp; Support</h1><p className="landlord-page-header__subtitle landlord-help-subtitle">Find guidance for managing listings, units, verification, and tenant activity.</p></header>
     <div className="landlord-help-category-grid" aria-label="Landlord help topics">
       {helpCategories.map(([title, items], categoryIndex) => <div className="landlord-help-category" key={title}>
         <h2 className="landlord-help-category-title">{title}</h2><div className="landlord-help-topic-list">

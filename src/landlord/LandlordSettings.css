@@ -4,24 +4,18 @@
   min-height: 100%;
 }
 
-.landlord-settings-page-header,
 .landlord-settings-card {
   border: 1px solid #dfe5ec;
   border-radius: 6px;
   background: #fff;
 }
 
-.landlord-settings-page-header { padding: 16px 18px; }
-
-.landlord-settings-page-header h1,
 .landlord-settings-card h2 {
   margin: 0;
   color: #1e293b;
   font-weight: 700;
 }
 
-.landlord-settings-page-header h1 { font-size: 22px; }
-.landlord-settings-page-header p,
 .landlord-settings-card-header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
 
 .landlord-settings-card { padding: 16px 18px; }
@@ -125,37 +119,7 @@
   .landlord-settings-profile-grid,
   .landlord-settings-permit-details { grid-template-columns: 1fr; gap: 12px; }
   .landlord-settings-permit-details .landlord-settings-permit-number { grid-column: auto; }
-  .landlord-settings-page-header,
   .landlord-settings-card { padding: 14px; }
-}
-
-/* Match the landlord dashboard header on desktop. */
-@media (min-width: 681px) {
-  .landlord-settings-page-header {
-    min-height: 130px;
-    padding: 40px 64px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    border: 1px solid #d9d9d9;
-    border-radius: 6px;
-    background: #ffffff;
-  }
-
-  .landlord-settings-page-header h1 {
-    color: #1f1f1f;
-    font-size: 24px;
-    line-height: 1.2;
-    font-weight: 700;
-  }
-
-  .landlord-settings-page-header p {
-    margin: 5px 0 0;
-    color: #64748b;
-    font-size: 14px;
-    line-height: 20px;
-  }
 }
 
 /* Use the same centered content width as the landlord dashboard cards. */
@@ -163,7 +127,7 @@
   .landlord-settings {
     width: 100%;
     max-width: 1400px;
-    margin: 15px auto 40px;
+    margin: 0 auto 40px;
     box-sizing: border-box;
   }
 }
@@ -182,33 +146,6 @@
     box-sizing: border-box;
   }
 
-  /* Match the compact landlord dashboard header without touching profile content. */
-  .landlord-settings-page-header {
-    min-height: 0;
-    margin: 0 0 16px;
-    padding: 18px 20px;
-    box-sizing: border-box;
-    border: 0;
-    border-radius: 0;
-    background: #ffffff;
-    box-shadow: none;
-  }
-
-  .landlord-settings-page-header h1 {
-    margin: 0;
-    color: #0f172a;
-    font-size: 20px;
-    line-height: 1.18;
-    font-weight: 700;
-  }
-
-  .landlord-settings-page-header p {
-    max-width: 285px;
-    margin: 7px 0 0;
-    color: #52657a;
-    font-size: 14px;
-    line-height: 1.45;
-  }
 }
 
 /* ------------------------------------------------------------------

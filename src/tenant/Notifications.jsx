@@ -73,8 +73,8 @@ export function Notifications({ state }) {
     };
     const selectedReportIsResolved = selectedReport?.type === "report_resolved" || String(selectedReport?.payload?.status || "").startsWith("resolved");
     return <div className="tenant-notifications-container">
-    <section className="tenant-notifications-section">
-      <div className="tenant-notifications-panel"><h1 className="tenant-notifications-notifications">Notifications</h1><p className="tenant-notifications-text">Stay updated on your reports and apartment activity.</p></div>
+    <section className="tenant-notifications-section tenant-page-header">
+      <div className="tenant-notifications-panel tenant-page-header__content"><h1 className="tenant-notifications-notifications">Notifications</h1><p className="tenant-notifications-text">Stay updated on your reports and apartment activity.</p></div>
     </section>
 
     <section className="tenant-notifications-section-2">

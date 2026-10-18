@@ -40,9 +40,9 @@ export const LandlordNotifications = ({
 
   return (
     <div className="landlord-notifications">
-      <header className="landlord-notifications__header">
-        <h1>Notifications</h1>
-        <p>Stay informed of new applications, reports, and account updates.</p>
+      <header className="landlord-page-header landlord-notifications__header">
+        <h1 className="landlord-page-header__title">Notifications</h1>
+        <p className="landlord-page-header__subtitle">Stay informed of new applications, reports, and account updates.</p>
       </header>
 
       <section className="landlord-notifications__panel" aria-label="Notifications">

@@ -1345,8 +1345,8 @@ if (browseMode === "popular") {
 
                     <main className="app-shell-main">
                         <div className="app-shell-content app-shell-content-mobile-nav">
-                            <section className="apartment-browse-section-3">
- <div className="apartment-browse-panel-11">
+                            <section className="apartment-browse-section-3 tenant-page-header">
+ <div className="apartment-browse-panel-11 tenant-page-header__content">
     <h1 className="apartment-browse-available-apartments">
         Apartments in La Paz
     </h1>

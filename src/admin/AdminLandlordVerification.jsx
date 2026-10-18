@@ -138,18 +138,6 @@ export function AdminLandlordVerification({
         <p>Review landlord accounts and verification status.</p>
       </header>
 
-      <div className="admin-verification-controls">
-        <label className="admin-verification-search">
-          <Search aria-hidden="true" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search landlords by name, email, phone, or permit"
-            type="search"
-          />
-        </label>
-      </div>
-
       <section className="admin-verification-statistics" aria-label="Verification summary">
         {[
           { label: "Total Landlords", note: "Registered landlord accounts", count: counts.total, icon: UserRound, tone: "total", filterValue: "all" },
@@ -172,6 +160,18 @@ export function AdminLandlordVerification({
           </button>
         ))}
       </section>
+
+      <div className="admin-verification-controls">
+        <label className="admin-verification-search">
+          <Search aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search landlords by name, email, phone, or permit"
+            type="search"
+          />
+        </label>
+      </div>
 
       <section className="admin-verification-table-panel">
         <div className="admin-verification-table-scroll">

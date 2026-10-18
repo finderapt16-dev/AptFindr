@@ -111,9 +111,9 @@ export const LandlordSettings = ({
   securityTab,
 }) => (
   <div className="landlord-settings">
-    <header className="landlord-settings-page-header">
-      <h1>Settings</h1>
-      <p>Manage your account, preferences, business information, and security.</p>
+    <header className="landlord-page-header landlord-settings-page-header">
+      <h1 className="landlord-page-header__title">Settings</h1>
+      <p className="landlord-page-header__subtitle">Manage your account, preferences, business information, and security.</p>
     </header>
 
     <section className="landlord-settings-photo-card" aria-label="Profile photo">

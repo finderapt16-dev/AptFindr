@@ -4,7 +4,6 @@ import { MyPropertyCard } from "@/landlord/MyPropertyCard";
 import { Button } from "@/components/ui/button";
 
 import {
-  Building2,
   ChevronRight,
   Clock,
   Info,
@@ -432,10 +431,10 @@ export const MyProperties = ({
   if (myApartments.length === 0) {
     return (
       <div className="properties-section-container properties-empty-page">
-        <div className="properties-empty-heading">
-          <h2>Your Apartments</h2>
+        <div className="landlord-page-header properties-empty-heading">
+          <h2 className="landlord-page-header__title">Your Apartments</h2>
 
-          <p>
+          <p className="landlord-page-header__subtitle">
             Manage your apartments, units, and availability.
           </p>
         </div>
@@ -486,34 +485,26 @@ export const MyProperties = ({
    */
   return (
     <div className="properties-section-container">
-      <header className="properties-section-header">
-        <div className="properties-section-row">
-          <span className="properties-section-row-2">
-            <Building2 className="properties-section-building2-icon" />
-          </span>
+      <header className="landlord-page-header properties-section-header">
+        <div className="properties-section-header-copy">
+          <h1 className="landlord-page-header__title properties-section-your-listings">
+            Your Listings
+          </h1>
 
-          <div>
-            <p className="properties-section-my-properties">
-              My Apartments
-            </p>
-
-            <h1 className="properties-section-your-listings">
-              Your Listings
-            </h1>
-
-            <p className="properties-section-text">
-              Manage units, publication, and listing performance.
-            </p>
-          </div>
+          <p className="landlord-page-header__subtitle properties-section-text">
+            Manage units, publication, and listing performance.
+          </p>
         </div>
+      </header>
 
-        <Link to="/add-apartment">
+      <div className="properties-section-header-actions">
+        <Link to="/add-apartment" className="properties-section-add-property-link">
           <Button className="properties-section-add-property">
             <Plus className="properties-section-plus-icon" />
             Add Apartment
           </Button>
         </Link>
-      </header>
+      </div>
 
       <section className="properties-section-section">
         <div className="properties-section-row-3">

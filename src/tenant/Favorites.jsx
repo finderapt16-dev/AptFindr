@@ -557,8 +557,8 @@ export function Favorites() {
 
                 <main className="app-shell-main">
                     <div className="app-shell-content app-shell-content-mobile-nav">
-                        <section className="tenant-favorites-hero">
-                            <div className="favorites-panel-9">
+                        <section className="tenant-favorites-hero tenant-page-header">
+                            <div className="favorites-panel-9 tenant-page-header__content">
                                 <h1 className="favorites-your-favorites">
                                     Your Favorites
                                 </h1>
@@ -668,8 +668,8 @@ export const FavoritesOverview = ({
     navigate,
 }) => (
     <div className="favorites-section-container">
-        <section className="favorites-section-section">
-            <div className="favorites-section-content">
+        <section className="favorites-section-section tenant-page-header">
+            <div className="favorites-section-content tenant-page-header__content">
                 <div>
                     <h1 className="favorites-section-your-favorites">
                         Your Favorites

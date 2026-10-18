@@ -1,10 +1,7 @@
 /* Landlord Help & Support: tenant-style layout with landlord content. */
 
 /* Page */
-.landlord-help-page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px; box-sizing: border-box; }
-.landlord-help-header { margin-bottom: 16px; padding: 22px 32px; border: 1px solid #e1e7ec; border-radius: 8px; background: #fff; }
-.landlord-help-title { margin: 0; color: #111; font-size: 28px; line-height: 1.2; font-weight: 700; }
-.landlord-help-subtitle { margin: 6px 0 0; color: #687787; font-size: 14px; line-height: 1.5; }
+.landlord-help-page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 24px 24px; box-sizing: border-box; }
 
 /* Help topics */
 .landlord-help-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
@@ -52,8 +49,7 @@
 
 /* Responsive */
 @media (max-width: 800px) {
-  .landlord-help-page { padding: 16px; }
-  .landlord-help-header { padding: 20px; }
+  .landlord-help-page { padding: 0 16px 16px; }
   .landlord-help-category-grid { grid-template-columns: 1fr; }
 }
 

@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, LockKeyhole, Mail, RotateCcw, Send } from "lucide-react";
 export const ReportProblem = ({ reportSubmitted, resetReport, reportForm, setReportForm, publishedApartments, reportEvidenceFiles, setReportEvidenceFiles, user, handleReportSubmit, isSubmittingReport, }) => (<div className="report-page">
-    <header className="report-hero">
-      <div className="report-section-panel">
+    <header className="report-hero tenant-page-header">
+      <div className="report-section-panel tenant-page-header__content">
         <h2 className="report-section-report-a-problem">Report a Problem</h2>
         <p className="report-section-text">Tell us about inaccurate or problematic apartment listing information.</p>
       </div>

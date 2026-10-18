@@ -433,10 +433,10 @@ export function MarketTrends() {
           <main className="app-shell-content app-shell-content-mobile-nav">
             <div className="market-trends-page">
               {/* Header */}
-              <header className="market-trends-header">
+              <header className="landlord-page-header market-trends-header">
                 <div>
-                  <h1>Market Trends</h1>
-                  <p>
+                  <h1 className="landlord-page-header__title">Market Trends</h1>
+                  <p className="landlord-page-header__subtitle">
                     Discover the most popular apartment
                     listings based on tenant engagement.
                   </p>

@@ -18,7 +18,14 @@ export const HelpSupport = ({ supportSubmitted, setSupportSubmitted, supportForm
   const [openTopic, setOpenTopic] = useState(null);
   const [supportOpen, setSupportOpen] = useState(false);
   return <div className="tenant-help-page">
-    <header className="tenant-help-header"><h1 className="tenant-help-title">Help</h1><p className="tenant-help-subtitle">Search our help topics or browse the categories below.</p></header>
+  <header className="tenant-help-header tenant-page-header">
+  <div className="tenant-help-heading">
+    <h1 className="tenant-help-title">Help</h1>
+    <p className="tenant-help-subtitle">
+      Search our help topics or browse the categories below.
+    </p>
+  </div>
+</header>
     <div className="tenant-help-category-grid" aria-label="Help topics">
       {helpCategories.map(([title, items], categoryIndex) => <div className="tenant-help-category" key={title}>
         <h2 className="tenant-help-category-title">{title}</h2><div className="tenant-help-topic-list">

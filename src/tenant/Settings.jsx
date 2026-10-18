@@ -239,8 +239,8 @@ export function Settings({
                 SETTINGS HEADER
             ===================================================== */}
 
-            <header className="tenant-profile-heading">
-                <div>
+            <header className="tenant-profile-heading tenant-page-header">
+                <div className="tenant-page-header__content">
                     <h1>Settings</h1>
 
                     <p>

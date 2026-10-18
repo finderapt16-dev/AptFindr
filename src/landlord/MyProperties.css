@@ -16,13 +16,7 @@
    ============================================================ */
 
 .properties-section-header {
-  width: 100%;
-  min-height: 108px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 0 24px;
+  position: relative;
 }
 
 .properties-section-row {
@@ -54,6 +48,12 @@
   min-width: 0;
 }
 
+.properties-section-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 16px;
+}
+
 .properties-section-my-properties {
   margin: 0 0 2px;
   color: #64748b;
@@ -62,23 +62,6 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.properties-section-your-listings {
-  margin: 0;
-  color: #111827;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-.properties-section-text {
-  margin: 5px 0 0;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 400;
 }
 
 .properties-section-add-property-link,
@@ -704,15 +687,6 @@
     padding-right: 28px;
   }
 
-  .properties-section-header {
-    min-height: 100px;
-  }
-
-  .properties-section-your-listings {
-    font-size: 24px;
-    line-height: 30px;
-  }
-
   .properties-section-grid {
     grid-template-columns: 1fr;
   }
@@ -727,12 +701,7 @@
     padding: 0 20px 30px;
   }
 
-  .properties-section-header {
-    align-items: flex-start;
-    flex-direction: column;
-    padding-top: 24px;
-    padding-bottom: 20px;
-  }
+  .properties-section-header-actions { justify-content: stretch; }
 
   .properties-section-add-property-link,
   .properties-section-add-property {
@@ -799,15 +768,6 @@
   .properties-section-building2-icon {
     width: 21px;
     height: 21px;
-  }
-
-  .properties-section-your-listings {
-    font-size: 21px;
-    line-height: 27px;
-  }
-
-  .properties-section-text {
-    font-size: 12px;
   }
 
   .properties-section-row-3 {

@@ -1,0 +1,120 @@
+/*
+ * Shared tenant dashboard page header.
+ * Notifications is the source of truth; page-level content stays independent
+ * through the optional bleed value used only by narrower page shells.
+ */
+.tenant-browse .app-shell-main {
+  scrollbar-gutter: stable;
+}
+
+.tenant-page-header,
+.tenant-page-header.apartment-browse-section-3,
+.tenant-page-header.tenant-favorites-hero,
+.tenant-page-header.favorites-section-section,
+.tenant-page-header.tenant-notifications-section,
+.tenant-page-header.tenant-profile-heading,
+.tenant-page-header.report-hero,
+.tenant-page-header.tenant-help-header {
+  --tenant-page-header-bleed: 0px;
+  width: min(calc(100% + var(--tenant-page-header-bleed) + var(--tenant-page-header-bleed)), 1400px);
+  min-height: 130px;
+  margin: 15px 0 24px;
+  padding: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.tenant-page-header__content,
+.tenant-page-header .tenant-help-heading {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.tenant-page-header :is(h1, h2) {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.tenant-page-header p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+/* Parent top margins would otherwise be added to the shared 15px header gap. */
+.tenant-notifications-container {
+  margin-top: 0;
+}
+
+.tenant-browse main .tenant-profile-settings {
+  margin: 0 auto 40px;
+}
+
+/* Help retains its existing 1152px content column while its header uses the
+   complete tenant content width. */
+.tenant-help-page {
+  width: 100%;
+  max-width: 1400px;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.tenant-help-category-grid,
+.tenant-help-contact-cta {
+  box-sizing: border-box;
+  width: calc(100% - 48px);
+  max-width: 1152px;
+  margin-inline: auto;
+}
+
+/* Report content retains its existing readable 1321px measure while its
+   header follows the shared 1400px tenant page width. */
+.report-page > .report-form,
+.report-page > .report-success {
+  width: min(100%, 1321px);
+  margin-inline: auto;
+}
+
+@media (min-width: 761px) and (max-width: 1500px) {
+  .tenant-profile-settings .tenant-page-header {
+    --tenant-page-header-bleed: 16px;
+  }
+}
+
+@media (max-width: 800px) {
+  .tenant-help-category-grid,
+  .tenant-help-contact-cta {
+    width: calc(100% - 32px);
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .tenant-page-header,
+  .tenant-page-header.apartment-browse-section-3,
+  .tenant-page-header.tenant-favorites-hero,
+  .tenant-page-header.favorites-section-section,
+  .tenant-page-header.tenant-notifications-section,
+  .tenant-page-header.tenant-profile-heading,
+  .tenant-page-header.report-hero,
+  .tenant-page-header.tenant-help-header {
+    min-height: 120px;
+    padding: 24px;
+  }
+}

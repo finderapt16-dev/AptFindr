@@ -49,6 +49,8 @@
 
 @import '../tenant/TenantShell.css';
 
+@import '../tenant/TenantPageHeader.css';
+
 
 /* =========================
    LANDLORD
@@ -93,6 +95,9 @@
 @import '../landlord/AppealModal.css';
 
 @import '../landlord/PeopleModal.css';
+
+/* Keep the landlord dashboard page-header contract after page-specific CSS. */
+@import '../landlord/LandlordPageHeader.css';
 
 /* =========================
    ADMIN
