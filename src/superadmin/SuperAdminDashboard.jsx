@@ -1,4 +1,3 @@
-import { getSupportTicketId, isSupportNotification } from "@/utils/supportNotifications";
 import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 import { AdminOverview } from "./SuperAdminOverview";
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
@@ -12,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isAdminRole } from "@/services/authService";
 import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
-import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchStaffNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchSupportTicketById, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
+import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchSupportTicketById, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
@@ -164,7 +163,7 @@ export function AdminDashboard() {
         const message = String(notification.message ?? "").toLowerCase();
         const action = String(payload.action ?? "").toLowerCase();
         const value = `${type} ${title} ${message} ${action}`;
-        if (isSupportNotification(notification))
+        if (type === "support_request" || payload.ticket_id || payload.support_ticket_id)
             return "support";
         if (value.includes("report") || value.includes("violation"))
             return "reports";
@@ -189,7 +188,7 @@ export function AdminDashboard() {
             setAdminNotifs([]);
             return [];
         }
-        const notifications = await fetchStaffNotifications(user.id, "super_admin", true);
+        const notifications = await fetchNotifications(user.id, true);
         setAdminNotifs(notifications);
         return notifications;
     }, [user?.id]);
@@ -256,7 +255,7 @@ export function AdminDashboard() {
             toast.error("Could not restore the notification. Please try again.");
     };
     const openSupportRequest = async (notification) => {
-        const ticketId = getSupportTicketId(notification);
+        const ticketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
         if (!ticketId || loadingSupportRequestId) {
             if (!ticketId)
                 toast.error("This support request is missing its ticket reference.");
@@ -574,7 +573,7 @@ export function AdminDashboard() {
                 const [loadedReports, loadedViolations, loadedNotifications, loadedApartments, loadedAppeals, loadedArchivedReports, loadedArchivedAppeals, loadedUsers] = await Promise.all([
                     fetchAdminReports(),
                     fetchViolations(),
-                    user?.id ? fetchStaffNotifications(user.id, "super_admin", true) : Promise.resolve([]),
+                    user?.id ? fetchNotifications(user.id, true) : Promise.resolve([]),
                     fetchApartments(),
                     fetchPendingAppeals(),
                     fetchArchivedReports(),
@@ -1422,8 +1421,9 @@ export function AdminDashboard() {
                     const actionUrl = rawActionUrl.startsWith("/")
                         ? rawActionUrl
                         : apartment ? `${apartmentDetailBasePath}/${apartmentId}` : "";
-                    const supportTicketId = getSupportTicketId(notification);
-                    const isSupportRequest = isSupportNotification(notification);
+                    const supportTicketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
+                    const isSupportRequest = String(notification.type ?? "").toLowerCase() === "support_request"
+                        || Boolean(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id);
                     const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
                     const isPermitNotification = isBusinessPermitNotification(notification);
                     const permitPayload = notification.payload ?? {};

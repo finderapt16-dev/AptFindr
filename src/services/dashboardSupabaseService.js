@@ -2,7 +2,6 @@ import { notifyNotificationsChanged } from "./liveUpdates";
 import { supabase } from "./supabaseClient";
 import { safeRandomId } from "../utils/safeRandomId";
 import { apartmentRowToApartment } from "../data/apartments";
-import { filterStaffNotifications } from "../utils/supportNotifications";
 export const defaultTenantPreferences = {
     hasSavedPreferences: false,
     preferredArea: "",
@@ -412,9 +411,6 @@ export async function fetchNotifications(userId, includeArchived = false) {
         console.error("Unexpected error in fetchNotifications:", error);
         return [];
     }
-}
-export async function fetchStaffNotifications(userId, role, includeArchived = true) {
-    return filterStaffNotifications(await fetchNotifications(userId, includeArchived), role);
 }
 export async function getUnreadNotificationCount(userId) {
     try {

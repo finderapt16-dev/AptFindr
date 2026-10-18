@@ -28,6 +28,7 @@ const ACCOUNT_ITEMS = [
 
 export function AdminSidebar({
   activeSection,
+  isSupportView = false,
   pendingReports,
   activeAppealsCount,
   unreadNotifsCount,
@@ -35,10 +36,12 @@ export function AdminSidebar({
   pendingApartmentsCount,
   user,
   navigateToAdminModule,
+  navigateToSupport,
   handleLogout,
   onNavigate,
 }) {
-  const countFor = (section) => {
+  const countFor = (section, label) => {
+    if (label === "Help & Support") return 0;
     if (section === "reports") return pendingReports;
     if (section === "appeals") return activeAppealsCount;
     if (section === "notifications") return unreadNotifsCount;
@@ -51,8 +54,10 @@ export function AdminSidebar({
     <nav aria-label={label} className="admin-figma-sidebar-group">
       <p>{label}</p>
       {items.map(({ icon: Icon, label: itemLabel, section }) => {
-        const count = countFor(section);
-        const isCurrent = activeSection === section;
+        const count = countFor(section, itemLabel);
+        const isCurrent = itemLabel === "Help & Support"
+          ? isSupportView
+          : activeSection === section && !(isSupportView && section === "notifications");
 
         return (
           <button
@@ -60,7 +65,11 @@ export function AdminSidebar({
             className={`admin-figma-sidebar-item ${isCurrent ? "is-active" : ""}`}
             key={itemLabel}
             onClick={() => {
-              navigateToAdminModule(section);
+              if (itemLabel === "Help & Support") {
+                navigateToSupport?.();
+              } else {
+                navigateToAdminModule(section);
+              }
               onNavigate?.();
             }}
             type="button"

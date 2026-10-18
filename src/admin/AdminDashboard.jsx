@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
-import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordProfile, fetchLandlordWithDetails, fetchStaffNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
+import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordProfile, fetchLandlordWithDetails, fetchNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
@@ -215,6 +215,8 @@ export function AdminDashboard() {
     const [isRefreshingNotifs, setIsRefreshingNotifs] = useState(false);
     const [notifPage, setNotifPage] = useState(1);
     const [notificationToDelete, setNotificationToDelete] = useState(null);
+    const [selectedSupportRequest, setSelectedSupportRequest] = useState(null);
+    const [loadingSupportRequestId, setLoadingSupportRequestId] = useState(null);
     const isNotificationRead = (notification) => (notification.read ?? notification.is_read) === true;
     const getNotificationCategory = (notification) => {
         const payload = notification.payload ?? {};
@@ -223,6 +225,8 @@ export function AdminDashboard() {
         const message = String(notification.message ?? "").toLowerCase();
         const action = String(payload.action ?? "").toLowerCase();
         const value = `${type} ${title} ${message} ${action}`;
+        if (type === "support_request" || payload.ticket_id || payload.support_ticket_id)
+            return "support";
         if (type === "landlord_activity" || payload.category === "landlord_activity" || payload.activity_type)
             return "activities";
         if (value.includes("report") || value.includes("violation"))
@@ -245,7 +249,7 @@ export function AdminDashboard() {
             setAdminNotifs([]);
             return [];
         }
-        const notifications = await fetchStaffNotifications(user.id, "admin", true);
+        const notifications = await fetchNotifications(user.id, true);
         setAdminNotifs(notifications);
         return notifications;
     }, [user?.id]);
@@ -310,6 +314,35 @@ export function AdminDashboard() {
         setDeletingNotifId(null);
         if (!restored)
             toast.error("Could not restore the notification. Please try again.");
+    };
+    const openSupportRequest = async (notification) => {
+        const ticketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
+        if (!ticketId || loadingSupportRequestId) {
+            if (!ticketId)
+                toast.error("This support request is missing its ticket reference.");
+            return;
+        }
+        setLoadingSupportRequestId(notification.id ?? ticketId);
+        try {
+            const ticket = await fetchSupportTicketById(ticketId);
+            if (!ticket) {
+                toast.error("The support request could not be loaded.");
+                return;
+            }
+            const submitter = ticket.user_id ? await fetchUserById(ticket.user_id) : null;
+            setSelectedSupportRequest({ ticket, submitter });
+            if (notification.id && !notification.is_deleted && !isNotificationRead(notification)) {
+                await markNotificationRead(notification.id, user?.id);
+                await loadAdminNotifications();
+            }
+        }
+        catch (error) {
+            console.error("Unable to open support request:", error);
+            toast.error("The support request could not be loaded.");
+        }
+        finally {
+            setLoadingSupportRequestId(null);
+        }
     };
     const openAppealNotification = async (notification) => {
         const appealId = String(notification.payload?.appeal_id ?? "");
@@ -580,7 +613,7 @@ export function AdminDashboard() {
                 const [loadedReports, loadedViolations, loadedNotifications, loadedApartments, loadedAppeals, loadedArchivedReports, loadedArchivedAppeals, loadedUsers] = await Promise.all([
                     fetchAdminReports(),
                     fetchViolations(),
-                    user?.id ? fetchStaffNotifications(user.id, "admin", true) : Promise.resolve([]),
+                    user?.id ? fetchNotifications(user.id, true) : Promise.resolve([]),
                     fetchApartments(),
                     fetchPendingAppeals(),
                     fetchArchivedReports(),
@@ -626,7 +659,7 @@ export function AdminDashboard() {
         };
     }, [user?.id]);
     useEffect(() => {
-        if (activeSection === "notifications") {
+        if (activeSection === "notifications" || activeSection === "support") {
             void loadAdminNotifications();
         }
         if (activeSection === "reports") {
@@ -1293,6 +1326,14 @@ export function AdminDashboard() {
     const navigateToAdminModule = (section) => {
         setSidebarOpen(false);
         if (!isAdminModule(section)) return;
+        if (section === "support") {
+            setNotifFilter("all");
+            setNotifTypeFilter("support");
+            setNotifActivityFilter("all");
+            setActiveSection("support");
+            navigate(`${portalBasePath}?section=support`);
+            return;
+        }
         if (section === "notifications") {
             setNotifFilter("all");
             setNotifTypeFilter("all");
@@ -1325,7 +1366,11 @@ export function AdminDashboard() {
     };
     const handleSectionChange = (section) => {
         if (!isAdminModule(section)) return;
-        if (section === "notifications") {
+        if (section === "support") {
+            setNotifFilter("all");
+            setNotifTypeFilter("support");
+            setNotifActivityFilter("all");
+        } else if (section === "notifications") {
             setNotifFilter("all");
             setNotifTypeFilter("all");
             setNotifActivityFilter("all");
@@ -1335,12 +1380,18 @@ export function AdminDashboard() {
         setActiveSection(section);
         navigate(`${portalBasePath}?section=${section}`);
     };
+    const navigateToSupport = () => handleSectionChange("support");
     useEffect(() => {
         if (!navigationDataReady || !user?.id || !isAdminModule(requestedSection))
             return;
         if (internalSectionNavigation.current === requestedSection) {
             internalSectionNavigation.current = null;
             return;
+        }
+        if (requestedSection === "support") {
+            setNotifFilter("all");
+            setNotifTypeFilter("support");
+            setNotifActivityFilter("all");
         }
         restoreAdminModule(requestedSection);
     }, [landlords, navigationDataReady, requestedSection, user?.id]);
@@ -1377,13 +1428,18 @@ export function AdminDashboard() {
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
-    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} pendingLandlordsCount={pendingLandlordsCount} pendingApartmentsCount={pendingApartmentsCount} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} handleLogout={handleLogout} onNavigate={onNavigate}/>);
+    const PortalSidebarContent = ({ onNavigate } = {}) => (<AdminSidebar activeSection={activeSection} isSupportView={activeSection === "support"} pendingLandlordsCount={pendingLandlordsCount} pendingApartmentsCount={pendingApartmentsCount} pendingReports={pendingReports} activeAppealsCount={activeAppealsCount} unreadNotifsCount={unreadNotifsCount} user={user} navigateToAdminModule={navigateToAdminModule} navigateToSupport={navigateToSupport} handleLogout={handleLogout} onNavigate={onNavigate}/>);
     // ── Section: Notifications ────────────────────────────────────────────────
     const renderNotifications = () => {
         const notificationCenterItems = adminNotifs;
         const activeNotifications = notificationCenterItems.filter((notification) => !notification.is_deleted);
         const unreadCount = activeNotifications.filter((notification) => !isNotificationRead(notification)).length;
         const selectNotificationView = (status, type = "all") => {
+            if (type === "support") {
+                handleSectionChange("support");
+            } else if (activeSection === "support") {
+                handleSectionChange("notifications");
+            }
             setNotifFilter(status);
             setNotifTypeFilter(type);
             setNotifActivityFilter("all");
@@ -1418,8 +1474,8 @@ export function AdminDashboard() {
         const visibleNotifs = filteredNotifs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
         return (<div className="admin-dashboard-container-3">
         <header>
-          <h1 className="admin-dashboard-notifications">Notifications</h1>
-          <p className="admin-dashboard-text-6">Stay updated with landlord applications, property submissions, reports, and appeals.</p>
+          <h1 className="admin-dashboard-notifications">{activeSection === "support" ? "Help & Support" : "Notifications"}</h1>
+          <p className="admin-dashboard-text-6">{activeSection === "support" ? "Review submitted support requests and open their details." : "Stay updated with landlord applications, property submissions, reports, and appeals."}</p>
         </header>
         <div className="admin-dashboard-row-17">
           <label className="admin-dashboard-label">
@@ -1456,6 +1512,9 @@ export function AdminDashboard() {
                     const actionUrl = rawActionUrl.startsWith("/")
                         ? rawActionUrl
                         : apartment ? `${apartmentDetailBasePath}/${apartmentId}` : "";
+                    const supportTicketId = String(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id ?? notification.action_target_id ?? "");
+                    const isSupportRequest = String(notification.type ?? "").toLowerCase() === "support_request"
+                        || Boolean(notification.payload?.ticket_id ?? notification.payload?.support_ticket_id);
                     const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
                     const isPermitNotification = isBusinessPermitNotification(notification);
                     const permitPayload = notification.payload ?? {};
@@ -1468,11 +1527,16 @@ export function AdminDashboard() {
                             .map((item) => String(item.title ?? "").trim())
                             .filter(Boolean)
                             .join(", ");
+                    const supportRequestLoading = loadingSupportRequestId === (notification.id ?? supportTicketId);
                     const openNotification = () => {
                         if (archived)
                             return;
                         if (!read && notification.id)
                             void toggleNotifReadStatus(notification.id, false);
+                        if (isSupportRequest) {
+                            void openSupportRequest(notification);
+                            return;
+                        }
                         if (isAppealNotification) {
                             void openAppealNotification(notification);
                             return;
@@ -1503,10 +1567,11 @@ export function AdminDashboard() {
                       <time className="admin-dashboard-notification-date" dateTime={notification.createdAt ?? notification.created_at ?? undefined} title={formatOptionalDate(notification.createdAt ?? notification.created_at, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}>{notificationAge(notification.createdAt ?? notification.created_at)}</time>
                     </div>
                     <div className="admin-dashboard-row-20">
+                      {!archived && isSupportRequest && <Button size="sm" variant="outline" disabled={supportRequestLoading} onClick={() => void openSupportRequest(notification)} className="admin-dashboard-button-10"><Eye className="admin-dashboard-eye-icon"/>{supportRequestLoading ? "Loading..." : "View Details"}</Button>}
                       {!archived && isAppealNotification && <Button size="sm" variant="outline" onClick={() => void openAppealNotification(notification)} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
                       {!archived && isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); openPermitLandlord(notification); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Landlord</Button>}
-                      {actionUrl && !archived && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
+                      {actionUrl && !archived && !isSupportRequest && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: `${portalBasePath}?section=notifications`, backLabel: "Back to Notifications" } }); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
                       <NotificationActionsMenu triggerClassName="admin-notification-menu-trigger" menuClassName="admin-notification-floating-menu">
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark as unread" : "Mark as read"} aria-label={read ? "Mark as unread" : "Mark as read"} className="admin-notification-action">{read ? <Mail className="admin-dashboard-mail-icon"/> : <MailOpen className="admin-dashboard-mail-open-icon"/>}{read ? "Mark as unread" : "Mark as read"}</button>}
@@ -1951,6 +2016,7 @@ export function AdminDashboard() {
     const sectionMap = {
         overview: () => <AdminOverview apartments={allApartments} landlords={landlords} reports={reports} appeals={appeals} onNavigate={navigateToAdminModule}/>,
         notifications: renderNotifications,
+        support: renderNotifications,
         landlords: renderLandlords,
         apartments: renderApartments,
         reports: renderReports,
@@ -2013,6 +2079,38 @@ export function AdminDashboard() {
             <AlertDialogAction onClick={confirmVerification} className={`admin-dashboard-alert-dialog-action ${verifyAction?.verify ? "admin-dashboard-alert-dialog-action-2" : "admin-dashboard-alert-dialog-action-3"}`}>
               {verifyAction?.verify ? "Confirm Verification" : verifyAction?.rejection ? "Confirm Rejection" : "Confirm Revoke"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={selectedSupportRequest !== null} onOpenChange={(open) => { if (!open)
+        setSelectedSupportRequest(null); }}>
+        <AlertDialogContent className="admin-dashboard-card-14">
+          <AlertDialogHeader className="admin-dashboard-alert-dialog-header">
+            <div className="admin-dashboard-row-10">
+              <span className="admin-dashboard-row-36"><Flag className="admin-dashboard-flag-icon"/></span>
+              <div className="admin-dashboard-panel-4">
+                <AlertDialogTitle className="admin-dashboard-support-request-details">Support Request Details</AlertDialogTitle>
+                <AlertDialogDescription className="admin-dashboard-alert-dialog-description">Review the complete request submitted to platform support.</AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          {selectedSupportRequest && (<div className="admin-dashboard-panel-14">
+              <div className="admin-dashboard-grid-3">
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-submitted-by">Submitted by</p><p className="admin-dashboard-text-33">{selectedSupportRequest.submitter?.name || "User unavailable"}</p></div>
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-user-role">User role</p><p className="admin-dashboard-text-34">{selectedSupportRequest.submitter?.role || "Unavailable"}</p></div>
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-contact-email">Contact email</p><p className="admin-dashboard-text-35">{selectedSupportRequest.ticket.contact || selectedSupportRequest.submitter?.email || "Not provided"}</p></div>
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-date-submitted">Date submitted</p><p className="admin-dashboard-text-33">{formatOptionalDate(selectedSupportRequest.ticket.created_at, { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-topic">Topic</p><p className="admin-dashboard-text-33">{selectedSupportRequest.ticket.topic || "Not provided"}</p></div>
+                <div className="admin-dashboard-panel-15"><p className="admin-dashboard-status">Status</p><p className="admin-dashboard-text-34">{(selectedSupportRequest.ticket.status || "Unavailable").replace(/_/g, " ")}</p></div>
+              </div>
+              <div>
+                <p className="admin-dashboard-full-message">Full message</p>
+                <p className="admin-dashboard-text-36">{selectedSupportRequest.ticket.message || "No message provided."}</p>
+              </div>
+            </div>)}
+          <AlertDialogFooter className="admin-dashboard-alert-dialog-footer">
+            <AlertDialogCancel className="admin-dashboard-close">Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
