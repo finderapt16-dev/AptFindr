@@ -1,9 +1,9 @@
 /*
  * Shared landlord dashboard page header.
  *
- * Notifications is the visual source of truth. The bleed variable lets a
- * header escape a page-specific content gutter without changing that page's
- * cards, forms, charts, or other content layout.
+ * Landlord Dashboard is the visual source of truth. The bleed variable only
+ * compensates for a page's internal gutter, so every header reaches the same
+ * outer edge without changing that page's cards, forms, charts, or layout.
  */
 .landlord-shell .app-shell-main {
   scrollbar-gutter: stable;
@@ -17,9 +17,9 @@
 .landlord-page-header.landlord-help-header,
 .landlord-page-header.properties-empty-heading {
   --landlord-page-header-bleed: 0px;
-  width: min(calc(100% + var(--landlord-page-header-bleed) + var(--landlord-page-header-bleed)), 1200px);
+  width: min(calc(100% + var(--landlord-page-header-bleed) + var(--landlord-page-header-bleed)), 1400px);
   min-height: 130px;
-  margin: 15px 0 24px;
+  margin: 15px auto 24px;
   padding: 40px 64px;
   display: flex;
   flex-direction: column;
@@ -40,7 +40,7 @@
   font-size: 24px;
   line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .landlord-page-header .landlord-page-header__subtitle {
@@ -50,21 +50,28 @@
   line-height: 20px;
 }
 
-/* Page-specific gutters are intentionally limited to the header itself. */
+/* Only My Apartments has a local content gutter that its header must cross. */
 .properties-section-header,
 .properties-empty-heading {
   --landlord-page-header-bleed: 40px;
 }
 
-.market-trends-header { --landlord-page-header-bleed: 20px; }
-.landlord-help-header { --landlord-page-header-bleed: 24px; }
+@media (min-width: 681px) and (max-width: 1279px) {
+  .landlord-page-header,
+  .landlord-page-header.landlord-notifications__header,
+  .landlord-page-header.properties-section-header,
+  .landlord-page-header.market-trends-header,
+  .landlord-page-header.landlord-settings-page-header,
+  .landlord-page-header.landlord-help-header,
+  .landlord-page-header.properties-empty-heading {
+    min-height: 112px;
+    padding: 30px 36px;
+  }
+}
 
 @media (max-width: 1100px) and (min-width: 681px) {
   .properties-section-header,
   .properties-empty-heading { --landlord-page-header-bleed: 28px; }
-
-  .market-trends-header { --landlord-page-header-bleed: 16px; }
-  .landlord-settings-page-header { --landlord-page-header-bleed: 16px; }
 }
 
 @media (max-width: 680px) {
@@ -76,6 +83,8 @@
   .landlord-page-header.landlord-help-header,
   .landlord-page-header.properties-empty-heading {
     min-height: 0;
+    width: calc(100% + var(--landlord-page-header-bleed) + var(--landlord-page-header-bleed));
+    max-width: none;
     margin: 0 0 16px;
     padding: 18px 20px;
     border: 0;
@@ -100,8 +109,6 @@
   .properties-section-header,
   .properties-empty-heading { --landlord-page-header-bleed: 20px; }
 
-  .market-trends-header { --landlord-page-header-bleed: 12px; }
-  .landlord-help-header { --landlord-page-header-bleed: 16px; }
 }
 
 @media (max-width: 480px) {

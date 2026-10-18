@@ -1,7 +1,7 @@
 /* Landlord Help & Support: tenant-style layout with landlord content. */
 
 /* Page */
-.landlord-help-page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 0 24px; box-sizing: border-box; }
+.landlord-help-page { width: 100%; max-width: 1400px; margin: 0 auto; padding: 0 0 24px; box-sizing: border-box; }
 
 /* Match the content panels to the full left and right edges of the header. */
 .landlord-help-category-grid,
