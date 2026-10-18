@@ -179,7 +179,27 @@
 }
 
 .security-tab-panel-2 input {
-    padding-right: 48px;
+    height: 31px;
+    min-height: 31px;
+    padding: 6px 40px 6px 9px;
+    border-color: #d9e0e8;
+    border-radius: 5px;
+    font-size: 11px;
+    line-height: normal;
+}
+
+.security-tab-password-fields .settings-fields-label {
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+@media (max-width: 700px) {
+    .security-tab-password-fields {
+        width: 100%;
+    }
 }
 
 .security-tab-button {
@@ -545,7 +565,7 @@
 
     color: #94a3b8;
 
-    font-size: 11px;
+    font-size: 14px;
 }
 
 

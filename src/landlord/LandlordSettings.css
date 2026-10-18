@@ -199,8 +199,8 @@
 .landlord-settings-business-card { padding: 16px; }
 .landlord-settings-business-card .landlord-settings-card-header { margin-bottom: 16px; }
 .landlord-settings-business-record { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(225px, .8fr); align-items: center; gap: 20px; padding: 10px 16px; border: 1px solid #dfe5ec; border-radius: 8px; background: #fff; }
-.landlord-settings-business-record .landlord-settings-permit-details { margin: 0; gap: 12px 22px; }
-.landlord-settings-business-record .landlord-settings-permit-details div { padding: 4px 10px; }
+.landlord-settings-business-record .landlord-settings-permit-details { margin: 0; padding: 0; border: 0; min-height: 0; gap: 12px 22px; }
+.landlord-settings-business-record .landlord-settings-permit-details > div { padding: 4px 10px; border: 0; border-radius: 0; box-shadow: none; background: transparent; min-height: 0; height: auto; }
 .landlord-settings-business-record .landlord-settings-permit-details dd { font-size: 12px; overflow-wrap: anywhere; }
 .landlord-settings-business-record .landlord-settings-permit-details dt { margin-bottom: 3px; font-size: 10px; }
 .landlord-settings-business-record .landlord-settings-permit-file { min-height: 66px; padding: 10px 12px; background: #fff; }
