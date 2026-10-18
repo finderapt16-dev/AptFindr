@@ -12,7 +12,6 @@
 
 .property-guidelines-modal {
   width: min(630px, 100%);
-  max-height: min(92vh, 930px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -27,7 +26,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding: 22px 28px 16px;
+  padding: 18px 28px 13px;
   border-bottom: 1px solid #d8dee6;
 }
 
@@ -72,36 +71,33 @@
 }
 
 .property-guidelines-content {
-  overflow-y: auto;
-  padding: 16px 28px;
+  overflow: visible;
+  padding: 12px 28px;
 }
 
 .property-guidelines-introduction {
-  margin: 0 0 14px;
-  color: #6b7280;
-  font-size: 15px;
-  line-height: 1.4;
+  display: none;
 }
 
 .property-guidelines-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .property-guidelines-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 94px;
-  padding: 14px 16px 14px 10px;
+  gap: 12px;
+  min-height: 0;
+  padding: 10px 14px 10px 10px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
 }
 
 .property-guidelines-icon {
-  width: 60px;
-  height: 60px;
-  flex: 0 0 60px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -109,8 +105,8 @@
 }
 
 .property-guidelines-icon svg {
-  width: 29px;
-  height: 29px;
+  width: 24px;
+  height: 24px;
   stroke-width: 1.9;
 }
 
@@ -122,9 +118,9 @@
 .property-guidelines-icon--cyan { background: #e4f9fc; color: #06a6bb; }
 
 .property-guidelines-item h3 {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: #111111;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.3;
   font-weight: 700;
 }
@@ -132,18 +128,19 @@
 .property-guidelines-item p {
   margin: 0;
   color: #6b7280;
-  font-size: 14px;
-  line-height: 1.3;
+  font-size: 13px;
+  line-height: 1.28;
 }
 
 .property-guidelines-footer {
-  display: flex;
-  justify-content: center;
-  padding: 22px 28px;
+  display: block;
+  width: 100%;
+  padding: 16px 28px 18px;
   border-top: 1px solid #d8dee6;
 }
 
 .property-guidelines-accept {
+  display: block;
   min-width: 276px;
   min-height: 45px;
   padding: 10px 22px;
@@ -154,6 +151,8 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .property-guidelines-accept:hover {
@@ -173,4 +172,15 @@
   .property-guidelines-item p,
   .property-guidelines-introduction { font-size: 13px; }
   .property-guidelines-accept { width: 100%; min-width: 0; }
+}
+
+@media (max-height: 760px) and (min-width: 641px) {
+  .property-guidelines-overlay { padding-block: 12px; }
+  .property-guidelines-header { padding-block: 14px 10px; }
+  .property-guidelines-content { padding-block: 8px; }
+  .property-guidelines-list { gap: 6px; }
+  .property-guidelines-item { padding-block: 7px; }
+  .property-guidelines-icon { width: 42px; height: 42px; flex-basis: 42px; }
+  .property-guidelines-icon svg { width: 21px; height: 21px; }
+  .property-guidelines-footer { padding-block: 10px 12px; }
 }

@@ -57,7 +57,27 @@
   font-weight: 400;
 }
 
+/* Report-specific type spacing otherwise makes this header taller than
+   Notifications despite the shared header card dimensions. */
+.tenant-page-header.report-hero .report-section-report-a-problem {
+  line-height: 1.2;
+}
+
+.tenant-page-header.report-hero .report-section-text {
+  margin: 5px 0 0;
+  line-height: 20px;
+}
+
 /* Parent top margins would otherwise be added to the shared 15px header gap. */
+.tenant-apartments-page,
+.tenant-favorites-page,
+.favorites-section-container,
+.tenant-notifications-container {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
 .tenant-notifications-container {
   margin-top: 0;
 }
@@ -66,8 +86,7 @@
   margin: 0 auto 40px;
 }
 
-/* Help retains its existing 1152px content column while its header uses the
-   complete tenant content width. */
+/* Keep Help content aligned with the full-width header. */
 .tenant-help-page {
   width: 100%;
   max-width: 1400px;
@@ -78,8 +97,8 @@
 .tenant-help-category-grid,
 .tenant-help-contact-cta {
   box-sizing: border-box;
-  width: calc(100% - 48px);
-  max-width: 1152px;
+  width: 100%;
+  max-width: 1400px;
   margin-inline: auto;
 }
 
@@ -100,7 +119,7 @@
 @media (max-width: 800px) {
   .tenant-help-category-grid,
   .tenant-help-contact-cta {
-    width: calc(100% - 32px);
+    width: 100%;
     max-width: none;
   }
 }
@@ -116,5 +135,29 @@
   .tenant-page-header.tenant-help-header {
     min-height: 120px;
     padding: 24px;
+  }
+}
+
+/* Browse and Favorites are standalone routes with an extra 36px page inset.
+   Extend only their headers through that inset to match dashboard headers. */
+@media (min-width: 641px) {
+  .tenant-browse .tenant-apartments-page > .tenant-page-header,
+  .tenant-browse .tenant-favorites-page > .tenant-page-header {
+    width: calc(100% + 72px) !important;
+    max-width: none !important;
+    margin-left: -36px !important;
+    margin-right: -36px !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+
+  .tenant-browse .tenant-apartments-page > .apartment-browse-form-hero,
+  .tenant-browse .tenant-apartments-page > .apartment-browse-controls,
+  .tenant-browse .tenant-apartments-page > .apartment-browse-section-5,
+  .tenant-browse .tenant-favorites-page > .favorites-section-2 {
+    width: calc(100% + 72px);
+    margin-left: -36px;
+    margin-right: -36px;
+    box-sizing: border-box;
   }
 }

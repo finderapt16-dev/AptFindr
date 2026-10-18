@@ -879,3 +879,39 @@ circle:not(.market-trend-donut-segment) {
     width: 124px;
   }
 }
+
+/* The Market Trends page has a 20px content gutter. Let its page header
+   bleed through that gutter so its edge and text align with other landlord
+   dashboard headers. */
+@media (min-width: 641px) {
+  .landlord-market-trends .market-trends-page > .landlord-page-header.market-trends-header {
+    width: calc(100% + 40px);
+    max-width: none;
+    margin-left: -20px;
+    margin-right: -20px;
+    left: 0;
+    transform: none;
+  }
+
+  .landlord-market-trends .market-trends-layout,
+  .landlord-market-trends .market-trends-empty {
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1100px) {
+  .landlord-market-trends .market-trends-page > .landlord-page-header.market-trends-header {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+
+  .landlord-market-trends .market-trends-layout,
+  .landlord-market-trends .market-trends-empty {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+}

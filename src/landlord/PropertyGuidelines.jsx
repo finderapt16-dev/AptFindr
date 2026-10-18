@@ -110,7 +110,10 @@ export function PropertyGuidelines({ onAccept, onClose }) {
           </div>
         </div>
 
-        <footer className="property-guidelines-footer">
+        <footer
+          className="property-guidelines-footer"
+          style={{ display: "flex", justifyContent: "center" }}
+        >
           <button
             type="button"
             className="property-guidelines-accept"

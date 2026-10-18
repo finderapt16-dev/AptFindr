@@ -53,7 +53,9 @@ export function LandlordSidebar({ user, activeSection, unreadNotifications, need
 
     <div className="landlord-sidebar-profile-wrap">
       <button type="button" className="app-sidebar-profile app-sidebar-profile-button landlord-sidebar-profile" onClick={() => selectSection("settings")} aria-label="Open personal information settings">
-        <span className="landlord-sidebar-avatar">{user?.avatar ? <img src={user.avatar} alt="Profile" /> : (user?.name?.[0]?.toUpperCase() ?? "L")}</span>
+        <span className="landlord-sidebar-avatar" aria-hidden="true">
+          {user?.name?.[0]?.toUpperCase() ?? "L"}
+        </span>
         <span className="landlord-sidebar-profile-copy"><strong>{user?.name || "Username unavailable"}</strong><small>{user?.email ?? ""}</small></span>
       </button>
     </div>

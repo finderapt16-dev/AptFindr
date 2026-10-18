@@ -1,7 +1,11 @@
 /* Landlord Help & Support: tenant-style layout with landlord content. */
 
 /* Page */
-.landlord-help-page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 24px 24px; box-sizing: border-box; }
+.landlord-help-page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 0 24px; box-sizing: border-box; }
+
+/* Match the content panels to the full left and right edges of the header. */
+.landlord-help-category-grid,
+.landlord-help-contact-cta { margin-inline: 0; }
 
 /* Help topics */
 .landlord-help-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
@@ -49,7 +53,9 @@
 
 /* Responsive */
 @media (max-width: 800px) {
-  .landlord-help-page { padding: 0 16px 16px; }
+  .landlord-help-page { padding: 0 0 16px; }
+  .landlord-help-category-grid,
+  .landlord-help-contact-cta { margin-inline: 0; }
   .landlord-help-category-grid { grid-template-columns: 1fr; }
 }
 
