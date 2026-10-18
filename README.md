@@ -34,7 +34,7 @@ See [the tenant source guide](docs/TENANT_STRUCTURE.md) for tenant page location
 
 ## Supabase
 
-The local `supabase-master-migration.sql` is intentionally ignored and must not be committed. Run the current migration manually in the Supabase SQL Editor when required. Configure production Site URL, allowed `/auth/callback` and `/reset-password` redirects, and custom SMTP in Supabase.
+SQL files are maintained locally and excluded from Git, including migrations under `scripts` and `supabase/migrations` and the `supabase-master-migration.sql` export. Keep a local copy and run the required migration manually in the Supabase SQL Editor. Configure production Site URL, allowed `/auth/callback` and `/reset-password` redirects, and custom SMTP in Supabase.
 
 ### Super admin account
 
@@ -57,7 +57,7 @@ The page also subscribes to `app_users` realtime changes, refreshes automaticall
 
 Before using it in a deployed Supabase project:
 
-1. Review and run `supabase/migrations/20261014000000_super_admin_user_management.sql` in the Supabase SQL Editor. This also adds `app_users` to the Supabase Realtime publication when needed.
+1. From your local migration copies, review and run `supabase/migrations/20261014000000_super_admin_user_management.sql` in the Supabase SQL Editor. This also adds `app_users` to the Supabase Realtime publication when needed.
 2. Deploy the Edge Function:
 
 ```powershell

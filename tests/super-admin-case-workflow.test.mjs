@@ -1,19 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const dashboardSource = readFileSync(
   new URL('../src/superadmin/SuperAdminDashboard.jsx', import.meta.url),
   'utf8',
 );
-const workflowSql = readFileSync(
-  new URL('../scripts/appeal_workflow_migration.sql', import.meta.url),
-  'utf8',
-);
-const authorizationMigration = readFileSync(
-  new URL('../supabase/migrations/20261016000000_super_admin_case_workflow.sql', import.meta.url),
-  'utf8',
-);
+const workflowSqlPath = new URL('../scripts/appeal_workflow_migration.sql', import.meta.url);
+const authorizationMigrationPath = new URL('../supabase/migrations/20261016000000_super_admin_case_workflow.sql', import.meta.url);
+const localMigrationsAvailable = existsSync(workflowSqlPath) && existsSync(authorizationMigrationPath);
 
 test('super admin shares the current admin report and appeal workflows', () => {
   assert.match(dashboardSource, /AdminReports.*from ['"]@\/admin\/AdminReports['"]/);
@@ -34,7 +29,11 @@ test('shared case components retain super admin navigation paths', () => {
   assert.match(dashboardSource, /apartmentDetailBasePath=\{apartmentDetailBasePath\}/);
 });
 
-test('report and appeal RPCs authorize both admin roles', () => {
+test('report and appeal RPCs authorize both admin roles', {
+  skip: localMigrationsAvailable ? false : 'SQL migrations are maintained locally and excluded from Git.',
+}, () => {
+  const workflowSql = readFileSync(workflowSqlPath, 'utf8');
+  const authorizationMigration = readFileSync(authorizationMigrationPath, 'utf8');
   const staffRoleCheck = /in \('admin', 'super_admin'\)/;
   assert.match(workflowSql, staffRoleCheck);
   assert.doesNotMatch(workflowSql, /lower\(role::text\)='admin'/);

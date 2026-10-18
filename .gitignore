@@ -49,3 +49,8 @@ database/
 node_modules/
 
 supabase/.temp/
+
+# SQL migrations and exports are maintained locally.
+*.sql
+github-sql/
+github-sql.zip

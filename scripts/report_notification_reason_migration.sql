@@ -1,9 +1,0 @@
--- OBSOLETE: do not run this migration independently.
---
--- It formerly replaced the report-insert notification trigger and notified a
--- landlord immediately when a tenant filed a report. That conflicts with the
--- admin-first workflow: landlords must only receive the report after an admin
--- approves it. The replacement trigger and complete notification payloads are
--- now in appeal_workflow_migration.sql.
---
--- If this file has already been run, run appeal_workflow_migration.sql again.
