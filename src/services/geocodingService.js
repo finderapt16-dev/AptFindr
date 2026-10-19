@@ -996,6 +996,7 @@ const locationFromNominatimRow = (row, lat = row.lat, lng = row.lng) => {
     const address = row.address ?? {};
     const road = firstAddressValue(address, ["road", "pedestrian", "residential", "footway", "path", "cycleway"]);
     const houseNumber = firstAddressValue(address, ["house_number"]);
+    // These OSM fields are suggestions only, not proof of the containing barangay.
     const barangayCandidate = firstAddressValue(address, ["village", "neighbourhood", "quarter", "hamlet"]);
     return {
         lat,

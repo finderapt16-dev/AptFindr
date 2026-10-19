@@ -97,6 +97,7 @@ const INITIAL_FORM_DATA = {
 };
 const INITIAL_VERIFICATION_DATA = {
     businessPermit: "",
+    businessAccount: "",
     permitIssuedAt: "",
     permitExpiry: "",
 };
@@ -126,6 +127,10 @@ export function AddApartment() {
     const [coverageUnverified, setCoverageUnverified] = useState(false);
     const [manualAddressEdited, setManualAddressEdited] = useState(false);
     const lastAutoGeocodedAddressRef = useRef("");
+    const lockMapToSelectedCoordinatesRef = useRef(false);
+    const gpsRequestRef = useRef(0);
+    const [pinSelectionRevision, setPinSelectionRevision] = useState(0);
+    const [gpsAccuracy, setGpsAccuracy] = useState(null);
     const [uploadedImages, setUploadedImages] = useState([]);
     const [amenitiesInput, setAmenitiesInput] = useState("");
     const [utilitiesInput, setUtilitiesInput] = useState("");
@@ -272,6 +277,10 @@ export function AddApartment() {
         setCoverageUnverified(false);
         setManualAddressEdited(false);
         lastAutoGeocodedAddressRef.current = "";
+        lockMapToSelectedCoordinatesRef.current = false;
+        gpsRequestRef.current += 1;
+        setPinSelectionRevision((value) => value + 1);
+        setGpsAccuracy(null);
     };
     const discardDraft = (resetForm = true) => {
         if (user?.id) {
@@ -295,6 +304,8 @@ export function AddApartment() {
         const restoredFormData = { ...INITIAL_FORM_DATA, ...pendingDraft.formData, image: "", images: [] };
         setFormData(restoredFormData);
         setLocationPinned(hasValidApartmentCoordinates(restoredFormData.lat, restoredFormData.lng));
+        lockMapToSelectedCoordinatesRef.current = hasValidApartmentCoordinates(restoredFormData.lat, restoredFormData.lng);
+        setPinSelectionRevision((value) => value + 1);
         setUploadedImages(pendingDraft.uploadedImages ?? []);
         setAmenitiesInput(pendingDraft.amenitiesInput ?? "");
         setUtilitiesInput(pendingDraft.utilitiesInput ?? "");
@@ -412,64 +423,68 @@ export function AddApartment() {
         });
     };
     const useLiveLocation = () => {
-        if (typeof navigator === "undefined" || !navigator.geolocation) {
-            toast.error("Live location is not supported by this browser. Use a supported browser on HTTPS.");
+        if (typeof navigator === "undefined" || !navigator.geolocation || !window.isSecureContext) {
+            toast.error("Live location requires a supported browser and HTTPS (or localhost).");
             return;
         }
-        if (locatingLiveLocation)
-            return;
+        if (locatingLiveLocation) return;
+        const requestId = ++gpsRequestRef.current;
         setLocatingLiveLocation(true);
         navigator.geolocation.getCurrentPosition(async (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+            if (requestId !== gpsRequestRef.current) return;
+            const { latitude: lat, longitude: lng, accuracy } = position.coords;
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                toast.error("GPS returned invalid coordinates. Please try again.");
+                setLocatingLiveLocation(false);
+                return;
+            }
+            // GPS coordinates are authoritative. Address lookups must never reposition this pin.
+            lockMapToSelectedCoordinatesRef.current = true;
+            setPinSelectionRevision((value) => value + 1);
+            setGpsAccuracy(accuracy);
             setFormData((current) => ({ ...current, lat, lng }));
             setLocationPinned(false);
             setLocationResolving(true);
+            if (accuracy > 100) toast.warning(`GPS accuracy is approximately ${Math.round(accuracy)} m. Check the pin before submitting.`);
             try {
                 const detectedAddress = await reverseGeocodeAddPropertyLocationWithinLaPaz(lat, lng);
+                if (requestId !== gpsRequestRef.current) return;
                 setFormData((current) => ({
-                    ...current,
-                    lat,
-                    lng,
-                    address: detectedAddress.street,
-                    barangay: detectedAddress.barangay || detectedAddress.barangayCandidate || "",
+                    ...current, lat, lng,
+                    // Never auto-accept an unverified neighbourhood as a barangay.
+                    address: detectedAddress.street || current.address,
+                    barangay: detectedAddress.barangayVerified ? detectedAddress.barangay : "",
                     city: detectedAddress.district,
                     state: detectedAddress.city,
                     zip: detectedAddress.zip,
                 }));
                 setLocationPinned(!detectedAddress.unresolved);
-                setBarangayUnverified(!detectedAddress.unresolved && !detectedAddress.barangayVerified);
-                setCoverageUnverified(!detectedAddress.unresolved && !detectedAddress.coverageVerified);
+                setBarangayUnverified(!detectedAddress.barangayVerified);
+                setCoverageUnverified(!detectedAddress.coverageVerified);
                 setManualAddressEdited(false);
-                lastAutoGeocodedAddressRef.current = [detectedAddress.street, detectedAddress.barangay || detectedAddress.barangayCandidate, detectedAddress.district, detectedAddress.city, detectedAddress.zip, "Philippines"].filter(Boolean).join(", ").trim().replace(/\s+/g, " ").toLowerCase();
-                clearValidationError("address");
-                clearValidationError("barangay");
                 clearValidationError("mapLocation");
-                toast.success("Live location added to the map.");
-            }
-            catch (error) {
+                toast.success("GPS pin placed at your detected coordinates. Verify the address before submitting.");
+            } catch (error) {
+                if (requestId !== gpsRequestRef.current) return;
                 setLocationPinned(false);
-                toast.error(error instanceof Error ? error.message : "We could not identify your live location. Move the map pin manually.");
-            }
-            finally {
-                setLocationResolving(false);
-                setLocatingLiveLocation(false);
+                toast.error(error instanceof Error ? error.message : "Could not verify this location. Check the pin manually.");
+            } finally {
+                if (requestId === gpsRequestRef.current) {
+                    setLocationResolving(false);
+                    setLocatingLiveLocation(false);
+                }
             }
         }, (error) => {
-            const message = error?.code === 1
-                ? "Location permission was denied. Allow location access and try again."
-                : error?.code === 3
-                    ? "Finding your location took too long. Please try again."
-                    : "Unable to get your live location. Check your device location settings.";
-            toast.error(message);
+            if (requestId !== gpsRequestRef.current) return;
+            toast.error(error?.code === 1 ? "Allow location permission and try again." : error?.code === 3 ? "GPS timed out. Please retry outdoors or near a window." : "Unable to obtain GPS location. Check device location settings.");
             setLocatingLiveLocation(false);
-        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
     };
     const FieldError = ({ field }) => validationErrors[field] ? <p className="add-apartment-text">{validationErrors[field]}</p> : null;
     const persistedStreetAddress = useMemo(() => [formData.address, formData.barangay].filter(Boolean).join(", "), [formData.address, formData.barangay]);
     const locationAddressQuery = useMemo(() => [formData.address, formData.barangay, formData.city, formData.state, formData.zip, "Philippines"].filter(Boolean).join(", "), [formData.address, formData.barangay, formData.city, formData.state, formData.zip]);
     useEffect(() => {
-        if (currentStep !== 3 || ![formData.address, formData.barangay].some((value) => String(value ?? "").trim()))
+        if (lockMapToSelectedCoordinatesRef.current || currentStep !== 3 || ![formData.address, formData.barangay].some((value) => String(value ?? "").trim()))
             return;
         const normalizedQuery = locationAddressQuery.trim().replace(/\s+/g, " ").toLowerCase();
         if (!normalizedQuery || normalizedQuery === lastAutoGeocodedAddressRef.current)
@@ -508,11 +523,13 @@ export function AddApartment() {
         }
         if (!String(verificationData.businessPermit).trim())
             errors.businessPermit = "Business permit number is required.";
+        if (!String(verificationData.businessAccount).trim())
+            errors.businessAccount = "Business account number is required.";
         if (!String(verificationData.permitIssuedAt).trim())
             errors.permitIssuedAt = "Permit issue date is required.";
         if (!contractDuration)
             errors.contractDuration = "Select a contract duration.";
-        const firstStep = errors.businessPermit || errors.permitIssuedAt || errors.permitExpiry
+        const firstStep = errors.businessPermit || errors.businessAccount || errors.permitIssuedAt || errors.permitExpiry
             ? 1
             : errors.title || errors.description || errors.images
                 ? 2
@@ -527,7 +544,7 @@ export function AddApartment() {
         const { errors } = validateAllFields();
         const belongsToStep = (field) => {
             if (step === 1)
-                return ["businessPermit", "permitIssuedAt", "permitExpiry"].includes(field);
+                return ["businessPermit", "businessAccount", "permitIssuedAt", "permitExpiry"].includes(field);
             if (step === 2)
                 return ["title", "description", "images"].includes(field);
             if (step === 3)
@@ -664,6 +681,7 @@ export function AddApartment() {
                     propertyName: formData.title || "",
                     propertyAddress: [persistedStreetAddress, formData.city, formData.state, formData.zip].filter(Boolean).join(", "),
                     businessPermit: verificationData.businessPermit,
+                    businessAccount: verificationData.businessAccount,
                     issuedAt: verificationData.permitIssuedAt,
                     permitExpiry: verificationData.permitExpiry,
                 },
@@ -730,7 +748,7 @@ export function AddApartment() {
                 role: "landlord",
                 email: user.email,
                 name: user.name,
-                permit_number: verificationData.businessPermit.trim(),
+                permit_number: verificationData.businessAccount.trim(),
                 business_permit_number: verificationData.businessPermit.trim(),
                 permit_issued_at: verificationData.permitIssuedAt || null,
                 permit_expiry: verificationData.permitExpiry || null,
@@ -918,6 +936,16 @@ export function AddApartment() {
                     </div>
 
                     <div className="add-apartment-panel-9">
+                      <Label>Business Account Number <span aria-hidden="true">*</span></Label>
+                      <Input value={verificationData.businessAccount} onChange={(e) => {
+                setVerificationData({ ...verificationData, businessAccount: e.target.value });
+                if (e.target.value.trim())
+                    clearValidationError("businessAccount");
+            }} aria-invalid={Boolean(validationErrors.businessAccount)} placeholder="e.g., A-A10087" className={fieldClass("businessAccount")}/>
+                      <FieldError field="businessAccount"/>
+                    </div>
+
+                    <div className="add-apartment-panel-9">
                       <Label>Date Issued <span aria-hidden="true">*</span></Label>
                       <Input type="date" value={verificationData.permitIssuedAt} onChange={(e) => {
                 setVerificationData({ ...verificationData, permitIssuedAt: e.target.value });
@@ -1044,15 +1072,16 @@ export function AddApartment() {
                         <LocateFixed aria-hidden="true"/>{locatingLiveLocation ? "Finding location..." : "Use my live location"}
                       </Button>
                     </div>
+                    {gpsAccuracy !== null && <p className="add-apartment-text-6">GPS accuracy: approximately {Math.round(gpsAccuracy)} meters. Confirm the pin is at your apartment, not just your current device location.</p>}
                     <p className="add-apartment-text-6">Click or drag the map pin to select your apartment's exact location. Address details will update from OpenStreetMap. If no street is found, enter it manually in the Street field.</p>
                     <div className="add-apartment-card-7">
-                      <PropertyLocationPicker lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {
+                      <PropertyLocationPicker pinSelectionRevision={pinSelectionRevision} lockToSelectedPin={lockMapToSelectedCoordinatesRef.current} lat={Number.isFinite(Number(formData.lat)) ? Number(formData.lat) : DEFAULT_LA_PAZ_MAP_CENTER.lat} lng={Number.isFinite(Number(formData.lng)) ? Number(formData.lng) : DEFAULT_LA_PAZ_MAP_CENTER.lng} addressQuery={locationAddressQuery} geocodeRequestKey={locationLookupRequest} onGeocodeStatusChange={(status) => setLocationResolving(status === "loading")} onMapAddressChange={(detectedAddress) => {
                 setFormData((current) => ({
                     ...current,
                     // A pin selection is authoritative. Clear unavailable OSM
                     // fields instead of retaining labels from the old location.
                     address: detectedAddress.street,
-                    barangay: detectedAddress.barangay || detectedAddress.barangayCandidate || "",
+                    barangay: detectedAddress.barangayVerified ? detectedAddress.barangay : "",
                     city: detectedAddress.district,
                     state: detectedAddress.city,
                     zip: detectedAddress.zip,
@@ -1061,13 +1090,20 @@ export function AddApartment() {
                 setBarangayUnverified(!detectedAddress.unresolved && !detectedAddress.barangayVerified);
                 setCoverageUnverified(!detectedAddress.unresolved && !detectedAddress.coverageVerified);
                 setManualAddressEdited(false);
-                lastAutoGeocodedAddressRef.current = [detectedAddress.street, detectedAddress.barangay || detectedAddress.barangayCandidate, detectedAddress.district, detectedAddress.city, detectedAddress.zip, "Philippines"].filter(Boolean).join(", ").trim().replace(/\s+/g, " ").toLowerCase();
+                lastAutoGeocodedAddressRef.current = [detectedAddress.street, detectedAddress.barangay, detectedAddress.district, detectedAddress.city, detectedAddress.zip, "Philippines"].filter(Boolean).join(", ").trim().replace(/\s+/g, " ").toLowerCase();
                 if (!detectedAddress.unresolved) {
                     clearValidationError("address");
                     clearValidationError("barangay");
                     clearValidationError("mapLocation");
                 }
             }} onLocationChange={(lat, lng, metadata = {}) => {
+                if (metadata.source === "map") {
+                    gpsRequestRef.current += 1;
+                    setLocatingLiveLocation(false);
+                    lockMapToSelectedCoordinatesRef.current = true;
+                    setPinSelectionRevision((value) => value + 1);
+                    setGpsAccuracy(null);
+                }
                 setFormData((current) => ({ ...current, lat, lng }));
                 const resolved = Boolean(metadata.locationResolved || metadata.verified) && hasValidApartmentCoordinates(lat, lng);
                 setLocationPinned(resolved);

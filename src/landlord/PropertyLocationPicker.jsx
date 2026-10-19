@@ -10,7 +10,7 @@ L.Icon.Default.mergeOptions({
     iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
-export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuery = "", geocodeRequestKey = 0, onGeocodeStatusChange, onMapAddressChange, }) {
+export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuery = "", geocodeRequestKey = 0, pinSelectionRevision = 0, lockToSelectedPin = false, onGeocodeStatusChange, onMapAddressChange, }) {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
@@ -21,6 +21,8 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
     const forwardControllerRef = useRef(null);
     const reverseRequestRef = useRef(0);
     const forwardRequestRef = useRef(0);
+    const lockToSelectedPinRef = useRef(lockToSelectedPin);
+    lockToSelectedPinRef.current = lockToSelectedPin;
     const [isClient, setIsClient] = useState(false);
     const [geocodeStatus, setGeocodeStatus] = useState("idle");
     const [matchedAddress, setMatchedAddress] = useState("");
@@ -118,6 +120,11 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
             forwardControllerRef.current?.abort();
         };
     }, [isClient]);
+    // Cancel stale address lookups when GPS or map selection takes priority.
+    useEffect(() => {
+        forwardRequestRef.current += 1;
+        forwardControllerRef.current?.abort();
+    }, [pinSelectionRevision]);
     // Update marker position when lat/lng props change
     useEffect(() => {
         if (markerRef.current && mapInstanceRef.current) {
@@ -126,7 +133,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
         }
     }, [lat, lng]);
     useEffect(() => {
-        if (!isClient || geocodeRequestKey === 0)
+        if (!isClient || geocodeRequestKey === 0 || lockToSelectedPin)
             return;
         const query = addressQuery.trim().replace(/\s+/g, " ");
         if (query.length < 3) {
@@ -144,7 +151,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
         const timer = window.setTimeout(async () => {
             try {
                 const location = await geocodeAddPropertyAddressWithinLaPaz(query, controller.signal);
-                if (requestId !== forwardRequestRef.current)
+                if (requestId !== forwardRequestRef.current || lockToSelectedPinRef.current)
                     return;
                 updateGeocodeStatus("found");
                 setMatchedAddress(location.label);
@@ -157,7 +164,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
             catch (error) {
                 if (error instanceof DOMException && error.name === "AbortError")
                     return;
-                if (requestId !== forwardRequestRef.current)
+                if (requestId !== forwardRequestRef.current || lockToSelectedPinRef.current)
                     return;
                 console.error("Unable to locate the entered address:", error);
                 updateGeocodeStatus(error instanceof GeocodingError && error.reason === "outside-scope" ? "outside-scope" : error instanceof GeocodingError && error.reason !== "network" ? "not-found" : "error", error instanceof Error ? error.message : "Unable to locate this address.");
@@ -167,7 +174,7 @@ export function PropertyLocationPicker({ lat, lng, onLocationChange, addressQuer
             window.clearTimeout(timer);
             controller.abort();
         };
-    }, [addressQuery, geocodeRequestKey, isClient]);
+    }, [addressQuery, geocodeRequestKey, isClient, lockToSelectedPin]);
     if (!isClient) {
         return (<div className="location-picker-row">
         <p className="location-picker-loading-map">Loading map...</p>

@@ -4,7 +4,7 @@ import "./AdminReports.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
-import { Archive, ArrowLeft, Bell, Building2, Calendar, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, FileX, Clock, Eye, Flag, Mail, Phone, RotateCcw, Search, Trash2, User as UserIcon, X, XCircle } from "lucide-react";
+import { Archive, ArrowLeft, Bell, Building2, Calendar, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, FileX, Eye, Flag, Mail, Phone, RotateCcw, Search, Trash2, User as UserIcon, X, XCircle } from "lucide-react";
 import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, SEVERITY_LABEL, text } from './adminDashboardHelpers';
 export function AdminReports({ reports, reportArchiveView, archivedReports, reportSearch, allApartments, reportStatusFilter, reportTypeFilter, reportSort, selectedReport, selectedReportDetails, setSelectedReport, setActiveSection, unreadNotifsCount, setViewingUserProfile, navigate, apartmentDetailBasePath, portalBasePath, selectedReportEvidence, onReportUpdated, resolveReport, setDismissReportModal, setCaseAction, setReportSearch, setReportStatusFilter, setReportTypeFilter, setReportSort, setReportArchiveView, dismissReportModal, dismissReport, viewingUserProfile, onReportBack, }) {
     const [page, setPage] = useState(1);
@@ -40,11 +40,14 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
     const currentPage = Math.min(page, pageCount);
     const visiblePageNumbers = [Math.max(1, Math.min(currentPage - 1, pageCount - 1)), Math.max(1, Math.min(currentPage - 1, pageCount - 1)) + 1].filter((number) => number <= pageCount);
     const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const underReviewCount = reports.filter((report) => reportStatus(report) === "under_review").length;
+    const resolvedCount = reports.filter((report) => reportStatus(report) === "resolved").length;
+    const dismissedCount = reports.filter((report) => reportStatus(report) === "dismissed").length;
     const summaryCards = [
-        { label: "Total Reports", value: reports.length, note: "All submitted reports", icon: FileX, tone: "total", filterValue: "all" },
-        { label: "Under Review", value: reports.filter((report) => reportStatus(report) === "under_review").length, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
-        { label: "Resolved", value: reports.filter((report) => reportStatus(report) === "resolved").length, note: "Closed cases", icon: CheckCircle2, tone: "resolved", filterValue: "resolved" },
-        { label: "Dismissed", value: reports.filter((report) => reportStatus(report) === "dismissed").length, note: "Closed without action", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
+        { label: "Total Reports", value: underReviewCount + resolvedCount + dismissedCount, note: "Excludes appeal / final review", icon: FileX, tone: "total", filterValue: "all" },
+        { label: "Under Review", value: underReviewCount, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
+        { label: "Resolved", value: resolvedCount, note: "Closed cases", icon: CheckCircle2, tone: "resolved", filterValue: "resolved" },
+        { label: "Dismissed", value: dismissedCount, note: "Closed without action", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
     ];
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",

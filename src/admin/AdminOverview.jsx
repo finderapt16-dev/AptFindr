@@ -12,10 +12,19 @@ export function AdminOverview({ apartments, landlords, reports, appeals, onNavig
     fetchRecentActivityLogs(30).then((items) => { if (active) setLogs(items); }).catch(() => {}).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+  const getReportStatusGroup = (report) => {
+    const status = String(report.status ?? "pending").toLowerCase().replace(/[ -]/g, "_");
+    if (["pending", "open", "pending_review", "in_review", "reviewing"].includes(status)) return "under_review";
+    if (["dismissed", "rejected"].includes(status)) return "dismissed";
+    if (["awaiting_landlord_appeal", "under_appeal", "appeal_period_expired", "evidence_deadline_expired", "appeal_dismissed_pending_final_decision"].includes(status)) return "in_progress";
+    if (["resolved", "closed", "approved", "completed", "resolved_appeal_approved"].includes(status)) return "resolved";
+    return "under_review";
+  };
+  const countedReports = reports.filter((report) => getReportStatusGroup(report) !== "in_progress").length;
   const stats = [
     { label: "Total Apartments", count: apartments.length, note: "All apartment listings", icon: Building2, tone: "apartments", section: "apartments" },
     { label: "Total Landlords", count: landlords.length, note: "Registered accounts", icon: UserRound, tone: "landlords", section: "landlords" },
-    { label: "Reports", count: reports.length, note: "Submitted by tenants", icon: FileText, tone: "reports", section: "reports" },
+    { label: "Reports", count: countedReports, note: "Excludes appeal / final review", icon: FileText, tone: "reports", section: "reports" },
     { label: "Appeals", count: appeals.length, note: "Submitted by landlords", icon: Gavel, tone: "appeals", section: "appeals" },
   ];
   const events = logs.map((log) => {
