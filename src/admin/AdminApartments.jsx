@@ -1,3 +1,4 @@
+import { hasExpiredPermit } from "@/utils/permitExpiry";
 import { getAdminAvailabilityLabel, getAdminListingLabel, getLowestRoomRent } from "@/admin/adminListingState";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                     {apartment.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="admin-apartments-image-with-fallback"/> : <div className="admin-apartments-row-5"><Building2 className="admin-apartments-building2-icon-2"/></div>}
                   </div>
                   <div className="admin-apartments-panel-3">
-                    <div className="admin-apartments-title-row"><h3 className="admin-apartments-heading">{apartment.title}</h3><span className="admin-apartments-inline-status">{status}</span>{apartment.propertyType && <span className="admin-apartments-inline-type">{apartment.propertyType}</span>}</div>
+                    <div className="admin-apartments-title-row"><h3 className="admin-apartments-heading">{apartment.title}</h3><span className="admin-apartments-inline-status">{status}</span>{hasExpiredPermit(apartment, landlord) && <span className="admin-apartments-expired-permit">Expired Permit</span>}</div>
                     <p className="admin-apartments-text-2"><MapPin className="admin-apartments-map-pin-icon"/>{location || "Location not provided"}</p>
                     <p className="admin-apartments-submitted-by">Submitted by <span className="admin-apartments-span-6">{landlord?.name || "Not available"}</span></p>
                     <div className="admin-apartments-row-6">
