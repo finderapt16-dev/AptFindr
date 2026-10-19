@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { notificationKind, relativeTime, reportIdOf, resolveActionUrl } from "@/tenant/notificationPresentation";
+import { fetchReportDetails } from "@/services/dashboardSupabaseService";
 export function Notifications({ state }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -14,6 +15,7 @@ export function Notifications({ state }) {
     const [menuId, setMenuId] = useState(null);
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
     const [selectedReport, setSelectedReport] = useState(null);
+    const [reportDetailsState, setReportDetailsState] = useState({ reportId: "", data: null, loading: false, error: "" });
     const listRef = useRef(null);
     const visible = useMemo(() => filter === "unread" ? notifications.filter((item) => item.read !== true) : notifications, [filter, notifications]);
     useEffect(() => {
@@ -27,6 +29,33 @@ export function Notifications({ state }) {
         if (reportNotification.id && reportNotification.read !== true)
             void markRead(reportNotification.id);
     }, [location.search, markRead, notifications, selectedReport]);
+    useEffect(() => {
+        const reportId = reportIdOf(selectedReport);
+        if (!selectedReport) {
+            setReportDetailsState({ reportId: "", data: null, loading: false, error: "" });
+            return undefined;
+        }
+        if (!reportId) {
+            setReportDetailsState({ reportId: "", data: null, loading: false, error: "This notification is missing its report link." });
+            return undefined;
+        }
+        let active = true;
+        setReportDetailsState({ reportId, data: null, loading: true, error: "" });
+        void fetchReportDetails(reportId).then((report) => {
+            if (!active)
+                return;
+            setReportDetailsState({
+                reportId,
+                data: report,
+                loading: false,
+                error: report ? "" : "This report is no longer available or you do not have permission to view it.",
+            });
+        }).catch(() => {
+            if (active)
+                setReportDetailsState({ reportId, data: null, loading: false, error: "This report is no longer available or you do not have permission to view it." });
+        });
+        return () => { active = false; };
+    }, [selectedReport]);
     useEffect(() => {
         if (!menuId)
             return;
@@ -46,13 +75,17 @@ export function Notifications({ state }) {
             document.removeEventListener("keydown", closeOnEscape);
         };
     }, [menuId]);
-    const openNotification = async (item) => {
-        if (item.id && item.read !== true && !await markRead(item.id))
-            toast.error("Notification could not be marked as read.");
+    const openNotification = (item) => {
         if (notificationKind(item) === "report") {
             setSelectedReport(item);
+            if (item.id && item.read !== true)
+                void markRead(item.id).then((marked) => { if (!marked)
+                    toast.error("Notification could not be marked as read."); });
             return;
         }
+        if (item.id && item.read !== true)
+            void markRead(item.id).then((marked) => { if (!marked)
+                toast.error("Notification could not be marked as read."); });
         const actionUrl = resolveActionUrl(item);
         if (actionUrl)
             navigate(actionUrl, { state: { returnTo: "/tenant/dashboard?section=notifications", backLabel: "Back to Notifications" } });
@@ -72,6 +105,9 @@ export function Notifications({ state }) {
         }
     };
     const selectedReportIsResolved = selectedReport?.type === "report_resolved" || String(selectedReport?.payload?.status || "").startsWith("resolved");
+    const selectedReportId = reportIdOf(selectedReport);
+    const selectedReportDetails = reportDetailsState.reportId === selectedReportId ? reportDetailsState.data : null;
+    const selectedReportStatus = String(selectedReportDetails?.status ?? selectedReport?.payload?.status ?? "Status unavailable").replace(/[_-]/g, " ");
     return <div className="tenant-notifications-container">
     <section className="tenant-notifications-section tenant-page-header">
       <div className="tenant-notifications-panel tenant-page-header__content"><h1 className="tenant-notifications-notifications">Notifications</h1><p className="tenant-notifications-text">Stay updated on your reports and apartment activity.</p></div>
@@ -105,6 +141,9 @@ export function Notifications({ state }) {
           <DialogTitle>{selectedReportIsResolved ? "Your report has been resolved" : selectedReport?.title || "Report update"}</DialogTitle>
           <DialogDescription>{selectedReport?.message || "Your report status has been updated."}</DialogDescription>
         </DialogHeader>
+        {selectedReport && <div className="tenant-report-status-dialog-details">
+          {reportDetailsState.loading ? <p>Loading report details...</p> : reportDetailsState.error ? <p role="alert">{reportDetailsState.error}</p> : <><p><strong>Report:</strong> {selectedReportDetails?.apartment_title ?? selectedReport?.payload?.apartment_title ?? selectedReportId}</p><p><strong>Current status:</strong> {selectedReportStatus}</p></>}
+        </div>}
         {selectedReport && <p className="tenant-report-status-dialog-time">Updated {relativeTime(selectedReport.created_at ?? selectedReport.createdAt)}</p>}
         <div className="tenant-report-status-dialog-actions"><Button onClick={() => setSelectedReport(null)}>Done</Button></div>
       </DialogContent>

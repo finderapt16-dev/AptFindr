@@ -148,6 +148,7 @@ export function AdminDashboard() {
     const [reports, setReports] = useState([]);
     const [archivedReports, setArchivedReports] = useState([]);
     const [selectedReport, setSelectedReport] = useState(null);
+    const [reportOpenedFromNotification, setReportOpenedFromNotification] = useState(false);
     const [selectedReportDetails, setSelectedReportDetails] = useState(null);
     const [selectedReportEvidence, setSelectedReportEvidence] = useState([]);
     const handledReportDetailsReturn = useRef(null);
@@ -1472,6 +1473,29 @@ export function AdminDashboard() {
             setSelectedLandlord(landlord);
             handleSectionChange("landlords");
         };
+        const reportIdFromNotification = (notification) => String(notification.payload?.report_id ?? notification.payload?.related_report_id ?? notification.payload?.reportId ?? (String(notification.action_target_type ?? "").toLowerCase() === "report" ? notification.action_target_id : "") ?? "").trim();
+        const openReportNotification = async (notification, reportId) => {
+            const openReport = (items, archived = false) => {
+                const report = items.find((item) => String(item.id) === reportId);
+                if (!report)
+                    return false;
+                setReportArchiveView(archived);
+                setSelectedReport(report);
+                setReportOpenedFromNotification(true);
+                handleSectionChange("reports");
+                return true;
+            };
+            if (openReport(reports) || openReport(archivedReports, true))
+                return;
+            // A notification can arrive before the reports list refreshes.
+            // Refresh once, then give a useful outcome if access was revoked
+            // or the record has since been deleted.
+            const [nextReports, nextArchivedReports] = await Promise.all([fetchAdminReports(), fetchArchivedReports()]);
+            setReports(nextReports);
+            setArchivedReports(nextArchivedReports);
+            if (!openReport(nextReports) && !openReport(nextArchivedReports, true))
+                toast.error("This report is no longer available or you do not have permission to view it.");
+        };
         const activityTypes = Array.from(new Set(notificationCenterItems
             .filter((notification) => getNotificationCategory(notification) === "activities")
             .map((notification) => String(notification.payload?.activity_type ?? notification.type ?? ""))
@@ -1515,7 +1539,9 @@ export function AdminDashboard() {
                     const Icon = tone.icon;
                     const archived = notification.is_deleted === true;
                     const read = isNotificationRead(notification);
-                    const apartmentId = String(notification.payload?.apartment_id ?? notification.apartmentId ?? notification.action_target_id ?? "");
+                    const reportId = reportIdFromNotification(notification);
+                    const isReportNotification = Boolean(reportId) && (String(notification.action_target_type ?? "").toLowerCase() === "report" || String(notification.type ?? "").toLowerCase().includes("report"));
+                    const apartmentId = String(notification.payload?.apartment_id ?? notification.apartmentId ?? (String(notification.action_target_type ?? "").toLowerCase() === "apartment" ? notification.action_target_id : "") ?? "");
                     const apartment = apartmentId ? allApartments.find((item) => item.id === apartmentId) : undefined;
                     const rawActionUrl = String(notification.action_url ?? notification.payload?.action_url ?? "");
                     const actionUrl = rawActionUrl.startsWith("/")
@@ -1537,6 +1563,10 @@ export function AdminDashboard() {
                             return;
                         if (!read && notification.id)
                             void toggleNotifReadStatus(notification.id, false);
+                        if (isReportNotification) {
+                            void openReportNotification(notification, reportId);
+                            return;
+                        }
                         if (isAppealNotification) {
                             void openAppealNotification(notification);
                             return;
@@ -1571,7 +1601,9 @@ export function AdminDashboard() {
                       {!archived && isAppealNotification && <Button size="sm" variant="outline" onClick={() => void openAppealNotification(notification)} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
                       {!archived && isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); openPermitLandlord(notification); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Landlord</Button>}
-                      {actionUrl && !archived && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
+                      {!archived && isReportNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
+                        void markNotificationRead(notification.id, user?.id); void openReportNotification(notification, reportId); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Report</Button>}
+                      {actionUrl && !archived && !isReportNotification && !isAppealNotification && !isPermitNotification && <Button size="sm" variant="outline" onClick={() => { if (!read && notification.id)
                         void markNotificationRead(notification.id, user?.id); navigate(actionUrl, { state: { returnTo: `${portalBasePath}?section=notifications`, backLabel: "Back to Notifications" } }); }} className="admin-dashboard-view-details"><Eye className="admin-dashboard-eye-icon"/>View Details</Button>}
                       <NotificationActionsMenu triggerClassName="admin-notification-menu-trigger" menuClassName="admin-notification-floating-menu">
                       {!archived && <button onClick={() => void toggleNotifReadStatus(notification.id || "", read)} title={read ? "Mark as unread" : "Mark as read"} aria-label={read ? "Mark as unread" : "Mark as read"} className="admin-notification-action">{read ? <Mail className="admin-dashboard-mail-icon"/> : <MailOpen className="admin-dashboard-mail-open-icon"/>}{read ? "Mark as unread" : "Mark as read"}</button>}
@@ -1596,7 +1628,7 @@ export function AdminDashboard() {
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} permitStates={permitStates} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
-    const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
+    const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile} onReportBack={() => { if (reportOpenedFromNotification) { setReportOpenedFromNotification(false); handleSectionChange("notifications"); } }}/>)
     // ── Section: Appeals Management ─────────────────────────────────────────
     const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView} onWorkflowChanged={async () => { const [nextReports, nextAppeals] = await Promise.all([fetchAdminReports(), fetchPendingAppeals()]); setReports(nextReports); setAppeals(nextAppeals); }}/>);
     const renderAdminInfo = () => {

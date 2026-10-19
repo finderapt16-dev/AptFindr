@@ -160,6 +160,16 @@ function toViolationRow(row) {
     };
 }
 function toNotificationRow(row) {
+    // Older database functions sometimes stored the report only in the action
+    // target columns.  Keep one normalized payload contract for every
+    // notification consumer so a refresh cannot turn a report notification
+    // into an unlinked card.
+    const payload = typeof row.payload === "object" && row.payload !== null && !Array.isArray(row.payload)
+        ? { ...row.payload }
+        : {};
+    if (!payload.report_id && String(row.action_target_type ?? "").toLowerCase() === "report" && row.action_target_id) {
+        payload.report_id = String(row.action_target_id);
+    }
     return {
         ...row,
         id: getStringValue(row.id),
@@ -167,7 +177,7 @@ function toNotificationRow(row) {
         type: getStringValue(row.type),
         title: getStringValue(row.title),
         message: getStringValue(row.message),
-        payload: typeof row.payload === "object" && row.payload !== null ? row.payload : null,
+        payload,
         read: typeof row.read === "boolean" ? row.read : null,
         created_at: getStringValue(row.created_at),
         createdAt: getStringValue(row.createdAt),
@@ -381,7 +391,9 @@ export async function fetchNotifications(userId, includeArchived = false) {
                 .eq("user_id", userId)
                 .order("created_at", { ascending: false });
             if (!includeArchived) {
-                query = query.eq("is_deleted", false);
+                // `is_deleted` was nullable in earlier notification rows.
+                // Those rows are active, and must remain visible after reload.
+                query = query.or("is_deleted.is.null,is_deleted.eq.false");
             }
             const { data, error } = await query;
             if (error) {
@@ -397,7 +409,7 @@ export async function fetchNotifications(userId, includeArchived = false) {
         const { data, error } = await supabase
             .from("notifications")
             .select("*")
-            .eq("is_deleted", false)
+            .or("is_deleted.is.null,is_deleted.eq.false")
             .order("created_at", { ascending: false })
             .limit(100);
         if (error) {
@@ -425,7 +437,7 @@ export async function getUnreadNotificationCount(userId) {
             .select("id", { count: "exact" })
             .eq("user_id", userId)
             .eq("read", false)
-            .eq("is_deleted", false);
+            .or("is_deleted.is.null,is_deleted.eq.false");
         if (error) {
             console.error("Error getting unread count:", error);
             return 0;

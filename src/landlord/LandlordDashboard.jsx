@@ -531,7 +531,6 @@ export function LandlordDashboard() {
           }`.trim();
 
     setAppealContact(user?.email || "");
-
     setAppealModal({
       open: true,
       appealId:
@@ -940,8 +939,6 @@ export function LandlordDashboard() {
         scheduleRefresh();
       }
     };
-
-
     window.addEventListener(
       "focus",
       refreshOnFocus
@@ -1276,36 +1273,40 @@ export function LandlordDashboard() {
    * ------------------------------------------------------------
    */
 
-  const handleNotificationClick = async (
-    notification
-  ) => {
+  const handleNotificationClick = async (notification) => {
     const payload = notification.payload ?? {};
+    const notificationType = String(notification.type ?? "");
     const permitNotification = isBusinessPermitNotification(notification);
+    const isReportNotification = [
+      "property_reported",
+      "report_approved_for_appeal",
+    ].includes(notificationType);
     const hasAppealReference = Boolean(
       payload.appeal_id ?? payload.appealId
     );
-    const showAccountMessage = !permitNotification && ![
-      "admin_message", "property_reported", "violation_issued",
-      "notice_issued", "appeal_status_updated",
-    ].includes(String(notification.type)) && !hasAppealReference && !(
-      notification.payload?.apartment_id &&
-      propertyIds.has(String(notification.payload.apartment_id))
-    );
-    if (showAccountMessage) {
-      setSelectedNotificationDetail({ notification, violation: null, appeal: null });
-    }
-    if (
-      !(notification.read ??
-        notification.is_read) &&
-      notification.id
-    ) {
-      const updated =
-        await markNotificationRead(
+
+    // Keep notification navigation responsive even when Supabase is slow.
+    // A failed read-status update should not prevent opening its details.
+    const markAsRead = async () => {
+      if (
+        !user?.id ||
+        !notification.id ||
+        (notification.read ?? notification.is_read)
+      ) {
+        return;
+      }
+
+      try {
+        const updated = await markNotificationRead(
           notification.id,
-          user?.id
+          user.id
         );
 
-      if (updated) {
+        if (!updated) {
+          toast.error("Unable to mark notification as read.");
+          return;
+        }
+
         setNotifications((previous) =>
           previous.map((item) =>
             item.id === notification.id
@@ -1318,25 +1319,66 @@ export function LandlordDashboard() {
               : item
           )
         );
-
-        setUnreadNotificationCount(
-          (previous) =>
-            Math.max(0, previous - 1)
+        setUnreadNotificationCount((previous) =>
+          Math.max(0, previous - 1)
         );
-      } else {
-        toast.error(
-          "Unable to mark notification as read."
-        );
+      } catch (error) {
+        console.error("Failed to mark notification as read:", error);
+        toast.error("Unable to mark notification as read.");
       }
-    }
+    };
 
-
+    // Business-permit alerts must continue to open Settings, not a
+    // generic notification modal.
     if (permitNotification) {
       setSelectedNotificationDetail(null);
+      setSelectedLandlordAppeal(null);
       handleSectionChange("settings");
+      void markAsRead();
       return;
     }
-    if (showAccountMessage) return;
+
+    // Display report information immediately. The details modal fetches
+    // the report separately, so marking the notification as read must not
+    // block the user from opening it.
+    if (isReportNotification) {
+      setSelectedLandlordAppeal(null);
+      setSelectedNotificationDetail({
+        notification,
+        violation: null,
+        appeal: null,
+      });
+      handleSectionChange("notifications");
+      void markAsRead();
+      return;
+    }
+
+    const showAccountMessage = ![
+      "admin_message",
+      "property_reported",
+      "report_approved_for_appeal",
+      "appeal_evidence_requested",
+      "violation_issued",
+      "notice_issued",
+      "appeal_status_updated",
+    ].includes(notificationType) && !hasAppealReference && !(
+      payload.apartment_id &&
+      propertyIds.has(String(payload.apartment_id))
+    );
+
+    if (showAccountMessage) {
+      setSelectedLandlordAppeal(null);
+      setSelectedNotificationDetail({
+        notification,
+        violation: null,
+        appeal: null,
+      });
+      void markAsRead();
+      return;
+    }
+
+    // Start the read-status update without delaying appeal navigation.
+    void markAsRead();
 
     const appealableTypes = new Set([
       "admin_message",
@@ -1367,9 +1409,7 @@ export function LandlordDashboard() {
               payload.violation_id
           ) ?? null;
       }
-
-
-      const appealId = String(payload?.appeal_id ?? payload?.appealId ?? "");
+ const appealId = String(payload?.appeal_id ?? payload?.appealId ?? "");
       const reportId = String(
         payload?.report_id ??
           payload?.related_report_id ??
@@ -1964,7 +2004,6 @@ export function LandlordDashboard() {
           }
           return;
         }
-
         if (!active) {
           return;
         }
@@ -2493,9 +2532,7 @@ export function LandlordDashboard() {
         );
         return;
       }
-
-
-      if (
+if (
         passwordState.new !==
         passwordState.confirm
       ) {
@@ -2898,9 +2935,7 @@ export function LandlordDashboard() {
         }
       }
     };
-
-
-  const handleRemoveProfilePhoto =
+ const handleRemoveProfilePhoto =
     async () => {
       if (
         !user?.id ||

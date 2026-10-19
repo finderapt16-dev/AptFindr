@@ -490,6 +490,9 @@
 .tenant-report-status-dialog [data-slot="dialog-title"] { margin-top:3px; color:#172033; font-size:21px; line-height:1.25; }
 .tenant-report-status-dialog [data-slot="dialog-description"] { max-width:350px; margin:6px auto 0; color:#607087; font-size:14px; line-height:1.55; }
 .tenant-report-status-dialog-time { margin:16px 0 0; color:#8291a5; font-size:12px; text-align:center; }
+.tenant-report-status-dialog-details { margin-top:16px; padding:12px 14px; border-radius:8px; background:#f6f9fc; color:#42526b; font-size:13px; line-height:1.5; }
+.tenant-report-status-dialog-details p { margin:0; }
+.tenant-report-status-dialog-details p + p { margin-top:5px; }
 .tenant-report-status-dialog-actions { display:flex; justify-content:center; margin-top:22px; }
 .tenant-report-status-dialog-actions .ui-button { min-width:116px; }
 
