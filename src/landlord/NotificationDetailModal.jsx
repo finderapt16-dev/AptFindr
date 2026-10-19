@@ -62,39 +62,6 @@ export const NotificationDetailModal = ({
     : undefined;
 
   // ==========================================
-  // APARTMENT INFORMATION
-  // ==========================================
-
-  const apartmentId = String(
-    payload.apartment_id ??
-      violation?.apartment_id ??
-      appealSource?.apartment_id ??
-      ""
-  );
-
-  const apartment = myApartments.find(
-    (item) => String(item.id) === apartmentId
-  );
-
-  const apartmentTitle = String(
-    payload.apartment_title ??
-      appealSource?.apartment_title ??
-      apartment?.title ??
-      "Apartment unavailable"
-  );
-
-  const apartmentImage =
-    apartment?.image ||
-    apartment?.image_url ||
-    apartment?.images?.[0] ||
-    null;
-
-  const apartmentLocation =
-    apartment?.address ||
-    apartment?.location ||
-    "Location unavailable";
-
-  // ==========================================
   // REPORT AND VIOLATION IDENTIFIERS
   // ==========================================
 
@@ -103,6 +70,9 @@ export const NotificationDetailModal = ({
       payload.related_report_id ??
       violation?.related_report_id ??
       appeal?.report_id ??
+      (notification.action_target_type === "report"
+        ? notification.action_target_id
+        : null) ??
       ""
   );
 
@@ -212,6 +182,41 @@ export const NotificationDetailModal = ({
     reportState.reportId === reportId &&
     reportState.error;
 
+  // Notifications created by older workflows may only contain the report ID.
+  // Once it is loaded, use the linked apartment so the detail card remains
+  // complete even when apartment data was omitted from the notification.
+  const apartmentId = String(
+    payload.apartment_id ??
+      violation?.apartment_id ??
+      appealSource?.apartment_id ??
+      report?.apartment_id ??
+      report?.apartmentId ??
+      ""
+  );
+
+  const apartment = myApartments.find(
+    (item) => String(item.id) === apartmentId
+  );
+
+  const apartmentTitle = String(
+    payload.apartment_title ??
+      appealSource?.apartment_title ??
+      report?.apartment_title ??
+      apartment?.title ??
+      "Apartment unavailable"
+  );
+
+  const apartmentImage =
+    apartment?.image ||
+    apartment?.image_url ||
+    apartment?.images?.[0] ||
+    null;
+
+  const apartmentLocation =
+    apartment?.address ||
+    apartment?.location ||
+    "Location unavailable";
+
   // ==========================================
   // GET TENANT'S ACTUAL WRITTEN DESCRIPTION
   // ==========================================
@@ -305,7 +310,11 @@ export const NotificationDetailModal = ({
   // ==========================================
 
   const adminMessage = isReportNotification
-    ? notification.message || `An administrator approved a report involving "${apartmentTitle}".`
+    ? notification.message || (
+      notification.type === "property_reported"
+        ? `Your apartment "${apartmentTitle}" has been reported. Please review the details and file an appeal if needed.`
+        : `An administrator approved a report involving "${apartmentTitle}".`
+    )
     : String(
         appeal?.admin_response ??
           payload.admin_response ??
@@ -332,7 +341,7 @@ export const NotificationDetailModal = ({
             ? notification.type === "report_approved_for_appeal" ? "Report Approved by Admin" : "Apartment Report Filed"
             : notification.title || "Notification"
         }
-        className="notification-detail-modal-card"
+        className={`notification-detail-modal-card${isReportNotification ? " is-report" : ""}`}
         onClick={(event) => event.stopPropagation()}
       >
         {/* ==================================
@@ -356,14 +365,16 @@ export const NotificationDetailModal = ({
             </h2>
           </div>
 
-          <button
-            type="button"
-            aria-label="Close notification"
-            onClick={handleClose}
-            className="notification-detail-modal-button"
-          >
-            <X className="notification-detail-modal-x-icon" />
-          </button>
+          {!isReportNotification && (
+            <button
+              type="button"
+              aria-label="Close notification"
+              onClick={handleClose}
+              className="notification-detail-modal-button"
+            >
+              <X className="notification-detail-modal-x-icon" />
+            </button>
+          )}
         </div>
 
         {/* ==================================
@@ -416,7 +427,9 @@ export const NotificationDetailModal = ({
                         : reportedIssue ||
                           (reportError
                             ? "Unable to load the tenant's report reason."
-                            : "Report reason unavailable.")}
+                            : reportId
+                            ? "Report reason unavailable."
+                            : "This notification is missing its report link.")}
                     </dd>
                   </div>
 
@@ -585,7 +598,7 @@ export const NotificationDetailModal = ({
                 : hasExistingAppeal
                 ? "Appeal Submitted"
                 : isReportNotification
-                ? "Submit Appeal"
+                ? "File an Appeal"
                 : "Submit Appeal"}
             </Button>
           )}

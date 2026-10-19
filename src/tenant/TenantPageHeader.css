@@ -102,11 +102,10 @@
   margin-inline: auto;
 }
 
-/* Report content retains its existing readable 1321px measure while its
-   header follows the shared 1400px tenant page width. */
+/* Keep report cards flush with the shared header's left and right edges. */
 .report-page > .report-form,
 .report-page > .report-success {
-  width: min(100%, 1321px);
+  width: 100%;
   margin-inline: auto;
 }
 

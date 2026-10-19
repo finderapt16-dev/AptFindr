@@ -483,6 +483,9 @@ export function LandlordDashboard() {
           payload.related_report_id ??
           violation?.related_report_id ??
           detail.appeal?.report_id ??
+          (detail.notification.action_target_type === "report"
+            ? detail.notification.action_target_id
+            : null) ??
           ""
       ) || null;
 
@@ -1357,7 +1360,13 @@ export function LandlordDashboard() {
 
       const appealId = String(payload?.appeal_id ?? payload?.appealId ?? "");
       const reportId = String(
-        payload?.report_id ?? payload?.related_report_id ?? violation?.related_report_id ?? ""
+        payload?.report_id ??
+          payload?.related_report_id ??
+          violation?.related_report_id ??
+          (notification.action_target_type === "report"
+            ? notification.action_target_id
+            : null) ??
+          ""
       );
       const violationId = String(payload?.violation_id ?? violation?.id ?? "");
 

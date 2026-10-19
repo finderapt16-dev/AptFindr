@@ -579,3 +579,77 @@
 /* Keep every notification detail, including an appeal invitation, in the
    same calm, compact visual system. */
 .notification-detail-modal-card{border-radius:12px;border-color:#dfe7ee;box-shadow:0 20px 48px rgb(15 23 42 / 20%)}.notification-detail-modal-row{padding:18px 20px 10px}.notification-detail-modal-button{width:30px;height:30px;background:transparent}.notification-detail-modal-button:hover{background:#f1f5f9}.notification-detail-modal-panel{padding-bottom:12px}.notification-detail-modal-apartment-card{border-color:#dfe7ee;background:#fbfdff}.notification-detail-modal-report-details dl{border-color:#e4eaf0}.notification-detail-modal-text-4{border-radius:8px;background:#eff8ff;color:#425466}.notification-detail-modal-card-2{border-radius:8px}.notification-detail-modal-content{padding-top:2px}.notification-detail-modal-close,.notification-detail-modal-button-2{height:36px;border-radius:8px;font-size:12px}.notification-detail-modal-button-2{background:#16a5e1}.notification-detail-modal-button-2:hover{background:#0e93ca}
+
+/* Newly filed apartment reports use the compact floating card from the
+   notification design, without changing the fuller administrative dialogs. */
+.notification-detail-modal-card.is-report {
+  max-width: 375px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-row {
+  padding: 20px 16px 11px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-heading {
+  font-size: 16px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-panel {
+  padding: 0 16px 8px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-panel > * {
+  margin-bottom: 12px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-apartment-card {
+  gap: 12px;
+  padding: 5px;
+  border-radius: 7px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-apartment-card img {
+  width: 116px;
+  height: 64px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-report-details dl {
+  gap: 4px;
+  padding: 12px 10px;
+  border-radius: 7px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-report-details dl > div {
+  grid-template-columns: 98px minmax(0, 1fr);
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-text-4 {
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-content {
+  gap: 10px;
+  padding: 0 16px 18px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-close,
+.notification-detail-modal-card.is-report .notification-detail-modal-button-2 {
+  height: 30px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-close {
+  min-width: 72px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-button-2 {
+  min-width: 112px;
+}
+
+.notification-detail-modal-card.is-report .notification-detail-modal-message-square-icon {
+  display: none;
+}
