@@ -1,6 +1,5 @@
 import "./AdminLandlordVerification.css";
 import { getAdminListingState } from "@/admin/adminListingState";
-import { BusinessPermitStatus } from "@/components/BusinessPermitStatus";
 
 import {
   CheckCircle2,
@@ -15,7 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 10;
 
-const getVerificationState = (landlord, apartments) => {
+const getVerificationState = (landlord) => {
   const status = String(
     landlord?.landlord_status ??
       landlord?.verification_status ??
@@ -27,16 +26,6 @@ const getVerificationState = (landlord, apartments) => {
 
   if (["rejected", "denied", "declined"].includes(status)) {
     return "rejected";
-  }
-
-  const landlordId = String(landlord?.id ?? "");
-  const hasPendingApartment = (apartments ?? []).some((apartment) =>
-    String(apartment?.landlordId ?? apartment?.landlord_id ?? "") === landlordId &&
-    getAdminListingState(apartment) === "pending"
-  );
-
-  if (hasPendingApartment) {
-    return "pending";
   }
 
   return landlord?.isVerified === true || landlord?.is_verified === true
@@ -97,7 +86,7 @@ export function AdminLandlordVerification({
     const values = { total: landlords.length, pending: 0, verified: 0, rejected: 0 };
 
     landlords.forEach((landlord) => {
-      values[getVerificationState(landlord, apartments)] += 1;
+      values[getVerificationState(landlord)] += 1;
     });
 
     return values;
@@ -107,7 +96,7 @@ export function AdminLandlordVerification({
     const query = search.trim().toLowerCase();
 
     return landlords.filter((landlord) => {
-      const matchesStatus = status === "all" || getVerificationState(landlord, apartments) === status;
+      const matchesStatus = status === "all" || getVerificationState(landlord) === status;
       const searchableValues = [
         getLandlordName(landlord),
         landlord?.email,
@@ -138,15 +127,15 @@ export function AdminLandlordVerification({
   return (
     <div className="admin-verification-page">
       <header className="admin-verification-header">
-        <h1>Landlord Verification</h1>
-        <p>Review landlord accounts, business permits, and verification status.</p>
+        <h1>Landlords</h1>
+        <p>Review and manage landlord accounts and verification status.</p>
         {permitError && <p className="business-permit-status__error" role="alert">Permit monitoring unavailable: {permitError} <button type="button" onClick={() => void onRetryPermits?.()}>Try again</button></p>}
       </header>
 
       <section className="admin-verification-statistics" aria-label="Verification summary">
         {[
           { label: "Total Landlords", note: "Registered landlord accounts", count: counts.total, icon: UserRound, tone: "total", filterValue: "all" },
-          { label: "Pending Review", note: "Awaiting account or apartment review", count: counts.pending, icon: Clock3, tone: "pending", filterValue: "pending" },
+          { label: "Pending Review", note: "Awaiting verification", count: counts.pending, icon: Clock3, tone: "pending", filterValue: "pending" },
           { label: "Verified", note: "Approved landlord accounts", count: counts.verified, icon: CheckCircle2, tone: "verified", filterValue: "verified" },
           { label: "Rejected", note: "Verification denied", count: counts.rejected, icon: X, tone: "rejected", filterValue: "rejected" },
         ].map(({ label, note, count, icon: Icon, tone, filterValue }) => (
@@ -160,8 +149,9 @@ export function AdminLandlordVerification({
             <span className={`admin-verification-stat-icon ${tone}`}>
               <Icon aria-hidden="true" />
             </span>
-            <strong>{count} {label}</strong>
+            <span className="admin-verification-stat-copy"><strong>{count}</strong><b>{label}</b>
             <span>{note}</span>
+            </span>
           </button>
         ))}
       </section>
@@ -172,7 +162,7 @@ export function AdminLandlordVerification({
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search landlords by name, email, phone, or permit"
+            placeholder="Search landlords"
             type="search"
           />
         </label>
@@ -184,9 +174,9 @@ export function AdminLandlordVerification({
             <thead>
               <tr>
                 <th>Landlord</th>
-                <th>Contact</th>
                 <th>Date Registered</th>
-                <th>Business Permit</th>
+                <th>New Apartment Submission</th>
+                <th>Total Apartments</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -195,9 +185,9 @@ export function AdminLandlordVerification({
               {visibleLandlords.map((landlord) => {
                 const name = getLandlordName(landlord);
                 const avatarUrl = getAvatarUrl(landlord);
-                const verificationState = getVerificationState(landlord, apartments);
-                const permitStatus = permitStates.get(String(landlord.id));
+                const verificationState = getVerificationState(landlord);
                 const properties = apartments.filter((apartment) => String(apartment.landlordId ?? apartment.landlord_id) === String(landlord.id));
+                const hasPendingSubmission = properties.some((property) => getAdminListingState(property) === "pending");
 
                 return (
                   <tr key={landlord.id}>
@@ -206,18 +196,16 @@ export function AdminLandlordVerification({
                         <span aria-hidden="true" className="admin-verification-avatar">
                           {avatarUrl ? <img src={avatarUrl} alt="" /> : name.charAt(0).toUpperCase()}
                         </span>
-                        <span>
+                        <button type="button" className="admin-verification-landlord-link" onClick={() => onViewVerification(landlord)} aria-label={`View ${name}'s details`}>
                           <strong>{name}</strong>
                           <small>{landlord.email || "No email provided"}</small>
-                        </span>
+                        </button>
                       </div>
                     </td>
-                    <td>{getContact(landlord)}</td>
                     <td>{formatDate(landlord.created_at ?? landlord.createdAt)}</td>
-                    <td>{getPermitNumber(landlord)}
-                      {permitStatus && <BusinessPermitStatus status={permitStatus} compact />}
-                      {permitStatus && <small className="business-permit-status__apartments">Apartments: {properties.map((property) => property.title).filter(Boolean).join(", ") || "No associated apartments"}</small>}
+                    <td>{hasPendingSubmission ? <span className="admin-verification-submission">Pending Listing</span> : <span className="admin-verification-no-submission">—</span>}
                     </td>
+                    <td>{properties.length}</td>
                     <td>
                       <span className={`admin-verification-badge ${verificationState}`}>
                         {verificationState === "pending"

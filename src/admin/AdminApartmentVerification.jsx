@@ -1,5 +1,5 @@
 import "./AdminApartmentVerification.css";
-import { ArrowLeft, Check, Clock3, Eye, FileText, MapPin, Phone, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, Clock3, Eye, FileText, FileX, MapPin, Phone, UserRound } from "lucide-react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 const value = (input, fallback = "Not provided") => String(input ?? "").trim() || fallback;
@@ -87,8 +87,7 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
               </dl>
             </div>
           </div>
-          <button type="button" className="admin-apartment-verification__outline-action" onClick={onViewApartment} disabled={!isApproved} title={isApproved ? "Open apartment inspection" : "Verify this apartment before opening inspection"}><Eye aria-hidden="true" />View Full Apartment Details</button>
-          {!isApproved && <small className="admin-apartment-verification__inspection-note">Verify this apartment before opening its full inspection page.</small>}
+          <button type="button" className="admin-apartment-verification__outline-action" onClick={onViewApartment} title="Open full apartment details"><Eye aria-hidden="true" />View Full Apartment Details</button>
         </section>
 
         <section className="admin-apartment-verification__card">
@@ -116,12 +115,12 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
         </section>
         <section className="admin-apartment-verification__card admin-apartment-verification__actions">
           <h2>Admin Actions</h2>
-          <p>Verify the business permit and apartment details, then publish the listing for tenants.</p>
-          {!isPublished && <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || !hasAvailableUnit} title={hasAvailableUnit ? "Verify and publish listing" : "Add an available unit before publishing"}><Check aria-hidden="true" />{isApproving ? "Verifying & publishing..." : "Verify & Publish Listing"}</button>}
+          <p>Verify the business permit and apartment details before approval.</p>
+          {!isPublished && <button type="button" className="admin-apartment-verification__approve" onClick={onApprove} disabled={isApproving || !hasAvailableUnit} title={hasAvailableUnit ? "Approve listing" : "Add an available unit before publishing"}><Check aria-hidden="true" />{isApproving ? "Approving..." : "Approve Listing"}</button>}
           {!isPublished && !hasAvailableUnit && <small className="admin-apartment-verification__publish-note">Add at least one available unit before this listing can be verified and published.</small>}
           {isPublished && <small className="admin-apartment-verification__publish-note">This listing is already published. Use the apartment inspection page to unpublish it if needed.</small>}
           <button type="button" className="admin-apartment-verification__outline-action" onClick={onRequestChanges}><FileText aria-hidden="true" />Request Changes</button>
-          <button type="button" className="admin-apartment-verification__reject" onClick={onReject} disabled={isApproving || isRejecting}><X aria-hidden="true" />{isRejecting ? "Rejecting..." : "Reject Listing"}</button>
+          <button type="button" className="admin-apartment-verification__reject" onClick={onReject} disabled={isApproving || isRejecting}><FileX aria-hidden="true" />{isRejecting ? "Rejecting..." : "Reject Listing"}</button>
         </section>
       </aside>
     </div>

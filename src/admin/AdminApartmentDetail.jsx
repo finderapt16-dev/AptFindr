@@ -276,7 +276,7 @@ export function AdminApartmentDetail() {
                 returnTo,
                 backLabel,
             };
-        navigateSmoothly(`/admin?section=landlords`, {
+        navigateSmoothly(`/admin?section=landlords&landlordId=${encodeURIComponent(String(landlordId))}`, {
             state: {
                 landlordProfileReturn,
             },
@@ -1612,7 +1612,7 @@ export function AdminApartmentDetail() {
                       <Building2 className="admin-apartment-detail-building2-icon-3"/>
                       View Reported Apartment
                     </Button>
-                    <Button disabled={!apartment?.landlordId} onClick={() => navigate(`${portalBasePath}?section=landlords`)} className="admin-apartment-detail-view-landlord">
+                    <Button disabled={!apartment?.landlordId} onClick={() => navigate(`${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(String(apartment.landlordId))}`)} className="admin-apartment-detail-view-landlord">
                       <Users className="admin-apartment-detail-users-icon-2"/>
                       View Landlord
                     </Button>

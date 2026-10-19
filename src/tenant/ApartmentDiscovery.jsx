@@ -63,12 +63,12 @@ const STATUS_LABEL = {
     occupied: "Occupied",
     maintenance: "Under Maintenance",
 };
-export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoading, onApartmentClick, showGuestFavorite = false }) {
+export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoading, onApartmentClick, showGuestFavorite = false, showFavoriteAction = true, showRatingSummary = true }) {
     const { isFavorite, toggleFavorite } = useFavorites();
     const { user } = useAuth();
     const favorite = isFavorite(apartment.id);
     const isOwnListing = user?.role === "landlord" && apartment.landlordId === user.id;
-    const showFavoriteButton = (isTenantRole(user?.role) || (showGuestFavorite && !user)) && !isOwnListing;
+    const showFavoriteButton = showFavoriteAction && (isTenantRole(user?.role) || (showGuestFavorite && !user)) && !isOwnListing;
     const locationText = formatApartmentLocation(apartment);
     const imageUrl = getImageUrl(apartment.image || apartment.images?.[0] || "");
     const handleFavoriteClick = (e) => {
@@ -102,7 +102,7 @@ export function ApartmentCard({ apartment, detailState, ratingStats, ratingsLoad
             <h3 className="apartment-card-heading">{apartment.title}</h3>
           </div>
           <p className="apartment-card-location">{locationText}</p>
-          <ApartmentRatingSummary stats={ratingStats} isLoading={ratingsLoading} compact className="apartment-card-apartment-rating-summary"/>
+          {showRatingSummary && <ApartmentRatingSummary stats={ratingStats} isLoading={ratingsLoading} compact className="apartment-card-apartment-rating-summary"/>}
           <p className="apartment-card-price">{priceLabel}</p>
           <span className="apartment-card-details">View apartment details</span>
         </CardContent>

@@ -34,6 +34,8 @@ const ManageRooms = lazy(() => import("./landlord/ManageRooms").then((module) =>
 // Admin
 const AdminDashboard = lazy(() => import("@/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })));
 const AdminApartmentDetail = lazy(() => import("./admin/AdminApartmentDetail").then((module) => ({ default: module.AdminApartmentDetail })));
+const AdminApartmentInspectionPage = lazy(() => import("./admin/AdminApartmentInspectionPage").then((module) => ({ default: module.AdminApartmentInspectionPage })));
+const AdminLandlordApartmentDetailsReview = lazy(() => import("./admin/AdminLandlordApartmentDetailsReview").then((module) => ({ default: module.AdminLandlordApartmentDetailsReview })));
 const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard").then((module) => ({ default: module.AdminDashboard })));
 const SuperAdminApartmentDetail = lazy(() => import("./superadmin/SuperAdminApartmentDetail").then((module) => ({ default: module.AdminApartmentDetail })));
 const APARTMENT_LOGIN_MESSAGE = "Please sign in or create an account to view apartment details.";
@@ -101,7 +103,10 @@ export const router = createBrowserRouter([
             // Landlord market details.
             { path: "landlord/market/:id", element: <ProtectedRoute allowedRoles={["landlord"]}><PageLoader><ApartmentDetail /></PageLoader></ProtectedRoute> },
             // Admin apartment review.
+            { path: "admin/apartment-inspection/:id", element: <ProtectedRoute allowedRoles={["admin"]}><PageLoader><AdminApartmentInspectionPage /></PageLoader></ProtectedRoute> },
+            { path: "admin/landlord-apartment-review/:id", element: <ProtectedRoute allowedRoles={["admin"]}><PageLoader><AdminLandlordApartmentDetailsReview /></PageLoader></ProtectedRoute> },
             { path: "admin/apartment/:id", element: <ProtectedRoute allowedRoles={["admin"]}><PageLoader><AdminApartmentDetail /></PageLoader></ProtectedRoute> },
+            { path: "super-admin/apartment-inspection/:id", element: <ProtectedRoute allowedRoles={["super_admin"]}><PageLoader><AdminApartmentInspectionPage /></PageLoader></ProtectedRoute> },
             { path: "super-admin/apartment/:id", element: <ProtectedRoute allowedRoles={["super_admin"]}><PageLoader><SuperAdminApartmentDetail /></PageLoader></ProtectedRoute> },
             // Landlord property management.
             { path: "add-apartment", element: <ProtectedRoute allowedRoles={["landlord"]}><PageLoader><AddApartment /></PageLoader></ProtectedRoute> },

@@ -91,23 +91,38 @@ export function Dashboard() {
     };
     useEffect(() => {
         let mounted = true;
-        const loadRankingData = () => Promise.all([fetchDashboardFavorites(), fetchApartmentViews(), fetchApartmentRatings()])
-            .then(([favorites, views, ratings]) => {
+        const loadRankingData = async () => {
+            const results = await Promise.allSettled([
+                fetchDashboardFavorites(),
+                fetchApartmentViews(),
+                fetchApartmentRatings(),
+            ]);
             if (!mounted)
                 return;
-            setDashboardFavoriteRows(favorites);
-            setDashboardViewRows(views);
-            setDashboardRatingRows(ratings);
+            const [favorites, views, ratings] = results;
+            if (favorites.status === "fulfilled") {
+                setDashboardFavoriteRows(favorites.value);
+            }
+            else {
+                console.error("Unable to load dashboard favorites:", favorites.reason);
+                setDashboardFavoriteRows([]);
+            }
+            if (views.status === "fulfilled") {
+                setDashboardViewRows(views.value);
+            }
+            else {
+                console.error("Unable to load apartment views:", views.reason);
+                setDashboardViewRows([]);
+            }
+            if (ratings.status === "fulfilled") {
+                setDashboardRatingRows(ratings.value);
+            }
+            else {
+                console.error("Unable to load apartment ratings:", ratings.reason);
+                setDashboardRatingRows([]);
+            }
             setRatingsLoading(false);
-        })
-            .catch(() => {
-            if (!mounted)
-                return;
-            setDashboardFavoriteRows([]);
-            setDashboardViewRows([]);
-            setDashboardRatingRows([]);
-            setRatingsLoading(false);
-        });
+        };
         void loadRankingData();
         const unsubscribe = subscribeToApartmentRatings(() => { void loadRankingData(); });
         return () => {

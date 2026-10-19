@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchLandlordBusinessPermits } from "@/services/verificationDocumentsService";
-import { BusinessPermitStatus, PermitGraceNotice } from "@/components/BusinessPermitStatus";
+import { PermitGraceNotice } from "@/components/BusinessPermitStatus";
 import { getBusinessPermitStatus } from "@/utils/businessPermitStatus";
 import { useManilaDate } from "@/hooks/useManilaDate";
 import { UpdateBusinessPermitDialog } from "./UpdateBusinessPermitDialog";
@@ -100,7 +100,6 @@ function BusinessPermitInformation({ refreshKey }) {
           </div>
         </div>
       </div>
-      <BusinessPermitStatus status={permitStatus} />
       {records.length > 1 && <nav className="landlord-settings-permit-pagination" aria-label="Business permit pages">
         <button type="button" aria-label="Previous business permit" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft aria-hidden="true" /></button>
         <span aria-live="polite">Page {currentPage + 1} of {records.length}</span>

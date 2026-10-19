@@ -10,6 +10,7 @@ import { LandlordNotifications } from "@/landlord/LandlordNotifications";
 import { LandlordOverview } from "@/landlord/LandlordOverview";
 import { LandlordSettings } from "@/landlord/LandlordSettings";
 import { isBusinessPermitNotification } from "@/utils/businessPermitStatus";
+import { visibleLandlordNotifications } from "@/landlord/landlordNotificationRules";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { LandlordMenuTrigger } from "@/landlord/LandlordMenuTrigger";
 import { ProfileTab } from "@/landlord/ProfileTab";
@@ -1122,12 +1123,13 @@ export function LandlordDashboard() {
       try {
         const notifs =
           await fetchNotifications(user.id);
+        const landlordNotifs = visibleLandlordNotifications(notifs);
 
         if (active) {
-          setNotifications(notifs);
+          setNotifications(landlordNotifs);
 
           const unreadCount =
-            notifs.filter(
+            landlordNotifs.filter(
               (notification) =>
                 !(notification.read ??
                   notification.is_read)

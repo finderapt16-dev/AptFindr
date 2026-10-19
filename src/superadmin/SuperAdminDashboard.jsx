@@ -62,6 +62,7 @@ export function AdminDashboard() {
     const [searchParams] = useSearchParams();
     const requestedSectionValue = searchParams.get("section");
     const requestedSection = requestedSectionValue || "users";
+    const requestedLandlordId = searchParams.get("landlordId") || "";
     const isAvailableSection = (value) => isAdminModule(value);
     const [activeSection, setActiveSection] = useState(() => isAvailableSection(requestedSection) ? requestedSection : "users");
     const internalSectionNavigation = useRef(null);
@@ -625,6 +626,14 @@ export function AdminDashboard() {
                 setArchivedAppeals(loadedArchivedAppeals);
                 setLandlords(await attachLandlordPermitNumbers(loadedUsers.filter((account) => account.role === "landlord")));
                 setAdminAccounts(loadedUsers.filter((account) => isAdminRole(account.role)));
+                const rememberedLandlord = user?.id ? getAdminModuleLocation(user.id, "landlords") : null;
+                if (rememberedLandlord?.view === "landlord-apartment-verification") {
+                    const restoredLandlord = loadedUsers.find((account) => account.role === "landlord" && text(account.id) === text(rememberedLandlord.landlordId));
+                    const restoredApartment = loadedApartments.find((item) => text(item.id) === text(rememberedLandlord.apartmentId));
+                    if (restoredLandlord) setSelectedLandlord(restoredLandlord);
+                    if (restoredApartment) setSelectedLandlordProperty(restoredApartment);
+                    else if (restoredLandlord) rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(restoredLandlord.id) });
+                }
             } catch (error) {
                 console.error("Unable to load admin dashboard data:", error);
             } finally {
@@ -1215,7 +1224,9 @@ export function AdminDashboard() {
             return;
         const remembered = getAdminModuleLocation(user.id, section);
         if (section === "landlords") {
-            const landlordId = remembered?.view === "landlord-details" || remembered?.view === "landlord-action" ? remembered.landlordId : "";
+            // A landlord profile is a URL-addressable view. Only restore the
+            // verification subpage from memory because it has its own return flow.
+            const landlordId = requestedLandlordId || (remembered?.view === "landlord-apartment-verification" ? remembered.landlordId : "");
             const landlord = landlordId ? landlords.find((item) => text(item.id) === landlordId) ?? null : null;
             if (landlord) {
                 setSelectedLandlord(landlord);
@@ -1229,6 +1240,11 @@ export function AdminDashboard() {
             else if (!landlordId) {
                 setSelectedLandlord(null);
             }
+            if (!requestedLandlordId && remembered?.view === "landlord-apartment-verification") {
+                const apartment = allApartments.find((item) => text(item.id) === text(remembered.apartmentId));
+                if (apartment) setSelectedLandlordProperty(apartment);
+            }
+            if (requestedLandlordId) setSelectedLandlordProperty(null);
             if (remembered?.view === "landlord-action" && landlord) {
                 openViolationModal(remembered.mode, landlordId, text(landlord.name, "Landlord"), "General", undefined, undefined, "landlords");
             }
@@ -1324,19 +1340,22 @@ export function AdminDashboard() {
             setNotifActivityFilter("all");
         }
         restoreAdminModule(requestedSection);
-    }, [landlords, navigationDataReady, requestedSection, user?.id]);
+    }, [allApartments, landlords, navigationDataReady, requestedLandlordId, requestedSection, user?.id]);
     useEffect(() => {
         if (!navigationDataReady || !user?.id)
             return;
         if (activeSection === "landlords") {
             const rememberedLandlord = getAdminModuleLocation(user.id, "landlords");
-            const isRestoringLandlord = rememberedLandlord?.view === "landlord-details"
+            const isRestoringLandlord = rememberedLandlord?.view === "landlord-apartment-verification"
                 && Boolean(rememberedLandlord.landlordId)
-                && !selectedLandlord?.id;
+                && (!selectedLandlord?.id || (rememberedLandlord?.view === "landlord-apartment-verification" && !selectedLandlordProperty?.id));
             if (isRestoringLandlord)
                 return;
             if (violationModal?.open && violationModal.sourceModule === "landlords") {
                 rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-action", landlordId: violationModal.landlordId, mode: violationModal.mode });
+            }
+            else if (selectedLandlord?.id && selectedLandlordProperty?.id) {
+                rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-apartment-verification", landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) });
             }
             else if (selectedLandlord?.id) {
                 rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(selectedLandlord.id) });
@@ -1354,7 +1373,7 @@ export function AdminDashboard() {
         else if (isAdminModule(activeSection)) {
             rememberAdminModuleLocation(user.id, activeSection, { view: "overview" });
         }
-    }, [activeSection, navigationDataReady, selectedAppeal?.id, selectedLandlord?.id, selectedReport?.id, user?.id, violationModal]);
+    }, [activeSection, navigationDataReady, selectedAppeal?.id, selectedLandlord?.id, selectedLandlordProperty?.id, selectedReport?.id, user?.id, violationModal]);
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
@@ -1529,7 +1548,7 @@ export function AdminDashboard() {
       </div>);
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
-    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
+    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); if (user?.id) rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(landlord.id) }); navigate(`${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(text(landlord.id))}`); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} aptStatusFilter={aptStatusFilter} setAptStatusFilter={setAptStatusFilter} aptPropertyTypeFilter={aptPropertyTypeFilter} setAptPropertyTypeFilter={setAptPropertyTypeFilter} aptSort={aptSort} setAptSort={setAptSort} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} setSelectedApt={setSelectedApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal} selectedApt={selectedApt} reports={reports} setSelectedLandlord={setSelectedLandlord} resolveReport={resolveReport} dismissReport={dismissReport}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
@@ -1824,11 +1843,19 @@ export function AdminDashboard() {
     const renderLandlordDetails = () => {
         if (!selectedLandlord || !selectedLandlordDetails)
             return renderLandlords();
+        const closeLandlordDetails = () => {
+            setSelectedLandlordProperty(null);
+            setSelectedLandlord(null);
+            if (requestedLandlordId) {
+                if (user?.id) rememberAdminModuleLocation(user.id, "landlords", { view: "overview" });
+                navigate(`${portalBasePath}?section=landlords`, { replace: true });
+            }
+        };
         return <AdminLandlordVerificationReview
           landlord={selectedLandlord}
           details={selectedLandlordDetails}
           isLoading={isLoadingLandlordDetails}
-          onBack={() => { setSelectedLandlordProperty(null); setSelectedLandlord(null); }}
+          onBack={closeLandlordDetails}
           onViewProperty={(propertyId) => setSelectedLandlordProperty(selectedLandlordDetails.properties.find((property) => text(property.id) === text(propertyId)) ?? null)}
         />;
     };
@@ -1855,7 +1882,10 @@ export function AdminDashboard() {
           onApprove={() => void handleApproveAndPublishApartment(selectedLandlordProperty)}
           onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
           onReject={() => void handleRejectApartmentListing(selectedLandlordProperty)}
-          onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
+          onViewApartment={() => {
+            if (user?.id) rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-apartment-verification", landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) });
+            navigate(`/super-admin/apartment-inspection/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Apartment Verification" } });
+          }}
         />;
     };
     const renderLandlordDocument = () => <AdminVerificationDocumentViewer

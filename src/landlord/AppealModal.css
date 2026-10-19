@@ -520,3 +520,45 @@
 /* Header and controls shared by the appeal submission and evidence forms. */
 .appeal-modal-row{align-items:flex-start;padding:16px 22px 12px;background:#fff;border-bottom:1px solid #edf1f5}.appeal-modal-header-copy{min-width:0}.appeal-modal-kicker{margin:0;color:#16a5e1;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.appeal-modal-row .appeal-modal-submit-appeal{margin:3px 0 2px;color:#1f2937;font-size:18px;line-height:1.2}.appeal-modal-row .appeal-modal-text{margin:0;color:#718096;font-size:11px;line-height:1.35}.appeal-modal-row .appeal-modal-button{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;padding:0;border:0;border-radius:7px;color:#64748b;background:transparent;cursor:pointer}.appeal-modal-row .appeal-modal-button:hover{background:#f1f5f9}.appeal-modal-row .appeal-modal-button:disabled{cursor:not-allowed}.appeal-modal-card{border-radius:12px}.appeal-modal-panel{padding-top:18px}.appeal-modal-apartment-card>div:last-child{min-width:0}.appeal-modal-apartment-card strong,.appeal-modal-apartment-card p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:420px){.appeal-modal-row{padding:14px 18px 10px}.appeal-modal-row .appeal-modal-text{display:none}}
+
+/* Keep the dialog inside the viewport and scroll its form when evidence or
+   smaller screens make the content taller than the available space. */
+.appeal-modal-overlay {
+  align-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+}
+.appeal-modal-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
+  margin-block: auto;
+  overflow: hidden;
+}
+.appeal-modal-row { flex: 0 0 auto; }
+.appeal-modal-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.appeal-modal-row-5 { flex: 0 0 auto; }
+.appeal-modal-card .evidence-uploader-style-13 {
+  width: 100%;
+  max-height: min(32vh, 220px);
+  aspect-ratio: 16 / 9;
+}
+.appeal-modal-card .evidence-uploader-style-14 { object-fit: contain; }
+.appeal-modal-card .evidence-uploader-thumbnail-grid {
+  grid-template-columns: repeat(auto-fill, minmax(76px, 88px));
+  max-height: 190px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 420px) {
+  .appeal-modal-overlay { align-items: flex-start; padding: 10px; }
+  .appeal-modal-card { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
+}

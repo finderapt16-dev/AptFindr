@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, X } from "lucide-react";
 import { fetchReportDetails } from "@/services/dashboardSupabaseService";
+import "./NotificationDetailModal.css";
 
 // Convert a value to usable text.
 const getText = (value) =>
@@ -328,7 +329,7 @@ export const NotificationDetailModal = ({
 
   return (
     <div
-      className="notification-detail-modal-overlay"
+      className={`notification-detail-modal-overlay${isReportNotification ? " is-report" : ""}`}
       onClick={handleClose}
     >
       <div className="notification-detail-modal-overlay-2" />

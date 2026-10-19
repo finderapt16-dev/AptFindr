@@ -1549,6 +1549,23 @@
   }
 }
 
+/* Tenant report prompt styled to match the supplied compact reference card. */
+.apartment-detail-page .apartment-detail-section-6 {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #d5d5d5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: none;
+}
+.apartment-detail-page .apartment-detail-row-9 { align-items: center; gap: 9px; }
+.apartment-detail-page .apartment-detail-alert-triangle-icon-2 { width: 20px; height: 20px; color: #111; }
+.apartment-detail-page .apartment-detail-report-a-problem { margin: 0; color: #111; font-size: 18px; font-weight: 700; line-height: 24px; }
+.apartment-detail-page .apartment-detail-text-13 { margin: 20px 0 0; color: #52627a; font-size: 14px; line-height: 20px; }
+.apartment-detail-page .apartment-detail-report-a-problem-2 { min-height: 48px; margin-top: 18px; border: 1px solid #d0d0d0; border-radius: 12px; color: #0874b7; background: #fff; font-size: 14px; font-weight: 700; }
+.apartment-detail-page .apartment-detail-report-a-problem-2:hover { border-color: #aebdca; background: #f8fafc; }
+
 .apartment-detail-mail-icon, .apartment-detail-phone-icon {
   height: calc(var(--spacing, .25rem) * 4);
   width: calc(var(--spacing, .25rem) * 4);
@@ -2858,8 +2875,68 @@
 .apartment-detail-page .apartment-detail-grid-6 small { font-size: 9px; }
 .apartment-detail-page .apartment-detail-aside > * { min-width: 0; }
 .apartment-detail-page .apartment-detail-panel-17 { min-height: 210px; overflow: hidden; border-radius: 6px; }
-.apartment-detail-page .apartment-detail-section-6 { background: #fffdf9; }
 
+/* Figma-matched tenant report card, scoped to the actual Tenant page root. */
+.tenant-detail-colors .apartment-detail-section-6 {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 26px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px;
+  background: #fff;
+  background-color: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-lg, .5rem);
+  box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a;
+}
+.tenant-detail-colors .apartment-detail-section-6 > .apartment-detail-row-9 {
+  display: grid;
+  grid-template-columns: 21px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 26px;
+  width: 100%;
+}
+.tenant-detail-colors .apartment-detail-section-6 .apartment-detail-panel-2 { display: contents; }
+.tenant-detail-colors .apartment-detail-section-6 .apartment-detail-alert-triangle-icon-2 {
+  width: 21px;
+  height: 19px;
+  color: #000;
+}
+.tenant-detail-colors .apartment-detail-section-6 .apartment-detail-report-a-problem {
+  margin: 0;
+  color: #000;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.tenant-detail-colors .apartment-detail-section-6 .apartment-detail-text-13 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 17px;
+}
+.tenant-detail-colors .apartment-detail-section-6 .apartment-detail-report-a-problem-2 {
+  box-sizing: border-box;
+  align-self: stretch;
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  margin: 0;
+  padding: 11px 16px;
+  color: #0369a1;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 20%);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 17px;
+}
 /* Property image gallery -------------------------------------------------- */
 /* Keeps the reference layout isolated to the property images card. */
 .apartment-property-image-card {

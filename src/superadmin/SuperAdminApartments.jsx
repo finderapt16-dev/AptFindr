@@ -79,7 +79,7 @@ export function AdminApartments({ allApartments, getApartmentReportCount, setAct
                     <div><p className="admin-apartments-listing-status">Listing Status</p><span className="admin-apartments-card-4"><ShieldCheck className="admin-apartments-shield-check-icon"/>{status}</span>{reportCount > 0 && <p className="admin-apartments-text-3"><Flag className="admin-apartments-flag-icon"/>{reportCount} {reportCount === 1 ? "report" : "reports"}</p>}</div>
                   </div>
                   <div className="admin-apartments-row-9">
-                    <Button variant="outline" size="sm" disabled={!canInspect} title={canInspect ? "Inspect apartment" : "Verify the apartment before inspection"} onClick={(event) => { event.stopPropagation(); onApartmentViewed?.(apartment); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
+                    <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onApartmentViewed?.(apartment); navigate(`${portalBasePath}/apartment-inspection/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
                   </div>
                 </article>);
             })}

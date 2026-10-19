@@ -1946,3 +1946,33 @@
 }
 
 .admin-portal-shell .admin-apartments-expired-permit { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; color: #b91c1c; background: #fee2e2; font-size: 10px; font-weight: 700; line-height: 1.2; }
+
+/* Apartment overview cards, matching the compact property row reference. */
+.admin-portal-shell .admin-apartments-article {
+  grid-template-columns: 152px minmax(0, 1fr) 92px;
+  min-height: 130px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-color: #d8d8d8;
+  border-radius: 8px;
+}
+.admin-portal-shell .admin-apartments-panel-2 { width: 152px; height: 108px; border-radius: 7px; }
+.admin-portal-shell .admin-apartments-panel-3 { min-width: 0; gap: 5px; padding: 0; }
+.admin-portal-shell .admin-apartments-title-row { flex-wrap: wrap; gap: 6px; }
+.admin-portal-shell .admin-apartments-heading { color: #172033; font-size: 12px; font-weight: 700; }
+.admin-portal-shell .admin-apartments-text-2,
+.admin-portal-shell .admin-apartments-price-range,
+.admin-portal-shell .admin-apartments-submitted-by { margin: 0; color: #52627a; font-size: 10px; line-height: 1.4; }
+.admin-portal-shell .admin-apartments-price-range { font-weight: 500; }
+.admin-portal-shell .admin-apartments-span-6 { color: #334155; }
+.admin-portal-shell .admin-apartments-expired-permit { font-size: 8px; }
+.admin-portal-shell .admin-apartments-row-9 { justify-self: end; align-self: center; }
+.admin-portal-shell .admin-apartments-inspect { width: 78px; min-width: 78px; height: 34px; }
+
+@media (max-width: 760px) {
+  .admin-portal-shell .admin-apartments-article { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .admin-portal-shell .admin-apartments-panel-2 { width: 76px; height: 76px; }
+  .admin-portal-shell .admin-apartments-row-9 { grid-column: 1 / -1; width: 100%; justify-self: stretch; }
+  .admin-portal-shell .admin-apartments-inspect { width: 100%; }
+}

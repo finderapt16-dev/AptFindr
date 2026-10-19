@@ -158,6 +158,8 @@
 .admin-verification-avatar { display: grid; width: 26px; height: 26px; place-items: center; overflow: hidden; border-radius: 999px; background: #f3e8ff; color: #9333ea; font-size: 9px; font-weight: 700; }
 .admin-verification-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .admin-verification-landlord > span:last-child { display: grid; gap: 2px; }
+.admin-verification-landlord-link { display: grid; gap: 2px; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.admin-verification-landlord-link:hover strong { color: #0284c7; text-decoration: underline; }
 .admin-verification-landlord strong { color: #334155; font-size: 9px; line-height: 1.2; font-weight: 600; }
 .admin-verification-landlord small { color: #94a3b8; font-size: 8px; line-height: 1.2; }
 

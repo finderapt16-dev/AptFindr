@@ -23,7 +23,6 @@ import {
 } from "@/tenant/geospatialSearch";
 
 import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
-import { fetchRatingsForApartments, summarizeApartmentRatings } from "@/services/apartmentRatingsService";
 
 import {
     fetchApartmentViews,
@@ -42,9 +41,9 @@ function selectRandomListings(apartments) {
     return listings.slice(0, 4);
 }
 
-function PreviewCard({ apartment, onApartmentClick, viewCount = 0, ratingStats, ratingsLoading, showDistance = false }) {
+function PreviewCard({ apartment, onApartmentClick, viewCount = 0, showDistance = false }) {
     return <div className="landing-preview-wrapper">
-      <ApartmentCard apartment={{ ...apartment, views: viewCount }} ratingStats={ratingStats} ratingsLoading={ratingsLoading} onApartmentClick={onApartmentClick} showGuestFavorite/>
+      <ApartmentCard apartment={{ ...apartment, views: viewCount }} onApartmentClick={onApartmentClick} showGuestFavorite showFavoriteAction={false} showRatingSummary={false}/>
       {showDistance && Number.isFinite(apartment.distanceMeters) && (
         <span className="landing-preview-distance">
           {formatDistance(apartment.distanceMeters)}
@@ -252,19 +251,6 @@ export function LandingApartmentPreview({
     );
 
 
-    const [ratingRows, setRatingRows] = useState([]);
-    const [ratingsLoading, setRatingsLoading] = useState(true);
-    const ratingSummary = useMemo(() => summarizeApartmentRatings(ratingRows), [ratingRows]);
-    useEffect(() => {
-        let active = true;
-        setRatingsLoading(true);
-        fetchRatingsForApartments(displayedApartments.map(apartment => apartment.id))
-            .then(rows => { if (active) setRatingRows(rows); })
-            .catch(error => { console.error("Unable to load apartment ratings:", error); if (active) setRatingRows([]); })
-            .finally(() => { if (active) setRatingsLoading(false); });
-        return () => { active = false; };
-    }, [displayedApartments]);
-
     /* =========================
        LOADING
     ========================= */
@@ -384,8 +370,6 @@ export function LandingApartmentPreview({
                             apartment
                         ) => (
                             <PreviewCard
-                                ratingStats={ratingSummary.byApartment.get(apartment.id)}
-                                ratingsLoading={ratingsLoading}
                                 key={
                                     apartment.id
                                 }

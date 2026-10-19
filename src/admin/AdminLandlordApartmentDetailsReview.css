@@ -1,0 +1,113 @@
+.admin-landlord-apartment-review {
+  min-height: 100vh;
+  width: min(100% - 48px, 1580px);
+  margin: 0 auto;
+  padding: 28px 0 56px;
+  color: #172033;
+  background: #fff;
+}
+.admin-landlord-apartment-review__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  color: #0ea5e9;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.admin-landlord-apartment-review__back svg { width: 18px; height: 18px; }
+.admin-landlord-apartment-review__heading { margin: 24px 0 32px; }
+.admin-landlord-apartment-review__heading h1 { margin: 0; color: #111827; font-size: clamp(24px, 2vw, 30px); line-height: 1.2; }
+.admin-landlord-apartment-review__heading p { margin: 6px 0 0; color: #536783; font-size: 15px; }
+.admin-landlord-apartment-review__grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(350px, .95fr); grid-template-areas: "information location" "units location"; gap: 22px 28px; align-items: start; }
+.admin-landlord-apartment-review__card { min-width: 0; padding: 16px 14px; border: 1px solid #cfd4da; border-radius: 10px; background: #fff; }
+.admin-landlord-apartment-review__card > h2 { margin: 0 0 18px; color: #111; font-size: 24px; line-height: 1.2; }
+.admin-landlord-apartment-review__information { grid-area: information; }
+.admin-landlord-apartment-review__location { grid-area: location; }
+.admin-landlord-apartment-review__units { grid-area: units; padding: 20px 16px; }
+.admin-landlord-apartment-review__property-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(270px, .9fr); gap: 14px; align-items: start; }
+.admin-landlord-apartment-review__gallery, .admin-landlord-apartment-review__details { min-width: 0; }
+.admin-landlord-apartment-review__hero { position: relative; overflow: hidden; width: 100%; aspect-ratio: 1.45; border-radius: 9px; background: #a5a5a5; }
+.admin-landlord-apartment-review__hero > :is(img, span) { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-landlord-apartment-review__hero > span img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-landlord-apartment-review__placeholder { display: grid; width: 100%; height: 100%; place-items: center; padding: 20px; color: #64748b; background: #eef2f6; text-align: center; }
+.admin-landlord-apartment-review__hero > button { position: absolute; top: 50%; display: grid; width: 38px; height: 38px; place-items: center; padding: 0; border: 2px solid #526174; border-radius: 50%; color: #526174; background: rgb(255 255 255 / 75%); transform: translateY(-50%); cursor: pointer; }
+.admin-landlord-apartment-review__hero > button:nth-of-type(1) { left: 10px; }
+.admin-landlord-apartment-review__hero > button:nth-of-type(2) { right: 10px; }
+.admin-landlord-apartment-review__hero > button svg { width: 22px; height: 22px; }
+.admin-landlord-apartment-review__dots { position: absolute; right: 0; bottom: 12px; left: 0; display: flex; justify-content: center; gap: 8px; }
+.admin-landlord-apartment-review__dots button { width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; background: #d1d5db; cursor: pointer; }
+.admin-landlord-apartment-review__dots button[aria-current="true"] { background: #0ea5e9; }
+.admin-landlord-apartment-review__thumbnails { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.admin-landlord-apartment-review__thumbnails button { height: 82px; overflow: hidden; padding: 0; border: 0; border-radius: 8px; background: #e5e7eb; cursor: pointer; }
+.admin-landlord-apartment-review__thumbnails button.is-active { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+.admin-landlord-apartment-review__thumbnails img, .admin-landlord-apartment-review__thumbnails button > span { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-landlord-apartment-review__details { display: grid; gap: 15px; }
+.admin-landlord-apartment-review__title h3 { margin: 0; color: #111; font-size: 23px; line-height: 1.2; }
+.admin-landlord-apartment-review__title p { margin: 7px 0 0; color: #697d9a; font-size: 14px; }
+.admin-landlord-apartment-review__facts { display: grid; gap: 16px; margin: 0; }
+.admin-landlord-apartment-review__facts > div { display: grid; grid-template-columns: minmax(105px, .8fr) minmax(0, 1fr); gap: 10px; }
+.admin-landlord-apartment-review__facts dt { color: #7588a3; font-size: 13px; }
+.admin-landlord-apartment-review__facts dd { margin: 0; color: #172033; font-size: 13px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.admin-landlord-apartment-review__tag-group { padding: 10px 11px; border: 1px solid #d1d5db; border-radius: 9px; }
+.admin-landlord-apartment-review__tag-group h3 { margin: 0 0 10px; color: #111; font-size: 13px; }
+.admin-landlord-apartment-review__tag-group > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.admin-landlord-apartment-review__tag-group span { min-width: 88px; padding: 7px 10px; border: 1px solid #bae6fd; border-radius: 999px; color: #0284c7; background: #e0f2fe; font-size: 11px; text-align: center; }
+.admin-landlord-apartment-review__map { height: clamp(320px, 30vw, 470px); overflow: hidden; border-radius: 10px; background: #e8e8e8; }
+.admin-landlord-apartment-review__map .map-view-shell, .admin-landlord-apartment-review__map .map-view-container, .admin-landlord-apartment-review__map .leaflet-container { width: 100%; height: 100%; }
+.admin-landlord-apartment-review__map-empty { display: grid; height: 100%; align-content: center; justify-items: center; gap: 8px; padding: 20px; color: #454545; background: repeating-linear-gradient(35deg, #ededed, #ededed 18px, #e4e4e4 18px, #e4e4e4 21px); text-align: center; }
+.admin-landlord-apartment-review__map-empty svg { width: 28px; height: 28px; color: #0ea5e9; }
+.admin-landlord-apartment-review__map-empty strong { font-size: 17px; }
+.admin-landlord-apartment-review__map-empty span, .admin-landlord-apartment-review__map-empty small { color: #667085; font-size: 13px; }
+.admin-landlord-apartment-review__map-address { display: flex; align-items: flex-start; gap: 7px; margin: 13px 0 0; color: #536783; font-size: 13px; }
+.admin-landlord-apartment-review__map-address svg { flex: 0 0 auto; width: 16px; height: 16px; color: #0ea5e9; }
+.admin-landlord-apartment-review__units > h2 { margin-bottom: 5px; }
+.admin-landlord-apartment-review__units > p { margin: 0; color: #697d9a; font-size: 14px; }
+.admin-landlord-apartment-review__unit-list { display: grid; gap: 12px; margin-top: 22px; padding: 0 10px; }
+.admin-landlord-apartment-review__unit { display: grid; grid-template-columns: minmax(190px, 250px) minmax(0, 1fr); gap: 18px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; }
+.admin-landlord-apartment-review__unit-image { height: 210px; overflow: hidden; border-radius: 8px; background: #eef2f6; }
+.admin-landlord-apartment-review__unit-image img, .admin-landlord-apartment-review__unit-image > span { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-landlord-apartment-review__unit-image > div { display: grid; width: 100%; height: 100%; place-items: center; padding: 12px; color: #667085; text-align: center; }
+.admin-landlord-apartment-review__unit-content { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.admin-landlord-apartment-review__unit-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.admin-landlord-apartment-review__unit-heading h3 { margin: 0; color: #111; font-size: 19px; }
+.admin-landlord-apartment-review__unit-heading > span { flex: 0 0 auto; padding: 6px 14px; border-radius: 99px; color: #15803d; background: #dcfce7; font-size: 12px; }
+.admin-landlord-apartment-review__unit-heading > span.is-occupied, .admin-landlord-apartment-review__unit-heading > span.is-under-maintenance { color: #b45309; background: #fef3c7; }
+.admin-landlord-apartment-review__rent { color: #0874ad; font-size: 19px; }
+.admin-landlord-apartment-review__unit-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; color: #536783; font-size: 13px; }
+.admin-landlord-apartment-review__unit-meta i { width: 1px; height: 16px; background: #9aa4b2; }
+.admin-landlord-apartment-review__amenities { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 5px; }
+.admin-landlord-apartment-review__amenities b { margin-right: 4px; color: #111; font-size: 12px; }
+.admin-landlord-apartment-review__amenities span { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 8px; color: #172033; font-size: 11px; }
+.admin-landlord-apartment-review__description { padding: 9px 11px; border-radius: 8px; background: #f1f5f9; }
+.admin-landlord-apartment-review__description strong { color: #111; font-size: 12px; }
+.admin-landlord-apartment-review__description p { margin: 3px 0 0; color: #536783; font-size: 11px; line-height: 1.45; white-space: pre-wrap; }
+.admin-landlord-apartment-review__empty, .admin-landlord-apartment-review__state { padding: 28px; border: 1px solid #d1d5db; border-radius: 10px; color: #536783; background: #fff; text-align: center; }
+
+@media (max-width: 1050px) {
+  .admin-landlord-apartment-review__grid { grid-template-columns: minmax(0, 1fr) minmax(300px, .82fr); gap: 18px; }
+  .admin-landlord-apartment-review__property-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-landlord-apartment-review__hero { aspect-ratio: 1.8; }
+  .admin-landlord-apartment-review__unit { grid-template-columns: 190px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .admin-landlord-apartment-review { width: min(100% - 28px, 680px); padding-top: 18px; }
+  .admin-landlord-apartment-review__heading { margin: 18px 0 22px; }
+  .admin-landlord-apartment-review__heading p { font-size: 13px; line-height: 1.5; }
+  .admin-landlord-apartment-review__grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "information" "units" "location"; gap: 16px; }
+  .admin-landlord-apartment-review__card { padding: 16px; }
+  .admin-landlord-apartment-review__card > h2 { font-size: 20px; }
+  .admin-landlord-apartment-review__map { height: 340px; }
+  .admin-landlord-apartment-review__unit-list { padding: 0; }
+}
+@media (max-width: 520px) {
+  .admin-landlord-apartment-review__unit { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .admin-landlord-apartment-review__unit-image { height: 210px; }
+  .admin-landlord-apartment-review__facts > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .admin-landlord-apartment-review__thumbnails { gap: 7px; }
+  .admin-landlord-apartment-review__thumbnails button { height: 68px; }
+  .admin-landlord-apartment-review__map { height: 290px; }
+}

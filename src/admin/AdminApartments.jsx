@@ -1,10 +1,10 @@
 import { hasExpiredPermit } from "@/utils/permitExpiry";
-import { getAdminAvailabilityLabel, getAdminListingLabel, getLowestRoomRent } from "@/admin/adminListingState";
+import { getAdminListingLabel, getLowestRoomRent } from "@/admin/adminListingState";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { Button } from "@/components/ui/button";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
-import { AlertOctagon, BedDouble, Bell, Building2, Calendar, Car, CheckCircle2, Eye, Flag, MapPin, PawPrint, Search, ShieldCheck, Sofa, Wifi } from "lucide-react";
-import { formatOptionalDate, OverviewEmpty, text } from './adminDashboardHelpers';
+import { AlertOctagon, Bell, Building2, Calendar, Car, CheckCircle2, Eye, Flag, MapPin, PawPrint, Search, ShieldCheck, Sofa, Wifi } from "lucide-react";
+import { OverviewEmpty, text } from './adminDashboardHelpers';
 const canInspectApartment = (apartment) => apartment?.isPublished === true
     || apartment?.is_published === true
     || String(apartment?.approvalStatus ?? apartment?.approval_status ?? "").trim().toLowerCase() === "approved";
@@ -56,31 +56,36 @@ export function AdminApartments({ allApartments, permitStates = new Map(), getAp
                 const landlord = getLandlordForApt(apartment);
                 const reportCount = getApartmentReportCount(apartment.id);
                 const status = getAdminListingLabel(apartment);
-                const availability = getAdminAvailabilityLabel(apartment);
-                const lowestRoomRent = getLowestRoomRent(apartment);
+                const roomRents = (apartment.rooms ?? [])
+                    .map((room) => Number(room.rent ?? room.price))
+                    .filter((rent) => Number.isFinite(rent) && rent > 0);
+                const lowestRoomRent = roomRents.length ? Math.min(...roomRents) : getLowestRoomRent(apartment);
+                const highestRoomRent = roomRents.length ? Math.max(...roomRents) : lowestRoomRent;
+                const priceRange = lowestRoomRent === null
+                    ? (Number(apartment.price) > 0 ? `\u20B1${Number(apartment.price).toLocaleString()} / month` : "Price not provided")
+                    : `\u20B1${lowestRoomRent.toLocaleString()}${highestRoomRent !== lowestRoomRent ? ` - \u20B1${highestRoomRent.toLocaleString()}` : ""} / month`;
+                const imageCandidates = [
+                    ...(apartment.images ?? []),
+                    ...(apartment.rooms ?? []).flatMap((room) => room.images ?? []),
+                    apartment.image,
+                ].filter((image) => typeof image === "string" && image.trim());
+                const apartmentPhoto = imageCandidates.find((image) => !/graph\.facebook\.com|platform-lookaside\.fbsbx\.com/i.test(image));
                 const location = formatApartmentLocation(apartment);
-                const canInspect = canInspectApartment(apartment);
-                const roomCount = apartment.rooms?.length || apartment.bedrooms || 0;
                 return (<article key={apartment.id} className="admin-apartments-article">
                   <div className="admin-apartments-panel-2">
-                    {apartment.image ? <ImageWithFallback src={apartment.image} alt={apartment.title} className="admin-apartments-image-with-fallback"/> : <div className="admin-apartments-row-5"><Building2 className="admin-apartments-building2-icon-2"/></div>}
+                    {apartmentPhoto ? <ImageWithFallback src={apartmentPhoto} alt={apartment.title} className="admin-apartments-image-with-fallback"/> : <div className="admin-apartments-row-5"><Building2 className="admin-apartments-building2-icon-2"/></div>}
                   </div>
                   <div className="admin-apartments-panel-3">
-                    <div className="admin-apartments-title-row"><h3 className="admin-apartments-heading">{apartment.title}</h3><span className="admin-apartments-inline-status">{status}</span>{hasExpiredPermit(apartment, landlord) && <span className="admin-apartments-expired-permit">Expired Permit</span>}</div>
+                    <div className="admin-apartments-title-row"><h3 className="admin-apartments-heading">{apartment.title}</h3><span className="admin-apartments-inline-status">{status}</span>{hasExpiredPermit(apartment, landlord) && <span className="admin-apartments-expired-permit">Permit Expired</span>}</div>
                     <p className="admin-apartments-text-2"><MapPin className="admin-apartments-map-pin-icon"/>{location || "Location not provided"}</p>
+                    <p className="admin-apartments-price-range">{priceRange}</p>
                     <p className="admin-apartments-submitted-by">Submitted by <span className="admin-apartments-span-6">{landlord?.name || "Not available"}</span></p>
-                    <div className="admin-apartments-row-6">
-                      <span className="admin-apartments-row-7"><BedDouble className="admin-apartments-bed-double-icon"/>{roomCount || 0} {roomCount === 1 ? "Room/Unit" : "Rooms/Units"}</span>
-                      <span className="admin-apartments-row-7"><CheckCircle2 className="admin-apartments-check-circle2-icon"/>{availability}</span>
-                      {lowestRoomRent !== null && <span className="admin-apartments-starting-at">Starting at ₱{lowestRoomRent.toLocaleString()}/month</span>}
-                      <span className="admin-apartments-added"><Calendar className="admin-apartments-calendar-icon-2"/>Added {formatOptionalDate(apartment.createdAt, { month: "short", day: "numeric", year: "numeric" })}</span>
-                    </div>
                   </div>
                   <div className="admin-apartments-row-8">
                     <div><p className="admin-apartments-listing-status">Listing Status</p><span className="admin-apartments-card-4"><ShieldCheck className="admin-apartments-shield-check-icon"/>{status}</span>{reportCount > 0 && <p className="admin-apartments-text-3"><Flag className="admin-apartments-flag-icon"/>{reportCount} {reportCount === 1 ? "report" : "reports"}</p>}</div>
                   </div>
                   <div className="admin-apartments-row-9">
-                    <Button variant="outline" size="sm" disabled={!canInspect} title={canInspect ? "Inspect apartment" : "Verify the apartment before inspection"} onClick={(event) => { event.stopPropagation(); onApartmentViewed?.(apartment); navigate(`${apartmentDetailBasePath}/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
+                    <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onApartmentViewed?.(apartment); navigate(`${portalBasePath}/apartment-inspection/${apartment.id}`, { state: { returnTo: `${portalBasePath}?section=apartments`, backLabel: "Back to Apartments" } }); }} className="admin-apartments-inspect"><Eye className="admin-apartments-eye-icon"/>Inspect</Button>
                   </div>
                 </article>);
             })}
@@ -114,7 +119,7 @@ export function AdminApartments({ allApartments, permitStates = new Map(), getAp
 
       <div className="admin-apartments-panel-5">
         <Search className="admin-apartments-search-icon-2"/>
-        <input value={aptSearch} onChange={(e) => setAptSearch(e.target.value)} placeholder="Search by name or location…" className="admin-apartments-input-2"/>
+        <input value={aptSearch} onChange={(e) => setAptSearch(e.target.value)} placeholder="Search by name or locationÃ¢â‚¬Â¦" className="admin-apartments-input-2"/>
       </div>
 
     <div className="admin-apartments-grid">
@@ -152,7 +157,7 @@ export function AdminApartments({ allApartments, permitStates = new Map(), getAp
                 <MapPin className="admin-apartments-map-pin-icon-2"/>{apt.location}
               </p>
               <div className="admin-apartments-row-17">
-                <span className="admin-apartments-span-11">₱{apt.price?.toLocaleString()}<span className="admin-apartments-mo">/mo</span></span>
+                <span className="admin-apartments-span-11">Ã¢â€šÂ±{apt.price?.toLocaleString()}<span className="admin-apartments-mo">/mo</span></span>
                 <div className="admin-apartments-row-18">
                   {apt.wifi && <span className="admin-apartments-card-7"><Wifi className="admin-apartments-wifi-icon"/></span>}
                   {apt.parking && <span className="admin-apartments-card-7"><Car className="admin-apartments-car-icon"/></span>}

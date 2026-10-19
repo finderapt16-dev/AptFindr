@@ -76,7 +76,7 @@
 .landlord-notification.is-unread:hover { background: #e1f4fd; }
 .landlord-notification__open {
   position: absolute;
-  z-index: 0;
+  z-index: 1;
   inset: 0;
   padding: 0;
   color: inherit;
@@ -90,7 +90,7 @@
 }
 .landlord-notification__content {
   position: relative;
-  z-index: 1;
+  z-index: 0;
   display: grid;
   min-width: 0;
   grid-template-columns: minmax(0, 1fr) 78px;
@@ -338,3 +338,4 @@
   .landlord-notifications__mark-read { justify-self: end; justify-content: center; min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; white-space: normal; text-align: center; }
   .landlord-notifications__mark-read svg { flex-shrink: 0; }
 }
+

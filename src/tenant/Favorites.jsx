@@ -34,6 +34,7 @@ import { isTenantVisibleApartment } from "@/utils/listingVisibility";
 import { ApartmentRatingSummary } from "@/components/ApartmentRatingSummary";
 import { EmptyState } from "@/tenant/EmptyState";
 import { ApartmentCard } from "@/tenant/ApartmentDiscovery";
+import { fetchApartmentRatings, subscribeToApartmentRatings, summarizeApartmentRatings } from "@/services/apartmentRatingsService";
 
 import {
     dashboardPathForRole,
@@ -121,6 +122,39 @@ export function Favorites() {
         isLoading,
         setIsLoading,
     ] = useState(true);
+
+    const [ratingRows, setRatingRows] = useState([]);
+    const [ratingsLoading, setRatingsLoading] = useState(true);
+    const ratingSummary = useMemo(
+        () => summarizeApartmentRatings(ratingRows),
+        [ratingRows]
+    );
+
+    useEffect(() => {
+        let active = true;
+        const loadRatings = async () => {
+            try {
+                const rows = await fetchApartmentRatings();
+                if (active)
+                    setRatingRows(rows);
+            }
+            catch (error) {
+                console.error("Unable to load favorite apartment ratings:", error);
+                if (active)
+                    setRatingRows([]);
+            }
+            finally {
+                if (active)
+                    setRatingsLoading(false);
+            }
+        };
+        void loadRatings();
+        const unsubscribe = subscribeToApartmentRatings(() => { void loadRatings(); });
+        return () => {
+            active = false;
+            unsubscribe();
+        };
+    }, []);
 
     useEffect(() => {
         markFavoritesViewed();
@@ -458,26 +492,8 @@ export function Favorites() {
 
                             <ApartmentRatingSummary
                                 compact
-                                stats={
-                                    (
-                                        apartment.rating ??
-                                        apartment.averageRating ??
-                                        apartment.average_rating
-                                    )
-                                        ? {
-                                              average: Number(
-                                                  apartment.rating ??
-                                                  apartment.averageRating ??
-                                                  apartment.average_rating
-                                              ),
-                                              count: Number(
-                                                  apartment.ratingCount ??
-                                                  apartment.rating_count ??
-                                                  1
-                                              ),
-                                          }
-                                        : undefined
-                                }
+                                stats={ratingSummary.byApartment.get(apartment.id)}
+                                isLoading={ratingsLoading}
                                 className="apartment-browse-apartment-rating-summary"
                             />
 
@@ -785,9 +801,7 @@ const FavoriteApartmentCard = ({
 }) => (
     <ApartmentCard
         apartment={apartment}
-        ratingStats={ratingSummary.byApartment.get(
-            apartment.id
-        )}
+        ratingStats={ratingSummary.byApartment.get(apartment.id)}
         ratingsLoading={ratingsLoading}
         detailState={{
             returnTo: "/tenant/dashboard?section=favorites",

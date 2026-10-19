@@ -199,10 +199,10 @@ export function AdminLandlordVerification({
                         <span aria-hidden="true" className="admin-verification-avatar">
                           {avatarUrl ? <img src={avatarUrl} alt="" /> : name.charAt(0).toUpperCase()}
                         </span>
-                        <span>
+                        <button type="button" className="admin-verification-landlord-link" onClick={() => onViewVerification(landlord)} aria-label={`View ${name}'s details`}>
                           <strong>{name}</strong>
                           <small>{landlord.email || "No email provided"}</small>
-                        </span>
+                        </button>
                       </div>
                     </td>
                     <td>{getContact(landlord)}</td>

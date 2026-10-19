@@ -1282,6 +1282,7 @@
 
 .mr-unit-information { margin-top: 8px; gap: 14px 36px; }
 .mr-unit-field { display: grid; align-content: start; gap: 5px; color: #475569; font-size: 13px; }
+.mr-unit-field .mr-required-mark { color: #dc2626; }
 .mr-unit-field .mr-input { width: 100%; min-width: 0; height: 32px; padding: 5px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; box-sizing: border-box; color: #111827; }
 /* Keep numeric validation while removing the browser's increment/decrement arrows. */
 .mr-unit-field input[type="number"] { appearance: textfield; }

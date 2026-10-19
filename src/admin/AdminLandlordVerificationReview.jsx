@@ -57,7 +57,7 @@ export function AdminLandlordVerificationReview({ landlord, details, isLoading, 
         <h2>Landlord Information</h2>
         <div className="admin-landlord-profile-listing__person"><span>{avatarUrl ? <img src={avatarUrl} alt="" /> : landlordName.charAt(0).toUpperCase()}</span><div><strong>{landlordName}</strong><small>{value(landlord.email)}</small></div></div>
         <dl>
-          <div><dt><span><UserRound aria-hidden="true" /></span>Full Name</dt><dd>{landlordName} {landlordIsVerified && <em>Verified Landlord</em>}</dd></div>
+          <div><dt><span><UserRound aria-hidden="true" /></span>Full Name</dt><dd>{landlordName} {landlordIsVerified && <em>Verified</em>}</dd></div>
           <div><dt><span><Mail aria-hidden="true" /></span>Email</dt><dd>{value(landlord.email)}</dd></div>
           <div><dt><span><Phone aria-hidden="true" /></span>Contact Number</dt><dd>{value(phone)}</dd></div>
           <div><dt><span><MapPin aria-hidden="true" /></span>Address</dt><dd>{value(address)}</dd></div>

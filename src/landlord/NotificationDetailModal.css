@@ -583,7 +583,9 @@
 /* Newly filed apartment reports use the compact floating card from the
    notification design, without changing the fuller administrative dialogs. */
 .notification-detail-modal-card.is-report {
-  max-width: 375px;
+  width: min(100%, 540px);
+  max-width: 540px;
+  max-height: none;
 }
 
 .notification-detail-modal-card.is-report .notification-detail-modal-row {
@@ -652,4 +654,12 @@
 
 .notification-detail-modal-card.is-report .notification-detail-modal-message-square-icon {
   display: none;
+}
+
+/* Report notices are short enough to fit as a single, larger card. */
+.notification-detail-modal-overlay.is-report {
+  overflow: visible;
+}
+.notification-detail-modal-card.is-report .notification-detail-modal-panel {
+  overflow: visible;
 }

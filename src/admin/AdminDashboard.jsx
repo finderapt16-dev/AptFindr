@@ -124,6 +124,8 @@ export function AdminDashboard() {
     const [searchParams] = useSearchParams();
     const requestedSectionValue = searchParams.get("section");
     const requestedSection = requestedSectionValue || "overview";
+    const requestedLandlordId = searchParams.get("landlordId") || "";
+    const requestedLandlordApartmentId = searchParams.get("apartmentId") || "";
     const isAvailableSection = (value) => isAdminModule(value);
     const [activeSection, setActiveSection] = useState(() => isAvailableSection(requestedSection) ? requestedSection : "landlords");
     const internalSectionNavigation = useRef(null);
@@ -661,14 +663,6 @@ export function AdminDashboard() {
                 const loadedLandlords = loadedUsers.filter((account) => account.role === "landlord");
                 setLandlords(loadedLandlords);
                 setAdminAccounts(loadedUsers.filter((account) => account.role === "admin"));
-                const rememberedLandlord = user?.id ? getAdminModuleLocation(user.id, "landlords") : null;
-                const restoredLandlordId = rememberedLandlord?.view === "landlord-details" || rememberedLandlord?.view === "landlord-action"
-                    ? text(rememberedLandlord.landlordId)
-                    : "";
-                if (restoredLandlordId) {
-                    const restoredLandlord = loadedLandlords.find((account) => text(account.id) === restoredLandlordId);
-                    if (restoredLandlord) setSelectedLandlord(restoredLandlord);
-                }
                 // Permit numbers enhance the overview, but should never delay
                 // opening a landlord profile. Only fetch the small profile row
                 // here; full records load after a profile is selected.
@@ -1317,16 +1311,10 @@ export function AdminDashboard() {
             return;
         const remembered = getAdminModuleLocation(user.id, section);
         if (section === "landlords") {
-            const landlordId = remembered?.view === "landlord-details" || remembered?.view === "landlord-action" ? remembered.landlordId : "";
+            const landlordId = requestedLandlordId;
             const landlord = landlordId ? landlords.find((item) => text(item.id) === landlordId) ?? null : null;
             if (landlord) {
                 setSelectedLandlord(landlord);
-            }
-            else if (landlordId && text(selectedLandlord?.id) !== landlordId) {
-                void fetchUserById(landlordId).then((loadedLandlord) => {
-                    if (loadedLandlord)
-                        setSelectedLandlord(loadedLandlord);
-                }).catch(() => undefined);
             }
             else if (!landlordId) {
                 setSelectedLandlord(null);
@@ -1412,18 +1400,47 @@ export function AdminDashboard() {
             return;
         }
         restoreAdminModule(requestedSection);
-    }, [landlords, navigationDataReady, requestedSection, user?.id]);
+    }, [allApartments, landlords, navigationDataReady, requestedLandlordId, requestedSection, user?.id]);
+    useEffect(() => {
+        if (requestedSection !== "landlords") return;
+        if (!requestedLandlordId) {
+            setSelectedLandlord(null);
+            setSelectedLandlordProperty(null);
+            setIsViewingLandlordDocument(false);
+            return;
+        }
+        if (!navigationDataReady) return;
+        const landlord = landlords.find((item) => text(item.id) === text(requestedLandlordId)) ?? null;
+        setSelectedLandlord((current) => current?.id === landlord?.id ? current : landlord);
+        if (!landlord || text(selectedLandlord?.id) !== text(requestedLandlordId)) {
+            setSelectedLandlordDetails(null);
+            setSelectedLandlordProperty(null);
+            setIsViewingLandlordDocument(false);
+        }
+    }, [landlords, navigationDataReady, requestedLandlordId, requestedSection, selectedLandlord?.id]);
+    useEffect(() => {
+        if (requestedSection !== "landlords" || !requestedLandlordId) return;
+        if (!requestedLandlordApartmentId) {
+            setSelectedLandlordProperty(null);
+            return;
+        }
+        if (!selectedLandlord || text(selectedLandlord.id) !== text(requestedLandlordId)) return;
+        const fromProfile = selectedLandlordDetails?.properties?.find((item) => text(item.id) === text(requestedLandlordApartmentId));
+        const fromApartmentList = allApartments.find((item) =>
+            text(item.id) === text(requestedLandlordApartmentId)
+            && text(item.landlordId ?? item.landlord_id) === text(requestedLandlordId));
+        const apartment = fromProfile ?? fromApartmentList ?? null;
+        if (apartment) setSelectedLandlordProperty((current) => current?.id === apartment.id ? current : apartment);
+        else if (selectedLandlordDetails && !isLoadingLandlordDetails) setSelectedLandlordProperty(null);
+    }, [allApartments, isLoadingLandlordDetails, requestedLandlordApartmentId, requestedLandlordId, requestedSection, selectedLandlord?.id, selectedLandlordDetails?.properties]);
     useEffect(() => {
         if (!navigationDataReady || !user?.id)
             return;
         if (activeSection === "landlords") {
-            const rememberedLandlord = getAdminModuleLocation(user.id, "landlords");
-            const isRestoringLandlord = rememberedLandlord?.view === "landlord-details"
-                && Boolean(rememberedLandlord.landlordId)
-                && !selectedLandlord?.id;
-            if (isRestoringLandlord)
-                return;
-            if (selectedLandlord?.id) {
+            if (selectedLandlord?.id && selectedLandlordProperty?.id) {
+                rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-apartment-verification", landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) });
+            }
+            else if (selectedLandlord?.id) {
                 rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(selectedLandlord.id) });
             }
             else {
@@ -1439,7 +1456,7 @@ export function AdminDashboard() {
         else if (isAdminModule(activeSection)) {
             rememberAdminModuleLocation(user.id, activeSection, { view: "overview" });
         }
-    }, [activeSection, navigationDataReady, selectedAppeal?.id, selectedLandlord?.id, selectedReport?.id, user?.id, violationModal]);
+    }, [activeSection, navigationDataReady, selectedAppeal?.id, selectedLandlord?.id, selectedLandlordProperty?.id, selectedReport?.id, user?.id, violationModal]);
     const handleLogout = () => { if (user?.id)
         clearAdminNavigationMemory(user.id); logout?.(); navigate("/"); };
     // ── Sidebar ───────────────────────────────────────────────────────────────
@@ -1624,7 +1641,7 @@ export function AdminDashboard() {
       </div>);
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
-    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} permitStates={permitStates} permitError={permitError} onRetryPermits={loadPermitRecords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
+    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} permitStates={permitStates} permitError={permitError} onRetryPermits={loadPermitRecords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); if (user?.id) rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(landlord.id) }); navigate(`${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(text(landlord.id))}`); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
     const renderApartments = () => (<AdminApartments allApartments={allApartments} permitStates={permitStates} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
@@ -1963,18 +1980,38 @@ export function AdminDashboard() {
             }
             setSelectedLandlordProperty(null);
             setSelectedLandlord(null);
+            if (requestedLandlordId) {
+                if (user?.id) rememberAdminModuleLocation(user.id, "landlords", { view: "overview" });
+                navigate(`${portalBasePath}?section=landlords`, { replace: true });
+            }
         };
         return <AdminLandlordVerificationReview
           landlord={selectedLandlord}
           details={selectedLandlordDetails}
           isLoading={isLoadingLandlordDetails || !selectedLandlordDetails}
           onBack={closeLandlordDetails}
-          onViewProperty={(propertyId) => setSelectedLandlordProperty(selectedLandlordDetails.properties.find((property) => text(property.id) === text(propertyId)) ?? null)}
+          onViewProperty={(propertyId) => {
+            const apartmentId = text(propertyId);
+            if (!selectedLandlordDetails?.properties?.some((property) => text(property.id) === apartmentId)) return;
+            navigate(`${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(text(selectedLandlord.id))}&apartmentId=${encodeURIComponent(apartmentId)}`);
+          }}
         />;
     };
-    const pendingLandlordProfileId = !navigationDataReady && activeSection === "landlords" && !selectedLandlord && user?.id
-        ? text(getAdminModuleLocation(user.id, "landlords")?.landlordId)
+    const requestedLandlordRecord = landlords.find((item) => text(item.id) === text(requestedLandlordId)) ?? null;
+    const pendingLandlordProfileId = requestedSection === "landlords" && requestedLandlordId
+        && (!navigationDataReady || (requestedLandlordRecord && text(selectedLandlord?.id) !== text(requestedLandlordId)))
+        ? requestedLandlordId
         : "";
+    const requestedApartmentRecord = selectedLandlordDetails?.properties?.find((item) => text(item.id) === text(requestedLandlordApartmentId))
+        ?? allApartments.find((item) => text(item.id) === text(requestedLandlordApartmentId) && text(item.landlordId ?? item.landlord_id) === text(requestedLandlordId))
+        ?? null;
+    const hasMatchingLandlordDetails = text(selectedLandlordDetails?.user?.id) === text(requestedLandlordId);
+    const isRequestedLandlordApartmentLoading = Boolean(requestedLandlordApartmentId && requestedLandlordId)
+        && (!hasMatchingLandlordDetails || isLoadingLandlordDetails || (requestedApartmentRecord && text(selectedLandlordProperty?.id) !== text(requestedLandlordApartmentId)));
+    const isRequestedLandlordApartmentMissing = Boolean(requestedLandlordApartmentId && requestedLandlordId)
+        && hasMatchingLandlordDetails
+        && !isLoadingLandlordDetails
+        && !requestedApartmentRecord;
     const renderApartmentVerification = () => {
         if (!selectedLandlord || !selectedLandlordDetails || !selectedLandlordProperty)
             return renderLandlordDetails();
@@ -1993,12 +2030,23 @@ export function AdminDashboard() {
           isApproving={publishingApartmentId === selectedLandlordProperty.id}
           isRejecting={rejectingApartmentId === selectedLandlordProperty.id}
           hasAvailableUnit={hasAvailableUnit}
-          onBack={() => { setRequestChangesModal(null); setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
+          onBack={() => {
+            setRequestChangesModal(null);
+            setIsViewingLandlordDocument(false);
+            navigate(`${portalBasePath}?section=landlords`, { replace: true });
+          }}
           onViewDocument={() => setIsViewingLandlordDocument(true)}
           onApprove={() => void handleApproveAndPublishApartment(selectedLandlordProperty)}
           onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
           onReject={() => void handleRejectApartmentListing(selectedLandlordProperty)}
-          onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
+          onViewApartment={() => {
+            const landlordId = text(selectedLandlord.id);
+            const apartmentId = text(selectedLandlordProperty.id);
+            const returnTo = `${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(landlordId)}&apartmentId=${encodeURIComponent(apartmentId)}`;
+            navigate(`/admin/landlord-apartment-review/${encodeURIComponent(apartmentId)}?landlordId=${encodeURIComponent(landlordId)}&apartmentId=${encodeURIComponent(apartmentId)}`, {
+              state: { returnTo, backLabel: "Apartment Verification" },
+            });
+          }}
         />;
     };
     const renderLandlordDocument = () => <AdminVerificationDocumentViewer
@@ -2055,7 +2103,9 @@ export function AdminDashboard() {
         admininfo: renderAdminInfo,
     };
     const isFocusedAppealReview = activeSection === "appeals" && Boolean(selectedAppeal);
-    const isFocusedApartmentVerification = activeSection === "landlords" && Boolean(selectedLandlordProperty);
+    const isFocusedApartmentVerification = activeSection === "landlords"
+        && Boolean(requestedLandlordApartmentId)
+        && text(selectedLandlordProperty?.id) === text(requestedLandlordApartmentId);
     const isFocusedWorkspace = isFocusedAppealReview || isFocusedApartmentVerification;
     // ── Render ────────────────────────────────────────────────────────────────
     return (<div className={`admin-portal-shell app-shell ${isFocusedAppealReview ? "admin-appeal-review-shell" : ""} ${isFocusedApartmentVerification ? "admin-apartment-verification-shell" : ""}`}>
@@ -2078,8 +2128,16 @@ export function AdminDashboard() {
           <main className="app-shell-content app-shell-content-mobile-nav">
             {violationModal?.open && violationModal.sourceModule !== "landlords" && violationModal.sourceModule === activeSection
             ? renderAdministrativeAction()
-            : activeSection === "landlords" && selectedLandlord
-                ? selectedLandlordProperty ? isViewingLandlordDocument ? renderLandlordDocument() : renderApartmentVerification() : renderLandlordDetails()
+            : activeSection === "landlords" && requestedLandlordId && navigationDataReady && !requestedLandlordRecord
+                ? <section className="admin-dashboard-container-3" role="alert"><h1>Landlord not found</h1><p>This landlord record is unavailable or may have been removed.</p><button type="button" className="admin-dashboard-back-to-landlords" onClick={() => navigate(`${portalBasePath}?section=landlords`, { replace: true })}>Back to Landlords</button></section>
+            : activeSection === "landlords" && isRequestedLandlordApartmentMissing
+                ? <section className="admin-dashboard-container-3" role="alert"><h1>Apartment not found</h1><p>This apartment is not available under the selected landlord.</p><button type="button" className="admin-dashboard-back-to-landlords" onClick={() => navigate(`${portalBasePath}?section=landlords&landlordId=${encodeURIComponent(text(selectedLandlord?.id ?? requestedLandlordId))}`, { replace: true })}>Back to Landlord Profile</button></section>
+            : activeSection === "landlords" && isRequestedLandlordApartmentLoading
+                ? <AdminLandlordProfileLoading />
+            : activeSection === "landlords" && requestedLandlordId && selectedLandlord && text(selectedLandlord.id) === text(requestedLandlordId)
+                ? requestedLandlordApartmentId && selectedLandlordProperty && text(selectedLandlordProperty.id) === text(requestedLandlordApartmentId)
+                    ? isViewingLandlordDocument ? renderLandlordDocument() : renderApartmentVerification()
+                    : renderLandlordDetails()
                 : pendingLandlordProfileId ? <AdminLandlordProfileLoading />
                 : (sectionMap[activeSection] ?? renderLandlords)()}
           </main>
