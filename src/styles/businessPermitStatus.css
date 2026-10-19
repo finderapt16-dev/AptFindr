@@ -1,0 +1,22 @@
+.business-permit-status { display: grid; gap: 8px; min-width: 0; margin-top: 10px; font-size: 12px; }
+.business-permit-status__badge { justify-self: start; padding: 4px 9px; border-radius: 999px; font-weight: 600; background: #f1f5f9; color: #475569; }
+.business-permit-status__badge--success { background: #e8f7ef; color: #166534; }
+.business-permit-status__badge--warning { background: #fff4dc; color: #92400e; }
+.business-permit-status__badge--danger { background: #fff1f2; color: #be123c; }
+.business-permit-status__badge--info { background: #eaf7fd; color: #0369a1; }
+.business-permit-status__grace { color: #92400e; font-size: inherit; }
+.business-permit-status__details { display: grid; gap: 5px; margin: 0; }
+.business-permit-status__details div { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.business-permit-status__details dt { color: #64748b; }
+.business-permit-status__details dd { margin: 0; overflow-wrap: anywhere; }
+.business-permit-status__notice { margin: 12px 0; padding: 12px 14px; border: 1px solid #f1d79b; border-radius: 8px; background: #fffaf0; color: #784d15; font-size: 12px; line-height: 1.6; }
+.business-permit-status__notice p { margin: 5px 0 0; }
+.business-permit-status--compact { max-width: 310px; font-size: 11px; }
+.business-permit-status--compact .business-permit-status__details div { display: block; white-space: normal; }
+.business-permit-status__apartments { display: block; margin-top: 6px; max-width: 310px; color: #64748b; font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
+.business-permit-status__notification { display: block; margin-top: 5px; color: #64748b; font-size: 11px; line-height: 1.5; white-space: normal; }
+.business-permit-status__error { margin: 8px 0; color: #92400e; font-size: 12px; }
+@media (max-width: 640px) {
+  .business-permit-status--compact { font-size: 12px; }
+  .business-permit-status__notification { font-size: 12px; }
+}

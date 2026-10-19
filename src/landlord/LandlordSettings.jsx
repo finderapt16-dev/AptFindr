@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchLandlordBusinessPermits } from "@/services/verificationDocumentsService";
+import { BusinessPermitStatus, PermitGraceNotice } from "@/components/BusinessPermitStatus";
+import { getBusinessPermitStatus } from "@/utils/businessPermitStatus";
+import { useManilaDate } from "@/hooks/useManilaDate";
+import { UpdateBusinessPermitDialog } from "./UpdateBusinessPermitDialog";
 import { ChevronLeft, ChevronRight, FileText, LockKeyhole, Pencil } from "lucide-react";
 
 import "./LandlordSettings.css";
@@ -40,13 +44,15 @@ const ProfileField = ({ label, required = false, hint, children }) => (
 );
 
 
-function BusinessPermitInformation() {
+function BusinessPermitInformation({ refreshKey }) {
   const { user } = useAuth();
   const [permits, setPermits] = useState([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
+  const [editingPermit, setEditingPermit] = useState(null);
+  const now = useManilaDate();
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -63,19 +69,22 @@ function BusinessPermitInformation() {
       if (active) setError(reason.message || "Unable to load business permits.");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [user?.id, reload]);
+  }, [user?.id, reload, refreshKey]);
 
   const records = permits;
   const currentPage = Math.min(page, Math.max(0, records.length - 1));
   const permit = records[currentPage];
   const size = Number(permit?.fileSize);
+  const permitStatus = getBusinessPermitStatus(permit?.permitAccount ?? permit ?? {}, now);
 
-  return <section className="landlord-settings-card landlord-settings-business-card">
+  return <section id="business-permit" className="landlord-settings-card landlord-settings-business-card">
     <header className="landlord-settings-card-header landlord-settings-business-header">
       <div><h2>Business Information</h2><p>Manage your business verification and permit details.</p></div>
       <span className="landlord-settings-read-only"><LockKeyhole aria-hidden="true" strokeWidth={1.6} />READ-ONLY</span>
     </header>
     {loading ? <p role="status">Loading business permits...</p> : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></div> : permit ? <>
+      <PermitGraceNotice status={permitStatus} />
+      {permit.permitAccount?.statusError && <p className="business-permit-status__error" role="alert">Permit renewal status unavailable: {permit.permitAccount.statusError} <button type="button" onClick={() => setReload(value => value + 1)}>Try again</button></p>}
       <div className="landlord-settings-business-record">
         <dl className="landlord-settings-permit-details">
           <div><dt>Apartment Name</dt><dd>{permit.apartmentName || permit.businessName || "Not provided"}</dd></div>
@@ -87,15 +96,18 @@ function BusinessPermitInformation() {
           <div>
             {permit.documentUrl ? <a href={permit.documentUrl} target="_blank" rel="noreferrer">{permit.fileName || permitFileName(permit.documentUrl)}</a> : <strong>No business permit uploaded</strong>}
             <small>{size > 0 ? size >= 1024 * 1024 ? `${(size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB` : "Size not provided"}</small>
+            <button type="button" className="landlord-settings-permit-update-link" onClick={() => setEditingPermit({ ...permit, permitExpiry: permitStatus.expiresAt ? new Date(permitStatus.expiresAt).toISOString() : permit.permitExpiry })}>Update permit</button>
           </div>
         </div>
       </div>
+      <BusinessPermitStatus status={permitStatus} />
       {records.length > 1 && <nav className="landlord-settings-permit-pagination" aria-label="Business permit pages">
         <button type="button" aria-label="Previous business permit" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft aria-hidden="true" /></button>
         <span aria-live="polite">Page {currentPage + 1} of {records.length}</span>
         <button type="button" aria-label="Next business permit" disabled={currentPage === records.length - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight aria-hidden="true" /></button>
       </nav>}
     </> : <p>No business permit information available.</p>}
+    {editingPermit && <UpdateBusinessPermitDialog permit={editingPermit} landlordId={editingPermit.landlordId || user.id} onClose={() => setEditingPermit(null)} onSubmitted={() => setReload(value => value + 1)} />}
   </section>;
 }
 
@@ -109,6 +121,7 @@ export const LandlordSettings = ({
   business,
   profileTab,
   securityTab,
+  permitRefreshKey,
 }) => (
   <div className="landlord-settings">
     <header className="landlord-page-header landlord-settings-page-header">
@@ -149,7 +162,7 @@ export const LandlordSettings = ({
       </footer>
     </section>
 
-    <BusinessPermitInformation />
+    <BusinessPermitInformation refreshKey={permitRefreshKey} />
 
     {securityTab}
   </div>

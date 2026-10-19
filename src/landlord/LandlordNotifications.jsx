@@ -1,6 +1,8 @@
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
 import "./LandlordNotifications.css";
 import { CheckCheck, Clock, MoreHorizontal } from "lucide-react";
+import { formatPermitDate, getPermitNotificationDetails } from "@/utils/businessPermitStatus";
+import "@/styles/businessPermitStatus.css";
 
 const isRead = (notification) => (notification.read ?? notification.is_read) === true;
 
@@ -31,6 +33,7 @@ export const LandlordNotifications = ({
   toggleNotifReadStatus,
   deletingNotifId,
   deleteNotif,
+  apartments = [],
 }) => {
   const unreadCount = notifications.filter((notification) => !isRead(notification)).length;
   const showingUnread = notifCategory === "unread";
@@ -65,6 +68,7 @@ export const LandlordNotifications = ({
               const unread = !isRead(notification);
               const notificationId = notification.id ?? `notification-${index}`;
               const menuIsOpen = notification.id && openNotifMenuId === notification.id;
+              const permitDetails = getPermitNotificationDetails(notification, apartments);
               return (
                 <article key={notificationId} className={`landlord-notification ${unread ? "is-unread" : ""} ${menuIsOpen ? "is-menu-open" : ""}`}>
                   <button
@@ -74,7 +78,13 @@ export const LandlordNotifications = ({
                     onClick={() => void handleNotificationClick(notification)}
                   />
                   <div className="landlord-notification__content">
-                    <span className="landlord-notification__body"><span>{notification.title || notification.type || "Notification"}</span><span>{notification.message || "You have a new account update."}</span></span>
+                    <span className="landlord-notification__body"><span>{notification.title || notification.type || "Notification"}</span><span>{notification.message || "You have a new account update."}
+                    {permitDetails && <small className="business-permit-status__notification">
+                      {permitDetails.graceDeadline !== null && <>Renewal approval deadline: {formatPermitDate(permitDetails.graceDeadline, true)} (Philippine time). </>}
+                      {permitDetails.apartmentNames && <>Apartments: {permitDetails.apartmentNames}. </>}
+                      Open to view your business permit and renewal status.
+                    </small>}
+                    </span></span>
                     <time dateTime={notification.created_at ?? notification.createdAt}>{relativeTime(notification.created_at ?? notification.createdAt)}</time>
                   </div>
                   {notification.id ? (

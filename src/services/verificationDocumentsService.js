@@ -1,4 +1,6 @@
 import { supabase } from "@/services/supabaseClient";
+import { fetchBusinessPermitRecords } from "./businessPermitRenewalService";
+import { buildPermitAccount } from "@/utils/businessPermitStatus";
 export const VERIFICATION_DOCUMENT_TYPES = [
     { key: "proof_of_ownership", label: "Proof of Ownership or Authority" },
     { key: "business_registration", label: "Business Registration" },
@@ -151,9 +153,10 @@ async function getAuthenticatedLandlordAccountId() {
 
 export async function fetchLandlordBusinessPermits() {
     const landlordId = await getAuthenticatedLandlordAccountId();
-    const [propertiesResult, documentsResult] = await Promise.all([
-        supabase.from("apartments").select("id, landlord_id, title, features").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
+    const [propertiesResult, documentsResult, permitRecords] = await Promise.all([
+        supabase.from("apartments").select("id, landlord_id, title, features, is_published").eq("landlord_id", landlordId).order("created_at", { ascending: false }),
         supabase.from("apartment_verification_documents").select("id, apartment_id, landlord_id, file_name, storage_path, created_at").eq("landlord_id", landlordId).eq("document_type", BUSINESS_PERMIT_DOCUMENT_TYPE).order("created_at", { ascending: false }),
+        fetchBusinessPermitRecords(landlordId).catch(error => ({ profiles: [], renewals: [], statusError: error.message || "Unable to load renewal status." })),
     ]);
     if (propertiesResult.error) throw new Error(propertiesResult.error.message);
     if (documentsResult.error) throw new Error(documentsResult.error.message);
@@ -163,17 +166,22 @@ export async function fetchLandlordBusinessPermits() {
     // Do not trust a document's landlord_id alone. A permit is visible only
     // when its apartment was fetched as owned by this authenticated landlord.
     const ownedProperties = properties.filter(property => String(property.landlord_id) === landlordId);
+    const account = buildPermitAccount(landlordId, permitRecords, ownedProperties);
+    account.statusError = permitRecords.statusError || "";
+    const profile = permitRecords.profiles[0] ?? {};
     const entries = ownedProperties.flatMap(property => {
         const verification = property.features?.verification ?? {};
         const propertyDocuments = documents.filter(document => String(document.apartment_id) === String(property.id) && String(document.landlord_id) === landlordId);
         if (!propertyDocuments.length && !verification.businessPermit) return [];
         return (propertyDocuments.length ? propertyDocuments : [null]).map(document => ({
+            permitAccount: account,
+            landlordId,
             id: String(document?.id ?? property.id),
             apartmentId: String(property.id),
             businessName: verification.businessName || verification.propertyName || property.title || "",
             apartmentName: property.title || verification.propertyName || "",
-            permitNumber: verification.businessPermit || "",
-            issuedAt: verification.dateIssued || verification.issuedAt || "",
+            permitNumber: profile.business_permit_number || profile.permit_number || verification.businessPermit || "",
+            issuedAt: profile.permit_issued_at || verification.dateIssued || verification.issuedAt || "",
             permitExpiry: verification.permitExpiry || "",
             fileName: document?.file_name || "",
             // File-size columns differ across existing deployments. The permit
@@ -183,8 +191,18 @@ export async function fetchLandlordBusinessPermits() {
             storagePath: document?.storage_path || "",
         }));
     });
+    if (!entries.length && (profile.permit_number || profile.business_permit_number)) {
+        entries.push({
+            id: landlordId, landlordId, permitAccount: account, apartmentId: null,
+            businessName: profile.business_name || "Business permit", apartmentName: "",
+            permitNumber: profile.business_permit_number || profile.permit_number,
+            issuedAt: profile.permit_issued_at || "", permitExpiry: profile.permit_expiry || "",
+            fileName: "", fileSize: null, storagePath: profile.verification_document_url || "",
+        });
+    }
     const propertyEntries = await Promise.all(entries.map(async entry => {
         if (!entry.storagePath) return { ...entry, documentUrl: "" };
+        if (/^https?:\/\//i.test(entry.storagePath)) return { ...entry, documentUrl: entry.storagePath };
         const { data, error } = await supabase.storage.from("verification-documents").createSignedUrl(entry.storagePath, 15 * 60);
         if (error) throw new Error(error.message || "Unable to open business permit.");
         return { ...entry, documentUrl: data?.signedUrl ?? "" };

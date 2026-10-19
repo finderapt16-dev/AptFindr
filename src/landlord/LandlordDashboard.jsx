@@ -9,6 +9,7 @@ import { LandlordHelpSupport } from "@/landlord/LandlordHelpSupport";
 import { LandlordNotifications } from "@/landlord/LandlordNotifications";
 import { LandlordOverview } from "@/landlord/LandlordOverview";
 import { LandlordSettings } from "@/landlord/LandlordSettings";
+import { isBusinessPermitNotification } from "@/utils/businessPermitStatus";
 import { LandlordSidebar } from "@/landlord/LandlordSidebar";
 import { LandlordMenuTrigger } from "@/landlord/LandlordMenuTrigger";
 import { ProfileTab } from "@/landlord/ProfileTab";
@@ -165,6 +166,7 @@ export function LandlordDashboard() {
 
 
   const [notifications, setNotifications] = useState([]);
+  const [permitRefreshKey, setPermitRefreshKey] = useState(0);
 
   const [unreadNotificationCount, setUnreadNotificationCount] =
     useState(0);
@@ -876,6 +878,7 @@ export function LandlordDashboard() {
         setApartmentsRefresh(
           (current) => current + 1
         );
+        setPermitRefreshKey(value => value + 1);
       }, 100);
     };
 
@@ -922,6 +925,8 @@ export function LandlordDashboard() {
         },
         scheduleRefresh
       )
+      .on("postgres_changes", { event: "*", schema: "public", table: "landlord_permit_renewals", filter: `landlord_id=eq.${user.id}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "landlord_profiles", filter: `user_id=eq.${user.id}` }, scheduleRefresh)
       .subscribe();
 
 
@@ -1275,10 +1280,11 @@ export function LandlordDashboard() {
     notification
   ) => {
     const payload = notification.payload ?? {};
+    const permitNotification = isBusinessPermitNotification(notification);
     const hasAppealReference = Boolean(
       payload.appeal_id ?? payload.appealId
     );
-    const showAccountMessage = ![
+    const showAccountMessage = !permitNotification && ![
       "admin_message", "property_reported", "violation_issued",
       "notice_issued", "appeal_status_updated",
     ].includes(String(notification.type)) && !hasAppealReference && !(
@@ -1325,6 +1331,11 @@ export function LandlordDashboard() {
     }
 
 
+    if (permitNotification) {
+      setSelectedNotificationDetail(null);
+      handleSectionChange("settings");
+      return;
+    }
     if (showAccountMessage) return;
 
     const appealableTypes = new Set([
@@ -3170,6 +3181,7 @@ export function LandlordDashboard() {
 
     notifications: () => (
       <LandlordNotifications
+        apartments={myApartments}
         notifications={
           notifications
         }
@@ -3235,6 +3247,7 @@ export function LandlordDashboard() {
         </div>
       )}
       <LandlordSettings
+        permitRefreshKey={permitRefreshKey}
         settingsTab={
           settingsTab
         }

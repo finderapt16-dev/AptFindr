@@ -3,6 +3,7 @@ import { Check, Upload, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getRenewalPermitYear, submitBusinessPermitUpdate } from "@/services/businessPermitRenewalService";
 import { toast } from "sonner";
+import "@/styles/permitUpdateDialog.css";
 
 export function UpdateBusinessPermitDialog({ permit, landlordId, onClose, onSubmitted }) {
     const permitYear = getRenewalPermitYear(permit);
@@ -49,7 +50,7 @@ export function UpdateBusinessPermitDialog({ permit, landlordId, onClose, onSubm
             <fieldset disabled={saving}>
               <label className="permit-upload-label">Upload permit <small>PDF or image</small></label>
               <input ref={picker} type="file" accept="application/pdf,image/jpeg,image/png" hidden onChange={event => { addFiles(event.target.files); event.target.value = ""; }}/>
-              <button type="button" className="permit-update-dropzone" onClick={() => picker.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); addFiles(event.dataTransfer.files); }}><Upload/><strong>Drag and drop files here or click to browse</strong><span>PDF, JPG, JPEG, or PNG • Max 5MB • Up to 5 files</span></button>
+              <button type="button" className="permit-update-dropzone" onClick={() => picker.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); addFiles(event.dataTransfer.files); }}><Upload/><strong>Drag and drop files here or click to browse</strong><span>PDF, JPG, JPEG, or PNG | Max 5MB | One permit document</span></button>
               {files.length > 0 && <ul className="permit-update-files">{files.map((file, index) => <li key={`${file.name}-${index}`}><span>{file.name}</span><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, position) => position !== index))}><X/></button></li>)}</ul>}
               <label>Permit number<input value={form.permitNumber} onChange={event => setForm({ ...form, permitNumber: event.target.value })} placeholder="e.g., BP 2026-1231" required/></label>
               <label>Permit year<input value={permitYear} readOnly aria-readonly="true"/></label>

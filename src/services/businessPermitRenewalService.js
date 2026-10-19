@@ -6,6 +6,20 @@ const MANILA_TIME_ZONE = "Asia/Manila";
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const asObject = (value) => (value && typeof value === "object" && !Array.isArray(value) ? value : {});
 
+// Read existing records; account verification and permit approval are separate.
+export async function fetchBusinessPermitRecords(landlordId) {
+    let profiles = supabase.from("landlord_profiles").select("*");
+    let renewals = supabase.from("landlord_permit_renewals").select("*").order("submitted_at", { ascending: false });
+    if (landlordId) {
+        profiles = profiles.eq("user_id", landlordId);
+        renewals = renewals.eq("landlord_id", landlordId);
+    }
+    const [profileResult, renewalResult] = await Promise.all([profiles, renewals]);
+    if (profileResult.error) throw new Error(profileResult.error.message || "Unable to load permit information.");
+    if (renewalResult.error) throw new Error(renewalResult.error.message || "Unable to load permit renewal status.");
+    return { profiles: asArray(profileResult.data), renewals: asArray(renewalResult.data) };
+}
+
 const manilaYear = (date = new Date()) => Number(new Intl.DateTimeFormat("en", {
     year: "numeric",
     timeZone: MANILA_TIME_ZONE,
@@ -13,6 +27,10 @@ const manilaYear = (date = new Date()) => Number(new Intl.DateTimeFormat("en", {
 
 export function getRenewalPermitYear(permit, now = new Date()) {
     const currentYear = manilaYear(now);
+    const openRenewal = [...(permit?.permitAccount?.renewals ?? permit?.renewals ?? [])]
+        .filter((row) => ["pending_review", "pending", "under_review", "requires_changes", "rejected"].includes(String(row.status).toLowerCase()) && Number(row.permit_year) >= currentYear)
+        .sort((left, right) => Number(right.permit_year) - Number(left.permit_year))[0];
+    if (openRenewal) return Number(openRenewal.permit_year);
     const expiry = permit?.permitExpiry || permit?.expiresAt || permit?.expires_at;
     const expiryDate = expiry ? new Date(expiry) : null;
     if (expiryDate && !Number.isNaN(expiryDate.getTime())) {

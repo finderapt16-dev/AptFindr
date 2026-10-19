@@ -22,3 +22,12 @@ test('renewal year uses the current cycle after the old permit has expired', asy
   const now = new Date('2027-01-02T12:00:00+08:00');
   assert.equal(getRenewalPermitYear(permit, now), 2027);
 });
+
+test('replacing a pending renewal keeps its submitted cycle when the profile already has next-year expiry', async () => {
+  const { getRenewalPermitYear } = await loadService();
+  const permit = {
+    permitExpiry: '2028-01-01T00:00:00+08:00',
+    permitAccount: { renewals: [{ permit_year: 2027, status: 'pending_review' }] },
+  };
+  assert.equal(getRenewalPermitYear(permit, new Date('2027-01-20T12:00:00+08:00')), 2027);
+});

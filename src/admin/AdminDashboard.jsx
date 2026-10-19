@@ -10,6 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchApartmentInspectionDetails, rejectApartmentListing, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
+import { fetchBusinessPermitRecords } from "@/services/businessPermitRenewalService";
+import { buildPermitAccount, formatPermitDate, getBusinessPermitStatus, getPermitNotificationDetails, isBusinessPermitNotification } from "@/utils/businessPermitStatus";
+import { useManilaDate } from "@/hooks/useManilaDate";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordProfile, fetchLandlordWithDetails, fetchStaffNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
@@ -238,8 +241,6 @@ export function AdminDashboard() {
             return "landlord";
         return "system";
     };
-    const isBusinessPermitNotification = (notification) => String(notification.type ?? "").toLowerCase().startsWith("business_permit_")
-        || Boolean(notification.payload?.permit_event_id);
     const loadAdminNotifications = useCallback(async () => {
         if (!user?.id) {
             setAdminNotifs([]);
@@ -386,6 +387,34 @@ export function AdminDashboard() {
     const [isLoadingLandlordPropertyDetails, setIsLoadingLandlordPropertyDetails] = useState(false);
     const [isLoadingLandlordDetails, setIsLoadingLandlordDetails] = useState(false);
     const [allApartments, setAllApartments] = useState([]);
+    const [permitRecords, setPermitRecords] = useState(null);
+    const [permitError, setPermitError] = useState("");
+    const permitRequestId = useRef(0);
+    const permitDate = useManilaDate();
+    const loadPermitRecords = useCallback(async () => {
+        const requestId = ++permitRequestId.current;
+        if (!user?.id) return;
+        try {
+            const records = await fetchBusinessPermitRecords();
+            if (requestId === permitRequestId.current) {
+                setPermitRecords(records);
+                setPermitError("");
+            }
+        } catch (error) {
+            if (requestId === permitRequestId.current) {
+                setPermitRecords(null);
+                setPermitError(error.message || "Unable to load permit monitoring.");
+            }
+        }
+    }, [user?.id]);
+    useEffect(() => {
+        void loadPermitRecords();
+        return () => { permitRequestId.current += 1; };
+    }, [loadPermitRecords]);
+    const permitStates = useMemo(() => new Map(landlords.map((landlord) => {
+        const account = permitRecords ? buildPermitAccount(landlord.id, permitRecords, allApartments) : {};
+        return [String(landlord.id), getBusinessPermitStatus(account, permitDate)];
+    })), [landlords, allApartments, permitRecords, permitDate]);
     const [adminProfile, setAdminProfile] = useState(() => toAdminProfileState(user));
     const [savedAdminProfile, setSavedAdminProfile] = useState(() => toAdminProfileState(user));
     const [isEditingAdminProfile, setIsEditingAdminProfile] = useState(false);
@@ -781,6 +810,7 @@ export function AdminDashboard() {
         const refreshVisibleData = () => {
             refreshApartmentData();
             refreshUserData();
+            void loadPermitRecords();
             void fetchAdminReports().then(setReports);
             void fetchViolations().then(setViolations);
             void fetchPendingAppeals().then(setAppeals);
@@ -805,6 +835,7 @@ export function AdminDashboard() {
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_images" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "apartment_verification_documents" }, refreshApartmentData)
             .on("postgres_changes", { event: "*", schema: "public", table: "landlord_permit_renewals" }, scheduleVisibleRefresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "landlord_profiles" }, scheduleVisibleRefresh)
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_users" }, scheduleVisibleRefresh)
             .subscribe();
         const refreshOnFocus = () => scheduleVisibleRefresh();
@@ -825,7 +856,7 @@ export function AdminDashboard() {
             document.removeEventListener("visibilitychange", refreshOnVisibility);
             void supabase.removeChannel(channel);
         };
-    }, [loadAdminNotifications, selectedLandlord?.id, selectedLandlordProperty?.id, user?.id, user?.role]);
+    }, [loadAdminNotifications, loadPermitRecords, selectedLandlord?.id, selectedLandlordProperty?.id, user?.id, user?.role]);
     // Fetch full report details when a report is selected
     useEffect(() => {
         let active = true;
@@ -1493,10 +1524,9 @@ export function AdminDashboard() {
                     const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
                     const isPermitNotification = isBusinessPermitNotification(notification);
                     const permitPayload = notification.payload ?? {};
-                    const expirationAt = permitPayload.expiration_at;
-                    const renewalStatus = permitPayload.renewal_status;
                     const permitLandlordId = String(permitPayload.landlord_id ?? notification.action_target_id ?? "");
-                    const apartmentNames = permitPayload.apartment_names
+                    const permitDetails = getPermitNotificationDetails(notification, allApartments.filter((item) => String(item.landlordId ?? item.landlord_id) === permitLandlordId));
+                    const apartmentNames = permitDetails?.apartmentNames
                         || allApartments
                             .filter((item) => String(item.landlordId ?? item.landlord_id ?? "") === permitLandlordId)
                             .map((item) => String(item.title ?? "").trim())
@@ -1527,10 +1557,11 @@ export function AdminDashboard() {
                       </div>
                       <p className="admin-dashboard-text-8">{safeNotificationText(notification.message, "No additional details provided.")}</p>
                       {isPermitNotification && <div className="admin-dashboard-permit-notification-details">
-                        <span><strong>Landlord:</strong> {String(permitPayload.landlord_name ?? "Not provided")}</span>
+                        <span><strong>Landlord:</strong> {String(permitPayload.landlord_name ?? landlords.find((landlord) => String(landlord.id) === permitLandlordId)?.name ?? "Not provided")}</span>
                         <span><strong>Permit year:</strong> {String(permitPayload.permit_year ?? "Not provided")}</span>
-                        <span><strong>Expires:</strong> {expirationAt ? formatOptionalDate(expirationAt, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }) : "Not provided"}</span>
-                        <span><strong>Renewal:</strong> {String(renewalStatus ?? "Awaiting Renewal")}</span>
+                        <span><strong>Expires:</strong> {formatPermitDate(permitDetails?.expirationDate, true)}</span>
+                        <span><strong>Renewal:</strong> {permitDetails?.renewalLabel}</span>
+                        {permitDetails?.graceDeadline !== null && <span><strong>Grace period deadline:</strong> {formatPermitDate(permitDetails?.graceDeadline, true)} (Philippine time)</span>}
                         <span><strong>Apartments:</strong> {String(apartmentNames ?? "Not provided")}</span>
                         <span><strong>Notification:</strong> {String(permitPayload.notification_status ?? "Notification Created")}</span>
                       </div>}
@@ -1561,9 +1592,9 @@ export function AdminDashboard() {
       </div>);
     };
     // ── Section: Landlords ────────────────────────────────────────────────────
-    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
+    const renderLandlords = () => (<AdminLandlordVerification landlords={landlords} apartments={allApartments} permitStates={permitStates} permitError={permitError} onRetryPermits={loadPermitRecords} onViewVerification={(landlord) => { setSelectedLandlordProperty(null); setSelectedLandlord(landlord); }}/>);
     // ── Section: Apartments ───────────────────────────────────────────────────
-    const renderApartments = () => (<AdminApartments allApartments={allApartments} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal}/>);
+    const renderApartments = () => (<AdminApartments allApartments={allApartments} permitStates={permitStates} getApartmentReportCount={getApartmentReportCount} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} aptSearch={aptSearch} setAptSearch={setAptSearch} filteredApts={filteredApts} aptFilter={aptFilter} getLandlordForApt={getLandlordForApt} onApartmentViewed={markApartmentViewed} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setAptFilter={setAptFilter} violations={violations} openViolationModal={openViolationModal}/>);
     // ── Section: Reports ──────────────────────────────────────────────────────
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile}/>);
     // ── Section: Appeals Management ─────────────────────────────────────────
