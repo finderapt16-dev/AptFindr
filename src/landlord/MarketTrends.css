@@ -246,6 +246,31 @@
   background: #079adb;
 }
 
+/* Keep the desktop analytics rail beside the list on compact laptop
+   viewports, while shrinking the fixed card columns to protect the title,
+   location, and action button from colliding. */
+@media (min-width: 1101px) and (max-width: 1350px) {
+  .landlord-market-trends .market-trends-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+    gap: 14px;
+  }
+
+  .landlord-market-trends .market-details {
+    padding: 16px;
+  }
+
+  .landlord-market-trends .market-property-card-compact {
+    grid-template-columns: 144px minmax(0, 1fr) 132px;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .landlord-market-trends .market-property-image {
+    width: 144px;
+    height: 102px;
+  }
+}
+
 /* EMPTY STATES */
 
 .market-period-empty,
