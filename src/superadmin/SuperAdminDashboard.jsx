@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminRole } from "@/services/authService";
-import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, rejectApartmentListing, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordWithDetails, fetchStaffNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchSupportTicketById, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
@@ -352,6 +352,7 @@ export function AdminDashboard() {
     const [aptPropertyTypeFilter, setAptPropertyTypeFilter] = useState("all");
     const [aptSort, setAptSort] = useState("newest");
     const [publishingApartmentId, setPublishingApartmentId] = useState(null);
+    const [rejectingApartmentId, setRejectingApartmentId] = useState(null);
     // landlord details modal
     const [selectedLandlord, setSelectedLandlord] = useState(null);
     const [selectedLandlordDetails, setSelectedLandlordDetails] = useState(null);
@@ -508,6 +509,39 @@ export function AdminDashboard() {
         }
         finally {
             setPublishingApartmentId(null);
+        }
+    };
+    const handleRejectApartmentListing = async (apartment) => {
+        if (!apartment?.id || !user?.id || rejectingApartmentId)
+            return;
+        setRejectingApartmentId(apartment.id);
+        try {
+            await rejectApartmentListing(apartment.id, user.id);
+            const rejectedApartment = {
+                ...apartment,
+                isPublished: false,
+                is_published: false,
+                approvalStatus: "rejected",
+                approval_status: "rejected",
+            };
+            setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...rejectedApartment } : item));
+            setSelectedApt((current) => current?.id === apartment.id ? { ...current, ...rejectedApartment } : current);
+            setSelectedLandlordDetails((current) => current ? {
+                ...current,
+                properties: current.properties.map((item) => item.id === apartment.id ? { ...item, ...rejectedApartment } : item),
+            } : current);
+            setRequestChangesModal(null);
+            setIsViewingLandlordDocument(false);
+            setSelectedLandlordProperty(null);
+            setSelectedLandlordPropertyDetails(null);
+            setSelectedLandlordPropertyDocuments([]);
+            toast.success("Listing rejected and removed from the review queue.");
+        }
+        catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to reject this listing.");
+        }
+        finally {
+            setRejectingApartmentId(null);
         }
     };
     const filteredApts = useMemo(() => {
@@ -1814,12 +1848,13 @@ export function AdminDashboard() {
           documents={selectedLandlordPropertyDocuments}
           isLoading={isLoadingLandlordPropertyDetails}
           isApproving={publishingApartmentId === selectedLandlordProperty.id}
+          isRejecting={rejectingApartmentId === selectedLandlordProperty.id}
           hasAvailableUnit={hasAvailableUnit}
           onBack={() => { setRequestChangesModal(null); setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
           onViewDocument={() => setIsViewingLandlordDocument(true)}
           onApprove={() => void handleApproveAndPublishApartment(selectedLandlordProperty)}
           onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
-          onReject={() => openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
+          onReject={() => void handleRejectApartmentListing(selectedLandlordProperty)}
           onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
         />;
     };

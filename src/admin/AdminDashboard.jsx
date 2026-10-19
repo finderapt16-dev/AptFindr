@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchApartmentInspectionDetails, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
+import { fetchApartmentInspectionDetails, rejectApartmentListing, verifyLandlordAndPublishApartment } from "@/services/apartmentsService";
 import { fetchApartmentVerificationDocuments } from "@/services/verificationDocumentsService";
 import { archiveAppeal, archiveReport, createAuditLog, createViolation, deleteNotification, deleteViolation as deleteViolationRecord, fetchAdminActivityLogs, fetchAdminReports, fetchApartments, fetchArchivedAppeals, fetchArchivedReports, fetchLandlordProfile, fetchLandlordWithDetails, fetchStaffNotifications, fetchPendingAppeals, fetchReportWithDetails, fetchUserById, fetchUsers, fetchViolations, markAllNotificationsRead, markNotificationRead, markNotificationUnread, notifyReportDismissed, notifyReportResolved, permanentlyDeleteAppeal, permanentlyDeleteNotification, permanentlyDeleteReport, restoreAppeal, restoreReport, unarchiveNotification, updateReportStatus, updateUserProfile } from "@/services/dashboardSupabaseService";
 import { getReportEvidence } from "@/services/reportEvidenceService";
 import { supabase } from "@/services/supabaseClient";
 import { formatAuditLogForDisplay, formatNotificationType, safeNotificationText } from "@/utils/auditLogDisplay";
-import { Activity, AlertOctagon, AlertTriangle, Archive, Bell, BellRing, Calendar, CheckCheck, CheckCircle2, ChevronRight, ClipboardList, Clock, Edit2, Eye, FileText, Flag, History, Lock, Mail, MailOpen, Menu, Phone, RefreshCw, RotateCcw, Save, Search, Settings, Shield, ShieldAlert, Smartphone, Trash2, User as UserIcon, Users, X, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Archive, Bell, BellRing, Calendar, CheckCheck, CheckCircle2, ChevronRight, ClipboardList, Clock, Edit2, Eye, FileText, Flag, History, Lock, Mail, MailOpen, Menu, Phone, RefreshCw, RotateCcw, Save, Search, Settings, Shield, ShieldAlert, Smartphone, Trash2, User as UserIcon, Users, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -375,6 +375,7 @@ export function AdminDashboard() {
     const [aptSearch, setAptSearch] = useState("");
     const [aptFilter, setAptFilter] = useState("all");
     const [publishingApartmentId, setPublishingApartmentId] = useState(null);
+    const [rejectingApartmentId, setRejectingApartmentId] = useState(null);
     // landlord details modal
     const [selectedLandlord, setSelectedLandlord] = useState(null);
     const [selectedLandlordDetails, setSelectedLandlordDetails] = useState(null);
@@ -530,6 +531,38 @@ export function AdminDashboard() {
         }
         finally {
             setPublishingApartmentId(null);
+        }
+    };
+    const handleRejectApartmentListing = async (apartment) => {
+        if (!apartment?.id || !user?.id || rejectingApartmentId)
+            return;
+        setRejectingApartmentId(apartment.id);
+        try {
+            await rejectApartmentListing(apartment.id, user.id);
+            const rejectedApartment = {
+                ...apartment,
+                isPublished: false,
+                is_published: false,
+                approvalStatus: "rejected",
+                approval_status: "rejected",
+            };
+            setAllApartments((current) => current.map((item) => item.id === apartment.id ? { ...item, ...rejectedApartment } : item));
+            setSelectedLandlordDetails((current) => current ? {
+                ...current,
+                properties: current.properties.map((item) => item.id === apartment.id ? { ...item, ...rejectedApartment } : item),
+            } : current);
+            setRequestChangesModal(null);
+            setIsViewingLandlordDocument(false);
+            setSelectedLandlordProperty(null);
+            setSelectedLandlordPropertyDetails(null);
+            setSelectedLandlordPropertyDocuments([]);
+            toast.success("Listing rejected and removed from the review queue.");
+        }
+        catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to reject this listing.");
+        }
+        finally {
+            setRejectingApartmentId(null);
         }
     };
     const filteredApts = useMemo(() => {
@@ -1266,10 +1299,14 @@ export function AdminDashboard() {
             else if (!landlordId) {
                 setSelectedLandlord(null);
             }
-            if (remembered?.view === "landlord-action" && landlord) {
-                openViolationModal(remembered.mode, landlordId, text(landlord.name, "Landlord"), "General", undefined, undefined, "landlords");
+            if (remembered?.view === "landlord-action") {
+                // The landlord administrative-action page has been removed.
+                // Preserve the selected landlord, but return to its details view.
+                rememberAdminModuleLocation(user.id, "landlords", landlordId
+                    ? { view: "landlord-details", landlordId }
+                    : { view: "overview" });
             }
-            else if (violationModal?.sourceModule === "landlords") {
+            if (violationModal?.sourceModule === "landlords") {
                 setViolationModal(null);
             }
         }
@@ -1354,10 +1391,7 @@ export function AdminDashboard() {
                 && !selectedLandlord?.id;
             if (isRestoringLandlord)
                 return;
-            if (violationModal?.open && violationModal.sourceModule === "landlords") {
-                rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-action", landlordId: violationModal.landlordId, mode: violationModal.mode });
-            }
-            else if (selectedLandlord?.id) {
+            if (selectedLandlord?.id) {
                 rememberAdminModuleLocation(user.id, "landlords", { view: "landlord-details", landlordId: text(selectedLandlord.id) });
             }
             else {
@@ -1821,8 +1855,6 @@ export function AdminDashboard() {
 
         <section className="admin-dashboard-section-14">
           {verified ? <Button variant="outline" onClick={(e) => { e.stopPropagation(); void requestVerification(selectedLandlord, false); setSelectedLandlord(null); }} className="admin-dashboard-revoke-verification"><XCircle className="admin-dashboard-xcircle-icon-2"/>Revoke Verification</Button> : <Button onClick={(e) => { e.stopPropagation(); void requestVerification(selectedLandlord, true); setSelectedLandlord(null); }} className="admin-dashboard-verify-landlord"><CheckCircle2 className="admin-dashboard-check-circle2-icon-5"/>Verify Landlord</Button>}
-          <Button variant="outline" onClick={(e) => { e.stopPropagation(); openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), "General"); }} className="admin-dashboard-issue-violation"><AlertOctagon className="admin-dashboard-alert-octagon-icon-2"/>Issue Violation</Button>
-          <Button variant="outline" onClick={(e) => { e.stopPropagation(); openViolationModal("notice", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), "General"); }} className="admin-dashboard-send-notice"><BellRing className="admin-dashboard-bell-ring-icon-2"/>Send Notice</Button>
         </section>
       </div>);
     };
@@ -1896,12 +1928,13 @@ export function AdminDashboard() {
           documents={selectedLandlordPropertyDocuments}
           isLoading={isLoadingLandlordPropertyDetails}
           isApproving={publishingApartmentId === selectedLandlordProperty.id}
+          isRejecting={rejectingApartmentId === selectedLandlordProperty.id}
           hasAvailableUnit={hasAvailableUnit}
           onBack={() => { setRequestChangesModal(null); setIsViewingLandlordDocument(false); setSelectedLandlordProperty(null); }}
           onViewDocument={() => setIsViewingLandlordDocument(true)}
           onApprove={() => void handleApproveAndPublishApartment(selectedLandlordProperty)}
           onRequestChanges={() => setRequestChangesModal({ landlordId: text(selectedLandlord.id), apartmentId: text(selectedLandlordProperty.id) })}
-          onReject={() => openViolationModal("violation", text(selectedLandlord.id), text(selectedLandlord.name, "Landlord"), text(selectedLandlordProperty.title, "Apartment"), undefined, text(selectedLandlordProperty.id), "landlords")}
+          onReject={() => void handleRejectApartmentListing(selectedLandlordProperty)}
           onViewApartment={() => navigate(`${apartmentDetailBasePath}/${selectedLandlordProperty.id}`, { state: { returnTo: `${portalBasePath}?section=landlords`, backLabel: "Back to Landlord Overview" } })}
         />;
     };
@@ -1980,7 +2013,7 @@ export function AdminDashboard() {
         </button>}
         <div className="app-shell-main">
           <main className="app-shell-content app-shell-content-mobile-nav">
-            {violationModal?.open && violationModal.sourceModule === activeSection
+            {violationModal?.open && violationModal.sourceModule !== "landlords" && violationModal.sourceModule === activeSection
             ? renderAdministrativeAction()
             : activeSection === "landlords" && selectedLandlord
                 ? selectedLandlordProperty ? isViewingLandlordDocument ? renderLandlordDocument() : renderApartmentVerification() : renderLandlordDetails()

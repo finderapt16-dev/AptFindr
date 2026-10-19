@@ -253,7 +253,9 @@ export async function fetchAdminReports() {
     const { data, error } = await supabase
         .from("reports")
         .select("*")
-        .eq("is_archived", false)
+        // Older and tenant-submitted report rows can have no archive flag.
+        // Treat those rows as active so they appear in the admin Reports view.
+        .or("is_archived.is.null,is_archived.eq.false")
         .order("submitted_at", { ascending: false });
     if (error) {
         console.error("Error fetching active reports:", error);

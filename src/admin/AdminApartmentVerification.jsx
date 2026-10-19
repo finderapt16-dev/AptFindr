@@ -22,7 +22,7 @@ const money = (amount) => {
   return Number.isFinite(number) && number > 0 ? `\u20B1${number.toLocaleString("en-PH")}` : null;
 };
 
-export function AdminApartmentVerification({ landlord, profile, property, inspection, documents = [], isLoading, hasAvailableUnit, onBack, onViewDocument, onApprove, onRequestChanges, onReject, onViewApartment, isApproving }) {
+export function AdminApartmentVerification({ landlord, profile, property, inspection, documents = [], isLoading, hasAvailableUnit, onBack, onViewDocument, onApprove, onRequestChanges, onReject, onViewApartment, isApproving, isRejecting }) {
   const submittedApartment = inspection?.apartment ?? {};
   const rawApartment = inspection?.rawApartment ?? {};
   const apartment = {
@@ -121,7 +121,7 @@ export function AdminApartmentVerification({ landlord, profile, property, inspec
           {!isPublished && !hasAvailableUnit && <small className="admin-apartment-verification__publish-note">Add at least one available unit before this listing can be verified and published.</small>}
           {isPublished && <small className="admin-apartment-verification__publish-note">This listing is already published. Use the apartment inspection page to unpublish it if needed.</small>}
           <button type="button" className="admin-apartment-verification__outline-action" onClick={onRequestChanges}><FileText aria-hidden="true" />Request Changes</button>
-          <button type="button" className="admin-apartment-verification__reject" onClick={onReject}><X aria-hidden="true" />Reject Listing</button>
+          <button type="button" className="admin-apartment-verification__reject" onClick={onReject} disabled={isApproving || isRejecting}><X aria-hidden="true" />{isRejecting ? "Rejecting..." : "Reject Listing"}</button>
         </section>
       </aside>
     </div>
