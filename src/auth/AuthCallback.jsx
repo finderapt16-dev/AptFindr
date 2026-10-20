@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, GOOGLE_ROLE_ERROR, isTenantRole, provisionGoogleTenant, getAuthSession, isGoogleOAuthSession, signOutAuthSession } from "@/services/authService";
+import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, GOOGLE_ROLE_ERROR, isTenantRole, getAuthSession, isGoogleOAuthSession, signOutAuthSession } from "@/services/authService";
 
 function getOAuthErrorMessage(params) {
     const error = `${params.get("error_code") || params.get("error") || ""} ${params.get("error_description") || ""}`.trim();
@@ -44,6 +44,7 @@ export function AuthCallback() {
             const code = params.get("code");
             if (code) {
                 const { error: exchangeError } = await exchangeAuthCode(code);
+                if (!active) return;
                 if (exchangeError) {
                     console.error("Email verification callback failed:", exchangeError);
                     if (active)
@@ -52,6 +53,7 @@ export function AuthCallback() {
                 }
             }
             const { data, error: userError } = await getAuthUser();
+            if (!active) return;
             if (userError || !data.user?.email_confirmed_at) {
                 if (userError)
                     console.error("Unable to confirm verified user:", userError);
@@ -60,12 +62,15 @@ export function AuthCallback() {
                 return;
             }
             const { data: sessionData, error: sessionError } = await getAuthSession();
+            if (!active) return;
             if (sessionError) throw sessionError;
+            if (!sessionData.session) throw new Error("The authenticated session is missing. Please sign in again.");
             const googleOAuth = isGoogleOAuthSession(sessionData.session);
             try {
                 if (googleOAuth) {
-                    await provisionGoogleTenant();
+                    // Hydration provisions and loads the tenant in one operation.
                     const profile = await hydrateSession();
+                    if (!active) return;
                     if (!profile)
                         throw new Error("The Google account profile is not available.");
                     if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
@@ -89,9 +94,11 @@ export function AuthCallback() {
                 return;
             }
             catch (profileError) {
+                if (!active) return;
                 console.error("Authentication succeeded but profile recovery failed:", profileError);
                 clearPendingGoogleOAuthFlow();
-                await signOutAuthSession({ scope: "local" });
+                const { error: signOutError } = await signOutAuthSession({ scope: "local" });
+                if (signOutError) console.error("Unable to end failed sign-in:", signOutError);
                 const isGoogleAuth = googleOAuth;
                 if (active)
                     navigate("/login", {
@@ -101,6 +108,8 @@ export function AuthCallback() {
                         // and it has to say what to do next.
                         state: profileError?.message === GOOGLE_ROLE_ERROR
                             ? { error: GOOGLE_ROLE_ERROR }
+                            : profileError?.code === "PGRST202"
+                            ? { error: "Google sign-in cannot create your tenant account because the required database function has not been deployed. Please contact the administrator." }
                             : isGoogleAuth
                             ? { error: "Google signed you in, but AptFindr could not finish creating your account. Press Continue with Google to try again, and contact the administrator if this keeps happening." }
                             : { error: "Your email is confirmed, but AptFindr could not load your account. Try signing in, and contact support if this continues." },

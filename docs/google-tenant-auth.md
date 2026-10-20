@@ -11,7 +11,28 @@ Changed application files:
 - `src/auth/Signup.jsx`: sends Google signup through the same tenant-only flow; old Google setup bookmarks redirect to the callback.
 
 Database file: `supabase/google-tenant-auth.sql`.
-Tests: `tests/google-signup.test.mjs`, `tests/email-confirmation.test.mjs`.
+Tests: `tests/google-signup.test.mjs`, `tests/email-confirmation.test.mjs`, `tests/google-tenant-database.test.mjs`.
+Diagnostic script: `scripts/check-google-auth-deployment.mjs`.
+
+## Confirmed cause of the current failure
+
+On 2026-10-20, the configured project returned HTTP 404 with:
+
+- Code: `PGRST202`
+- Message: `Could not find the function public.complete_google_tenant_sign_in without parameters in the schema cache`
+- Details: PostgREST searched for the zero-argument function (or one unnamed JSON parameter) and found no match.
+
+Catalog inspection independently confirmed `to_regprocedure('public.complete_google_tenant_sign_in()')` is NULL. Production edge logs contain repeated 404 requests to this RPC during the failed browser logins. Three verified Google Auth users currently have no profile linked by Auth ID. The current `handle_new_auth_user()` trigger explicitly returns without inserting new Google profiles. Together, the missing RPC and deferring trigger leave successful Google authentication without an application account. Changing the banner cannot fix this.
+
+`app_users` requires non-null name, email, role and username. Usernames must be unique and match 4?30 letters/digits/underscores. The corrected function generates a compliant internal username, checks for collisions, and supplies all required values. Users never enter a username/password. Existing unique Auth-ID/email constraints are retained, with normalized-email uniqueness added. Existing INSERT RLS permits tenant/landlord self-inserts; the OAuth guard closes that browser-controlled path while the verified private function creates only tenants.
+
+Current frontend causes:
+
+- `src/services/authService.js` calls the missing RPC. Previously it wrapped the error using only its message, losing code/details/hint. It now preserves diagnostic fields, logs them in development, validates the returned Auth ID, and shares concurrent provisioning requests without caching future sign-ins.
+- `src/auth/AuthCallback.jsx` previously provisioned explicitly and then hydrated, causing another provisioning call. It now hydrates/provisions once, checks the session/profile before navigation, and stops stale StrictMode effect instances before they can navigate or sign out another instance.
+- `public.handle_new_auth_user()` remains the production-side blocker until the SQL is applied. The complete corrected definition is included in the SQL; Google returns before legacy linking touches existing accounts. The existing password branch is retained.
+
+The diagnostic request is reproducible with `node scripts/check-google-auth-deployment.mjs`. It uses only the configured anonymous key, prints error diagnostics without credentials, and cannot create an account. After deployment, it should be denied as anonymous (rather than reporting a missing function).
 
 ## Database deployment status
 
@@ -19,7 +40,7 @@ The SQL has **not been applied**. Automatic approval review rejected the product
 
 The SQL uses the existing tables and role enum. It adds a normalized email uniqueness index, a private provisioning function behind an authenticated-only invoker RPC, and a guard against browser-controlled OAuth profile creation/role reassignment. The existing auth trigger defers all Google identities to provisioning; its password-signup body remains intact. Server-side identity checks use `auth.uid()`, `auth.users`, and Google `auth.identities`, never browser-supplied role or identity parameters. Existing tenant IDs and account data are preserved. Conflicting identities and non-tenant roles fail without changing their records. Transaction locks and unique constraints prevent duplicate profiles during repeated callbacks. No password or Google token is stored in profile tables.
 
-Preflight against the connected project found no duplicate normalized emails. SQL runtime tests and live Google sign-in are pending database approval. The Supabase CLI was not present; this is a reviewable standalone SQL deployment file, not an invented CLI migration-history entry.
+Preflight against the connected project found no duplicate normalized emails. The corrected SQL passed isolated embedded PostgreSQL tests. Production SQL verification and live Google sign-in remain pending database approval. The Supabase CLI was not present; this is a reviewable standalone SQL deployment file, not an invented CLI migration-history entry.
 
 ## Google and Supabase configuration
 
@@ -38,6 +59,26 @@ Preflight against the connected project found no duplicate normalized emails. SQ
 References: [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google), [redirect configuration](https://supabase.com/docs/guides/auth/redirect-urls).
 
 ## Verification
+
+- 27 focused JavaScript authentication tests pass.
+- 10 database scenarios pass against isolated PostgreSQL using PGlite (11 test results including the parent test). This exercises the actual SQL, not a mocked provisioning function.
+- The production Vite build passes.
+- The broader pre-existing suite has six failures in username/signup expectations, preference matching, legacy role spelling, and sidebar assertions. Those unrelated implementations were not changed.
+
+Reproduce the focused tests:
+
+`node --test tests/google-signup.test.mjs tests/email-confirmation.test.mjs`
+
+The database test skips by default when its optional test engine is unavailable. To run without changing project dependencies, in PowerShell:
+
+`npm.cmd install --prefix "$env:TEMP/aptfindr-auth-sql-check" --no-save --package-lock=false @electric-sql/pglite@0.3.14`
+
+`$env:APTFINDR_PGLITE_DIR = "$env:TEMP/aptfindr-auth-sql-check/node_modules/@electric-sql/pglite"`
+
+`node --test tests/google-tenant-database.test.mjs`
+
+The migration was applied twice successfully in the isolated database. Deployment includes short lock/statement timeouts and a PostgREST schema-cache reload notification. No production user rows have been modified.
+
 
 The focused mocked-boundary regression tests cover automatic tenant provisioning without form/password arguments; repeated callback and refresh recovery; landlord/admin/super-admin rejection; preservation of their password sessions when Google is linked; unverified identity rejection; database errors; localhost/Vercel callback origins; PKCE replay protection; and unchanged email-confirmation behavior.
 

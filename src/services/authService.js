@@ -370,18 +370,45 @@ export function isGoogleOAuthSession(session) {
         return claims.amr?.some(entry => entry.method === 'oauth') === true;
     } catch { return false; }
 }
+function googleTenantError(error, stage) {
+    const failure = Object.assign(new Error(error.message || 'Google tenant sign-in failed.'), {
+        name: 'GoogleTenantAuthError', code: error.code, details: error.details,
+        hint: error.hint, stage, cause: error,
+    });
+    if (import.meta.env?.DEV) {
+        console.error('[AUTH] Google tenant sign-in failed', {
+            stage, code: failure.code, message: failure.message,
+            details: failure.details, hint: failure.hint,
+        });
+    }
+    return failure;
+}
+const googleTenantRequests = new Map();
 export async function provisionGoogleTenant() {
     const { data: verified, error: verificationError } = await supabaseClient.auth.getUser();
+    if (verificationError) throw googleTenantError(verificationError, 'verify_identity');
     if (verificationError || !verified?.user?.email_confirmed_at || !isGoogleAuthUser(verified.user)) {
         throw new Error('Your Google session could not be verified. Please continue with Google again.');
     }
-    // No role, email, name or Auth UUID is accepted from the browser.
-    const { data, error } = await supabaseClient.rpc('complete_google_tenant_sign_in');
-    if (error) throw new Error(error.message);
-    const profile = normalizeUser(data);
-    if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
-    assertActiveAccount(profile);
-    return profile;
+    const authId = verified.user.id;
+    if (!googleTenantRequests.has(authId)) {
+        const request = (async () => {
+            // No role, email, name or Auth UUID is accepted from the browser.
+            const { data, error } = await supabaseClient.rpc('complete_google_tenant_sign_in');
+            if (error) throw googleTenantError(error, 'provision_profile');
+            const profile = normalizeUser(data);
+            if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
+            if (!profile.id || profile.authId !== authId) {
+                throw googleTenantError({ message: 'The tenant profile does not match the authenticated account.' }, 'load_profile');
+            }
+            assertActiveAccount(profile);
+            return profile;
+        })();
+        googleTenantRequests.set(authId, request);
+        // Only in-flight requests are shared; future sign-ins recheck the database.
+        void request.finally(() => googleTenantRequests.delete(authId)).catch(() => {});
+    }
+    return googleTenantRequests.get(authId);
 }
 export async function getExistingProfileForAuthUser(authUser) {
     if (!authUser?.id)

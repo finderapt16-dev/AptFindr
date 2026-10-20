@@ -8,21 +8,22 @@ const { code } = await transformWithOxc(source.replace(/^import .*;\r?\n/gm, '')
     jsx: { runtime: 'classic' },
 });
 
-async function runCallback({ role = 'tenant', confirmed = true, profileAvailable = true, google = false, flow = null, hash = '' } = {}) {
+async function runCallback({ role = 'tenant', confirmed = true, profileAvailable = true, google = false, flow = null, hash = '', strictMode = false, hydrationError = null } = {}) {
     let finish;
     const completed = new Promise(resolve => { finish = resolve; });
-    const calls = { signouts: 0, hydrations: 0 };
+    const calls = { signouts: 0, hydrations: 0, navigations: 0 };
     const key = `__callbackTest${Math.random().toString(36).slice(2)}`;
     globalThis[key] = {
         React: { createElement: () => null },
         console: { error: () => {} },
         Link: () => null,
         window: { location: { search: '', hash } },
-        useEffect: effect => effect(),
+        useEffect: effect => { if (strictMode) effect()(); effect(); },
         useState: () => ['', error => finish({ error })],
-        useNavigate: () => (path, options) => finish({ path, ...options }),
+        useNavigate: () => (path, options) => { calls.navigations++; finish({ path, ...options }); },
         useAuth: () => ({ hydrateSession: async () => {
             calls.hydrations++;
+            if (hydrationError) throw hydrationError;
             return profileAvailable ? { role } : null;
         } }),
         clearPendingGoogleOAuthFlow: () => {},
@@ -104,4 +105,21 @@ test('expired implicit confirmation link reports its error before loading a prof
     assert.equal(result.path, '/login');
     assert.match(result.state.error, /expired/);
     assert.equal(calls.hydrations, 0);
+});
+
+test('StrictMode callback remount only hydrates and navigates once', async () => {
+    const { result, calls } = await runCallback({ google: true, strictMode: true });
+    assert.equal(result.path, '/browse');
+    assert.equal(calls.hydrations, 1);
+    assert.equal(calls.navigations, 1);
+    assert.equal(calls.signouts, 0);
+});
+test('missing provisioning RPC reports the deployment problem and does not loop', async () => {
+    const { result, calls } = await runCallback({ google: true,
+        hydrationError: Object.assign(new Error('Function missing'), { code: 'PGRST202' }) });
+    assert.equal(result.path, '/login');
+    assert.match(result.state.error, /database function has not been deployed/);
+    assert.equal(calls.hydrations, 1);
+    assert.equal(calls.navigations, 1);
+    assert.equal(calls.signouts, 1);
 });

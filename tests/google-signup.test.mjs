@@ -22,7 +22,7 @@ async function setup({ role = 'tenant', confirmed = true, method = 'oauth', rpcE
     },
     rpc: async (...args) => {
       calls.push({ rpc: args });
-      if (rpcError) return { error: { message: rpcError } };
+      if (rpcError) return { error: typeof rpcError === 'string' ? { message: rpcError } : rpcError };
       if (role !== 'tenant') return { error: { message: 'This Google account is already associated with another account role. Please use your designated sign-in method.' } };
       profile ??= { ...stored, id: user.id, name: 'Google Name' };
       return { data: { ...profile } };
@@ -63,6 +63,8 @@ test('refresh and repeated callbacks recover the same existing tenant profile', 
   assert.equal(first.id, stored.id);
   assert.deepEqual(second, first);
   assert.equal(stored.preferences.retained, true);
+  assert.equal(calls.length, 1);
+  await service.provisionGoogleTenant();
   assert.equal(calls.length, 2);
 });
 
@@ -114,4 +116,19 @@ test('duplicate PKCE callbacks exchange the single-use code only once', async ()
   const [first, second] = await Promise.all([service.exchangeAuthCode('single-use-code'), service.exchangeAuthCode('single-use-code')]);
   assert.deepEqual(first, second);
   assert.deepEqual(calls, [{ exchange: 'single-use-code' }]);
+});
+
+test('Supabase error code, details and hint survive provisioning errors', async () => {
+  const diagnostic = { code: 'PGRST202', message: 'Missing database function', details: 'Function was not found', hint: 'Deploy the migration' };
+  const { service } = await setup({ rpcError: diagnostic });
+  await assert.rejects(service.provisionGoogleTenant(), error => {
+    assert.equal(error.code, diagnostic.code);
+    assert.equal(error.message, diagnostic.message);
+    assert.equal(error.details, diagnostic.details);
+    assert.equal(error.hint, diagnostic.hint);
+    assert.equal(error.stage, 'provision_profile');
+    return true;
+  });
+  // Rejections are not cached: retry performs a fresh request.
+  await assert.rejects(service.provisionGoogleTenant(), error => error.code === 'PGRST202');
 });
