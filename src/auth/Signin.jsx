@@ -403,18 +403,7 @@ export function Login({
             setLoading(true);
 
             try {
-                const result =
-                    await loginWithGoogle();
-
-                /*
-                 * A provider session without an AptFindr profile is never a
-                 * login. End it locally and require an explicit signup flow.
-                 */
-                if (result?.needsAccount) {
-                    clearPendingGoogleOAuthFlow();
-                    navigate("/signup?google=setup&role=tenant");
-                    return;
-                }
+                await loginWithGoogle();
             } catch (googleError) {
                 clearPendingGoogleOAuthFlow();
                 console.error("[AUTH] Google sign-in failed", googleError);

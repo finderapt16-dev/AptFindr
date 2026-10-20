@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
                 return refreshedCurrentUser;
             }
             else {
-                persistCurrentUser(null);
-                return null;
+                // A partial directory refresh must not discard a verified session.
+                return previousUser;
             }
         });
     }, []);
@@ -69,16 +69,17 @@ export function AuthProvider({ children }) {
             const requestId = ++authRequestIdRef.current;
             try {
                 clearLegacyApplicationStorage();
-                const [allUsers, pendingCount] = await Promise.all([fetchAppUsers(), getPendingLandlordCount()]);
-                if (!isActive || requestId !== authRequestIdRef.current) {
-                    return;
-                }
+                const authenticatedUser = await getCurrentAuthenticatedUser();
+                if (!isActive) return;
+                if (requestId === authRequestIdRef.current) setCurrentUser(authenticatedUser);
+                // Directory availability must not determine session restoration.
+                const [allUsers, pendingCount] = await Promise.all([
+                    fetchAppUsers().catch(() => []),
+                    getPendingLandlordCount().catch(() => 0),
+                ]);
+                if (!isActive) return;
                 setUsers(allUsers);
                 setPendingLandlordCount(pendingCount);
-                const authenticatedUser = await getCurrentAuthenticatedUser();
-                if (!isActive || requestId !== authRequestIdRef.current)
-                    return;
-                setCurrentUser(authenticatedUser);
             }
             catch (error) {
                 if (!isActive || requestId !== authRequestIdRef.current) {
@@ -103,7 +104,9 @@ export function AuthProvider({ children }) {
     }, []);
     useEffect(() => {
         return onAuthStateChange((authUser) => {
+            authRequestIdRef.current += 1;
             setCurrentUser(authUser);
+            setIsLoading(false);
         });
     }, []);
     useEffect(() => {

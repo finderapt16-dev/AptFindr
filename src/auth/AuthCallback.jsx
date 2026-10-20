@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, getExistingProfileForAuthUser, getPendingGoogleOAuthFlow, isGoogleAuthUser, signOutAuthSession } from "@/services/authService";
-
-const dashboardPathForRole = (role) => {
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
-    if (normalizedRole === "super_admin") return "/super-admin";
-    if (normalizedRole === "admin") return "/admin";
-    return normalizedRole === "landlord" ? "/landlord/dashboard" : "/browse";
-};
+import { clearPendingGoogleOAuthFlow, exchangeAuthCode, getAuthUser, GOOGLE_ROLE_ERROR, isTenantRole, provisionGoogleTenant, getAuthSession, isGoogleOAuthSession, signOutAuthSession } from "@/services/authService";
 
 function getOAuthErrorMessage(params) {
     const error = `${params.get("error_code") || params.get("error") || ""} ${params.get("error_description") || ""}`.trim();
@@ -66,53 +59,19 @@ export function AuthCallback() {
                     setError("Email verification could not be confirmed. Request a new verification email and try again.");
                 return;
             }
+            const { data: sessionData, error: sessionError } = await getAuthSession();
+            if (sessionError) throw sessionError;
+            const googleOAuth = isGoogleOAuthSession(sessionData.session);
             try {
-                if (isGoogleAuthUser(data.user)) {
-                    const oauthFlow = getPendingGoogleOAuthFlow();
-                    const existingProfile = await getExistingProfileForAuthUser(data.user);
-                    if (oauthFlow === "signup" && !existingProfile) {
-                        clearPendingGoogleOAuthFlow();
-                        const requestedRole = params.get("signup_role") === "landlord" ? "&role=landlord" : "";
-                        if (active) navigate(`/signup?google=setup${requestedRole}`, { replace: true });
-                        return;
-                    }
-
-                    if (oauthFlow === "signup" && existingProfile) {
-                        clearPendingGoogleOAuthFlow();
-                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
-                        if (signOutError) throw signOutError;
-                        if (active) navigate("/login", {
-                            replace: true,
-                            state: { message: "An AptFindr account already exists for this Google account. Please sign in to continue." },
-                        });
-                        return;
-                    }
-
-                    if (oauthFlow === "login" && !existingProfile) {
-                        clearPendingGoogleOAuthFlow();
-                        // A first-time Google visitor starts from Sign In. Keep
-                        // their verified Google session so the tenant setup form
-                        // can show the email as read-only and finish the account.
-                        if (active) navigate("/signup?google=setup&role=tenant", { replace: true });
-                        return;
-                    }
-
-                    if (!oauthFlow) {
-                        clearPendingGoogleOAuthFlow();
-                        const { error: signOutError } = await signOutAuthSession({ scope: "local" });
-                        if (signOutError) throw signOutError;
-                        if (active) navigate("/login", {
-                            replace: true,
-                            state: { error: "Your Google sign-in request expired. Please try again from Sign In or Create Account." },
-                        });
-                        return;
-                    }
+                if (googleOAuth) {
+                    await provisionGoogleTenant();
                     const profile = await hydrateSession();
                     if (!profile)
                         throw new Error("The Google account profile is not available.");
+                    if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
                     clearPendingGoogleOAuthFlow();
                     if (active)
-                            navigate(dashboardPathForRole(profile.role), { replace: true });
+                            navigate("/browse", { replace: true });
                     return;
                 }
                 // Email confirmation can create a temporary browser session.
@@ -132,20 +91,26 @@ export function AuthCallback() {
             catch (profileError) {
                 console.error("Authentication succeeded but profile recovery failed:", profileError);
                 clearPendingGoogleOAuthFlow();
-                await signOutAuthSession();
-                const isGoogleAuth = isGoogleAuthUser(data.user);
+                await signOutAuthSession({ scope: "local" });
+                const isGoogleAuth = googleOAuth;
                 if (active)
                     navigate("/login", {
                         replace: true,
                         // A Google account that could not be finished has to read
                         // as a problem, not as the green "account created" banner,
                         // and it has to say what to do next.
-                        state: isGoogleAuth
+                        state: profileError?.message === GOOGLE_ROLE_ERROR
+                            ? { error: GOOGLE_ROLE_ERROR }
+                            : isGoogleAuth
                             ? { error: "Google signed you in, but AptFindr could not finish creating your account. Press Continue with Google to try again, and contact the administrator if this keeps happening." }
                             : { error: "Your email is confirmed, but AptFindr could not load your account. Try signing in, and contact support if this continues." },
                     });
             }
-        })();
+        })().catch((unexpectedError) => {
+            console.error('Authentication callback failed:', unexpectedError);
+            clearPendingGoogleOAuthFlow();
+            if (active) setError('Sign-in could not be completed. Please return to Sign In and try again.');
+        });
         return () => { active = false; };
     }, [hydrateSession, navigate]);
     return (<main className="auth-status-page">
@@ -155,8 +120,8 @@ export function AuthCallback() {
             <p className="auth-status-description">{error}</p>
             <Link to="/login" className="auth-status-login-link">Return to Sign In</Link>
           </>) : (<>
-            <h1 className="auth-status-title">Verifying your email</h1>
-            <p className="auth-status-description">Please wait while AptFindr confirms your email address.</p>
+            <h1 className="auth-status-title">Completing sign-in</h1>
+            <p className="auth-status-description">Please wait while AptFindr verifies your account.</p>
           </>)}
       </section>
     </main>);

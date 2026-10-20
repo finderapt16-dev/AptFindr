@@ -142,8 +142,7 @@ export function setPendingGoogleOAuthFlow(flow) {
         window.sessionStorage.setItem(GOOGLE_OAUTH_FLOW_STORAGE_KEY, marker);
     }
     catch {
-        // Storage can be unavailable in private mode; the flow still works, it
-        // just falls back to the "finish creating your account" prompt.
+        // Storage is optional; verified server identity determines the flow.
     }
 }
 export function getPendingGoogleOAuthFlow() {
@@ -360,28 +359,43 @@ export async function fetchUserByEmail(email) {
     }
     return data ? normalizeUser(data) : null;
 }
-function isUnfinishedGoogleProfile(authUser, profile) {
-    if (!profile || !isGoogleAuthUser(authUser) || authUser.user_metadata?.googleSignupCompleted === true) return false;
-    if (authUser.user_metadata?.googleSignupCompleted === false) return true;
-    // Older triggers assigned a generated username before the signup form.
-    // Keep real legacy accounts; only treat these placeholder profiles as unfinished.
-    return isTenantRole(profile.role)
-        && authUser.user_metadata?.termsAccepted !== true
-        && /^user_[a-f0-9]{24}$|^usr_[a-f0-9]{26}$/i.test(profile.username ?? '');
+export const GOOGLE_ROLE_ERROR = 'This Google account is already associated with another account role. Please use your designated sign-in method.';
+
+// Linked Google identities must not change password sign-in behavior.
+export function isGoogleOAuthSession(session) {
+    if (!isGoogleAuthUser(session?.user) || !session?.access_token) return false;
+    try {
+        const payload = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const claims = JSON.parse(atob(payload));
+        return claims.amr?.some(entry => entry.method === 'oauth') === true;
+    } catch { return false; }
+}
+export async function provisionGoogleTenant() {
+    const { data: verified, error: verificationError } = await supabaseClient.auth.getUser();
+    if (verificationError || !verified?.user?.email_confirmed_at || !isGoogleAuthUser(verified.user)) {
+        throw new Error('Your Google session could not be verified. Please continue with Google again.');
+    }
+    // No role, email, name or Auth UUID is accepted from the browser.
+    const { data, error } = await supabaseClient.rpc('complete_google_tenant_sign_in');
+    if (error) throw new Error(error.message);
+    const profile = normalizeUser(data);
+    if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
+    assertActiveAccount(profile);
+    return profile;
 }
 export async function getExistingProfileForAuthUser(authUser) {
     if (!authUser?.id)
         return null;
     const existingByAuthId = await fetchUserByAuthId(authUser.id);
     if (existingByAuthId)
-        return isUnfinishedGoogleProfile(authUser, existingByAuthId) ? null : existingByAuthId;
+        return existingByAuthId;
     const existingByEmail = authUser.email ? await fetchUserByEmail(authUser.email) : null;
-    return isUnfinishedGoogleProfile(authUser, existingByEmail) ? null : existingByEmail;
+    return existingByEmail;
 }
-async function ensureProfileForAuthUser(authUser) {
+async function ensureProfileForAuthUser(authUser, googleOAuth = false) {
     if (!authUser?.email_confirmed_at) return null;
+    if (googleOAuth) return provisionGoogleTenant();
     const existingByAuthId = await fetchUserByAuthId(authUser.id);
-    if (isUnfinishedGoogleProfile(authUser, existingByAuthId)) return null;
     if (existingByAuthId) {
         assertValidRole(existingByAuthId.role);
         await ensureRoleProfile(existingByAuthId.id, existingByAuthId.role, {
@@ -395,7 +409,6 @@ async function ensureProfileForAuthUser(authUser) {
     }
     const email = normalizeEmailAddress(authUser.email);
     const existingByEmail = email ? await fetchUserByEmail(email) : null;
-    if (isUnfinishedGoogleProfile(authUser, existingByEmail)) return null;
     if (existingByEmail) {
         assertValidRole(existingByEmail.role);
         const { data, error } = await supabaseClient
@@ -491,7 +504,7 @@ export async function getCurrentAuthenticatedUser() {
         persistCurrentUser(null);
         return null;
     }
-    const profile = await ensureProfileForAuthUser(authUser);
+    const profile = await ensureProfileForAuthUser(authUser, isGoogleOAuthSession(data.session));
     assertActiveAccount(profile);
     persistCurrentUser(profile);
     return profile;
@@ -511,7 +524,10 @@ export function onAuthStateChange(callback) {
             callback(null);
             return;
         }
-        void ensureProfileForAuthUser(authUser)
+        // Defer auth calls until the Supabase callback releases its lock.
+        setTimeout(() => {
+        if (requestId !== latestAuthProfileRequestId) return;
+        void ensureProfileForAuthUser(authUser, isGoogleOAuthSession(session))
             .then((profile) => {
             if (requestId !== latestAuthProfileRequestId)
                 return;
@@ -526,8 +542,9 @@ export function onAuthStateChange(callback) {
             persistCurrentUser(null);
             callback(null);
         });
+        }, 0);
     });
-    return () => data.subscription.unsubscribe();
+    return () => { latestAuthProfileRequestId += 1; data.subscription.unsubscribe(); };
 }
 function signupLog(message, details) {
     if (!import.meta.env.DEV)
@@ -677,75 +694,12 @@ export async function signupUser(input) {
         profileSetupError,
     };
 }
-export async function finalizeGoogleSignup(_authUser, input = {}) {
-    // Verify the provider identity instead of trusting the form's email.
-    let { data: verified, error: verificationError } = await supabaseClient.auth.getUser();
-    if (verificationError && [401, 403].includes(verificationError.status)) {
-        const { error: refreshError } = await supabaseClient.auth.refreshSession();
-        if (!refreshError) {
-            const retry = await supabaseClient.auth.getUser();
-            verified = retry.data;
-            verificationError = retry.error;
-        }
-    }
-    const authUser = verified?.user;
-    if (verificationError && verificationError.status !== 401 && verificationError.status !== 403 && verificationError.name !== 'AuthSessionMissingError') {
-        throw new Error('We could not reach Google account verification. Check your connection and try Create Account again. Your form is still here.');
-    }
-    if (verificationError || !isGoogleAuthUser(authUser) || !authUser.email_confirmed_at) {
-        throw new Error('Your Google session has expired or is no longer available. Continue with Google again to verify your account.');
-    }
-    if (_authUser?.id && _authUser.id !== authUser.id) throw new Error('The signed-in Google account changed. Reload the signup form before continuing.');
-    const existingProfile = await getExistingProfileForAuthUser(authUser);
-    if (existingProfile) {
-        assertActiveAccount(existingProfile);
-        return ensureProfileForAuthUser(authUser);
-    }
-    if (!['tenant', 'landlord'].includes(input.role)) throw new Error('Choose Tenant or Landlord.');
-    if (input.termsAccepted !== true || (input.role === 'landlord' && input.landlordVerificationAccepted !== true)) {
-        throw new Error('Accept the account terms before continuing.');
-    }
-    const errors = {
-        ...validateAccountDetails({ ...input, email: authUser.email }),
-        ...(input.role === 'landlord' ? validatePersonalInformation(input) : {}),
-    };
-    if (Object.keys(errors).length) throw new Error(Object.values(errors)[0]);
-    const profileUsername = resolveProfileUsername(input.username);
-    await assertUsernameAvailable(profileUsername);
-    const placeholder = await fetchUserByAuthId(authUser.id);
-    if (isUnfinishedGoogleProfile(authUser, placeholder)) {
-        const { error: pendingError } = await supabaseClient.auth.updateUser({ data: { googleSignupCompleted: false } });
-        if (pendingError) throw new Error(pendingError.message);
-        const { error: profileError } = await supabaseClient.from(APP_USERS_TABLE).update({
-            username: profileUsername, name: input.name,
-            role: input.role, mobile: input.mobileNumber || null,
-            status: input.role === 'landlord' ? 'pending' : 'active',
-            is_verified: input.role !== 'landlord',
-        }).eq('id', placeholder.id);
-        if (profileError) throw new Error(profileError.message);
-    }
-    const { data, error } = await supabaseClient.auth.updateUser({
-        password: input.password,
-        data: {
-            name: input.name,
-            given_name: input.firstName?.trim() || undefined,
-            family_name: input.lastName?.trim() || undefined,
-            username: profileUsername,
-            role: input.role,
-            mobile: input.mobileNumber,
-            middleInitial: input.middleInitial,
-            termsAccepted: true,
-            landlordVerificationAccepted: input.role === 'landlord',
-            googleSignupCompleted: true,
-        },
-    });
-    if (error || !data.user) throw new Error(error?.message || 'Unable to save your Google account details.');
-    const profile = await ensureProfileForAuthUser(data.user);
-    assertActiveAccount(profile);
-    return profile;
+// Compatibility for old bookmarks: Google no longer needs a signup form.
+export async function finalizeGoogleSignup() {
+    return provisionGoogleTenant();
 }
-export async function signupWithGoogle(options = {}) {
-    return loginWithGoogle({ signupRole: options.role, flow: 'signup' });
+export async function signupWithGoogle() {
+    return loginWithGoogle({ flow: 'signup' });
 }
 let pendingGoogleReset = null;
 export function resetUnfinishedGoogleSignIn() {
@@ -762,35 +716,15 @@ export function resetUnfinishedGoogleSignIn() {
     })().finally(() => { pendingGoogleReset = null; });
     return pendingGoogleReset;
 }
-export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
+export async function loginWithGoogle({ flow = 'login' } = {}) {
     // Closing and immediately reopening the popup must finish the reset first.
     if (pendingGoogleReset) await pendingGoogleReset;
     const requestedFlow = flow === 'signup' ? 'signup' : 'login';
     setPendingGoogleOAuthFlow(requestedFlow);
-    // A Google session can already be live without an AptFindr account: that is
-    // the state the sign-in notice exists for. Sending it back to the provider
-    // would loop the visitor between Google and the same screen, so hand the
-    // caller the identity and let it offer to finish the account instead.
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    const currentAuthUser = sessionData.session?.user;
-    if (isGoogleAuthUser(currentAuthUser)) {
-        try {
-            const existingProfile = await getExistingProfileForAuthUser(currentAuthUser);
-            if (!existingProfile) {
-                return { needsAccount: true, google: describeGoogleAuthUser(currentAuthUser) };
-            }
-        }
-        catch (profileError) {
-            // A profile lookup can only fail transiently. Fall through to the
-            // normal provider round trip rather than blocking sign-in.
-            console.warn('[AUTH] Google session profile lookup failed before sign-in', profileError);
-        }
-    }
-    const signupRoleParam = signupRole === 'landlord' ? '?signup_role=landlord' : '';
     const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback${signupRoleParam}`,
+            redirectTo: `${window.location.origin}/auth/callback`,
             // Force Google to show the account chooser instead of silently
             // reusing whichever Google account is already signed in.
             queryParams: {
@@ -799,6 +733,7 @@ export async function loginWithGoogle({ signupRole, flow = 'login' } = {}) {
         },
     });
     if (error) {
+        clearPendingGoogleOAuthFlow();
         throw new Error('We could not continue with Google. Please try again.');
     }
 }
@@ -878,8 +813,14 @@ export function requestPasswordResetEmail(email) {
         redirectTo: `${window.location.origin}/reset-password`,
     });
 }
+// React StrictMode can mount the callback twice; a PKCE code is single-use.
+const authCodeExchanges = new Map();
 export function exchangeAuthCode(code) {
-    return supabaseClient.auth.exchangeCodeForSession(code);
+    if (!authCodeExchanges.has(code)) {
+        if (authCodeExchanges.size >= 5) authCodeExchanges.clear();
+        authCodeExchanges.set(code, supabaseClient.auth.exchangeCodeForSession(code));
+    }
+    return authCodeExchanges.get(code);
 }
 export function getAuthSession() {
     return supabaseClient.auth.getSession();

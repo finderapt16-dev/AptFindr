@@ -89,28 +89,8 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
   }, [landlordStep, values.role]);
 
   useEffect(() => {
-    if (!googleSetup) return;
-    let active = true;
-    void getAuthUser().then(({ data, error }) => {
-      if (!active) return;
-      if (error || !isGoogleAuthUser(data.user) || !data.user.email_confirmed_at) {
-        setError("Your Google session has expired. Sign in with Google again.");
-        return;
-      }
-      setGoogleIdentity(data.user);
-      const googleName = getGoogleNameFields(data.user);
-      const googleFullName = [googleName.firstName, googleName.lastName].filter(Boolean).join(" ");
-      setValues(current => ({
-        ...current,
-        role: current.role || googleSetupRole,
-        email: data.user.email || current.email,
-        fullName: current.fullName || googleFullName,
-        firstName: current.firstName || googleName.firstName,
-        lastName: current.lastName || googleName.lastName,
-      }));
-    }).catch(() => { if (active) setError("Unable to verify your Google session. Please sign in again."); });
-    return () => { active = false; };
-  }, [googleSetup]);
+    if (googleSetup) navigate('/auth/callback', { replace: true });
+  }, [googleSetup, navigate]);
 
   const changeField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -265,13 +245,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
     submissionInFlightRef.current = true;
     setBusy("google");
     try {
-      const googleSignup = await signupWithGoogle({ role: "tenant" });
-      if (googleSignup?.needsAccount) {
-        navigate("/signup?google=setup&role=tenant");
-        submissionInFlightRef.current = false;
-        setBusy(null);
-        return;
-      }
+      await signupWithGoogle({ role: "tenant" });
       // Otherwise Supabase is redirecting the browser to Google; keep actions locked.
     } catch (googleError) {
       clearPendingGoogleOAuthFlow();

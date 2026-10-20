@@ -30,7 +30,13 @@ async function runCallback({ role = 'tenant', confirmed = true, profileAvailable
         getAuthUser: async () => ({ data: { user: { email_confirmed_at: confirmed ? '2026-10-05' : null } } }),
         getExistingProfileForAuthUser: async () => profileAvailable ? { role } : null,
         getPendingGoogleOAuthFlow: () => flow,
-        isGoogleAuthUser: () => google,
+        GOOGLE_ROLE_ERROR: 'This Google account is already associated with another account role. Please use your designated sign-in method.',
+        provisionGoogleTenant: async () => {
+            if (role !== 'tenant') throw new Error('This Google account is already associated with another account role. Please use your designated sign-in method.');
+            return { role: 'tenant' };
+        },
+        getAuthSession: async () => ({ data: { session: {} } }),
+        isGoogleOAuthSession: () => google,
         isTenantRole: value => value === 'tenant',
         signOutAuthSession: async () => {
             calls.signouts++;
@@ -50,8 +56,9 @@ async function runCallback({ role = 'tenant', confirmed = true, profileAvailable
 for (const role of ['tenant', 'landlord']) {
     test(`existing Google ${role} goes to their login destination`, async () => {
         const { result, calls } = await runCallback({ role, google: true, flow: 'login' });
-        assert.equal(result.path, role === 'landlord' ? '/landlord/dashboard' : '/browse');
-        assert.equal(calls.signouts, 0);
+        assert.equal(result.path, role === 'landlord' ? '/login' : '/browse');
+        assert.equal(calls.signouts, role === 'landlord' ? 1 : 0);
+        if (role === 'landlord') assert.match(result.state.error, /another account role/);
     });
     test(`confirmed ${role} must sign in after email confirmation`, async () => {
         const { result, calls } = await runCallback({ role });
@@ -63,11 +70,19 @@ for (const role of ['tenant', 'landlord']) {
     });
 }
 
-test('new Google user must choose a role and complete signup before dashboard access', async () => {
-    const { result, calls } = await runCallback({ google: true, flow: 'signup', profileAvailable: false });
-    assert.equal(result.path, '/signup?google=setup');
-    assert.equal(calls.hydrations, 0);
-    assert.equal(calls.signouts, 0);
+for (const flow of ['login', 'signup', null]) {
+    test('Google tenant enters dashboard without manual signup, flow=' + flow, async () => {
+        const { result, calls } = await runCallback({ google: true, flow });
+        assert.equal(result.path, '/browse');
+        assert.equal(calls.hydrations, 1);
+        assert.equal(calls.signouts, 0);
+    });
+}
+test('profile recovery failure signs out and displays an error', async () => {
+    const { result, calls } = await runCallback({ google: true, profileAvailable: false });
+    assert.equal(result.path, '/login');
+    assert.match(result.state.error, /could not finish/);
+    assert.equal(calls.signouts, 1);
 });
 
 test('unverified email cannot open a dashboard', async () => {
