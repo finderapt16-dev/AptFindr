@@ -79,11 +79,11 @@ for (const flow of ['login', 'signup', null]) {
         assert.equal(calls.signouts, 0);
     });
 }
-test('profile recovery failure signs out and displays an error', async () => {
+test('new Google user goes to prefilled tenant Create Account without signing out', async () => {
     const { result, calls } = await runCallback({ google: true, profileAvailable: false });
-    assert.equal(result.path, '/login');
-    assert.match(result.state.error, /could not finish/);
-    assert.equal(calls.signouts, 1);
+    assert.equal(result.path, '/signup?google=setup&role=tenant');
+    assert.equal(calls.hydrations, 1);
+    assert.equal(calls.signouts, 0);
 });
 
 test('unverified email cannot open a dashboard', async () => {

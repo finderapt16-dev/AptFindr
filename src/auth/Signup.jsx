@@ -4,11 +4,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowRight, Building2, ChevronRight, Home, Info, Users } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, isGoogleAuthUser, resendSignupVerification, signOutAuthSession, signupWithGoogle } from "@/services/authService";
+import { clearPendingGoogleOAuthFlow, finalizeGoogleSignup, getAuthUser, GOOGLE_ROLE_ERROR, isGoogleAuthUser, resendSignupVerification, signOutAuthSession, signupWithGoogle } from "@/services/authService";
 import { SignupAccountFields, SignupFullNameField, SignupPersonalFields } from "./SignupFields";
 import { SignupAgreement, SignupPolicyDialog } from "./SignupPolicyDialog";
 import { normalizeSignupValues, validateAccountDetails, validatePersonalInformation } from "./signupValidation";
 import { useSignupViewport } from "./useSignupViewport";
+import { getGoogleNameFields } from "./googleNameFields";
 
 const INITIAL_VALUES = {
   role: "", email: "", password: "", confirmPassword: "",
@@ -25,23 +26,6 @@ function GoogleIcon() {
       <path fill="#EA4335" d="M12 5.93c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3 14.62 2.24 12 2.24a9.72 9.72 0 0 0-7.68 5.44l2.9 2.24c.76-2.29 2.9-3.99 5.42-3.99Z" />
     </svg>
   );
-}
-
-function getGoogleNameFields(authUser) {
-  const metadata = authUser?.user_metadata && typeof authUser.user_metadata === "object"
-    ? authUser.user_metadata
-    : {};
-  const firstName = typeof metadata.given_name === "string" ? metadata.given_name.trim() : "";
-  const lastName = typeof metadata.family_name === "string" ? metadata.family_name.trim() : "";
-  if (firstName || lastName) return { firstName, lastName };
-
-  const fullName = [metadata.full_name, metadata.name]
-    .find((value) => typeof value === "string" && value.trim())?.trim() ?? "";
-  const parts = fullName.split(/\s+/).filter(Boolean);
-  return {
-    firstName: parts[0] ?? "",
-    lastName: parts.slice(1).join(" "),
-  };
 }
 
 export function Signup({ embedded = false, redirect = null, onClose }) {
@@ -89,8 +73,35 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
   }, [landlordStep, values.role]);
 
   useEffect(() => {
-    if (googleSetup) navigate('/auth/callback', { replace: true });
-  }, [googleSetup, navigate]);
+    if (!googleSetup) return;
+    let active = true;
+    void (async () => {
+      const { data, error: identityError } = await getAuthUser();
+      if (!active) return;
+      if (identityError || !data.user?.email_confirmed_at || !isGoogleAuthUser(data.user)) {
+        throw new Error('Your Google session has expired. Continue with Google again.');
+      }
+      const existingProfile = await hydrateSession();
+      if (!active) return;
+      if (existingProfile) {
+        if (existingProfile.role !== 'tenant') throw new Error(GOOGLE_ROLE_ERROR);
+        navigate('/browse', { replace: true });
+        return;
+      }
+      const names = getGoogleNameFields(data.user);
+      setValues(current => ({ ...current, role: 'tenant', email: data.user.email,
+        fullName: [names.firstName, names.lastName].filter(Boolean).join(' '),
+        firstName: names.firstName, lastName: names.lastName }));
+      setGoogleIdentity(data.user);
+    })().catch(async setupError => {
+      if (!active) return;
+      if (setupError.message === GOOGLE_ROLE_ERROR) {
+        await signOutAuthSession({ scope: 'local' });
+        if (active) navigate('/login', { replace: true, state: { error: GOOGLE_ROLE_ERROR } });
+      } else setError(setupError.message || 'Unable to load your Google account. Please sign in again.');
+    });
+    return () => { active = false; };
+  }, [googleSetup, hydrateSession, navigate]);
 
   const changeField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -146,7 +157,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
       return;
     }
     const normalized = normalizeSignupValues(values);
-    const accountErrors = validateAccountDetails(normalized);
+    const accountErrors = googleSetup ? {} : validateAccountDetails(normalized);
     if (Object.keys(accountErrors).length) {
       showValidation(accountErrors, isLandlord ? 1 : undefined);
       return;
@@ -288,7 +299,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
 
   const loginPrompt = <p className="signup-login-prompt">Already have an account? <Link to={loginPath}>Sign In</Link></p>;
   const agreement = <SignupAgreement checked={termsAccepted} onChange={changeAgreement} disabled={loading} onPolicyClick={openPolicy} role={isLandlord ? "landlord" : "tenant"} />;
-  const createButton = <button type="submit" disabled={loading} className="signup-primary-button signup-submit-button">{busy === "account" ? <><span className="signup-spinner" aria-hidden="true" /> Creating your account...</> : "Create Account"}</button>;
+  const createButton = <button type="submit" disabled={loading || (googleSetup && !googleIdentity)} className="signup-primary-button signup-submit-button">{busy === "account" ? <><span className="signup-spinner" aria-hidden="true" /> Creating your account...</> : "Create Account"}</button>;
 
   return (
     <div className={`auth-palette signup-page${embedded ? " signup-page--floater" : " signup-page--standalone"}${values.role ? ` signup-page--${values.role}` : ""}`}>
@@ -309,7 +320,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               <div className="signup-google-setup-notice" role="status">
                 <Info aria-hidden="true" />
                 <p>
-                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Complete your tenant account and press <strong>Create Account</strong>. Your password also lets you sign in with your email.
+                  Google has verified your email{googleIdentity ? ` (${googleIdentity.email})` : ""}. Review your name, accept the terms, and press <strong>Create Account</strong> to finish registering as a tenant. No password is required.
                 </p>
               </div>
             )}
@@ -340,7 +351,7 @@ export function Signup({ embedded = false, redirect = null, onClose }) {
               )}
               {values.role === "tenant" && (
                 <>
-                  <div className="signup-tenant-simple-form"><SignupFullNameField values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant-name" /><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} /></div>
+                  <div className="signup-tenant-simple-form"><SignupFullNameField values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant-name" /><SignupAccountFields values={values} onChange={changeField} errors={fieldErrors} disabled={loading} idPrefix="tenant" emailReadOnly={googleSetup} includeUsername={!googleSetup} includePassword={!googleSetup} /></div>
                   {agreement}
                   {createButton}
                   {!googleSetup && <><div className="signup-social-divider" aria-hidden="true"><span /><b>or</b><span /></div>

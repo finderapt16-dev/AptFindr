@@ -4,14 +4,14 @@ import { AuthField } from "./AuthField";
 import { supabase } from "@/services/supabaseClient";
 import { PASSWORD_REQUIREMENTS } from "./signupValidation";
 
-export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, emailReadOnly = false, emailLabel = "Email Address", hideEmail = false }) {
+export function SignupAccountFields({ values, onChange, errors = {}, disabled = false, idPrefix = "signup", includePassword = true, includeUsername = true, emailReadOnly = false, emailLabel = "Email Address", hideEmail = false }) {
   const username = String(values.username ?? "").trim();
   const email = String(values.email ?? "").trim().toLowerCase();
   const [usernameCheck, setUsernameCheck] = useState({ username: "", error: "" });
   const [emailCheck, setEmailCheck] = useState({ email: "", error: "" });
 
   useEffect(() => {
-    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+    if (!includeUsername || !/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
       setUsernameCheck({ username: "", error: "" });
       return undefined;
     }
@@ -31,7 +31,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
       }
     }, 350);
     return () => { active = false; clearTimeout(timer); };
-  }, [username]);
+  }, [username, includeUsername]);
 
   useEffect(() => {
     if (emailReadOnly || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -92,7 +92,7 @@ export function SignupAccountFields({ values, onChange, errors = {}, disabled = 
 
   return (
     <>
-      <AuthField {...fieldProps("username")} error={errors.username || (usernameCheck.username === username ? usernameCheck.error : "")} label="Username" required placeholder="Enter your username" autoComplete="username" spellCheck={false} />
+      {includeUsername && <AuthField {...fieldProps("username")} error={errors.username || (usernameCheck.username === username ? usernameCheck.error : "")} label="Username" required placeholder="Enter your username" autoComplete="username" spellCheck={false} />}
       {!hideEmail && <AuthField {...fieldProps("email")} error={errors.email || (emailCheck.email === email ? emailCheck.error : "")} label={emailLabel} readOnly={emailReadOnly} type="email" required placeholder="Enter your email address" autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" />}
       {includePassword && (
         <>

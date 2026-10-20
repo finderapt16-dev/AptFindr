@@ -421,7 +421,15 @@ export async function getExistingProfileForAuthUser(authUser) {
 }
 async function ensureProfileForAuthUser(authUser, googleOAuth = false) {
     if (!authUser?.email_confirmed_at) return null;
-    if (googleOAuth) return provisionGoogleTenant();
+    if (googleOAuth) {
+        // Restoring a Google session must never register an account in the background.
+        // New users remain signed in to Google while they complete Create Account.
+        const profile = await fetchUserByAuthId(authUser.id);
+        if (!profile) return null;
+        if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
+        assertActiveAccount(profile);
+        return profile;
+    }
     const existingByAuthId = await fetchUserByAuthId(authUser.id);
     if (existingByAuthId) {
         assertValidRole(existingByAuthId.role);
@@ -721,9 +729,26 @@ export async function signupUser(input) {
         profileSetupError,
     };
 }
-// Compatibility for old bookmarks: Google no longer needs a signup form.
-export async function finalizeGoogleSignup() {
-    return provisionGoogleTenant();
+// Only submitting the Google tenant form creates the application profile.
+export async function finalizeGoogleSignup(expectedAuthUser, input = {}) {
+    const fullName = String(input.fullName ?? input.name ?? '').trim();
+    if (!fullName) throw new Error('Full name is required.');
+    if (input.termsAccepted !== true) throw new Error('Accept the Terms of Service and Privacy Policy to continue.');
+    const { data, error } = await supabaseClient.auth.getUser();
+    if (error) throw googleTenantError(error, 'verify_identity');
+    if (!data.user?.email_confirmed_at || !isGoogleAuthUser(data.user)) {
+        throw new Error('Your Google session could not be verified. Please continue with Google again.');
+    }
+    if (expectedAuthUser?.id && expectedAuthUser.id !== data.user.id) {
+        throw new Error('The signed-in Google account changed. Continue with Google again.');
+    }
+    const profile = await provisionGoogleTenant();
+    // Name is an editable profile field. Identity and role still come only from the server.
+    if (profile.name === fullName) return profile;
+    const { data: updated, error: updateError } = await supabaseClient.from(APP_USERS_TABLE)
+        .update({ name: fullName }).eq('id', profile.id).eq('auth_id', data.user.id).select('*').single();
+    if (updateError) throw googleTenantError(updateError, 'save_profile');
+    return normalizeUser(updated);
 }
 export async function signupWithGoogle() {
     return loginWithGoogle({ flow: 'signup' });

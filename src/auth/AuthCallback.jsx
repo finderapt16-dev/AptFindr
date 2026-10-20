@@ -68,11 +68,14 @@ export function AuthCallback() {
             const googleOAuth = isGoogleOAuthSession(sessionData.session);
             try {
                 if (googleOAuth) {
-                    // Hydration provisions and loads the tenant in one operation.
+                    // Hydration only loads an existing profile; new users must submit Create Account.
                     const profile = await hydrateSession();
                     if (!active) return;
-                    if (!profile)
-                        throw new Error("The Google account profile is not available.");
+                    if (!profile) {
+                        clearPendingGoogleOAuthFlow();
+                        navigate('/signup?google=setup&role=tenant', { replace: true });
+                        return;
+                    }
                     if (!isTenantRole(profile.role)) throw new Error(GOOGLE_ROLE_ERROR);
                     clearPendingGoogleOAuthFlow();
                     if (active)

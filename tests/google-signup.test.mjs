@@ -28,7 +28,10 @@ async function setup({ role = 'tenant', confirmed = true, method = 'oauth', rpcE
       return { data: { ...profile } };
     },
     from(table) {
+      let updates;
       const query = { select: () => query, eq: () => query,
+        update: data => { updates = data; calls.push({ update: data }); return query; },
+        single: async () => { profile = { ...profile, ...updates }; return { data: profile }; },
         maybeSingle: async () => ({ data: profile }),
         upsert: async data => { calls.push({ table, data }); return {}; } };
       return query;
@@ -48,13 +51,32 @@ async function setup({ role = 'tenant', confirmed = true, method = 'oauth', rpcE
   } finally { delete globalThis[key]; }
 }
 
-test('new Google tenant is provisioned without signup form, password or browser role arguments', async () => {
+test('new Google user remains without an app profile until Create Account is submitted', async () => {
   const { service, calls } = await setup();
-  const profile = await service.getCurrentAuthenticatedUser();
+  assert.equal(await service.getCurrentAuthenticatedUser(), null);
+  assert.equal(await service.getCurrentAuthenticatedUser(), null);
+  assert.deepEqual(calls, []);
+  const profile = await service.finalizeGoogleSignup({ id: 'google-id' }, {
+    fullName: 'Google Name', termsAccepted: true, role: 'super_admin', email: 'spoofed@example.com',
+  });
   assert.equal(profile.role, 'tenant');
   assert.equal(profile.email, 'verified@gmail.com');
-  assert.equal(profile.name, 'Google Name');
   assert.deepEqual(calls, [{ rpc: ['complete_google_tenant_sign_in'] }]);
+  assert.equal((await service.getCurrentAuthenticatedUser()).id, profile.id);
+});
+test('Google signup requires a name and agreement before any profile write', async () => {
+  const { service, calls } = await setup();
+  await assert.rejects(service.finalizeGoogleSignup(null, { termsAccepted: true }), /name is required/);
+  await assert.rejects(service.finalizeGoogleSignup(null, { fullName: 'Name' }), /Terms of Service/);
+  await assert.rejects(service.finalizeGoogleSignup({ id: 'other-account' }, { fullName: 'Name', termsAccepted: true }), /account changed/);
+  assert.deepEqual(calls, []);
+});
+test('the name reviewed on Create Account is saved without changing role or email', async () => {
+  const { service, calls } = await setup();
+  const profile = await service.finalizeGoogleSignup({ id: 'google-id' }, { fullName: 'Reviewed Name', termsAccepted: true });
+  assert.equal(profile.name, 'Reviewed Name');
+  assert.equal(profile.role, 'tenant');
+  assert.deepEqual(calls[1], { update: { name: 'Reviewed Name' } });
 });
 
 test('refresh and repeated callbacks recover the same existing tenant profile', async () => {
@@ -73,7 +95,7 @@ for (const role of ['landlord', 'admin', 'super_admin']) {
     const { service, calls, stored } = await setup({ role, existing: true });
     await assert.rejects(service.getCurrentAuthenticatedUser(), error => error.message === service.GOOGLE_ROLE_ERROR);
     assert.equal(stored.role, role);
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 0);
   });
   test(`password session with linked Google identity preserves ${role} access`, async () => {
     const { service, calls } = await setup({ role, method: 'password', existing: true });
