@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
     const [pendingLandlordCount, setPendingLandlordCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const authRequestIdRef = useRef(0);
+    const pendingLoginRequestRef = useRef(null);
     const refreshUsers = useCallback(async () => {
         const [allUsers, pendingCount] = await Promise.all([fetchAppUsers(), getPendingLandlordCount()]);
         setUsers(allUsers);
@@ -104,6 +105,9 @@ export function AuthProvider({ children }) {
     }, []);
     useEffect(() => {
         return onAuthStateChange((authUser) => {
+            // signInWithPassword/setSession also emits SIGNED_IN. The active
+            // login owns its result; that notification is not a newer request.
+            if (pendingLoginRequestRef.current !== null) return;
             authRequestIdRef.current += 1;
             setCurrentUser(authUser);
             setIsLoading(false);
@@ -152,6 +156,7 @@ export function AuthProvider({ children }) {
     }, [refreshUsers]);
     const login = useCallback(async (credentials) => {
         const requestId = ++authRequestIdRef.current;
+        pendingLoginRequestRef.current = requestId;
         setIsLoading(true);
         setCurrentUser(null);
         persistCurrentUser(null);
@@ -171,6 +176,9 @@ export function AuthProvider({ children }) {
             return { success: false, error: getErrorMessage(error, 'Invalid email or password.') };
         }
         finally {
+            if (pendingLoginRequestRef.current === requestId) {
+                pendingLoginRequestRef.current = null;
+            }
             if (requestId === authRequestIdRef.current) {
                 setIsLoading(false);
             }
@@ -223,6 +231,7 @@ export function AuthProvider({ children }) {
     }, [currentUser?.id]);
     const logout = useCallback(() => {
         authRequestIdRef.current += 1;
+        pendingLoginRequestRef.current = null;
         setIsLoading(true);
         setCurrentUser(null);
         return logoutUser().catch((logoutError) => {
