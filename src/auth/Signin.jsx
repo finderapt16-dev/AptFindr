@@ -178,6 +178,9 @@ export function Login({
             );
         }
 
+        if (location.state?.allowResendVerification) {
+            setSuccessMessage('Enter your email below, then request a new verification email.');
+        }
     }, [location.state]);
 
 
@@ -220,8 +223,9 @@ export function Login({
 
     const resendVerification =
         async () => {
+            const resendEmail = location.state?.allowResendVerification ? email.trim() : verificationEmail;
             if (
-                !verificationEmail ||
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resendEmail) ||
                 resending ||
                 resendCooldown > 0
             ) {
@@ -233,7 +237,7 @@ export function Login({
 
             try {
                 await resendSignupVerification(
-                    verificationEmail
+                    resendEmail
                 );
 
                 setSuccessMessage(
@@ -496,13 +500,14 @@ export function Login({
                     </Alert>
 
 
-                    {verificationEmail && (
+                    {(verificationEmail || location.state?.allowResendVerification) && (
 
                         <button
                             type="button"
                             disabled={
                                 resending ||
-                                resendCooldown > 0
+                                resendCooldown > 0 ||
+                                (location.state?.allowResendVerification && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
                             }
                             onClick={() =>
                                 void resendVerification()

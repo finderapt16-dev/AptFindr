@@ -37,7 +37,11 @@ export function AuthCallback() {
                 if (active)
                     navigate("/login", {
                         replace: true,
-                        state: { error: getOAuthErrorMessage(params) },
+                        state: {
+                            error: getOAuthErrorMessage(params),
+                            allowResendVerification: /otp_expired|email link is invalid/i.test(
+                                params.get('error_code') + ' ' + callbackError),
+                        },
                     });
                 return;
             }

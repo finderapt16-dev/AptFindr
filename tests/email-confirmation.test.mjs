@@ -104,7 +104,9 @@ test('expired implicit confirmation link reports its error before loading a prof
     const { result, calls } = await runCallback({ hash: '#error=access_denied&error_code=otp_expired' });
     assert.equal(result.path, '/login');
     assert.match(result.state.error, /expired/);
+    assert.equal(result.state.allowResendVerification, true);
     assert.equal(calls.hydrations, 0);
+    assert.equal(calls.signouts, 0);
 });
 
 test('StrictMode callback remount only hydrates and navigates once', async () => {
