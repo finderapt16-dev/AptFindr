@@ -1325,7 +1325,7 @@ if (browseMode === "popular") {
                 setPreferencesOpen
             }
         >
-            <div className="tenant-browse">
+            <div className="tenant-browse app-shell">
                 <MobileNavigation
                     active="apartments"
                     unreadCount={
@@ -1333,18 +1333,18 @@ if (browseMode === "popular") {
                     }
                 />
 
-                <div className="apartment-browse-row-8">
-                    <div className="apartment-browse-panel-9">
+                <div className="app-shell-frame">
+                    <aside className="app-shell-sidebar">
                         <Sidebar
                             active="apartments"
                             unreadCount={
                                 unreadCount
                             }
                         />
-                    </div>
+                    </aside>
 
-                    <main className="app-shell-main">
-                        <div className="app-shell-content app-shell-content-mobile-nav">
+                    <div className="app-shell-main">
+                        <main className="app-shell-content app-shell-content-mobile-nav">
                             <div className="tenant-apartments-page">
                             <section className="apartment-browse-section-3 tenant-page-header">
  <div className="apartment-browse-panel-11 tenant-page-header__content">
@@ -1783,8 +1783,8 @@ if (browseMode === "popular") {
                                 )}
                             </section>
                         </div>
-                        </div>
-                    </main>
+                        </main>
+                </div>
                 </div>
             </div>
 

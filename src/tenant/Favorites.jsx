@@ -571,8 +571,8 @@ export function Favorites() {
                     />
                 </aside>
 
-                <main className="app-shell-main">
-                    <div className="app-shell-content app-shell-content-mobile-nav">
+                <div className="app-shell-main">
+                    <main className="app-shell-content app-shell-content-mobile-nav">
                         <div className="tenant-favorites-page">
                         <section className="tenant-favorites-hero tenant-page-header">
                             <div className="favorites-panel-9 tenant-page-header__content">
@@ -660,8 +660,8 @@ export function Favorites() {
                             )}
                         </section>
                         </div>
-                    </div>
-                </main>
+                    </main>
+                </div>
             </div>
         </div>
     );
