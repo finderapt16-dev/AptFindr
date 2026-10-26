@@ -1,3 +1,4 @@
+import { getAdminReportSummary } from "./adminReportSummary";
 import "./AdminOverview.css";
 import { useEffect, useState } from "react";
 import { Building2, UserRound, FileText, Gavel } from "lucide-react";
@@ -12,10 +13,11 @@ export function AdminOverview({ apartments, landlords, reports, appeals, onNavig
     fetchRecentActivityLogs(30).then((items) => { if (active) setLogs(items); }).catch(() => {}).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+  const reportSummary = getAdminReportSummary(reports);
   const stats = [
     { label: "Total Apartments", count: apartments.length, note: "All apartment listings", icon: Building2, tone: "apartments", section: "apartments" },
     { label: "Total Landlords", count: landlords.length, note: "Registered accounts", icon: UserRound, tone: "landlords", section: "landlords" },
-    { label: "Total Reports", count: reports.length, note: "All submitted reports", icon: FileText, tone: "reports", section: "reports" },
+    { label: "Total Reports", count: reportSummary.total, note: "All submitted reports", icon: FileText, tone: "reports", section: "reports" },
     { label: "Appeals", count: appeals.length, note: "Submitted by landlords", icon: Gavel, tone: "appeals", section: "appeals" },
   ];
   const events = logs.map((log) => {
