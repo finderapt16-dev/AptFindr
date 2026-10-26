@@ -88,3 +88,30 @@
 @media (max-width: 440px) {
   .reports-reference-stats { grid-template-columns: 1fr; }
 }
+
+/* Admin report waiting response presentation. */
+.admin-reports-waiting.admin-case-list > .reports-reference-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 32px; }
+.admin-reports-waiting.admin-case-list .reports-reference-stat { flex-direction: row; gap: 14px; text-align: left; padding: 16px 20px; justify-content: flex-start; }
+.admin-reports-waiting.admin-case-list .reports-reference-stat-icon { width: 50px; height: 50px; flex-basis: 50px; margin: 0; }
+.admin-reports-waiting .reports-reference-stat-icon.is-total { background: #e0f2fe; color: #2196ff; }
+.admin-reports-waiting .reports-reference-stat-icon.is-review { background: #fff7ed; color: #ff9800; }
+.admin-reports-waiting .reports-reference-stat-icon.is-waiting { background: #ffccff; color: #ff00cc; }
+.admin-reports-waiting .admin-report-stat-count { display: block; margin-bottom: 3px; }
+.admin-reports-waiting .reports-reference-stat-note { color: #778196; font-size: 14px; }
+.admin-reports-waiting .reports-reference-status.is-waiting_response { background: #ffccff; color: #ff00cc; white-space: normal; max-width: 144px; min-height: 42px; padding: 6px 28px; line-height: 18px; }
+@media (max-width: 1200px) {
+  .admin-reports-waiting.admin-case-list > .reports-reference-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .admin-reports-waiting.admin-case-list > .reports-reference-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-reports-waiting.admin-case-list .reports-reference-stat { gap: 10px; padding: 12px; }
+}
+@media (max-width: 440px) {
+  .admin-reports-waiting.admin-case-list > .reports-reference-stats { grid-template-columns: 1fr; }
+}
+
+.admin-reports-waiting .admin-report-deadline-reached td { background: #fff1f2; }
+.admin-reports-waiting .admin-report-deadline-reached td:first-child { border-left: 4px solid #dc2626; }
+.admin-reports-waiting .reports-reference-status.is-deadline_reached { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700; }
+.admin-reports-waiting p.admin-report-deadline-caption { color: #b91c1c; font-weight: 600; margin-top: 6px; }
+.admin-reports-waiting p.admin-report-deadline-date { font-size: 11px; margin-top: 5px; white-space: normal; }

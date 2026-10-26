@@ -1,3 +1,4 @@
+import { useApplicationSettings } from "@/services/applicationSettingsService";
 import "./AdminLandlordVerification.css";
 import { getAdminListingState } from "@/admin/adminListingState";
 
@@ -12,7 +13,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-const PAGE_SIZE = 10;
 
 const getVerificationState = (landlord) => {
   const status = String(
@@ -78,6 +78,7 @@ export function AdminLandlordVerification({
   permitError = "",
   onRetryPermits,
 }) {
+  const { items_per_page: PAGE_SIZE } = useApplicationSettings();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);

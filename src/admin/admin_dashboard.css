@@ -1976,3 +1976,8 @@
   .admin-portal-shell .admin-apartments-row-9 { grid-column: 1 / -1; width: 100%; justify-self: stretch; }
   .admin-portal-shell .admin-apartments-inspect { width: 100%; }
 }
+
+.admin-portal-shell .admin-settings-photo-picker { position: relative; overflow: hidden; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+.admin-portal-shell .admin-settings-photo-picker input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.admin-portal-shell .admin-settings-photo-picker:focus-within { outline: 2px solid #139fe0; outline-offset: 2px; }
+.admin-portal-shell .admin-settings-photo-error { color: #b91c1c; font-size: 12px; overflow-wrap: anywhere; }

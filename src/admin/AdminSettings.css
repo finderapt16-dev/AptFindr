@@ -1,0 +1,39 @@
+﻿.admin-settings-v2 { width: 100%; max-width: 1400px; margin: 15px auto 40px; color: #111; font-size: 14px; }
+.admin-settings-v2 * { box-sizing: border-box; }
+.admin-settings-v2 > header { border: 1px solid #ccc; border-radius: 10px; background: #fff; padding: 38px 64px; margin-bottom: 24px; }
+.admin-settings-v2 h1 { font-size: 26px; font-weight: 750; margin: 0 0 6px; }
+.admin-settings-v2 h2 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.3; }
+.admin-settings-v2 p { color: #647a9b; margin: 0; line-height: 1.4; }
+.admin-settings-v2-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+.admin-settings-v2-column { display: grid; gap: 18px; }
+.admin-settings-v2-card { min-width: 0; border: 1px solid #ccc; border-radius: 10px; background: white; padding: 22px 28px; }
+.admin-settings-v2 form { margin-top: 26px; }
+.admin-settings-v2 fieldset { border: 0; min-width: 0; padding: 0; margin: 0; }
+.admin-settings-v2 label { display: grid; gap: 4px; font-weight: 400; }
+.admin-settings-v2 input, .admin-settings-v2 select { min-width: 0; width: 100%; height: 31px; border: 1px solid #ccc; border-radius: 5px; background: #fff; padding: 5px 10px; color: #111; font: inherit; font-size: 12px; }
+.admin-settings-v2 button, .admin-settings-v2-upload { min-height: 44px; border: 0; border-radius: 10px; padding: 10px 26px; background: #0da7e1; color: white; font: inherit; font-weight: 500; cursor: pointer; }
+.admin-settings-v2 button:disabled, .admin-settings-v2 .is-disabled { opacity: .5; cursor: default; }
+.admin-settings-v2 input:focus-visible, .admin-settings-v2 select:focus-visible, .admin-settings-v2 button:focus-visible, .admin-settings-v2-upload:focus-within { outline: 2px solid #0da7e1; outline-offset: 2px; }
+.admin-settings-v2-profile { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 48px; padding: 10px 0 24px; }
+.admin-settings-v2-profile fieldset { display: grid; gap: 12px; align-content: start; }
+.admin-settings-v2-photo { text-align: center; }
+.admin-settings-v2-avatar { width: 136px; height: 128px; margin: 0 auto 22px; background: #cceaff; color: #008df4; font-size: 60px; font-weight: 600; border-radius: 50%; overflow: hidden; display: grid; place-items: center; }
+.admin-settings-v2-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.admin-settings-v2 .admin-settings-v2-upload { position: relative; display: grid; place-items: center; min-height: 48px; padding: 10px; overflow: hidden; }
+.admin-settings-v2-upload input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.admin-settings-v2 .admin-settings-v2-remove { background: #fff; color: #647a9b; border: 1px solid #aaa; width: 100%; margin: 12px 0 22px; min-height: 48px; padding: 10px; }
+.admin-settings-v2-actions { display: flex; justify-content: flex-end; margin-top: 22px; }
+.admin-settings-v2-system { display: grid; gap: 13px; }
+.admin-settings-v2 label.admin-settings-v2-system-row { display: grid; grid-template-columns: minmax(160px, .52fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+.admin-settings-v2-password { display: grid; gap: 18px; }
+.admin-settings-v2-password > button { justify-self: start; }
+.admin-settings-v2-password-input { position: relative; }
+.admin-settings-v2-password-input input { padding-right: 40px; }
+.admin-settings-v2 .admin-settings-v2-password-input button { position: absolute; right: 1px; top: 1px; width: 36px; height: 29px; min-height: 0; background: transparent; padding: 6px; color: #647a9b; }
+.admin-settings-v2-password-input svg { width: 18px; height: 18px; }
+.admin-settings-v2-note { display: flex; gap: 14px; border: 1px solid #b8d7ff; background: #f2f7ff; border-radius: 10px; padding: 15px; color: #647a9b; font-size: 12px; line-height: 1.4; }
+.admin-settings-v2-note svg { flex: 0 0 20px; width: 20px; height: 20px; color: #168eff; }
+.admin-settings-v2 .admin-settings-v2-error { color: #b91c1c; font-size: 13px; margin-top: 10px; overflow-wrap: anywhere; }
+@media (max-width: 1250px) { .admin-settings-v2-grid { gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .admin-settings-v2-profile { grid-template-columns: 130px minmax(0, 1fr); gap: 20px; } .admin-settings-v2-avatar { width: 112px; height: 112px; } .admin-settings-v2-card { padding: 22px; } .admin-settings-v2 label.admin-settings-v2-system-row { grid-template-columns: 1fr; gap: 5px; } }
+@media (max-width: 900px) { .admin-settings-v2-grid { grid-template-columns: 1fr; } .admin-settings-v2 > header { padding: 28px; } .admin-settings-v2 label.admin-settings-v2-system-row { grid-template-columns: minmax(150px, .6fr) 1fr; } }
+@media (max-width: 480px) { .admin-settings-v2-profile { grid-template-columns: 1fr; } .admin-settings-v2-photo { width: 170px; margin: auto; } .admin-settings-v2 label.admin-settings-v2-system-row { grid-template-columns: 1fr; } }
