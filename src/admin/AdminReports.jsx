@@ -1,53 +1,45 @@
+import { getAdminReportStatus, getAdminReportSummary } from "./adminReportSummary";
+import { getReportDeadlineNotice, formatReportDeadline } from "./reportDeadline";
+import { useApplicationSettings } from "@/services/applicationSettingsService";
 import { ReportReviewDetail } from "./ReportReviewDetail";
 import "./AdminCaseList.css";
 import "./AdminReports.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatApartmentLocation } from "@/utils/apartmentLocation";
-import { Archive, ArrowLeft, Bell, Building2, Calendar, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, FileX, Eye, Flag, Mail, Phone, RotateCcw, Search, Trash2, User as UserIcon, X, XCircle } from "lucide-react";
+import { Archive, ArrowLeft, Bell, Building2, Calendar, Clock, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, FileX, Eye, Flag, Mail, Phone, RotateCcw, Search, Trash2, User as UserIcon, X, XCircle } from "lucide-react";
 import { ArchiveEmpty, formatOptionalDate, OverviewEmpty, SEVERITY_LABEL, text } from './adminDashboardHelpers';
 export function AdminReports({ reports, reportArchiveView, archivedReports, reportSearch, allApartments, reportStatusFilter, reportTypeFilter, reportSort, selectedReport, selectedReportDetails, setSelectedReport, setActiveSection, unreadNotifsCount, setViewingUserProfile, navigate, apartmentDetailBasePath, portalBasePath, selectedReportEvidence, onReportUpdated, resolveReport, setDismissReportModal, setCaseAction, setReportSearch, setReportStatusFilter, setReportTypeFilter, setReportSort, setReportArchiveView, dismissReportModal, dismissReport, viewingUserProfile, onReportBack, }) {
     const [page, setPage] = useState(1);
-    const reportStatus = (report) => {
-        const status = String(report.status ?? "pending").toLowerCase().replace(/[ -]/g, "_");
-        if (["pending", "open", "pending_review", "in_review", "reviewing"].includes(status))
-            return "under_review";
-        if (["dismissed", "rejected"].includes(status))
-            return "dismissed";
-        if (["awaiting_landlord_appeal", "under_appeal", "appeal_period_expired", "evidence_deadline_expired", "appeal_dismissed_pending_final_decision"].includes(status))
-            return "in_progress";
-        if (["resolved", "closed", "approved", "completed", "resolved_appeal_approved"].includes(status))
-            return "resolved";
-        return "under_review";
-    };
-    const reportSource = reportArchiveView ? archivedReports : reports;
+    const [now, setNow] = useState(Date.now);
+    useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 15000); return () => window.clearInterval(timer); }, []);
+    const { items_per_page: pageSize } = useApplicationSettings();
+    const reportStatus = getAdminReportStatus;
+    const reportSummary = getAdminReportSummary(reports);
+    const reportSource = reportArchiveView ? archivedReports : reportSummary.activeReports;
     const normalizedSearch = reportSearch.trim().toLowerCase();
     const getReportApartment = (report) => allApartments.find((apartment) => String(apartment.id) === String(report.apartmentId ?? report.apartment_id));
     const getReportApartmentTitle = (report) => report.apartment_title ?? report.apartment ?? getReportApartment(report)?.title ?? "Apartment unavailable";
     const getReporterLabel = (report) => report.reporter_name ?? report.reporter ?? "Reporter unavailable";
     const visibleReports = reportSource.filter((report) => {
-        const statusFilter = ["pending", "open"].includes(reportStatusFilter)
-            ? "under_review"
-            : reportStatusFilter;
+        const statusFilter = reportStatusFilter === "all" ? "all" : reportStatus({ status: reportStatusFilter });
         const matchesStatus = reportArchiveView || statusFilter === "all" || reportStatus(report) === statusFilter;
         const matchesSearch = !normalizedSearch || [getReportApartmentTitle(report), getReporterLabel(report), report.issueType, report.issue_type, report.category, report.details, report.id, getReportApartment(report)?.landlordName]
             .some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
         return matchesStatus && matchesSearch;
-    }).sort((left, right) => new Date(right.submittedAt ?? right.submitted_at ?? right.created_at ?? 0) - new Date(left.submittedAt ?? left.submitted_at ?? left.created_at ?? 0));
-    useEffect(() => { setPage(1); }, [reportSearch, reportStatusFilter, reportArchiveView]);
-    const pageSize = 5;
+    }).sort((left, right) => Number(Boolean(getReportDeadlineNotice(right, now))) - Number(Boolean(getReportDeadlineNotice(left, now))) || new Date(right.submittedAt ?? right.submitted_at ?? right.created_at ?? 0) - new Date(left.submittedAt ?? left.submitted_at ?? left.created_at ?? 0));
+    useEffect(() => { setPage(1); }, [reportSearch, reportStatusFilter, reportArchiveView, pageSize]);
     const pageCount = Math.max(1, Math.ceil(visibleReports.length / pageSize));
     const currentPage = Math.min(page, pageCount);
     const visiblePageNumbers = [Math.max(1, Math.min(currentPage - 1, pageCount - 1)), Math.max(1, Math.min(currentPage - 1, pageCount - 1)) + 1].filter((number) => number <= pageCount);
     const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-    const underReviewCount = reports.filter((report) => reportStatus(report) === "under_review").length;
-    const resolvedCount = reports.filter((report) => reportStatus(report) === "resolved").length;
-    const dismissedCount = reports.filter((report) => reportStatus(report) === "dismissed").length;
+    const { under_review: underReviewCount, resolved: resolvedCount, dismissed: dismissedCount, waiting_response: waitingResponseCount } = reportSummary;
     const summaryCards = [
-        { label: "Total Reports", value: underReviewCount + resolvedCount + dismissedCount, note: "Excludes appeal / final review", icon: FileX, tone: "total", filterValue: "all" },
-        { label: "Under Review", value: underReviewCount, note: "Currently investigating", icon: Eye, tone: "review", filterValue: "under_review" },
+        { label: "Total Reports", value: reportSummary.total, note: "All submitted reports", icon: Eye, tone: "total", filterValue: "all" },
+        { label: "Under Review", value: underReviewCount, note: "Currently investigating", icon: Clock, tone: "review", filterValue: "under_review" },
         { label: "Resolved", value: resolvedCount, note: "Closed cases", icon: CheckCircle2, tone: "resolved", filterValue: "resolved" },
-        { label: "Dismissed", value: dismissedCount, note: "Closed without action", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
+        { label: "Dismissed", value: dismissedCount, note: "Not valid or no action needed", icon: XCircle, tone: "dismissed", filterValue: "dismissed" },
+        { label: "Waiting Response", value: waitingResponseCount, note: "Reports awaiting landlord appeal.", icon: RotateCcw, tone: "waiting", filterValue: "waiting_response" },
     ];
     const currentDate = new Date().toLocaleDateString("en-PH", {
         weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -61,11 +53,11 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
         const reportPath = `${portalBasePath}?section=reports`;
         return <ReportReviewDetail key={selectedReport.id} report={selectedReport} apartment={reportApartment} details={selectedReportDetails} evidence={selectedReportEvidence} onBack={() => { setSelectedReport(null); onReportBack?.(); }} onViewApartment={() => apartmentId && navigate(`${apartmentDetailBasePath}/${apartmentId}`, { state: { returnTo: reportPath, backLabel: "Back to Report Details", reportDetailsOrigin: { source: "admin-report-details", reportId, apartmentId, landlordId, reportPath } } })} onUpdated={onReportUpdated} resolveReport={resolveReport} dismissReport={dismissReport} archived={reportArchiveView} onArchive={() => setCaseAction({ type: "archive-report", id: text(selectedReport.id), label: getReportApartmentTitle(selectedReport) })}/>;
     }
-    return (<div className="reports-reference admin-case-list">
-      <header className="reports-reference-header"><h1>Report</h1><p>Review and manage reports submitted by tenants regarding apartment listings.</p></header>
+    return (<div className="reports-reference admin-case-list admin-reports-waiting">
+      <header className="reports-reference-header"><h1>Reports</h1><p>Review and manage reports submitted by tenants regarding apartment listings.</p></header>
       <div className="reports-reference-stats" aria-label="Report status filters">{summaryCards.map(({ label, value, note, icon: Icon, tone, filterValue }) => {
-        const active = !reportArchiveView && (["pending", "open"].includes(reportStatusFilter) ? "under_review" : reportStatusFilter) === filterValue;
-        return <button type="button" key={label} className={`reports-reference-stat ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => { setReportArchiveView(false); setReportStatusFilter(filterValue); setPage(1); }}><span className={`reports-reference-stat-icon is-${tone}`}><Icon aria-hidden="true"/></span><span><strong>{value} {label}</strong><span className="reports-reference-stat-note">{note}</span></span></button>;
+        const active = !reportArchiveView && (reportStatusFilter === "all" ? "all" : reportStatus({ status: reportStatusFilter })) === filterValue;
+        return <button type="button" key={label} className={`reports-reference-stat ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => { setReportArchiveView(false); setReportStatusFilter(filterValue); setPage(1); }}><span className={`reports-reference-stat-icon is-${tone}`}><Icon aria-hidden="true"/></span><span><strong><span className="admin-report-stat-count">{value}</span>{label}</strong><span className="reports-reference-stat-note">{note}</span></span></button>;
       })}</div>
       <div className="reports-reference-filters">
         <label className="reports-reference-search"><Search aria-hidden="true"/><input aria-label="Search reports" value={reportSearch} onChange={(event) => setReportSearch(event.target.value)} placeholder="Search landlords"/></label>
@@ -75,14 +67,15 @@ export function AdminReports({ reports, reportArchiveView, archivedReports, repo
         <tbody>{pageReports.map((report) => {
           const apartment = getReportApartment(report);
           const status = reportStatus(report);
-            const statusLabel = { under_review: "Pending Admin Review", in_progress: "Appeal / Final Review", resolved: "Resolved", dismissed: "Dismissed" }[status];
-          return <tr key={report.id}>
+          const deadlineNotice = getReportDeadlineNotice(report, now);
+            const statusLabel = { under_review: "Under Review", waiting_response: "Waiting Response", resolved: "Resolved", dismissed: "Dismissed" }[status];
+          return <tr key={report.id} className={deadlineNotice ? "admin-report-deadline-reached" : undefined}>
             <td><strong>{getReportApartmentTitle(report)}</strong><p>{apartment ? formatApartmentLocation(apartment) || "Location not provided" : report.apartment_address || "Location not provided"}</p></td>
             <td><strong className="reports-reference-reporter">{getReporterLabel(report)}</strong><p className="reports-reference-role">{report.reporter_role ?? report.role ?? "Tenant"}</p></td>
             <td>{report.details || report.issueType || report.issue_type || report.category || "No description provided."}</td>
             <td className="reports-reference-date">{formatOptionalDate(report.submittedAt ?? report.submitted_at ?? report.created_at, { month: "short", day: "numeric", year: "numeric" })}</td>
-            <td><span className={`reports-reference-status is-${status}`}>{statusLabel}</span></td>
-            <td><button className="reports-reference-review" onClick={() => setSelectedReport(report)}>{status === "under_review" ? "Review" : "View"}</button>{reportArchiveView && <div className="reports-reference-archive-actions"><button onClick={() => setCaseAction({ type: "restore-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Restore</button><button onClick={() => setCaseAction({ type: "delete-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Delete</button></div>}</td>
+            <td><span className={`reports-reference-status is-${deadlineNotice ? "deadline_reached" : status}`}>{deadlineNotice ? "Deadline Reached" : statusLabel}</span>{deadlineNotice && <p className="admin-report-deadline-caption">{deadlineNotice.label}</p>}{report.appeal_deadline && status === "waiting_response" && <p className="admin-report-deadline-date">Appeal deadline: {formatReportDeadline(report.appeal_deadline)} (PH time)</p>}</td>
+            <td><button className="reports-reference-review" onClick={() => setSelectedReport(report)}>{["under_review", "waiting_response"].includes(status) ? "Review" : "View"}</button>{reportArchiveView && <div className="reports-reference-archive-actions"><button onClick={() => setCaseAction({ type: "restore-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Restore</button><button onClick={() => setCaseAction({ type: "delete-report", id: text(report.id), label: getReportApartmentTitle(report) })}>Delete</button></div>}</td>
           </tr>;
         })}{pageReports.length === 0 && <tr><td colSpan={6} className="reports-reference-empty">{reports.length === 0 && !reportArchiveView ? "No reports submitted yet." : "No reports match the selected filters."}</td></tr>}</tbody>
       </table></div>

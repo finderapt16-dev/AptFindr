@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { getReportDeadlineNotice } from "./reportDeadline";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, FileText, FileX, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { formatApartmentLocation } from "@/utils/apartmentLocation";
 import { finalizeReportListing, reviewTenantReport } from "@/services/dashboardSupabaseService";
 import "./ReportReviewDetail.css";
 
-const displayDate = (value) => value ? new Date(value).toLocaleString("en-PH", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "Not available";
+const displayDate = (value) => value ? new Date(value).toLocaleString("en-PH", { timeZone: "Asia/Manila", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "Not available";
 const labels = { pending_review: "Pending Admin Review", awaiting_landlord_appeal: "Awaiting Landlord Appeal", under_appeal: "Appeal Under Review", appeal_period_expired: "Appeal Period Expired", evidence_deadline_expired: "Evidence Deadline Expired", appeal_dismissed_pending_final_decision: "Final Listing Decision Required", resolved_appeal_approved: "Resolved — Appeal Approved", resolved: "Resolved", dismissed: "Dismissed" };
 
 export function ReportReviewDetail({ report, apartment, details, evidence = [], onBack, onViewApartment, onUpdated, archived, onArchive }) {
@@ -16,6 +17,9 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
   const status = String(report.status || "pending_review").toLowerCase().replace(/[ -]/g, "_");
   const needsInitialReview = ["pending_review", "pending", "open", "under_review", "in_review"].includes(status);
   const needsFinalDecision = ["appeal_period_expired", "evidence_deadline_expired", "appeal_dismissed_pending_final_decision"].includes(status);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 15000); return () => window.clearInterval(timer); }, []);
+  const deadlineNotice = getReportDeadlineNotice(report, now);
   const closed = ["dismissed", "resolved", "resolved_appeal_approved"].includes(status);
   const save = async () => {
     setProcessing(true);
@@ -30,6 +34,7 @@ export function ReportReviewDetail({ report, apartment, details, evidence = [], 
   return <div className="report-review-detail">
     <button className="report-review-back" onClick={onBack}><ArrowLeft/>Back to Reports</button>
     <header className="report-review-header"><div><h1>Report Details</h1><p>Review the tenant report, deadlines, and any appeal workflow.</p></div></header>
+    {deadlineNotice && <section role="status" className="report-review-deadline-notice"><strong>{deadlineNotice.label}</strong><p>{deadlineNotice.message}</p></section>}
     <div className="report-review-columns"><div className="report-review-main">
       <section className="report-review-panel"><h2>Report Information</h2><dl className="report-review-information"><dt>Reported By</dt><dd><span className="report-review-person">{reporterAvatarUrl ? <img src={reporterAvatarUrl} alt="" /> : <span>{reporterName.charAt(0).toUpperCase()}</span>}<strong>{reporterName}</strong></span></dd><dt>Date Submitted</dt><dd>{displayDate(report.submitted_at || report.submittedAt || report.created_at)}</dd><dt>Report Reason</dt><dd>{report.issue_type || report.category || "Not specified"}</dd><dt>Describe the Problem</dt><dd className="report-review-description">{report.details || "No description provided."}</dd><dt>Current Status</dt><dd><span className="report-review-status is-under_review">{labels[status] || status.replace(/_/g, " ")}</span></dd>{report.appeal_deadline && <><dt>Appeal Deadline</dt><dd>{displayDate(report.appeal_deadline)}</dd></>}{report.admin_notes && <><dt>Admin Notes</dt><dd>{report.admin_notes}</dd></>}</dl></section>
       <section className="report-review-panel"><h2>Supporting Evidence</h2>{evidence.length ? <div className="report-review-evidence-grid">{evidence.map((file, index) => <a className="report-review-file" key={file.id || index} href={file.fileUrl || file.file_url} target="_blank" rel="noreferrer"><span className="report-review-file-preview">{file.fileType === "image" ? <ImageWithFallback src={file.fileUrl || file.file_url} alt={file.fileName || "Evidence"}/> : <FileText/>}</span><strong>{file.fileName || file.file_name || "Supporting document"}</strong></a>)}</div> : <p className="report-review-empty">No supporting evidence submitted.</p>}</section>

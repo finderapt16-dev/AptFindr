@@ -1,3 +1,4 @@
+import { useApplicationSettings } from "@/services/applicationSettingsService";
 import { LogoutConfirmation } from "@/components/LogoutConfirmation";
 import {
   Bell,
@@ -38,6 +39,7 @@ export function AdminSidebar({
   handleLogout,
   onNavigate,
 }) {
+  const { application_name: applicationName } = useApplicationSettings();
   const countFor = (section) => {
     if (section === "reports") return pendingReports;
     if (section === "appeals") return activeAppealsCount;
@@ -77,7 +79,7 @@ export function AdminSidebar({
   return (
     <div className="app-sidebar admin-figma-sidebar">
       <div className="admin-figma-sidebar-brand">
-        <img alt="AptFindr" src="/aptfindr-wordmark.svg" />
+        {applicationName === "AptFindr" ? <img alt="AptFindr" src="/aptfindr-wordmark.svg" /> : <strong style={{ color: "#0da7e1", fontSize: 26 }}>{applicationName}</strong>}
       </div>
 
       <button type="button" className="admin-figma-sidebar-profile app-sidebar-profile-button" onClick={() => {

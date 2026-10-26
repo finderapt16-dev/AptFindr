@@ -1,3 +1,6 @@
+import { changeAuthPassword } from "@/services/authService";
+import { AdminSettings } from "./AdminSettings";
+import { saveAdminAvatar } from "./adminAvatarUpload";
 import { subscribeToLiveUpdates } from "@/services/liveUpdates";
 import { AdminOverview } from "./AdminOverview";
 import { NotificationActionsMenu } from "@/components/NotificationActionsMenu";
@@ -231,6 +234,9 @@ export function AdminDashboard() {
         const value = `${type} ${title} ${message} ${action}`;
         if (type === "landlord_activity" || payload.category === "landlord_activity" || payload.activity_type)
             return "activities";
+        const targetType = String(notification.action_target_type ?? "").toLowerCase();
+        if (targetType === "report") return "reports";
+        if (targetType === "appeal") return "appeals";
         if (value.includes("report") || value.includes("violation"))
             return "reports";
         if (value.includes("appeal"))
@@ -426,12 +432,66 @@ export function AdminDashboard() {
     const updateAdminProfile = (updater) => {
         setAdminProfile(updater);
     };
+    const [isUploadingAdminPhoto, setIsUploadingAdminPhoto] = useState(false);
+    const [adminPhotoError, setAdminPhotoError] = useState("");
+    const [adminPhotoPreview, setAdminPhotoPreview] = useState("");
+    useEffect(() => () => { if (adminPhotoPreview) URL.revokeObjectURL(adminPhotoPreview); }, [adminPhotoPreview]);
+    const handleAdminPhotoUpload = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file || isUploadingAdminPhoto || isSavingAdminProfile) return;
+        setAdminPhotoError("");
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            setAdminPhotoError("Choose a JPG, PNG, or WebP image.");
+            toast.error("Choose a JPG, PNG, or WebP image.");
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            setAdminPhotoError("Profile photo must be 2MB or smaller.");
+            toast.error("Profile photo must be 2MB or smaller.");
+            return;
+        }
+        if (!user?.id) {
+            toast.error("Sign in before uploading a profile photo.");
+            return;
+        }
+        setAdminPhotoPreview(URL.createObjectURL(file));
+        setIsUploadingAdminPhoto(true);
+        try {
+            const avatar = await saveAdminAvatar(supabase, user.id, file);
+            setAdminProfile((profile) => ({ ...profile, avatar }));
+            setSavedAdminProfile((profile) => ({ ...profile, avatar }));
+            toast.success("Profile photo updated!");
+            void refreshUsers().catch(() => undefined);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to upload your profile photo.";
+            setAdminPhotoError(message);
+            toast.error(message);
+        } finally {
+            setAdminPhotoPreview("");
+            setIsUploadingAdminPhoto(false);
+        }
+    };
+    const handleRemoveAdminPhoto = async () => {
+        if (!user?.id || isUploadingAdminPhoto || isSavingAdminProfile) return;
+        setIsUploadingAdminPhoto(true); setAdminPhotoError("");
+        try {
+            const { data, error } = await supabase.from("app_users").update({ avatar_url: null }).eq("id", user.id).select("id").single();
+            if (error || !data) throw new Error(error?.message || "Unable to remove your photo.");
+            setAdminProfile(profile => ({ ...profile, avatar: "" }));
+            setSavedAdminProfile(profile => ({ ...profile, avatar: "" }));
+            void refreshUsers().catch(() => undefined);
+            toast.success("Profile photo removed.");
+        } catch (error) { setAdminPhotoError(error.message); }
+        finally { setIsUploadingAdminPhoto(false); }
+    };
     const handleUpdateAdminProfile = async () => {
+        if (isUploadingAdminPhoto || isSavingAdminProfile) return;
         if (!user) {
             return;
         }
-        if (!adminProfile.firstName.trim() || !adminProfile.lastName.trim()) {
-            toast.error("Please enter your first and last name.");
+        if (!adminProfile.firstName.trim()) {
+            toast.error("Please enter your full name.");
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminProfile.email)) {
@@ -443,7 +503,7 @@ export function AdminDashboard() {
             id: user.id,
             role: user.role,
             email: adminProfile.email.trim(),
-            name: `${adminProfile.firstName.trim()} ${adminProfile.lastName.trim()}`,
+            name: `${adminProfile.firstName.trim()} ${adminProfile.lastName.trim()}`.trim(),
             mobile: adminProfile.mobile.trim(),
             avatar_url: adminProfile.avatar || null,
             department: adminProfile.department.trim(),
@@ -452,20 +512,28 @@ export function AdminDashboard() {
             permit_number: user.permitNumber ?? null,
         };
         try {
+            if (updatedUser.email !== savedAdminProfile.email) {
+                const { data, error } = await supabase.auth.updateUser({ email: updatedUser.email });
+                if (error) throw new Error(error.message);
+                if (data.user?.email !== updatedUser.email) {
+                    updatedUser.email = data.user?.email || savedAdminProfile.email;
+                    toast.info("Confirm the email change using the link sent to your email address.");
+                }
+            }
             const result = await updateUserProfile(updatedUser);
             if (result) {
                 const savedProfile = toAdminProfileState(result);
                 setAdminProfile(savedProfile);
                 setSavedAdminProfile(savedProfile);
                 setIsEditingAdminProfile(false);
-                await refreshUsers();
-                await createAuditLog({
+                void refreshUsers().catch(() => undefined);
+                void createAuditLog({
                     admin_id: user.id,
                     action: "admin_profile_updated",
                     target_type: "user",
                     target_id: user.id,
                     details: { fields: ["name", "email", "mobile", "department", "admin_level"] },
-                });
+                }).catch(error => console.warn("Unable to log profile update", error));
                 toast.success("Profile updated successfully!");
             }
             else {
@@ -1226,8 +1294,8 @@ export function AdminDashboard() {
             toast.error("All password fields are required");
             return;
         }
-        if (newPassword.length < 6) {
-            toast.error("New password must be at least 6 characters");
+        if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9\s]/.test(newPassword)) {
+            toast.error("Use at least 8 characters with letters, numbers, and a symbol");
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -1235,7 +1303,7 @@ export function AdminDashboard() {
             return;
         }
         try {
-            await updateUser(user.id, { password: newPassword });
+            await changeAuthPassword(currentPassword, newPassword);
             toast.success("Password changed successfully!");
             setPasswordModal(false);
             setCurrentPassword("");
@@ -1305,6 +1373,33 @@ export function AdminDashboard() {
     const pendingReports = reports.filter((report) => ["pending", "open", "pending_review", "under_review", "in_review", "reviewing"].includes(String(report.status ?? "pending").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
     const activeAppealsCount = appeals.filter((appeal) => ["pending", "pending_review", "under_review", "needs_information", "additional_evidence_submitted"].includes(String(appeal.status ?? "pending_review").trim().toLowerCase().replace(/[ -]/g, "_"))).length;
     useEffect(() => subscribeToLiveUpdates(user?.id, "notifications", loadAdminNotifications), [user?.id, loadAdminNotifications]);
+    useEffect(() => {
+        if (!user?.id) return;
+        let active = true;
+        let running = false;
+        const refreshCases = async () => {
+            if (running || document.visibilityState === "hidden") return;
+            running = true;
+            try {
+                // Fetch reports first so any overdue transition is committed before notifications load.
+                const nextReports = await fetchAdminReports();
+                if (!active) return;
+                setReports(nextReports);
+                await loadAdminNotifications();
+            } catch (error) { console.warn("Unable to refresh report deadlines", error); }
+            finally { running = false; }
+        };
+        const timer = window.setInterval(() => void refreshCases(), 60000);
+        return () => { active = false; window.clearInterval(timer); };
+    }, [user?.id, loadAdminNotifications]);
+    useEffect(() => {
+        setSelectedReport(current => {
+            if (!current) return current;
+            const refreshed = reports.find(report => report.id === current.id);
+            return refreshed && (refreshed.status !== current.status || refreshed.appeal_deadline !== current.appeal_deadline)
+                ? { ...current, ...refreshed } : current;
+        });
+    }, [reports]);
     const unreadNotifsCount = adminNotifs.filter((n) => !n.is_deleted && !isNotificationRead(n)).length;
     const restoreAdminModule = (section) => {
         if (!user?.id)
@@ -1564,7 +1659,7 @@ export function AdminDashboard() {
                     const actionUrl = rawActionUrl.startsWith("/")
                         ? rawActionUrl
                         : apartment ? `${apartmentDetailBasePath}/${apartmentId}` : "";
-                    const isAppealNotification = ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
+                    const isAppealNotification = String(notification.action_target_type ?? "").toLowerCase() === "appeal" || Boolean(notification.payload?.appeal_id) || ["appeal_submitted", "appeal_information_submitted"].includes(String(notification.type ?? "").toLowerCase());
                     const isPermitNotification = isBusinessPermitNotification(notification);
                     const permitPayload = notification.payload ?? {};
                     const permitLandlordId = String(permitPayload.landlord_id ?? notification.action_target_id ?? "");
@@ -1648,121 +1743,7 @@ export function AdminDashboard() {
     const renderReports = () => (<AdminReports reports={reports} reportArchiveView={reportArchiveView} archivedReports={archivedReports} reportSearch={reportSearch} allApartments={allApartments} reportStatusFilter={reportStatusFilter} reportTypeFilter={reportTypeFilter} reportSort={reportSort} selectedReport={selectedReport} selectedReportDetails={selectedReportDetails} setSelectedReport={setSelectedReport} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setViewingUserProfile={setViewingUserProfile} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} selectedReportEvidence={selectedReportEvidence} onReportUpdated={updated => { setReports(current => current.map(report => report.id === updated.id ? updated : report)); setSelectedReport(updated); }} resolveReport={resolveReport} setDismissReportModal={setDismissReportModal} setCaseAction={setCaseAction} setReportSearch={setReportSearch} setReportStatusFilter={setReportStatusFilter} setReportTypeFilter={setReportTypeFilter} setReportSort={setReportSort} setReportArchiveView={setReportArchiveView} dismissReportModal={dismissReportModal} dismissReport={dismissReport} viewingUserProfile={viewingUserProfile} onReportBack={() => { if (reportOpenedFromNotification) { setReportOpenedFromNotification(false); handleSectionChange("notifications"); } }}/>)
     // ── Section: Appeals Management ─────────────────────────────────────────
     const renderAppeals = () => (<AdminAppeals landlords={landlords} reports={reports} archivedReports={archivedReports} violations={violations} allApartments={allApartments} appealSearch={appealSearch} appealArchiveView={appealArchiveView} archivedAppeals={archivedAppeals} appeals={appeals} appealTypeFilter={appealTypeFilter} appealSort={appealSort} selectedAppeal={selectedAppeal} user={user} appealStatus={appealStatus} appealResponse={appealResponse} setAppeals={setAppeals} setSelectedAppeal={setSelectedAppeal} setAppealResponse={setAppealResponse} setAppealStatus={setAppealStatus} setActiveSection={handleSectionChange} unreadNotifsCount={unreadNotifsCount} setSelectedReport={setSelectedReport} navigate={navigate} apartmentDetailBasePath={apartmentDetailBasePath} portalBasePath={portalBasePath} setCaseAction={setCaseAction} setAppealSearch={setAppealSearch} setAppealTypeFilter={setAppealTypeFilter} setAppealSort={setAppealSort} setAppealArchiveView={setAppealArchiveView} onWorkflowChanged={async () => { const [nextReports, nextAppeals] = await Promise.all([fetchAdminReports(), fetchPendingAppeals()]); setReports(nextReports); setAppeals(nextAppeals); }}/>);
-    const renderAdminInfo = () => {
-        return (() => {
-            const adminName = `${adminProfile.firstName} ${adminProfile.lastName}`.trim();
-            const visibleAdmins = adminAccounts.length > 0 ? adminAccounts : user ? [user] : [];
-            const updateFullName = (value) => {
-                const [firstName = "", ...lastName] = value.trimStart().split(/\s+/);
-                updateAdminProfile((profile) => ({ ...profile, firstName, lastName: lastName.join(" ") }));
-            };
-            return (<main className="admin-settings-reference">
-              <header className="admin-settings-reference-header">
-                <h1>Settings</h1>
-                <p>Manage your admin account and system settings.</p>
-              </header>
-              <div className="admin-settings-reference-grid">
-                <section className="admin-settings-reference-column">
-                  <Card className="admin-settings-reference-card"><CardContent>
-                    <div className="admin-settings-reference-card-heading"><h2>Admin Profile</h2><p>View and update your administrator account information.</p></div>
-                    <div className="admin-settings-profile-body">
-                      <div className="admin-settings-profile-photo">
-                        <div className="admin-settings-profile-avatar">{adminProfile.avatar ? <img src={adminProfile.avatar} alt={adminName || "Admin profile"}/> : (adminProfile.firstName[0]?.toUpperCase() || "A")}</div>
-                        <button type="button" onClick={() => setIsEditingAdminProfile(true)} className="admin-settings-photo-button">Change Photo</button><span>JPG, PNG (Max 2MB)</span>
-                      </div>
-                      <fieldset disabled={isSavingAdminProfile || isLoadingAdminProfile} className="admin-settings-profile-fields">
-                        <label>Full Name<input value={adminName} onChange={(event) => updateFullName(event.target.value)} placeholder="Administrator name"/></label>
-                        <label>Email Address<input type="email" value={adminProfile.email} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, email: event.target.value }))} placeholder="admin@example.com"/></label>
-                        <label>Contact Number<input type="tel" value={adminProfile.mobile} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, mobile: event.target.value }))} placeholder="Not provided"/></label>
-                        <label>Position<input value={adminProfile.adminLevel} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, adminLevel: event.target.value }))} placeholder="System Administrator"/></label>
-                      </fieldset>
-                    </div>
-                    <div className="admin-settings-card-actions"><Button onClick={() => void handleUpdateAdminProfile()} disabled={isSavingAdminProfile || isLoadingAdminProfile} className="admin-settings-primary-button">{isSavingAdminProfile ? "Saving..." : "Save Changes"}</Button></div>
-                  </CardContent></Card>
-                  <Card className="admin-settings-reference-card"><CardContent>
-                    <div className="admin-settings-reference-card-heading"><h2>Change Password</h2><p>Update your password to keep your account secure.</p></div>
-                    <div className="admin-settings-password-fields">
-                      <label>Current Password<input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder="Enter current password"/></label>
-                      <label>New Password<input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Enter new password"/></label>
-                      <label>Confirm New Password<input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm new password"/></label>
-                    </div>
-                    <p className="admin-settings-password-note"><Shield/> Password must be at least 6 characters long and include a mix of letters, numbers, and symbols.</p>
-                    <div className="admin-settings-card-actions"><Button onClick={handleChangePassword} className="admin-settings-primary-button">Update Password</Button></div>
-                  </CardContent></Card>
-                </section>
-                <section className="admin-settings-reference-column">
-                  <Card className="admin-settings-reference-card"><CardContent>
-                    <div className="admin-settings-reference-card-heading"><h2>System Settings</h2><p>System-wide settings are unavailable until a secured settings service is configured.</p></div>
-                    <fieldset disabled hidden className="admin-settings-system-fields">
-                      <label>Application Name<input defaultValue="AptFindr"/></label><label>Support Email<input type="email" defaultValue="support@aptfindr.com"/></label><label>Contact Number<input defaultValue="0912 345 6789"/></label><label>Address<input defaultValue="La Paz, Iloilo City"/></label>
-                      <label>Default Currency<select defaultValue="PHP"><option value="PHP">Philippine Peso (₱)</option></select></label><label>Permit Renewal Reminder<select defaultValue="30"><option value="30">30 days before expiration</option></select></label><label>Max Apartment Photos<input type="number" defaultValue="10" min="1"/></label><label>Items Per Page<input type="number" defaultValue="10" min="1"/></label>
-                    </fieldset>
-                    <div className="admin-settings-card-actions"><Button disabled className="admin-settings-primary-button">System settings unavailable</Button></div>
-                  </CardContent></Card>
-                  <Card className="admin-settings-reference-card admin-settings-admins-card"><CardContent>
-                    <div className="admin-settings-admins-heading"><div><h2>System Administrators</h2><p>View administrator accounts. Invitations and role changes require a secured backend.</p></div><Button disabled className="admin-settings-add-admin">Admin invitations unavailable</Button></div>
-                    <div className="admin-settings-admin-table-wrap"><table className="admin-settings-admin-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead><tbody>
-                      {visibleAdmins.slice(0, 5).map((admin) => { const name = admin.name || `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || "Administrator"; const email = admin.email || "Not provided"; const status = admin.status || "Not Available"; return <tr key={admin.id || email}><td><span className="admin-settings-table-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name}</strong><small>{email}</small></span></td><td>{email}</td><td><span className="admin-settings-role">{admin.role || "Admin"}</span></td><td><span className="admin-settings-active">{status}</span></td><td>Not Available</td><td><button type="button" disabled title="Administrator editing requires a secured backend" className="admin-settings-edit-admin">Edit unavailable</button></td></tr>; })}
-                      {visibleAdmins.length === 0 && <tr><td colSpan="6" className="admin-settings-empty-admins">No administrator accounts found.</td></tr>}
-                    </tbody></table></div>
-                  </CardContent></Card>
-                </section>
-              </div>
-            </main>);
-        })();
-        const inputClass = "admin-dashboard-input-3";
-        const adminName = `${adminProfile.firstName} ${adminProfile.lastName}`.trim();
-        const accountStatus = user?.status || "Unavailable";
-        const ViewField = ({ label, value, wide = false }) => <div className={wide ? "admin-dashboard-panel-9" : ""}><p className="admin-dashboard-text-14">{label}</p><p className="admin-dashboard-text-15">{value?.trim() || "Not provided"}</p></div>;
-        return (<div className="admin-dashboard-container-5">
-        <header className="admin-dashboard-header-4">
-          <div className="admin-dashboard-row-21">
-            <span className="admin-dashboard-card-7"><Settings className="admin-dashboard-settings-icon"/></span>
-            <div>
-              <h2 className="admin-dashboard-admin-settings">Admin Settings</h2>
-              <p className="admin-dashboard-text-16">Manage your admin profile, account information, and security.</p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => void openActivityLog()} className="admin-dashboard-view-activity-log"><History className="admin-dashboard-history-icon"/>View Activity Log</Button>
-        </header>
-
-        <Card className="admin-dashboard-card-6">
-          <CardContent className="admin-dashboard-content-3">
-            <div className="admin-dashboard-row-28">
-              {adminProfile.avatar ? <img src={adminProfile.avatar} alt={adminName || "Admin profile"} className="admin-dashboard-image-3"/> : (adminProfile.firstName[0]?.toUpperCase() || <UserIcon className="admin-dashboard-user-icon-icon-2"/>)}
-            </div>
-            <div className="admin-dashboard-panel-7">
-              <h3 className="admin-dashboard-heading-5">{isLoadingAdminProfile ? "Loading profile..." : (adminName || "Profile name unavailable")}</h3>
-              <p className="admin-dashboard-text-17">{adminProfile.email || "Email unavailable"}</p>
-              <p className="admin-dashboard-text-18">{adminProfile.adminLevel || "Administrator"} <span className="admin-dashboard-span-19">·</span> <span className="admin-dashboard-span-20">{accountStatus}</span></p>
-            </div>
-            <Button onClick={() => setIsEditingAdminProfile(true)} disabled={isEditingAdminProfile || isLoadingAdminProfile} className="admin-dashboard-edit-profile"><Edit2 className="admin-dashboard-edit2-icon"/>Edit Profile</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="admin-dashboard-card-6"><CardContent className="admin-dashboard-card-content">
-          <SettingsSectionTitle icon={UserIcon} tone="admin-tone-brand-icon" title="Personal Information" description="Your saved account and contact details."/>
-          {isEditingAdminProfile ? <fieldset disabled={isSavingAdminProfile} className="admin-dashboard-grid-9">
-                  <SettingsField label="First Name"><input value={adminProfile.firstName} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, firstName: event.target.value }))} className={inputClass}/></SettingsField>
-                  <SettingsField label="Last Name"><input value={adminProfile.lastName} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, lastName: event.target.value }))} className={inputClass}/></SettingsField>
-                  <SettingsField label="Email Address" wide><input type="email" value={adminProfile.email} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, email: event.target.value }))} className={inputClass}/></SettingsField>
-                  <SettingsField label="Mobile Number" wide><div className="admin-dashboard-panel-10"><Smartphone className="admin-dashboard-smartphone-icon"/><input type="tel" value={adminProfile.mobile} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, mobile: event.target.value }))} placeholder="Not provided" className={`${inputClass} admin-dashboard-input-4`}/></div></SettingsField>
-                </fieldset> : <div className="admin-dashboard-grid-10"><ViewField label="First Name" value={adminProfile.firstName}/><ViewField label="Last Name" value={adminProfile.lastName}/><ViewField label="Email Address" value={adminProfile.email}/><ViewField label="Mobile Number" value={adminProfile.mobile}/></div>}
-        </CardContent></Card>
-
-        <Card className="admin-dashboard-card-6"><CardContent className="admin-dashboard-card-content">
-          <SettingsSectionTitle icon={Shield} tone="admin-tone-brand-icon" title="Administrative Information" description="Your administrative role and access information."/>
-          {isEditingAdminProfile ? <fieldset disabled={isSavingAdminProfile} className="admin-dashboard-grid-9">
-                  <SettingsField label="Department"><input value={adminProfile.department} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, department: event.target.value }))} placeholder="Not provided" className={inputClass}/></SettingsField>
-                  <SettingsField label="Admin Level"><select value={adminProfile.adminLevel} onChange={(event) => updateAdminProfile((profile) => ({ ...profile, adminLevel: event.target.value }))} className={inputClass}><option value="">Not provided</option>{adminProfile.adminLevel && !["Full Administrator", "Senior Moderator", "Moderator"].includes(adminProfile.adminLevel) && <option value={adminProfile.adminLevel}>{adminProfile.adminLevel}</option>}<option value="Full Administrator">Full Administrator</option><option value="Senior Moderator">Senior Moderator</option><option value="Moderator">Moderator</option></select></SettingsField>
-                </fieldset> : <div className="admin-dashboard-grid-10"><ViewField label="Department" value={adminProfile.department}/><ViewField label="Admin Level" value={adminProfile.adminLevel}/></div>}
-        </CardContent></Card>
-
-        {isEditingAdminProfile && <div className="admin-dashboard-content-4"><Button variant="outline" onClick={handleResetAdminProfile} disabled={isSavingAdminProfile} className="admin-dashboard-reset-changes"><RotateCcw className="admin-dashboard-rotate-ccw-icon-2"/>Reset Changes</Button><Button onClick={() => void handleUpdateAdminProfile()} disabled={isSavingAdminProfile} className="admin-dashboard-button-19"><Save className="admin-dashboard-save-icon"/>{isSavingAdminProfile ? "Saving..." : "Save Changes"}</Button></div>}
-
-        <Card className="admin-dashboard-card-6"><CardContent className="admin-dashboard-content-5"><SettingsSectionTitle icon={Lock} tone="admin-tone-brand-icon" title="Security" description="Manage the security of your administrator account."/><div className="admin-dashboard-panel-11"><p className="admin-dashboard-text-19">Protect your administrator account with an updated password.</p><Button onClick={() => setPasswordModal(true)} variant="outline" className="admin-dashboard-change-password"><Lock className="admin-dashboard-lock-icon"/>Change Password</Button></div></CardContent></Card>
-      </div>);
-    };
+    const renderAdminInfo = () => <AdminSettings profile={adminProfile} setProfile={setAdminProfile} loading={isLoadingAdminProfile} saving={isSavingAdminProfile} onSave={handleUpdateAdminProfile} preview={adminPhotoPreview} uploading={isUploadingAdminPhoto} photoError={adminPhotoError} onUpload={handleAdminPhotoUpload} onRemove={handleRemoveAdminPhoto}/>;
     const renderHistory = () => {
         const landlordMap = new Map(landlords.filter((landlord) => landlord.id).map((landlord) => [landlord.id, landlord]));
         const apartmentMap = new Map(allApartments.filter((apartment) => apartment.id).map((apartment) => [apartment.id, apartment]));
